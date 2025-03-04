@@ -1,0 +1,45 @@
+{
+  "name": "aether-client",
+  "version": "1.0.0",
+  "main": "src/aether.ts",
+  "dependencies": {
+    "@types/libsodium-wrappers": "^0.7.14",
+    "assert": "^2.1.0",
+    "bufferutil": "^4.0.8",
+    "dns-query": "^0.11.2",
+    "express": "^4.19.2",
+    "libsodium-wrappers": "^0.7.14",
+    "nodemon": "^3.1.0",
+    "reflect-metadata": "^0.2.2",
+    "universal-ws": "^0.2.9",
+    "utf-8-validate": "^6.0.4",
+    "util": "^0.12.5"
+  },
+  "scripts": {
+    "preinstall": "npx npm-force-resolutions",
+    "build": "webpack --config webpack.config.js",
+    "test": "webpack --config webpack.config-test.js"
+  },
+  "overrides": {
+    "chokidar": "3.5.3",
+    "glob-parent": "6.0.2"
+  },
+  "devDependencies": {
+    "@testdeck/mocha": "^0.3.3",
+    "@types/chai": "^4.3.16",
+    "@types/lodash": "^4.17.4",
+    "@types/node": "^20.13.0",
+    "chai": "^5.1.1",
+    "mocha": "^10.4.0",
+    "nyc": "^17.0.0",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.15.6",
+    "typescript": "^5.4.5",
+    "webpack": "^5.82.1",
+    "webpack-cli": "^5.1.1"
+  },
+  "engines": {
+    "node": "^21.7.3"
+  }
+}

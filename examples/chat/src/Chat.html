@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TODO supply a title</title>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+</head>
+<body>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+
+    .contacts {
+        grid-area: cont;
+        scroll-behavior: auto;
+        white-space: nowrap;
+    }
+
+    .interlocutors_messages {
+        grid-area: inM;
+    }
+
+    .message_set {
+        grid-area: mS;
+    }
+
+    .content {
+        display: grid;
+        width: 100%;
+        grid-template-columns: 0 0 400px 1fr;
+        grid-template-rows: 50vh 50vh;
+        grid-template-areas:
+                    ".cont .inM"
+                    ".cont .mS";
+    }
+
+    .g {
+        border: 1px solid blue;
+    }
+
+    .message_set {
+        display: grid;
+        grid-template-rows:40px 1fr 40px;
+    }
+
+    .wrap_msg {
+        background-color: gray;
+        height: 100%;
+    }
+
+    .interlocutors_messages {
+        overflow: auto;
+    }
+
+    #myuid {
+        color: green;
+    }
+</style>
+<div class="content">
+    <div class="g contacts" id="contacts">
+        <h2>Контакты</h2>
+
+    </div>
+    <div class="g interlocutors_messages">
+        <h2>Сообщения от пользователя</h2>
+        <p id="myuid"></p>
+        <div class="wrap_msg" id="msg_user">
+
+        </div>
+
+    </div>
+    <div class="g message_set" id="area_messages">
+        <label for="area_message">Enter message</label><textarea id="area_message"></textarea>
+        <button id="send">Отправить</button>
+    </div>
+
+</div>
+<script src="../build/ChatClient.js"></script>
+<script>
+    let msgUser = document.getElementById("msg_user");
+    let area_msg = document.getElementById("area_message");
+    let contacts = document.getElementById("contacts");
+    let buttonSend = document.getElementById("send");
+
+    function onMsg(user, msgRequest) {
+        let d = document.createElement("div");
+        d.innerText = user.toString();
+        msgUser.appendChild(d);
+        let s = document.createElement("div");
+        s.innerText = msgRequest;
+        msgUser.appendChild(s);
+    }
+
+    let currentUser = null;
+    let currentUserTag = null;
+
+    function onAddUser(user) {
+        let el = document.createElement("p");
+        el.textContent = user.toString();
+        el.user = user;
+        el.onclick = function () {
+            if (currentUserTag) {
+                currentUserTag.style.color = null;
+            }
+            currentUserTag = el;
+            currentUser = user;
+            el.style.color = "rgb(255,100,100)";
+        };
+        contacts.append(el);
+    }
+
+    let ip = prompt("Enter IP address please");
+    ChatClient.startClient(onMsg, onAddUser, ip).then(function (c) {
+        document.getElementById("myuid").textContent = c.uid.toString();
+
+        function sendMsg() {
+            if (!currentUser) {
+                alert("Can you select current address");
+                return;
+            }
+            let cu = currentUser;
+            let msgRequest = area_msg.value;
+            area_msg.value = "";
+            onMsg(cu, msgRequest);
+            c.sendMsg(cu, msgRequest);
+        }
+
+        buttonSend.onclick = sendMsg;
+        area_msg.onkey = function (e) {
+            if (e.code === 13) {
+                sendMsg();
+            }
+        };
+    });
+
+
+</script>
+</body>
+</html>

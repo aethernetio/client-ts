@@ -1,0 +1,24 @@
+{
+  "name": "aether-client",
+  "version": "1.0.0",
+  "main": "src/aether.js",
+  "dependencies": {
+    "assert": "^2.0.0",
+    "webpack-common-shake": "^2.1.0"
+  },
+  "scripts": {
+    "preinstall": "npx npm-force-resolutions",
+    "build": "webpack --config webpack.config.js"
+  },
+  "overrides": {
+    "chokidar": "3.5.3",
+    "glob-parent": "6.0.2"
+  },
+  "devDependencies": {
+    "webpack": "^5.82.1",
+    "webpack-cli": "^5.1.1"
+  },
+  "engines": {
+    "node": "^19.7.0"
+  }
+}
