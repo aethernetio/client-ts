@@ -1472,7 +1472,7 @@ export class UUID {
     }
 
     equals(o: UUID): boolean {
-        return this.value
+        return this.value.equals(o.value);
     }
 }
 
