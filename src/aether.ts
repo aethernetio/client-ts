@@ -1,9 +1,7 @@
 import {io} from "./aether-api";
 import {sodium} from "./aether-crypt";
 import Cloud = io.aether.common.Cloud;
-import Key = io.aether.common.Key;
-import KeyType = io.aether.common.KeyType;
-import CryptoLib = io.aether.common.CryptoLib;
+import Key = io.aether.crypt.Key;
 
 declare global {
     interface Map {
