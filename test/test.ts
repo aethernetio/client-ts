@@ -1,8 +1,8 @@
-import {Aether} from "../src/aether";
+import {aether as AE} from "../src/aether-core";
 
 class Chat {
 
     start() {
-        let aether=new Aether();
+        let aether=new AE.Aether();
     }
 }

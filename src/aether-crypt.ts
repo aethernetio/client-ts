@@ -1,18 +1,65 @@
 import * as _sodium from 'libsodium-wrappers';
-import {io} from "./aether-api";
-import {assert} from "./aether";
+import {aether as api} from "./aether-api";
+import {aether as core} from "./aether-core";
+import {aether as utils} from "./aether-utils";
+import Key = api.crypt.Key;
+import assert = utils.utils.assert;
+import {realpathSync} from "fs";
 
-
+// await _sodium.ready;
 export namespace sodium {
-    import Key = io.aether.common.Key;
-    await _sodium.ready;
     export const sodium = _sodium;
+    const NONCE_LEN = 8;
+    export class KeySize {
+        static CHACHA20POLY1305: 32;
+        static ENCODED_CHACHA20POLY1305: 80;
+        static CRYPTO_BOX_PUBLIC: 32;
+        static CRYPTO_BOX_PRIVATE: 32;
+        static CRYPTO_SIGN_PUBLIC: 32;
+        static CRYPTO_SIGN_PRIVATE: 64;
+    }
+    export class ChachaCryptoProvider implements core.CryptoProvider {
+        key: Uint8Array;
+        nonce: Uint8Array;
+
+        constructor(key: Uint8Array, nonce?: Uint8Array) {
+            this.key = key;
+            this.nonce = nonce ? nonce : new Uint8Array(NONCE_LEN);
+        }
+        private incrementNonce0(i:number){
+            if(this.nonce[i]==256){
+                this.nonce[i]=0;
+                this.incrementNonce0(i-1);
+            }else{
+                this.nonce[i]++;
+            }
+        }
+
+        incrementNonce(){
+            this.incrementNonce0(7);
+        }
+        decode(data: Uint8Array): Uint8Array {
+            let remoteNonce = new Uint8Array(data.buffer, data.byteLength - NONCE_LEN);
+            let data2 = new Uint8Array(data.buffer, 0, data.byteLength - NONCE_LEN);
+            return syncDecrypt(data2, this.key, remoteNonce);
+        }
+
+        encode(data: Uint8Array): Uint8Array {
+            let d = syncCrypt(data, this.key, this.nonce);
+            let res = new Uint8Array(d.byteLength + NONCE_LEN);
+            d.copyTo(res, 0)
+            this.nonce.copyTo(res, d.byteLength);
+            this.incrementNonce();
+            return res;
+        }
+
+    }
 
     export class PairKeys {
         publicKey: Key;
         privateKey: Key;
 
-        constructor(publicKey: io.aether.common.Key, privateKey: io.aether.common.Key=null) {
+        constructor(publicKey: Key, privateKey: Key = null) {
             this.publicKey = publicKey;
             this.privateKey = privateKey;
         }
@@ -25,8 +72,6 @@ export namespace sodium {
         private readonly keys: PairKeys;
 
         public constructor(keys: PairKeys) {
-            assert(keys.publicKey != null);
-            assert(keys.publicKey.data != null);
             this.keys = keys;
         }
 
@@ -34,10 +79,6 @@ export namespace sodium {
             if (dataBytes == null) return new Uint8Array(0);
             if (dataBytes.byteLength == 0) return dataBytes;
             let keys = this.keys;
-            assert(keys.privateKey != null);
-            assert(keys.privateKey.data != null);
-            assert(keys.privateKey != null);
-            assert(keys.privateKey.data != null);
             return sodium.crypto_box_seal_open(dataBytes, new Uint8Array(keys.publicKey.data), new Uint8Array(keys.privateKey.data));
         }
 
@@ -54,7 +95,7 @@ export namespace sodium {
         return sodium.crypto_aead_chacha20poly1305_keygen();
     }
 
-    export function asyncCrypt(data: (ArrayBuffer | Uint8Array)): ArrayBuffer {
+    export function asyncCrypt(data: (ArrayBuffer | Uint8Array)): Uint8Array {
         if (data instanceof ArrayBuffer) {
             data = new Uint8Array(data as ArrayBuffer);
         }
@@ -63,39 +104,15 @@ export namespace sodium {
         return cdata;
     }
 
-    export function syncCrypt(data: (ArrayBuffer | Uint8Array), key: (ArrayBuffer | Uint8Array), nonce: (ArrayBuffer | Uint8Array)) {
-        if (data instanceof ArrayBuffer) {
-            data = new Uint8Array(data as ArrayBuffer);
-        }
-        if (key instanceof ArrayBuffer) {
-            key = new Uint8Array(key as ArrayBuffer);
-        }
-        if (nonce instanceof ArrayBuffer) {
-            nonce = new Uint8Array(nonce as ArrayBuffer);
-        }
-        assert(data instanceof Uint8Array && key instanceof Uint8Array && nonce instanceof Uint8Array);
-        return sodium.crypto_aead_chacha20poly1305_encrypt(data as Uint8Array, null, null, nonce as Uint8Array,
-            key as Uint8Array)
+    export function syncCrypt(data: Uint8Array, key: Uint8Array, nonce: Uint8Array): Uint8Array {
+        return sodium.crypto_aead_chacha20poly1305_encrypt(data, null, null, nonce, key)
     }
 
-    export function syncDecrypt(data: (ArrayBuffer | Uint8Array), key: (ArrayBuffer | Uint8Array), nonce: (ArrayBuffer | Uint8Array)) {
+    export function syncDecrypt(data: Uint8Array, key: Uint8Array, nonce: Uint8Array): Uint8Array {
         assert(!!nonce);
-        if (data instanceof ArrayBuffer) {
-            data = new Uint8Array(data);
-        }
-        if (key instanceof ArrayBuffer) {
-            key = new Uint8Array(key);
-        }
-        if (nonce instanceof ArrayBuffer) {
-            nonce = new Uint8Array(nonce);
-        } else {
-            throw new Error(nonce.toString());
-        }
-        assert(data instanceof Uint8Array && key instanceof Uint8Array);
         try {
-            let res = sodium.crypto_aead_chacha20poly1305_decrypt(null, data as Uint8Array, null,
-                nonce as Uint8Array, key as Uint8Array);
-            return res;
+            return sodium.crypto_aead_chacha20poly1305_decrypt(null, data as Uint8Array, null,
+                nonce, key);
         } catch (e) {
             console.log(e);
             throw e;

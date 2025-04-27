@@ -5,7 +5,7 @@ module.exports = [
             maxEntrypointSize: 600000,
             maxAssetSize: 600000
         },
-        entry: './src/aether.ts',
+        entry: './src/aether-core.ts',
         module: {
             rules: [
                 {

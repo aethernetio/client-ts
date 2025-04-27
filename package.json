@@ -1,16 +1,14 @@
 {
   "name": "aether-client",
   "version": "1.0.0",
-  "main": "src/aether.ts",
+  "main": "src/aether-core.ts",
   "dependencies": {
     "@types/libsodium-wrappers": "^0.7.14",
     "assert": "^2.1.0",
     "bufferutil": "^4.0.8",
     "dns-query": "^0.11.2",
     "express": "^4.19.2",
-    "libsodium-wrappers": "^0.7.14",
     "nodemon": "^3.1.0",
-    "reflect-metadata": "^0.2.2",
     "universal-ws": "^0.2.9",
     "utf-8-validate": "^6.0.4",
     "util": "^0.12.5"
