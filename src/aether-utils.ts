@@ -6,8 +6,9 @@ declare global {
     interface Uint8Array {
         equals(val: Uint8Array): boolean;
 
-        copyTo(dest: Uint8Array, offsetDest: number, offsetSrc?: number, len?: number);
-        copy():Uint8Array;
+        copyTo(dest: Uint8Array, offsetDest: number, offsetSrc?: number, len?: number):void;
+
+        copy(): Uint8Array;
     }
 
     interface ArrayBuffer {
@@ -19,6 +20,8 @@ declare global {
 
     interface Array<T> {
         shuffle(): Array<T>;
+
+        removeIf(p: (v: T) => boolean): boolean;
     }
 
 }
@@ -32,6 +35,29 @@ Array.prototype.shuffle = function <T>(): Array<T> {
     }
     return this;
 }
+Array.prototype.removeIf = function <T>(p: (v: T) => boolean): boolean {
+    let flag = false;
+    let begin = -1;
+    for (let i = 0; i < this.length; i++) {
+        if (begin == -1) {
+            if (p(this[i])) {
+                begin = i;
+                flag = true;
+            }
+        } else {
+            if (!p(this[i])) {
+                this.slice(begin, i);
+                i = begin - 1;
+                begin = -1;
+            }
+        }
+    }
+    if (begin > -1) {
+        this.slice(begin);
+        return true;
+    }
+    return flag;
+}
 Uint8Array.prototype.equals = function (val: Uint8Array) {
     if (this.byteLength != val.byteLength) return false;
     for (let i = 0; i != val.byteLength; i++) {
@@ -39,8 +65,8 @@ Uint8Array.prototype.equals = function (val: Uint8Array) {
     }
     return true;
 }
-Uint8Array.prototype.copy = function ():Uint8Array {
-    let r=new Uint8Array(this.byteLength);
+Uint8Array.prototype.copy = function (): Uint8Array {
+    let r = new Uint8Array(this.byteLength);
     r.set(this);
     return r;
 }
@@ -98,16 +124,31 @@ export namespace aether.utils {
             throw new Error(hint.toString());
         }
     }
-
+    export type Consumer<T>=(v:T)=>void;
+    interface OnceTask<T> extends Consumer<T> {
+        once?:boolean;
+    }
     export class EventConsumer<T> {
-        private listeners: Array<(v: T) => void>;
+        private listeners: Array<Consumer<T>>;
 
-        public add(l: (v: T) => void) {
+        public add(l: Consumer<T>) {
             this.listeners.push(l);
         }
 
+        public once(l: Consumer<T>) {
+            (l as OnceTask<T>).once = true;
+            this.add(l);
+        }
+
         public fire(val: T): void {
-            this.listeners.forEach(f => f(val));
+            this.listeners.removeIf(f => {
+                if ((f as OnceTask<T>)['once']==true) {
+                    f(val);
+                    return true;
+                }
+                f(val);
+                return false;
+            });
         }
     }
 
@@ -123,6 +164,128 @@ export namespace aether.utils {
         }
     }
 
+    export interface ASet<T> extends Iterable<T> {
+        contains(val: T): boolean;
+
+        add(val: T): boolean;
+
+        remove(val: T): boolean;
+    }
+
+    export abstract class RSet<T> implements ASet<T> {
+        readonly onAdd = new EventConsumer<T>();
+        readonly onRemove = new EventConsumer<T>();
+
+        abstract [Symbol.iterator](): Iterator<T> ;
+
+        abstract contains(val: T): boolean;
+
+        add(val: T): boolean {
+            if (this.add0(val)) {
+                this.onAdd.fire(val);
+                return true;
+            }
+            return false;
+        }
+
+        remove(val: T): boolean {
+            if (this.remove0(val)) {
+                this.onRemove.fire(val);
+                return true;
+            }
+            return false;
+        }
+
+        protected abstract add0(val: T): boolean;
+
+        protected abstract remove0(val: T): boolean;
+    }
+
+
+    export class RSetSrc<T> extends RSet<T> {
+        private readonly data = new Set<T>();
+
+        [Symbol.iterator](): Iterator<T> {
+            return this.data[Symbol.iterator]();
+        }
+
+        contains(val: T): boolean {
+            return this.data.has(val);
+        }
+
+        protected add0(val: T): boolean {
+            let res = this.data.has(val);
+            this.data.add(val);
+            return res;
+        }
+
+        protected remove0(val: T): boolean {
+            let res = this.data.has(val);
+            this.data.delete(val);
+            return res;
+        }
+
+    }
+
+    export class RSetMerge<T> extends RSet<T> {
+        readonly children = new RSetSrc<RSet<T>>();
+        private readonly allElements = new Set<T>();
+
+        constructor() {
+            super();
+            this.children.onAdd.add(v => {
+                for (let e of v) {
+                    this.allElements.add(e);
+                }
+            });
+            this.children.onRemove.add(v => {
+                for (let e of v) {
+                    let count = 0;
+                    for (let ee of this.children) {
+                        if (ee.contains(e)) {
+                            count++;
+                            if (count > 1) break;
+                        }
+                    }
+                    if (count == 1) {
+                        this.allElements.delete(e);
+                    }
+                }
+            });
+        }
+
+        [Symbol.iterator](): Iterator<T> {
+            return this.allElements[Symbol.iterator]();
+        }
+
+        addChild(child: RSet<T>) {
+            this.children.add(child);
+        }
+
+        removeChild(child: RSet<T>) {
+            this.children.add(child);
+        }
+
+        contains(val: T): boolean {
+            return this.allElements.has(val);
+        }
+
+        protected add0(val: T): boolean {
+            throw new Error("unsupported");
+        }
+
+        protected remove0(val: T): boolean {
+            if (this.allElements.has(val)) {
+                this.allElements.delete(val);
+                for (let c of this.children) {
+                    c.remove(val);
+                }
+                return true;
+            }
+            return false;
+        }
+
+    }
 
     const FutureCancel = new Error("cancel");
 
@@ -308,7 +471,7 @@ export namespace aether.utils {
             }
             assert(typeof listener === 'function');
             this.listeners.add(listener);
-            if (this.isDone()) {
+            if (this.isFinalStatus()) {
                 listener(this);
             }
         }
@@ -354,7 +517,6 @@ export namespace aether.utils {
                 f.listeners.fire(f);
                 return
             }
-
             f.onCancel(() => {
                 if (this.isFinalStatus()) return;
                 this.cancel();
@@ -368,6 +530,282 @@ export namespace aether.utils {
         }
 
         mapComposite<E>(f: (v: T) => RFuture<E>): RFuture<E> {
+            if (this.isFinalStatus()) {
+                return f(this.value);
+            }
+            let res = new RFuture<E>();
+            this.add(ff => {
+                if (ff.isDone()) {
+                    f(ff.value).link(res);
+                }
+            });
+            return res;
+        }
+
+        update(val: T | Error) {
+            this._value = val;
+            this.listeners.fire(this);
+        }
+
+        toFuture() {
+            if (this.isFinalStatus()) {
+                return new Future().update(this._value);
+            }
+            let res = new Future();
+            res.onCancel(() => {
+                if (this.isFinalStatus()) return;
+                this.cancel();
+            });
+            this.add(f => {
+                res.update(f._value);
+            });
+            return res;
+        }
+    }
+
+    export class MFuture<T> {
+        private readonly listeners = new EventConsumer<MFuture<T>>();
+        private prom: Promise<T>;
+
+        constructor(value: T = null) {
+            if (typeof value !== 'undefined') {
+                this._value = value;
+            }
+        }
+
+        private _request: boolean;
+
+        get request() {
+            if (!this._request) {
+                this._request = true;
+                return true;
+            }
+            return false;
+        }
+
+        private _value: T | Error;
+
+        get value(): T {
+            if (this._value instanceof Error) {
+                throw this._value as Error
+            }
+            return this._value;
+        }
+
+        static of<T>(p: Promise<T>): MFuture<T> {
+            let res = new MFuture<T>();
+            p.then(v => res.set(v), e => res.error(e));
+            return res;
+        }
+
+        static completed<T>(value: T): MFuture<T> {
+            return new MFuture<T>(value);
+        }
+
+        static any<T>(futures: IterableIterator<MFuture<T>>): RFuture<T> {
+            for (let f of futures) {
+                if (f.isDone()) return f.toRFuture();
+            }
+            let result = new RFuture<T>();
+            for (let f of futures) {
+                f.to(v => result.tryDone(v));
+            }
+            return result;
+        }
+
+        to(listener: (v: T) => void): MFuture<T> {
+            this.add(v => {
+                if (v.isDone()) {
+                    listener(v._value as T);
+                }
+            });
+            return this;
+        }
+
+        toOnce(listener: (v: T) => void) {
+            this.addOnce(v => {
+                if (v.isDone()) {
+                    listener(v._value as T);
+                }
+            });
+        }
+
+        error(e: Error): MFuture<T> {
+            this.update(e);
+            return this;
+        }
+
+        update(v: T | Error) {
+            this._value = v;
+            this.listeners.fire(this);
+        }
+
+        set(value: T): MFuture<T> {
+            this.update(value);
+            return this;
+        }
+
+        timeoutSeconds(time: number, task: (f: MFuture<T>) => void) {
+            let self = this;
+            setTimeout(() => {
+                if (self.isNotDone()) {
+                    task(self);
+                }
+            }, time, this);
+        }
+
+        isDone(): boolean {
+            return typeof this._value && !(this._value instanceof Error);
+        }
+
+        isNotDone(): boolean {
+            return !this.isDone();
+        }
+
+        isError(): boolean {
+            return this._value instanceof Error && this._value != FutureCancel;
+        }
+
+        isCanceled(): boolean {
+            return this._value == FutureCancel;
+        }
+
+        cancel(): MFuture<T> {
+            this.update(FutureCancel);
+            return this;
+        }
+
+        map<E>(f: (v: T) => E): MFuture<E> {
+            let result = new MFuture<E>();
+            this.add(v => {
+                if (v._value instanceof Error) {
+                    result._value = v._value;
+                } else {
+                    result._value = f(v._value);
+                }
+                result.listeners.fire(result);
+            });
+            return result;
+        }
+
+        catch(e: (er: Error) => void): MFuture<T> {
+            if (this.isError()) {
+                e(this.getError());
+                return this;
+            }
+            this.add((v) => {
+                if (v.isError()) {
+                    e(v.getError());
+                }
+            });
+            return this;
+        }
+
+        onCancel(e: () => void): MFuture<T> {
+            this.add((v) => {
+                if (v.isCanceled()) {
+                    e();
+                }
+            });
+            return this;
+        }
+
+        throw(e: Error): MFuture<T> {
+            this.update(e);
+            return this;
+        }
+
+        add(listener: (f: MFuture<T>) => void) {
+            assert(typeof listener === 'function');
+            this.listeners.add(listener);
+            if (this.isFinalStatus()) {
+                listener(this);
+            }
+        }
+
+        addOnce(listener: (f: MFuture<T>) => void) {
+            if (this.isFinalStatus()) {
+                listener(this);
+                return;
+            }
+            assert(typeof listener === 'function');
+            this.listeners.once(listener);
+        }
+
+        isFinalStatus(): boolean {
+            return !!this._value;
+        }
+
+        timeoutError(seconds: number, s: string): MFuture<T> {
+            let self = this;
+            setTimeout(() => {
+                if (!self.isFinalStatus()) {
+                    console.log("Timeout: " + s);
+                }
+            }, seconds * 1000);
+            return this;
+        }
+
+        getError(): Error {
+            return this._value as Error;
+        }
+
+        timeout(seconds: number, f: () => void) {
+            let self = this;
+            setTimeout(() => {
+                if (!self.isFinalStatus()) {
+                    f();
+                }
+            }, seconds * 1000);
+            return this;
+        }
+
+        link(f: MFuture<T>): MFuture<T> {
+            if (this.isFinalStatus()) {
+                if (f._value == this._value) return;
+                f._value = this._value;
+                f.listeners.fire(f);
+                return
+            }
+
+            f.onCancel(() => {
+                if (this.isFinalStatus()) return;
+                this.cancel();
+            });
+            this.add(ff => {
+                if (f._value == ff._value) return;
+                f._value = ff._value;
+                f.listeners.fire(f);
+            });
+            return this;
+        }
+
+        toRFuture(): RFuture<T> {
+            if (this.isDone()) {
+                return RFuture.completed(this.value);
+            } else {
+                let res = new RFuture<T>();
+                this.add(f => {
+                    res.update(f._value);
+                });
+                return res;
+            }
+        }
+
+        mapComposite<E>(f: (v: T) => MFuture<E>): MFuture<E> {
+            if (this.isFinalStatus()) {
+                return f(this.value);
+            }
+            let res = new MFuture<E>();
+            this.add(ff => {
+                if (ff.isDone()) {
+                    f(ff.value).link(res);
+                }
+            });
+            return res;
+        }
+
+        mapRComposite<E>(f: (v: T) => RFuture<E>): RFuture<E> {
             if (this.isFinalStatus()) {
                 return f(this.value);
             }
@@ -474,7 +912,7 @@ export namespace aether.utils {
         }
 
         isDone(): boolean {
-            return typeof this._value && !(this._value instanceof Error) && this._value != FutureCancel;
+            return this._value != null && !(this._value instanceof Error);
         }
 
         isNotDone(): boolean {
@@ -605,6 +1043,12 @@ export namespace aether.utils {
                 f._value = ff._value;
                 f.listeners.fire(f);
             });
+            return this;
+        }
+
+        update(val: any): Future {
+            this._value = val;
+            this.listeners.fire(this);
             return this;
         }
     }
@@ -813,11 +1257,11 @@ export namespace aether.utils {
 
         toArray(): Uint8Array {
             if (this.posRead === 0 && this.posWrite === this.dataView.byteLength) {
-                this.posRead=this.posWrite;
+                this.posRead = this.posWrite;
                 return new Uint8Array(this.dataView.buffer);
             }
-            let res= new Uint8Array(this.dataView.buffer, this.posRead, this.posWrite - this.posRead);
-            this.posRead=this.posWrite;
+            let res = new Uint8Array(this.dataView.buffer, this.posRead, this.posWrite - this.posRead);
+            this.posRead = this.posWrite;
             return res;
         }
 
@@ -827,11 +1271,11 @@ export namespace aether.utils {
             }
         }
 
-        writeData(data: DataIO,len:number=data.getSizeForRead()) {
+        writeData(data: DataIO, len: number = data.getSizeForRead()) {
             assert(data instanceof DataIO);
             if (data.isEmpty()) return;
             this.writeArray(data.dataView, data.posRead, len);
-            data.posRead+=len;
+            data.posRead += len;
         }
 
         writeByteBI(val: bigint): void {

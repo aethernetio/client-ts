@@ -1,5 +1,5 @@
 import {aether as aetherGates} from "./aether-gates";
-import {aether, aether as aetherApi} from "./aether-api";
+import {aether as aetherApi} from "./aether-api";
 import {aether as aUtils} from "./aether-utils";
 import {aether as aetherTran} from "./aether-api-transport";
 import {sodium} from "./aether-crypt";
@@ -9,21 +9,29 @@ import DataIO = aUtils.utils.DataIO;
 import MUint8Array = aetherTran.transport.meta.MUint8Array;
 import MetaType = aetherTran.transport.meta.MetaType;
 import SerializeContext = aetherTran.transport.SerializeContext;
-import Gate = aetherGates.gates.Gate;
-import MetaApi = aetherTran.transport.MetaApi;
 import ApiGate = aetherTran.transport.ApiGate;
-
+import RemoteApi = aetherTran.transport.RemoteApi;
+import ValueMap = aetherGates.gates.ValueMap;
+import RSetSrc = aUtils.utils.RSetSrc;
 
 
 export namespace aether {
 
-    import base64ToArrayBuffer = aUtils.utils.base64ToArrayBuffer;
-
-    interface CryptoProvider {
-        encode(data: Uint8Array): Uint8Array;
-
-        decode(data: Uint8Array): Uint8Array;
-    }
+    import Future = aUtils.utils.Future;
+    import AuthorizedApi = aetherApi.clientServerApi.serverApi.AuthorizedApi;
+    import WSGate = aetherTran.transport.WSGate;
+    import Gate = aetherGates.gates.Gate;
+    import BufferGate = aetherGates.gates.BufferGate;
+    import ClientApiSafe = aetherApi.clientServerApi.clientApi.ClientApiSafe;
+    import ClientApiSafe_META = aetherApi.clientServerApi.clientApi.ClientApiSafe_META;
+    import AuthorizedApi_META = aetherApi.clientServerApi.serverApi.AuthorizedApi_META;
+    import Value = aetherGates.gates.Value;
+    import MapGate = aetherGates.gates.MapGate;
+    import UUIDAndCloud = aetherApi.common.UUIDAndCloud;
+    import MFuture = aUtils.utils.MFuture;
+    import Int16 = aUtils.utils.Int16;
+    import ServerDescriptor = aetherApi.common.ServerDescriptor;
+    import Int64 = aUtils.utils.Int64;
 
     export enum AetherCodec {
         BINARY,
@@ -37,9 +45,11 @@ export namespace aether {
     export interface CryptoNode {
 
     }
+
     export interface CryptoProvider {
-        encode(data:Uint8Array):Uint8Array;
-        decode(data:Uint8Array):Uint8Array;
+        encode(data: Uint8Array): Uint8Array;
+
+        decode(data: Uint8Array): Uint8Array;
     }
 
     export enum CryptoLib {SODIUM, HYDROGEN}
@@ -123,98 +133,165 @@ export namespace aether {
         }
     }
 
-    export interface AetherStore {
-        getUid(): UUID;
-
-        setUid(uid: UUID): void;
-
-        getCloud(uid: UUID): Cloud;
-        setCloud(uid: UUID,Cloud):void;
-
-        getMasterKey(): Key;
+    export class AccessGroup extends RSetSrc<UUID> {
+        id: Int64;
+        owner: UUID;
     }
-    import Future=aUtils.utils.Future;
-    import AuthorizedApi = aetherApi.clientServerApi.serverApi.AuthorizedApi;
-    import RFuture = aUtils.utils.RFuture;
-    import WSGate = aetherTran.transport.WSGate;
-    import Gate=aetherGates.gates.Gate;
-    import BufferGate=aetherGates.gates.BufferGate;
-    import ClientApiSafe = aether.clientServerApi.clientApi.ClientApiSafe;
-    import ClientApiSafe_META = aetherApi.clientServerApi.clientApi.ClientApiSafe_META;
-    import AuthorizedApi_META = aetherApi.clientServerApi.serverApi.AuthorizedApi_META;
-    import Value = aetherGates.gates.Value;
-    abstract class Connection{
-        ws:WSGate;
-        protected constructor(url:URL) {
+
+    export interface AetherStore {
+        parent: UUID;
+        uid: UUID;
+        clouds: Map<UUID, Cloud>;
+        servers: Map<ServerId, ServerDescriptor>;
+        accessGroups: Map<Int64, AccessGroup>;
+        masterKey: Key;
+    }
+
+    export class AetherStoreInMemory implements AetherStore {
+        accessGroups = new Map<Int64, aether.AccessGroup>;
+        clouds = new Map<UUID, Cloud>;
+        masterKey: Key;
+        parent: UUID;
+        servers = new Map<ServerId, ServerDescriptor>;
+        uid: UUID;
+
+    }
+
+    abstract class Connection {
+        ws: WSGate;
+
+        protected constructor(client: AetherCloudClient, url: URL) {
             this.ws = new WSGate(url);
             this.onConnect(this.ws.outside.accumUnPack());
         }
-        abstract onConnect(g:Gate<Uint8Array,Uint8Array>):void;
+
+        abstract onConnect(g: Gate<Uint8Array, Uint8Array>): void;
     }
+
     class ConnectionWork extends Connection {
-        buf=new BufferGate();
-        auth:ApiGate<ClientApiSafe,AuthorizedApi>;
-        constructor(url: URL) {
-            super(url);
-            this.auth=this.buf.down.toApi<ClientApiSafe,AuthorizedApi>(ClientApiSafe_META,AuthorizedApi_META,new class implements aether.clientServerApi.clientApi.ClientApiSafe {
-                changeAlias(alias: aether.UUID): void {
-                }
+        buf = new BufferGate();
+        auth: ApiGate<ClientApiSafe, AuthorizedApi>;
 
-                changeParent(uid: aether.UUID): void {
-                }
+        constructor(public readonly serverId: ServerId, client: AetherCloudClient, url: URL) {
+            super(client, url);
+            this.auth = this.buf.down.toApi<ClientApiSafe, AuthorizedApi>(ClientApiSafe_META, AuthorizedApi_META,
+                new class implements ClientApiSafe {
+                    changeAlias(alias: aether.UUID): void {
+                    }
 
-                newChild(uid: aether.UUID): void {
-                }
+                    changeParent(uid: aether.UUID): void {
+                        client.store.parent = uid;
+                    }
 
-                sendCloud(uid: aether.UUID, cloud: aether.common.Cloud): void {
-                }
+                    newChild(uid: aether.UUID): void {
+                    }
 
-                sendMessage(uid: aether.UUID, data: Value<Uint8Array>): void {
-                }
+                    sendCloud(uid: aether.UUID, cloud: Cloud): void {
+                    }
 
-                sendServerDescriptor(v: aetherApi.common.ServerDescriptor): void {
-                }
+                    sendMessage(uid: aether.UUID, data: Value<Uint8Array>): void {
+                    }
+
+                    sendServerDescriptor(v: aetherApi.common.ServerDescriptor): void {
+                    }
+                });
+        }
+
+        getAetherAuthApi(): RemoteApi<AuthorizedApi> {
+            return this.auth.remote;
+        }
+
+        onConnect(g: Gate<Uint8Array, Uint8Array>) {
+            this.buf.down.link = g;
+        }
+    }
+
+    class ConnectionReg extends Connection {
+
+        constructor(client: aether.AetherCloudClient, url: URL) {
+            super(client, url);
+        }
+
+        onConnect(g: Gate<Uint8Array, Uint8Array>): void {
+        }
+    }
+
+    type ServerId = Int16;
+
+    export class AetherCloudClient {
+        private readonly connectionsWork: MapGate<ServerId, ConnectionWork> = new MapGate(cw => cw.serverId);
+        private readonly clouds = new MapGate<UUID, UUIDAndCloud>((c: UUIDAndCloud) => c.uid as UUID);
+        private readonly servers = new MapGate<Int16, ServerDescriptor>(c => c.id);
+
+        constructor(public readonly store: AetherStore) {
+            this.clouds.addRequest().toConsumer(v => {
+                this.store.clouds.set(v.key, v.val.cloud);
+            });
+            this.servers.addRequest().toConsumer(v => {
+                this.store.servers.set(v.key, v.val);
+            });
+            this.getAetherAuthApi().to(r => {
+                this.clouds.addOutput().toSubApi(r, (api, d) => {
+                    api.resolverClouds(new class extends ValueMap<Array<UUID>> {
+                        constructor() {
+                            super(d);
+                        }
+
+                        get data(): Array<UUID> {
+                            return [d.data];
+                        }
+                    });
+                });
+                this.servers.addOutput().toSubApi(r, (api, d) => {
+                    api.resolverServers(new class extends ValueMap<Uint16Array> {
+                        constructor() {
+                            super(d);
+                        }
+
+                        get data(): Uint16Array {
+                            let ar = new Uint16Array(1);
+                            ar[0] = d.data;
+                            return ar;
+                        }
+                    });
+                });
             });
         }
 
-        getAetherAuthApi():AuthorizedApi{
-            return this.auth.remote;
+        getCloud(uid: UUID): MFuture<Cloud> {
+            return this.clouds.get(uid).map(c => c.cloud);
         }
-        onConnect(g: Gate<Uint8Array, Uint8Array>) {
-            this.buf.down.link=g;
-        }
-    }
-    class ConnectionReg{
 
-    }
-    type ServerId=utils.Int16;
-    export class AetherCloudClient {
-        readonly store:AetherStore;
-        private readonly connectionsWork: Map<ServerId,RFuture<ConnectionWork>>;
-        private readonly connectionsWork: Map<UUID,RFuture<Cloud>>;
-        private register():Future{
-            return null;
+        getUid(): UUID {
+            return this.store.uid;
         }
-        getCloud(uid:UUID):RFuture<Cloud>{
 
-        }
-        getConnectionWork():RFuture<ConnectionWork>{
-            if(this.connectionsWork.size==0){
-                new ConnectionWork();
+        getConnectionWork(serverId?: Int16): MFuture<ConnectionWork> {
+            if (serverId) {
+                return this.connectionsWork.get(serverId);
             }
-            return RFuture.any<ConnectionWork>(this.connectionsWork.values());
+            return this.getCloud(this.getUid()).mapComposite(c => {
+                let serverId2: Int16 = c.data[0];
+                return this.getConnectionWork(serverId2);
+            });
         }
-        getAetherAuthApi():RFuture<AuthorizedApi>{
-            return this.getConnectionWork().map(c=>c.getAetherAuthApi());
-        }
-        connect():Future{
-            return Future.of(sodium.sodium.ready).mapComposite(()=>{
-                if(this.store.getUid()){//is registered
 
-                }else{
+        getAetherAuthApi(): MFuture<RemoteApi<AuthorizedApi>> {
+            return this.getConnectionWork().map(c => c.getAetherAuthApi());
+        }
+
+        connect(): Future {
+            return Future.of(sodium.sodium.ready).mapComposite(() => {
+                if (this.store.uid) {//is registered
+                    return this.getConnectionWork().toRFuture().toFuture()
+                } else {
                     return this.register()
                 }
             });
+        }
+
+        private register(): Future {
+            return null;
         }
     }
 

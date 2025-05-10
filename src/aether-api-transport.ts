@@ -1,9 +1,9 @@
-import {aether, aether as gates} from "./aether-gates";
+import {aether as gates} from "./aether-gates";
 import {aether as aetherUtils} from "./aether-utils";
 import RFuture = aetherUtils.utils.RFuture;
 import Future = aetherUtils.utils.Future;
 import Value = gates.gates.Value;
-import GateI = gates.gates.GateI;
+import ValueRequestData = gates.gates.ValueRequestData;
 import FGate = gates.gates.FGate;
 import DataIO = aetherUtils.utils.DataIO;
 import Int8 = aetherUtils.utils.Int8;
@@ -16,11 +16,9 @@ export namespace aether.transport {
 
     import EventRun = aetherUtils.utils.EventRun;
     import MetaType = transport.meta.MetaType;
-    import ValueListener = aether.gates.ValueListener;
-    import ValueListenerEmpty = aether.gates.ValueListenerEmpty;
 
     export interface SerializeContext {
-        regValue(val: ValueListener): void;
+        regValue(val: Value<any>): void;
 
         regRFuture<T>(val: RFuture<T>, meta: meta.MetaType<T>): Int16;
 
@@ -29,6 +27,8 @@ export namespace aether.transport {
         getRFuture(reqId: Int16): RFuture<any>;
 
         getFuture(reqId: Int16): Future;
+
+        toRemote(out: DataIO): void;
     }
 
     export interface SC<T> {
@@ -45,6 +45,8 @@ export namespace aether.transport {
 
     export namespace meta {
 
+        import ValueA = gates.gates.ValueA;
+
         export interface MetaType<T> {
             serialize(ctx: SerializeContext, out: DataIO, value: T): void;
 
@@ -52,20 +54,27 @@ export namespace aether.transport {
         }
 
         export interface MetaArg {
-            name: string;
-            type: MetaType<any>;
+            get name(): string;
+
+            get type(): MetaType<any>;
         }
 
         export interface MetaMethod {
-            get name: string;
-            get returnType: MetaType<any>;
-            get args: Array<MetaArg>;
+            get name(): string;
+
+            get returnType(): MetaType<any>;
+
+            get args(): Array<MetaArg>;
+        }
+
+        export interface LocalApi {
+            getTransportResult(id: Int16): ResultUnit<any>;
+
+            getTransportStream(id: Int16): FGate<Uint8Array, Uint8Array>;
         }
 
         export interface MetaApi<T> {
-            get methods: Array<MetaMethod>;
-
-            callFromRemote(ctx: SerializeContext, inData: DataIO): void;
+            callFromRemote(ctx: SerializeContext, localApi: T, inData: Value<Uint8Array>): void;
 
             makeRemote(ctx: SerializeContext): T;
         }
@@ -209,18 +218,120 @@ export namespace aether.transport {
         export function makeValue<T>(m: MetaType<T>): MetaType<Value<T>> {
             return new class implements meta.MetaType<Value<T>> {
                 deserialize(ctx: SerializeContext, inData: DataIO): Value<T> {
-                    return Value.of(m.deserialize(ctx, inData));
+                    let d = m.deserialize(ctx, inData);
+                    return new class extends ValueA<T> {
+                        get isData(): boolean {
+                            return true;
+                        }
+
+                        get data(): T {
+                            return d;
+                        }
+                    };
                 }
 
                 serialize(ctx: SerializeContext, out: DataIO, value: Value<T>): void {
-                    ctx.regValue(value.listener);
+                    ctx.regValue(value);
                     m.serialize(ctx, out, value.data);
                 }
             };
         }
 
         export function makeApi<T>(m: any): MetaApi<T> {
-            return null;
+            let methods: Map<Int16, MetaMethod>;
+            return new class implements MetaApi<T> {
+                callFromRemote(ctx: SerializeContext, localApi: T, inDataVal: Value<Uint8Array>): void {
+                    let inData = new DataIO(inDataVal.data);
+                    let lApi: LocalApi = localApi as LocalApi;
+                    while (inData.isReadable()) {
+                        let cmdId = inData.readByte();
+                        let reqId: Int16 = 0;
+                        switch (cmdId) {
+                            case 0://result
+                                reqId = meta.MRequestId.deserialize(ctx, inData)
+                                let unitRes = lApi.getTransportResult(reqId);
+                                unitRes.future.done(unitRes.meta.deserialize(ctx, inData));
+                                break;
+                            case 1://exception
+                                reqId = meta.MRequestId.deserialize(ctx, inData)
+                                let unitError = lApi.getTransportResult(reqId);
+                                unitError.future.error(unitError.error.deserialize(ctx, inData));
+                                break;
+                            case 2://stream
+                                reqId = meta.MStreamId.deserialize(ctx, inData)
+                                let data = meta.MUint8Array.deserialize(ctx, inData);
+                                let g = lApi.getTransportStream(reqId);
+                                g.inside.send(new class implements Value<Uint8Array> {
+                                    get close(): boolean {
+                                        return inDataVal.close;
+                                    }
+
+                                    get isData(): boolean {
+                                        return true;
+                                    }
+
+                                    get data(): Uint8Array {
+                                        return data;
+                                    }
+
+                                    get force(): boolean {
+                                        return inDataVal.force;
+                                    }
+
+                                    get priority(): number {
+                                        return inDataVal.priority;
+                                    }
+
+                                    get requestData(): boolean {
+                                        return inDataVal.requestData;
+                                    }
+
+                                    abort(): void {
+                                        throw new Error();
+                                    }
+
+                                    drop(): void {
+                                    }
+                                });
+                                break;
+                            default:
+                                let m = methods.get(cmdId);
+                                let args: Array<any> = [];
+                                if (m.returnType) {
+                                    let f: Future | RFuture<any> = m.returnType.deserialize(ctx, inData);
+                                    for (let a of m.args) {
+                                        args.push(a.type.deserialize(ctx, inData));
+                                    }
+                                    let res = (localApi[m.name  as keyof T] as Function).apply(localApi, args);
+                                    f.done(res);
+                                } else {
+                                    for (let a of m.args) {
+                                        args.push(a.type.deserialize(ctx, inData));
+                                    }
+                                    (localApi[m.name as keyof T] as Function).apply(localApi, args);
+                                }
+                        }
+                    }
+                }
+
+                makeRemote(ctx: SerializeContext): T {
+                    let r:Record<string,any> = {};
+                    for (let m of methods.values()) {
+                        r[m.name] = function () {
+                            let out = new DataIO();
+                            for (let i = 0; i < m.args.length; i++) {
+                                let a = arguments[i];
+                                if (a == null || typeof a == 'undefined') {
+                                    throw new Error("Argument [" + m.args[i].name + "] is null");
+                                }
+                                m.args[i].type.serialize(ctx, out, a);
+                            }
+                            ctx.toRemote(out);
+                        }
+                    }
+                    return r as T;
+                }
+            };
         }
 
         export function makeSC<T>(): MetaType<SC<T>> {
@@ -291,6 +402,7 @@ export namespace aether.transport {
             }
         }
         export const MRequestId = MInt16;
+        export const MStreamId = MInt16;
         export const MBoolean: MetaType<boolean> = new class implements MetaType<boolean> {
             deserialize(ctx: SerializeContext, inData: DataIO): boolean {
                 return inData.readBoolean();
@@ -344,7 +456,6 @@ export namespace aether.transport {
                 out.writeArray(new Uint8Array(value.buffer));
             }
         }
-
         export const MString: MetaType<string> = new class MString implements meta.MetaType<string> {
             static readonly texe = new TextEncoder();
             static readonly tdec = new TextDecoder();
@@ -367,6 +478,7 @@ export namespace aether.transport {
     class ResultUnit<T> {
         readonly future: RFuture<T> | Future;
         readonly meta: MetaType<T>;
+        readonly error: MetaType<T>;
 
         constructor(future: RFuture<T> | Future, meta: MetaType<T>) {
             this.future = future;
@@ -374,14 +486,33 @@ export namespace aether.transport {
         }
     }
 
+    export interface RemoteApi<T> {
+        get apiGate(): ApiGate<any, T>;
+
+        run(task: (api: T) => void): Future;
+
+        run_flush(task: (api: T) => void): Future;
+
+        runWithResult<R>(task: (api: T) => R): RFuture<R>;
+
+        runWithResult_flush<R>(task: (api: T) => R): RFuture<R>;
+
+        runWithResultFuture<R>(task: (api: T) => RFuture<R>): RFuture<R>;
+
+        runWithResultFuture_flush<R>(task: (api: T) => RFuture<R>): RFuture<R>;
+    }
+
     export class ApiGate<LT, RT> extends FGate<Uint8Array, Uint8Array> implements SerializeContext {
         readonly lt: MetaApi<LT>;
         readonly rt: MetaApi<RT>;
         readonly localApi: LT;
-        readonly remote: RT;
+        public readonly remote: RemoteApi<RT>;
+        private readonly remote0: RT;
         private reqIdCounter: Int16;
-        private toRemoteValues = ValueListenerEmpty;
-        private toRemote = new DataIO();
+        private readonly toRemoteData = new Array<DataIO>();
+        private readonly toRemoteTasks = new Array<(api: RT) => void>();
+        private toRemoteValues = new Array<Value<any>>();
+        private flushProcess: boolean;
 
         constructor(lt: MetaApi<LT>, rt: MetaApi<RT>, localApi: LT,
                     readonly onRequestData = new EventRun(),
@@ -389,65 +520,133 @@ export namespace aether.transport {
                     readonly streams = new Map<Int16, ApiStream>(),
                     readonly results = new Map<Int16, ResultUnit<any>>()
         ) {
-            super(new class implements GateI<Uint8Array> {
-                fGate: FGate<any, any>;
-
-                isWritable(): boolean {
-                    return true;
-                }
-
-                requestData(): void {
+            super((val, fGate) => {
+                let ctx = fGate as unknown as SerializeContext;
+                lt.callFromRemote(ctx, this.localApi, val);
+                if (val.requestData) {
                     onRequestData.fire();
                     for (let s of streams.values()) {
-                        s.inside.requestData();
+                        s.inside.send(ValueRequestData);
                     }
                 }
-
-                send(val: Value<Uint8Array>): void {
-                    let inData = new DataIO(val.data);
-                    let ctx = this.fGate as unknown as SerializeContext;
-                    while (inData.isReadable()) {
-                        let cmdId = inData.readByte();
-                        let reqId: Int16 = 0;
-                        switch (cmdId) {
-                            case 0://result
-                                reqId = meta.MRequestId.deserialize(ctx, inData)
-                                let unitRes = results.get(reqId);
-                                unitRes.future.done(unitRes.meta.deserialize(ctx, inData));
-                                break;
-                            case 1://exception
-                                reqId = meta.MRequestId.deserialize(ctx, inData)
-                                let unitError = results.get(reqId);
-                                unitError.future.error(unitError.meta.deserialize(ctx, inData));
-                                break;
-                        }
-                    }
-                }
-            })
+            });
             this.lt = lt;
             this.rt = rt;
             this.localApi = localApi;
-            let r = {};
+            this.remote0 = rt.makeRemote(this);
             let self = this;
-            for (let m of rt.methods) {
-                r[m.name] = function () {
-                    let out = self.toRemote;
-                    for (let i = 0; i < m.args.length; i++) {
-                        let a = arguments[i];
-                        if (a == null || typeof a == 'undefined') {
-                            throw new Error("Argument [" + m.args[i].name + "] is null");
+            this.remote = new class implements aether.transport.RemoteApi<RT> {
+                get apiGate(): ApiGate<any, RT> {
+                    return self;
+                }
+
+                run(task: (api: RT) => void): Future {
+                    let res = new Future();
+                    self.toRemoteTasks.push((a) => {
+                        try {
+                            task(a);
+                            res.done();
+                        } catch (e) {
+                            res.error(e);
                         }
-                        m.args[i].type.serialize(self, out, a);
-                    }
+                    });
+                    return res;
+                }
+
+                runWithResult<R>(task: (api: RT) => R): RFuture<R> {
+                    let res = new RFuture<R>();
+                    this.run((a) => {
+                        res.done(task(a));
+                    });
+                    return res;
+                }
+
+                runWithResultFuture<R>(task: (api: RT) => RFuture<R>): RFuture<R> {
+                    let res = new RFuture<R>();
+                    this.run((a) => {
+                        task(a).link(res);
+                    });
+                    return res;
+                }
+
+                runWithResultFuture_flush<R>(task: (api: RT) => RFuture<R>): RFuture<R> {
+                    let res = new RFuture<R>();
+                    this.run_flush((a) => {
+                        task(a).link(res);
+                    });
+                    return res;
+                }
+
+                runWithResult_flush<R>(task: (api: RT) => R): RFuture<R> {
+                    let res = new RFuture<R>();
+                    this.run_flush((a) => {
+                        res.done(task(a));
+                    });
+                    return res;
+                }
+
+                run_flush(task: (api: RT) => void): Future {
+                    this.run(task);
+                    return self.flush();
                 }
             }
-            this.remote = r as RT;
         }
 
-        flush(): void {
-            let b = this.toRemote.toArray().copy();
-            this.toRemote.reset();
-            this.inside.send(Value.ofFlush(b, this.toRemoteValues));
+        toRemote(out: DataIO) {
+            this.toRemoteData.push(out);
+        }
+
+        flush(): Future {
+            if (this.flushProcess) return;
+            this.flushProcess = true;
+            try {
+                this.toRemoteTasks.forEach(t => t(this.remote0));
+                let out = new DataIO();
+                let res = new Future();
+                while (this.toRemoteData.length > 0) {
+                    out.writeData(this.toRemoteData.shift());
+                }
+                let vv = this.toRemoteValues;
+                this.toRemoteValues = [];
+                let pr: number = vv.map(v => v.priority).reduce((v1, v2) => Math.max(v1, v2));
+                this.inside.send(new class implements Value<Uint8Array> {
+                    get close(): boolean {
+                        return false;
+                    }
+
+                    get data(): Uint8Array {
+                        return out.toArray();
+                    }
+
+                    get isData(): boolean {
+                        return true;
+                    }
+
+                    get force(): boolean {
+                        return true;
+                    }
+
+                    get priority(): number {
+                        return pr;
+                    }
+
+                    get requestData(): boolean {
+                        return false;
+                    }
+
+                    abort(): void {
+                        vv.forEach(v => v.abort());
+                    }
+
+                    drop(): void {
+                        vv.forEach(v => v.drop());
+                        res.done();
+                    }
+                });
+                return res;
+            } finally {
+                this.flushProcess = false;
+            }
         }
 
         getFuture(reqId: Int16): Future {
@@ -470,13 +669,9 @@ export namespace aether.transport {
             return res;
         }
 
-        regValue(val: ValueListener): void {
-            if (val && val != ValueListenerEmpty) {
-                let old = this.toRemoteValues;
-                this.toRemoteValues = (o) => {
-                    old(o);
-                    val(o);
-                };
+        regValue(val: Value<any>): void {
+            if (val && val.isData) {
+                this.toRemoteValues.push(val);
             }
         }
 
@@ -484,23 +679,11 @@ export namespace aether.transport {
 
     export class WSGate extends FGate<Uint8Array, Uint8Array> {
         constructor(url: URL, private readonly ws: WebSocket = new WebSocket(url)) {
-            super(new class implements GateI<Uint8Array> {
-                fGate: FGate<any, any>;
-
-                isWritable(): boolean {
-                    return ws.readyState == WebSocket.OPEN;
-                }
-
-                requestData(): void {
-
-                }
-
-                send(val: Value<Uint8Array>): void {
-                    ws.send(val.data);
-                }
+            super(val => {
+                ws.send(val.data);
             });
             this.ws.onopen = e => {
-                this.inside.requestData();
+                this.inside.send(ValueRequestData);
             };
         };
     }
