@@ -3,17 +3,16 @@
     "outDir": "./build/",
     "noImplicitAny": true,
     "module": "ES2020",
-    "target": "ES2020",
+    "target": "ES2022",
     "jsx": "react",
     "sourceMap": true,
     "moduleResolution": "node",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "lib": [
-      "es2020",
-      "dom",
-      "es7",
-      "scripthost"
+      "ES2022",
+      "DOM",
+      "ScriptHost"
     ]
   }
 }
