@@ -1,0 +1,83 @@
+include:
+  - common
+
+name: ClientServerReg
+types:
+api:
+  ClientApiRegSafe:
+  GlobalRegClientApi:
+  ClientApiRegUnsafe:
+    methods:
+      enter:
+        id: 3
+        params:
+          stream:
+            name: ClientApiRegSafeStream
+            stream:
+              api: ClientApiRegSafe
+              crypto: true
+      enterGlobal:
+        id: 4
+        params:
+          stream:
+            name: GlobalRegClientApiStream
+            stream:
+              api: GlobalRegClientApi
+              crypto: true
+  GlobalRegServerApi:
+    methods:
+      setMasterKey:
+        id: 3
+        params:
+          key: Key
+      finish:
+        id: 4
+        returns:
+          fields:
+            alias: uuid
+            uid: uuid
+            cloud: Cloud
+
+  ServerRegistrationApi:
+    methods:
+      registration:
+        id: 3
+        params:
+          salt: string
+          suffix: string
+          passwords: int[]
+          parent: uuid
+          returnKey: Key
+          globalApi:
+            stream:
+              api: GlobalRegServerApi
+              crypto: true
+      requestWorkProofData:
+        id: 4
+        returns: WorkProofDTO
+        params:
+          parent: uuid
+          powMethods: PowMethod
+          returnKey: Key
+      resolveServers:
+        id: 5
+        returns: ServerDescriptor[]
+        params:
+          serverIds: Cloud
+
+  RegistrationRootApi:
+    methods:
+      getAsymmetricPublicKey:
+        id: 3
+        returns: SignedKey
+        params:
+          cryptoLib: CryptoLib
+      enter:
+        id: 4
+        params:
+          cryptoLib: CryptoLib
+          stream:
+            name: ServerRegistrationApiStream
+            stream:
+              api: ServerRegistrationApi
+              crypto: true

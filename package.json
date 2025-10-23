@@ -15,8 +15,9 @@
   },
   "scripts": {
     "preinstall": "npx npm-force-resolutions",
-    "build": "webpack --config webpack.config.mjs",
-    "test": "webpack --config webpack.config-test.js"
+    "generate-protocol": "npx tsx src/AetherProtocolPlugin.ts",
+    "prebuild": "npm run generate-protocol",
+    "build": "tsx node_modules/webpack/bin/webpack.js --config webpack.config.mjs"
   },
   "overrides": {
     "chokidar": "3.5.3",
@@ -35,7 +36,11 @@
     "tsx": "^4.15.6",
     "typescript": "^5.4.5",
     "webpack": "^5.102.1",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "glob": "^10.0.0",
+    "webpack-merge": "^5.1.0",
+    "js-yaml": "^4.1.0",
+    "@types/js-yaml": "^4.0.5"
   },
   "engines": {
     "node": "^21.7.3"
