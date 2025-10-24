@@ -26,21 +26,25 @@
   "devDependencies": {
     "@testdeck/mocha": "^0.3.3",
     "@types/chai": "^4.3.16",
+    "@types/jest": "^30.0.0",
+    "@types/js-yaml": "^4.0.5",
     "@types/lodash": "^4.17.4",
     "@types/node": "^20.13.0",
     "chai": "^5.1.1",
+    "glob": "^10.0.0",
+    "jest": "^30.2.0",
+    "jest-mock-extended": "^4.0.0",
+    "js-yaml": "^4.1.0",
     "mocha": "^10.4.0",
     "nyc": "^17.0.0",
+    "ts-jest": "^29.4.5",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.15.6",
     "typescript": "^5.4.5",
     "webpack": "^5.102.1",
     "webpack-cli": "^5.1.4",
-    "glob": "^10.0.0",
-    "webpack-merge": "^5.1.0",
-    "js-yaml": "^4.1.0",
-    "@types/js-yaml": "^4.0.5"
+    "webpack-merge": "^5.1.0"
   },
   "engines": {
     "node": "^21.7.3"

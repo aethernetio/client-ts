@@ -8,8 +8,8 @@ import {
     AConsumer, AFunction, ABiFunction,
 } from './aether_types';
 import {
-    EventConsumer, ARFutureWithFlag, ARFutureWithFlagImpl, AFuture,
-    AFutureImpl
+    EventConsumer, ARFutureWithFlag, AFuture,
+    ARFuture
 } from './aether_future';
 import { RU } from './aether_utils';
 
@@ -479,7 +479,7 @@ export class BMapImpl<K, V> implements BMap<K, V> {
     public getFuture(key: K): ARFutureWithFlag<V> {
         let future = this.data.get(key);
         if (!future) {
-            future = new ARFutureWithFlagImpl<V>();
+            future = new ARFutureWithFlag<V>();
             const onFinalize = (f: ARFutureWithFlag<V>) => {
                 this.removeRequest(key);
                 if (f.isDone()) {
@@ -564,7 +564,7 @@ export class BMapImpl<K, V> implements BMap<K, V> {
         this.data.clear();
         this.allRequests.clear();
         this._forUpdate.listeners.clear(); this._forRemove.listeners.clear(); this._forValueUpdate.listeners.clear();
-        return AFutureImpl.of();
+        return AFuture.of();
     }
 }
 

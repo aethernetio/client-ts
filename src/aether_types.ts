@@ -14,13 +14,10 @@ export class UUID {
         }
 
         const hex = match.slice(1).join(''); // match[1]...match[5]
-
         const data = new Uint8Array(16);
-
         for (let i = 0; i < 16; i++) {
             data[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
         }
-
         const uuid = new UUID();
         uuid.data = data;
         return uuid;
@@ -29,20 +26,12 @@ export class UUID {
     data!: Uint8Array;
     toString(): string {
         if (!this.data || this.data.length !== 16) {
-            // Это должно быть невозможно, если объект создан корректно,
-            // но для безопасности можно выбросить ошибку или вернуть пустую строку.
             throw new Error('UUID data is missing or incorrect size.');
         }
-
         let hexParts: string[] = [];
-
-        // Переводим каждый байт в двухсимвольное шестнадцатеричное представление
         for (let i = 0; i < 16; i++) {
-            // .toString(16) преобразует число в шестнадцатеричную строку.
-            // .padStart(2, '0') добавляет ведущий ноль, если нужно (например, 10 -> "0a").
             hexParts.push(this.data[i].toString(16).padStart(2, '0'));
         }
-
         return [
             hexParts.slice(0, 4).join(''),
             hexParts.slice(4, 6).join(''),
@@ -51,7 +40,6 @@ export class UUID {
             hexParts.slice(10, 16).join(''),
         ].join('-');
     }
-
 }
 export type URI = string;
 
@@ -119,5 +107,33 @@ export interface AutoCloseable {
     close(): void;
 }
 export interface Destroyable extends Disposable {
-    destroy(force: boolean): any;
+    destroy(force: boolean): any; // AFuture | void | etc.
+}
+
+// --- ИСПРАВЛЕНО: Добавлены классы ошибок ---
+
+/** Exception related to client startup and connection issues. */
+export class ClientStartException extends Error {
+    constructor(message: string, cause?: Error) {
+        super(message);
+        if (cause) this.cause = cause;
+        this.name = 'ClientStartException';
+    }
+}
+
+/** Exception related to errors occurring during API requests. */
+export class ClientApiException extends Error {
+    constructor(message: string, cause?: Error) {
+        super(message);
+        if (cause) this.cause = cause;
+        this.name = 'ClientApiException';
+    }
+}
+
+/** Exception related to internal asynchronous operation timeouts. */
+export class ClientTimeoutException extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'ClientTimeoutException';
+    }
 }

@@ -1,22 +1,23 @@
 // =============================================================================================
 // FILE: aether_protocol_generator.ts
 // PURPOSE: Standalone Generator для генерации TypeScript кода из ADSL YAML,
-//          на основе Groovy-генератора. (ИСПРАВЛЕННАЯ ВЕРСИЯ 22 - Fix syntax error and spacing)
+//          на основе Groovy-генератора. (ИСПРАВЛЕННАЯ ВЕРСИЯ 24 - Add crypto support for Streams)
 // =============================================================================================
 
 // --- Импорты типов, используемых в генерируемом коде (для ссылок) ---
 import {
-    AFuture, ARFuture, AFutureImpl, ARFutureImpl,
+    AFuture, ARFuture,
 } from './aether_future';
 import {
-    DataIn, DataOut, DataInOutImpl, DataInOutStaticImpl
+    DataIn, DataOut, DataInOut, DataInOutStatic
 } from './aether_datainout';
 import {
     FastMetaType, FastFutureContext, RemoteApi, FastMeta,
-    SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi
+    SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi,
+    BytesConverter, RemoteApiFuture // <-- Добавлен импорт BytesConverter, RemoteApiFuture
 } from './aether_fastmeta';
 import {
-    UUID, URI, Uint8Array
+    UUID, URI, Uint8Array, AConsumer // <-- Добавлен импорт AConsumer
 } from './aether_types';
 import { ToString, AString } from './aether_astring';
 
@@ -34,12 +35,16 @@ export type AetherDslMeta = {
 
 export type AetherDslMetaMap = { [baseName: string]: AetherDslMeta };
 export type IncludeResolver = (includeName: string) => Promise<AetherDslMeta>;
-export type TypeDefinition = { [key: string]: any };
+// --- ИЗМЕНЕНИЕ: TypeDefinition теперь может содержать stream с crypto ---
+export type TypeDefinition = {
+    [key: string]: any;
+    stream?: { api?: string, crypto?: boolean, name?: string }; // Добавлено crypto?
+};
 
 // =============================================================================================
-// 1. TypeInfo (Парсинг типов DSL)
+// 1. TypeInfo (Парсинг типов DSL) - БЕЗ ИЗМЕНЕНИЙ
 // =============================================================================================
-
+// ... (код TypeInfo остается прежним) ...
 class TypeInfo {
     public readonly javaType: string;
     public readonly javaTypeBoxed: string;
@@ -123,9 +128,9 @@ class TypeInfo {
     }
 
     getInitFuture(): string {
-        if (this.javaType === "void") { return "AFutureImpl.make()"; }
+        if (this.javaType === "void") { return "AFuture.make()"; }
         const tsType = this.toTsType(false, false);
-        return `ARFutureImpl.of<${tsType}>()`;
+        return `ARFuture.of<${tsType}>()`;
     }
     getAsReturnType(): string {
         if (this.javaType === "void") { return "AFuture"; }
@@ -159,11 +164,10 @@ class TypeInfo {
         return `${this.javaType}${this.isPack ? '(pack)' : ''}${this.isArray ? `[${this.arrayStaticSize > 0 ? this.arrayStaticSize : ''}]` : ''}${this.isNullable ? '?' : ''}`;
     }
 }
-
 // =============================================================================================
-// 2. GeneratorLogic (Вспомогательные методы и логика сериализации/десериализации)
+// 2. GeneratorLogic (Вспомогательные методы и логика сериализации/десериализации) - БЕЗ ИЗМЕНЕНИЙ
 // =============================================================================================
-
+// ... (код GeneratorLogic остается прежним) ...
 class GeneratorLogic {
     private varCounter: number = 0;
     private generatedMeta: Map<string, string> = new Map();
@@ -529,7 +533,7 @@ export const ${name}: FastMetaType<${t.getArgumentType()}> = new class implement
     }
 
     declareAnonymType(nameParts: string[], typeDefinition: TypeDefinition): string {
-        let generatedName: string = typeDefinition.name;
+        let generatedName: string = typeDefinition.name || typeDefinition.stream?.name || ""; // Use name from stream if available
         if (!generatedName) {
             let tempName = nameParts.map(part => part.charAt(0).toUpperCase() + part.slice(1)).join("");
             generatedName = tempName;
@@ -648,6 +652,10 @@ class TypeGenerator {
             }
         });
         sb.push(`    }\n`);
+
+        // --- ADDED: Generate Getters ---
+        this.generateGetters(sb, allFields);
+        // --- END ADDED ---
 
         sb.push(`    public toString(result: AString): void {`);
         const simpleClassName = name.replace(/.*\./, '');
@@ -786,37 +794,128 @@ class TypeGenerator {
         return sb.join('\n');
     }
 
+    // --- ИЗМЕНЕНИЕ: Добавлена поддержка crypto ---
     private generateStreamClass(name: string, cfg: TypeDefinition): string {
-        const sb: string[] = []; const hasApi = cfg.stream.api as string; const apiType = hasApi;
+        const sb: string[] = [];
+        const hasApi = cfg.stream?.api as string;
+        const apiType = hasApi;
+        const hasCrypto = !!cfg.stream?.crypto;
+        const apiRemoteType = hasApi ? `${apiType}Remote` : 'unknown'; // Тип для RemoteApiFuture
+
         sb.push(`// --- Generated Stream: ${name} ---`);
         sb.push(`export class ${name} implements ToString {`);
         sb.push(`    public readonly data: Uint8Array;`);
+
+        // --- Основной конструктор ---
         sb.push(`    constructor(data: Uint8Array) { this.data = data; }\n`);
-        // --- FIX: Use anonymous class syntax ---
+
+        // --- META ---
         sb.push(`    public static readonly META: FastMetaType<${name}> = new class implements FastMetaType<${name}> {`);
         sb.push(`        serialize(ctx: FastFutureContext, obj: ${name}, out: DataOut): void { FastMeta.META_ARRAY_BYTE.serialize(ctx, obj.data, out); }`);
         sb.push(`        deserialize(ctx: FastFutureContext, in_: DataIn): ${name} { return new ${name}(FastMeta.META_ARRAY_BYTE.deserialize(ctx, in_)); }`);
         sb.push(FAST_META_TYPE_IMPL_STUB_METHODS);
         sb.push(`    }();\n`);
+
+        // --- toString ---
         sb.push(`    public toString(result: AString): void { result.addStringSequence('${name}(').addStringSequence('data:').add(this.data).addChar(')'); }`);
-        if (hasApi) {
-            sb.push(`    public accept(context: FastFutureContext, localApi: ${apiType}): void {`);
-            sb.push(`        const dataInStatic = new DataInOutStaticImpl(this.data);`);
+
+        // --- Методы accept ---
+        if (hasApi && hasCrypto) {
+            sb.push(`\n    public accept(context: FastFutureContext, provider: BytesConverter, localApi: ${apiType}): void {`);
+            sb.push(`        const decryptedData = provider(this.data); // Расшифровка`);
+            sb.push(`        const dataInStatic = new DataInOutStatic(decryptedData);`);
             sb.push(`        if (!(${apiType} as any).META) throw new Error(\`META not found for API type ${apiType}\`);`);
-            // --- FIX: Call renamed method ---
             sb.push(`        (${apiType} as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);`);
             sb.push(`    }`);
+            // TODO: Добавить перегрузки accept, если они нужны (как в Groovy)
+        } else if (hasApi) {
+            sb.push(`\n    public accept(context: FastFutureContext, localApi: ${apiType}): void {`);
+            sb.push(`        const dataInStatic = new DataInOutStatic(this.data);`);
+            sb.push(`        if (!(${apiType} as any).META) throw new Error(\`META not found for API type ${apiType}\`);`);
+            sb.push(`        (${apiType} as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);`);
+            sb.push(`    }`);
+             // TODO: Добавить перегрузки accept, если они нужны (как в Groovy)
+        } else if (hasCrypto) {
+            sb.push(`\n    public accept(provider: BytesConverter, dataConsumer: AConsumer<Uint8Array>): void {`);
+            sb.push(`        const decryptedData = provider(this.data); // Расшифровка`);
+            sb.push(`        dataConsumer(decryptedData);`);
+            sb.push(`    }`);
         }
+
+        // --- Дополнительные конструкторы ---
+        if (hasApi && hasCrypto) {
+            sb.push(`\n    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<${apiRemoteType}>, sendFuture: AFuture): ${name} {`);
+            sb.push(`        remote.executeAll(context, sendFuture);`);
+            sb.push(`        const encryptedData = provider(context.remoteDataToArrayAsArray()); // Шифрование`);
+            sb.push(`        return new ${name}(encryptedData);`);
+            sb.push(`    }`);
+            sb.push(`\n    public static fromRemoteConsumer(context: FastFutureContext, provider: BytesConverter, remoteConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
+            sb.push(`        const api = (${apiType} as any).META.makeRemote(context);`);
+            sb.push(`        remoteConsumer(api);`);
+            sb.push(`        const encryptedData = provider(context.remoteDataToArrayAsArray()); // Шифрование`);
+            sb.push(`        return new ${name}(encryptedData);`);
+            sb.push(`    }`);
+            sb.push(`\n    public static fromRemoteBytes(provider: BytesConverter, remoteData: Uint8Array): ${name} {`);
+            sb.push(`        const encryptedData = provider(remoteData); // Шифрование`);
+            sb.push(`        return new ${name}(encryptedData);`);
+            sb.push(`    }`);
+        } else if (hasApi) {
+            sb.push(`\n    public static fromRemote(context: FastFutureContext, remote: RemoteApiFuture<${apiRemoteType}>, sendFuture: AFuture): ${name} {`);
+            sb.push(`        remote.executeAll(context, sendFuture);`);
+            sb.push(`        return new ${name}(context.remoteDataToArrayAsArray());`);
+            sb.push(`    }`);
+            sb.push(`\n    public static fromRemoteConsumer(context: FastFutureContext, remoteConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
+            sb.push(`        const api = (${apiType} as any).META.makeRemote(context);`);
+            sb.push(`        remoteConsumer(api);`);
+            sb.push(`        return new ${name}(context.remoteDataToArrayAsArray());`);
+            sb.push(`    }`);
+            // Конструктор fromRemoteBytes не нужен без crypto
+        } else if (hasCrypto) {
+            sb.push(`\n    public static fromBytes(provider: BytesConverter, data: Uint8Array): ${name} {`);
+            sb.push(`        const encryptedData = provider(data); // Шифрование`);
+            sb.push(`        return new ${name}(encryptedData);`);
+            sb.push(`    }`);
+        }
+
         sb.push(`}\n`);
         return sb.join('\n');
+    }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+    // --- ADDED: Method to generate getters (from TypeGenerator.groovy) ---
+    private generateGetters(sb: string[], fields: Map<string, TypeInfo>): void {
+        fields.forEach((typeInfo, fieldName) => {
+            const isBoolean = typeInfo.javaType === 'boolean' && !typeInfo.isArray && !typeInfo.isNullable;
+            const prefix = isBoolean ? 'is' : 'get';
+            const capitalName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+
+            sb.push(`\n    public ${prefix}${capitalName}(): ${typeInfo.getGetterType()} {`);
+            sb.push(`        return this.${fieldName};`);
+            sb.push(`    }`);
+
+            if (typeInfo.isArray) {
+                const elType = typeInfo.getElementType().getArgumentType();
+                // In TS, Uint8Array is number[], but we want to be explicit
+                const arrayType = (typeInfo.javaType === 'byte') ? `Uint8Array` : `${elType}[]`;
+                const elTypeForCheck = (typeInfo.javaType === 'byte') ? `number` : elType;
+
+                sb.push(`\n    public ${fieldName}Contains(el: ${elTypeForCheck}): boolean {`);
+                // Use Array.prototype.includes for simplicity, which works for Uint8Array and T[]
+                // For Uint8Array, 'includes' checks for byte values (numbers).
+                // For T[], 'includes' uses SameValueZero comparison.
+                sb.push(`        return (this.${fieldName} as ${arrayType}).includes(el as any);`);
+                sb.push(`    }`);
+            }
+        });
+        sb.push(``); // Add a newline at the end
     }
 }
 
 
 // =============================================================================================
-// 4. ApiGenerator (Генерация API-интерфейсов и заглушек)
+// 4. ApiGenerator (Генерация API-интерфейсов и заглушек) - БЕЗ ИЗМЕНЕНИЙ (логирование добавлено ранее)
 // =============================================================================================
-
+// ... (код ApiGenerator остается прежним, хуки логирования уже добавлены) ...
 class ApiGenerator {
     private readonly generatorLogic: GeneratorLogic;
     constructor(generatorLogic: GeneratorLogic) { this.generatorLogic = generatorLogic; }
@@ -854,23 +953,23 @@ class ApiGenerator {
 
             if (mDef.params) {
                 Object.entries(mDef.params).forEach(([paramName, paramType]) => {
-                     if (typeof paramType === 'object' && paramType !== null) {
+                     if (typeof paramType === 'object' && paramType !== null && !(paramType as any).stream) { // Allow stream objects
                          throw new Error(`[ApiGenerator] Unexpected anonymous type object in method ${methodName}. The pre-pass should have replaced it with a name.`);
                      }
-                    methodDef.params[paramName] = paramType as string;
+                    methodDef.params[paramName] = paramType as string | TypeDefinition; // Allow TypeDefinition for streams
                 });
             }
             if (mDef.returns) {
-                 if (typeof mDef.returns === 'object' && mDef.returns !== null) {
+                 if (typeof mDef.returns === 'object' && mDef.returns !== null && !(mDef.returns as any).stream ) { // Allow stream objects
                      throw new Error(`[ApiGenerator] Unexpected anonymous type object in method ${methodName} returns. The pre-pass should have replaced it with a name.`);
                  }
-                methodDef.returns = mDef.returns as string;
+                methodDef.returns = mDef.returns as string | TypeDefinition; // Allow TypeDefinition for streams
             }
             if (mDef.throws) {
-                 if (typeof mDef.throws === 'object' && mDef.throws !== null) {
+                 if (typeof mDef.throws === 'object' && mDef.throws !== null && !(mDef.throws as any).stream ) { // Allow stream objects
                       throw new Error(`[ApiGenerator] Unexpected anonymous type object in method ${methodName} throws. The pre-pass should have replaced it with a name.`);
                  }
-                 methodDef.throws = mDef.throws as string;
+                 methodDef.throws = mDef.throws as string | TypeDefinition; // Allow TypeDefinition for streams
             }
             if (!res.some(it => it.name == methodName)) res.push(methodDef);
          });
@@ -884,11 +983,22 @@ class ApiGenerator {
         sb.push(`export interface ${apiName}${extendsClause} {`);
         methods.forEach(m => {
             if (m.parent) return;
-            const params = Object.entries(m.params).map(([pn, pt]) => `${pn}: ${new TypeInfo(pt as string).getArgumentType()}`).join(', ');
-            const returnTypeInfo = new TypeInfo(m.returns);
+            // Handle cases where param or return type might be an object (stream definition)
+            const paramTypes = Object.entries(m.params).map(([pn, pt]) => {
+                const typeStr = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
+                    ? (pt as TypeDefinition).stream!.name!
+                    : pt as string;
+                return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
+            }).join(', ');
+
+             const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
+                 ? (m.returns as TypeDefinition).stream!.name!
+                 : m.returns as string;
+            const returnTypeInfo = new TypeInfo(returnTypeStr);
+
             const returns = returnTypeInfo.getAsReturnType();
             const finalReturns = (returnTypeInfo.javaType === 'void') && !m.throws ? 'AFuture' : returns;
-            sb.push(`    ${m.name}(${params}): ${finalReturns};`);
+            sb.push(`    ${m.name}(${paramTypes}): ${finalReturns};`);
         });
         sb.push(`}`);
         sb.push(`export namespace ${apiName} {`);
@@ -919,11 +1029,22 @@ class ApiGenerator {
         sb.push(`    protected constructor(remoteApi: RT) { this.remoteApi = remoteApi; }`);
         const methods = this.getAllMethods(apiName, apiDef);
         methods.forEach(m => {
-            const params = Object.entries(m.params).map(([pn, pt]) => `${pn}: ${new TypeInfo(pt as string).getArgumentType()}`).join(', ');
-            const returnTypeInfo = new TypeInfo(m.returns);
+            // Handle cases where param or return type might be an object (stream definition)
+             const paramTypes = Object.entries(m.params).map(([pn, pt]) => {
+                const typeStr = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
+                    ? (pt as TypeDefinition).stream!.name!
+                    : pt as string;
+                return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
+            }).join(', ');
+
+             const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
+                 ? (m.returns as TypeDefinition).stream!.name!
+                 : m.returns as string;
+            const returnTypeInfo = new TypeInfo(returnTypeStr);
+
             const returns = returnTypeInfo.getAsReturnType();
             const finalReturns = (returnTypeInfo.javaType === 'void') && !m.throws ? 'AFuture' : returns;
-            sb.push(`    public abstract ${m.name}(${params}): ${finalReturns};`);
+            sb.push(`    public abstract ${m.name}(${paramTypes}): ${finalReturns};`);
         });
         sb.push(`}`);
         return sb.join('\n');
@@ -938,25 +1059,54 @@ class ApiGenerator {
         sb.push(`                    case 0: { const reqId = FastMeta.META_REQUEST_ID.deserialize(ctx, dataIn); const futureRec = ctx.getFuture(reqId); if (futureRec) futureRec.onDone(dataIn); break; }`);
         sb.push(`                    case 1: { const reqId = FastMeta.META_REQUEST_ID.deserialize(ctx, dataIn); const futureRec = ctx.getFuture(reqId); if (futureRec) futureRec.onError(dataIn); break; }`);
         methods.forEach(m => {
-            const returnTypeInfo = new TypeInfo(m.returns);
-            const hasResponse = returnTypeInfo.javaType !== 'void' || m.throws;
+             // Handle cases where return or throws type might be an object (stream definition)
+             const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
+                 ? (m.returns as TypeDefinition).stream!.name!
+                 : m.returns as string;
+            const returnTypeInfo = new TypeInfo(returnTypeStr);
+
+            const throwsTypeStr = (typeof m.throws === 'object' && m.throws !== null && (m.throws as TypeDefinition).stream?.name)
+                 ? (m.throws as TypeDefinition).stream!.name!
+                 : m.throws as string;
+
+
+            const hasResponse = returnTypeInfo.javaType !== 'void' || !!throwsTypeStr;
             const reqIdVar = g.getUniqueVarName('reqId'); const paramVars: string[] = [];
             const fieldsForDeserialize = new Map<string, TypeInfo>();
             sb.push(`                case ${m.id}: {`);
             if (hasResponse) sb.push(`                    const ${reqIdVar} = dataIn.readInt();`);
+
+            // --- ADDED: Logic for logging hooks ---
+            const paramNames: string[] = [];
             Object.entries(m.params).forEach(([paramName, paramType]) => {
-                const typeInfo = new TypeInfo(paramType as string); const localVar = g.getUniqueVarName(paramName);
+                 const typeStr = (typeof paramType === 'object' && paramType !== null && (paramType as TypeDefinition).stream?.name)
+                    ? (paramType as TypeDefinition).stream!.name!
+                    : paramType as string;
+                const typeInfo = new TypeInfo(typeStr);
+                const localVar = g.getUniqueVarName(paramName);
                 sb.push(`                    let ${localVar}: ${typeInfo.getLocalVarType()};`);
-                fieldsForDeserialize.set(localVar, typeInfo); paramVars.push(localVar);
+                fieldsForDeserialize.set(localVar, typeInfo);
+                paramVars.push(localVar);
+                paramNames.push(paramName); // Store original param name
             });
+
             g.generateDeserializerFields(sb, 'ctx', 'dataIn', fieldsForDeserialize);
+
+            const argsNamesVar = g.getUniqueVarName("argsNames");
+            const argsValuesVar = g.getUniqueVarName("argsValues");
+            sb.push(`                    const ${argsNamesVar}: string[] = [${paramNames.map(n => `"${n}"`).join(', ')}];`);
+            sb.push(`                    const ${argsValuesVar}: any[] = [${paramVars.join(', ')}];`);
+            sb.push(`                    ctx.invokeLocalMethodBefore("${m.name}", ${argsNamesVar}, ${argsValuesVar});`);
+            // --- END ADDED ---
+
             const call = `${localApiVar}.${m.name}(${paramVars.join(', ')})`;
-            if (m.throws) sb.push(`                    try {`);
+            if (throwsTypeStr) sb.push(`                    try {`);
             if (hasResponse) {
                 sb.push(`                        ctx.regLocalFuture(); const resultFuture = ${call};`);
+                sb.push(`                        ctx.invokeLocalMethodAfter("${m.name}", resultFuture, ${argsNamesVar}, ${argsValuesVar});`); // Log after call
                 if (returnTypeInfo.javaType !== 'void') {
                     const rt = returnTypeInfo; const d = g.getUniqueVarName("data"); const rr = g.getUniqueVarName("v");
-                    sb.push(`                        resultFuture.to((${rr}: ${rt.getArgumentType()}) => { const ${d} = new DataInOutImpl();`);
+                    sb.push(`                        resultFuture.to((${rr}: ${rt.getArgumentType()}) => { const ${d} = new DataInOut();`);
                     g.generateSerializer(sb, 'ctx', d, rr, rt);
                     sb.push(`                            ctx.sendResultToRemote(${reqIdVar}, ${d}.toArray()); });`);
                 } else {
@@ -964,10 +1114,13 @@ class ApiGenerator {
                 }
             } else {
                  sb.push(`                        ${call};`);
+                 sb.push(`                        ctx.invokeLocalMethodAfter("${m.name}", null, ${argsNamesVar}, ${argsValuesVar});`); // Log after call
             }
-            if (m.throws) {
-                 const et = new TypeInfo(m.throws as string); const d = g.getUniqueVarName("data");
-                 sb.push(`                    } catch (e: any) { const ${d} = new DataInOutImpl();`);
+             if (throwsTypeStr) {
+                 const et = new TypeInfo(throwsTypeStr as string); const d = g.getUniqueVarName("data");
+                 sb.push(`                    } catch (e: any) {`);
+                 sb.push(`                        ctx.invokeLocalMethodAfter("${m.name}", null, ${argsNamesVar}, ${argsValuesVar});`); // Log error
+                 sb.push(`                        const ${d} = new DataInOut();`);
                  sb.push(`                        FastMeta.META_COMMAND.serialize(ctx, 1, ${d}); FastMeta.META_REQUEST_ID.serialize(ctx, ${reqIdVar}, ${d});`);
                  sb.push(`                        ${g.generateAccessMeta(et)}.serialize(ctx, e as ${et.getArgumentType()}, ${d}); ctx.sendToRemote(${d}.toArray()); }`);
             }
@@ -981,14 +1134,14 @@ class ApiGenerator {
     // --- FIX: Add implementation for makeLocal_fromBytes_ctxLocal ---
     private generateMetaMakeLocal_fromBytes_ctxLocal(sb: string[], apiName: string): void {
         sb.push(`        makeLocal_fromBytes_ctxLocal(ctx: FastApiContextLocal<${apiName}>, data: Uint8Array): void {`);
-        sb.push(`            this.makeLocal_fromDataIn(ctx, new DataInOutStaticImpl(data), ctx.localApi);`);
+        sb.push(`            this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), ctx.localApi);`);
         sb.push(`        }`);
     }
 
     // --- FIX: Add implementation for makeLocal_fromBytes_ctx ---
     private generateMetaMakeLocal_fromBytes_ctx(sb: string[], apiName: string): void {
         sb.push(`        makeLocal_fromBytes_ctx(ctx: FastFutureContext, data: Uint8Array, localApi: ${apiName}): void {`);
-        sb.push(`            this.makeLocal_fromDataIn(ctx, new DataInOutStaticImpl(data), localApi);`);
+        sb.push(`            this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);`);
         sb.push(`        }`);
     }
 
@@ -998,44 +1151,78 @@ class ApiGenerator {
         // Method definition within the anonymous class
         sb.push(`        makeRemote(${sCtx}: FastFutureContext): ${apiName}Remote {`);
         sb.push(`            const remoteApiImpl = {`);
-        sb.push(`                flush: (sendFuture?: AFuture) => { ${sCtx}.flush(sendFuture || AFutureImpl.make()); },`);
+        sb.push(`                flush: (sendFuture?: AFuture) => { ${sCtx}.flush(sendFuture || AFuture.make()); },`);
         sb.push(`                getFastMetaContext: () => ${sCtx},`);
         methods.forEach(m => {
-            const returnTypeInfo = new TypeInfo(m.returns);
-            const hasResponse = returnTypeInfo.javaType !== 'void' || m.throws;
-            const params = Object.entries(m.params).map(([pn, pt]) => `${pn}: ${new TypeInfo(pt as string).getArgumentType()}`).join(', ');
+            // Handle cases where return or throws type might be an object (stream definition)
+             const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
+                 ? (m.returns as TypeDefinition).stream!.name!
+                 : m.returns as string;
+            const returnTypeInfo = new TypeInfo(returnTypeStr);
+
+            const throwsTypeStr = (typeof m.throws === 'object' && m.throws !== null && (m.throws as TypeDefinition).stream?.name)
+                 ? (m.throws as TypeDefinition).stream!.name!
+                 : m.throws as string;
+
+
+            const hasResponse = returnTypeInfo.javaType !== 'void' || !!throwsTypeStr;
+
+            const paramTypes = Object.entries(m.params).map(([pn, pt]) => {
+                const typeStr = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
+                    ? (pt as TypeDefinition).stream!.name!
+                    : pt as string;
+                return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
+            }).join(', ');
+
             const returns = returnTypeInfo.getAsReturnType();
-            const finalReturns = (returnTypeInfo.javaType === 'void') && !m.throws ? 'AFuture' : returns;
+            const finalReturns = (returnTypeInfo.javaType === 'void') && !throwsTypeStr ? 'AFuture' : returns;
             const paramNames = Object.keys(m.params); const reqIdVar = g.getUniqueVarName('reqId');
             const dataOutVar = g.getUniqueVarName('dataOut'); const resultVar = g.getUniqueVarName('result');
-            sb.push(`                ${m.name}: (${params}): ${finalReturns} => {`);
-            sb.push(`                    const ${dataOutVar} = new DataInOutImpl(); ${dataOutVar}.writeByte(${m.id});`);
+            sb.push(`                ${m.name}: (${paramTypes}): ${finalReturns} => {`);
+            sb.push(`                    const ${dataOutVar} = new DataInOut(); ${dataOutVar}.writeByte(${m.id});`);
+
+            // --- ADDED: Logic for logging hooks ---
+            const argsNamesVar = g.getUniqueVarName("argsNames");
+            const argsValuesVar = g.getUniqueVarName("argsValues");
+            sb.push(`                    const ${argsNamesVar}: string[] = [${paramNames.map(n => `"${n}"`).join(', ')}];`);
+            sb.push(`                    const ${argsValuesVar}: any[] = [${paramNames.join(', ')}];`);
+            // --- END ADDED ---
+
             if (hasResponse) {
                 sb.push(`                    const ${resultVar} = ${returnTypeInfo.getInitFuture()};`);
+                sb.push(`                    ${sCtx}.invokeRemoteMethodAfter("${m.name}", ${resultVar}, ${argsNamesVar}, ${argsValuesVar});`); // Log before send
                 sb.push(`                    const ${reqIdVar} = ${sCtx}.regFuture({`);
                 sb.push(`                        onDone: (in_: DataIn) => {`);
                 if (returnTypeInfo.javaType !== 'void') {
                     const rt = returnTypeInfo;
-                    sb.push(`                            (${resultVar} as ARFutureImpl<${rt.getArgumentType()}>).tryDone(${g.generateAccessMeta(rt)}.deserialize(${sCtx}, in_));`);
+                    sb.push(`                            (${resultVar} as ARFuture<${rt.getArgumentType()}>).tryDone(${g.generateAccessMeta(rt)}.deserialize(${sCtx}, in_));`);
                 } else {
-                    sb.push(`                            (${resultVar} as AFutureImpl).tryDone();`);
+                    sb.push(`                            (${resultVar} as AFuture).tryDone();`);
                 }
                 sb.push(`                        },`);
-                const onErrorInParam = m.throws ? 'in_' : '_in_';
+                const onErrorInParam = throwsTypeStr ? 'in_' : '_in_';
                 sb.push(`                        onError: (${onErrorInParam}: DataIn) => {`);
-                if (m.throws) {
-                    const et = new TypeInfo(m.throws as string);
+                if (throwsTypeStr) {
+                    const et = new TypeInfo(throwsTypeStr as string);
                     sb.push(`                            const errorObj: ${et.getArgumentType()} = ${g.generateAccessMeta(et)}.deserialize(${sCtx}, ${onErrorInParam}); ${resultVar}.error(errorObj as Error);`);
                 } else {
                     sb.push(`                            ${resultVar}.error(new Error("Remote call failed without a typed exception"));`);
                 }
                 sb.push(`                        }`);
                 sb.push(`                    }); ${dataOutVar}.writeInt(${reqIdVar});`);
+            } else {
+                sb.push(`                    ${sCtx}.invokeRemoteMethodAfter("${m.name}", null, ${argsNamesVar}, ${argsValuesVar});`); // Log before send
             }
-            const fieldsForSerialize = new Map(paramNames.map(pn => [pn, new TypeInfo((m.params as any)[pn])]));
+            const fieldsForSerialize = new Map(paramNames.map(pn => {
+                 const pt = (m.params as any)[pn];
+                 const typeStr = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
+                    ? (pt as TypeDefinition).stream!.name!
+                    : pt as string;
+                return [pn, new TypeInfo(typeStr)];
+            }));
             g.generateSerializerFields(sb, sCtx, dataOutVar, fieldsForSerialize);
             sb.push(`                    ${sCtx}.sendToRemote(${dataOutVar}.toArray());`);
-            sb.push(`                    return ${hasResponse ? resultVar : 'AFutureImpl.of()'};`);
+            sb.push(`                    return ${hasResponse ? resultVar : 'AFuture.of()'};`);
             sb.push(`                },`);
         });
         sb.push(`            };`);
@@ -1046,9 +1233,9 @@ class ApiGenerator {
 
 
 // =============================================================================================
-// 5. Main Generator Logic (AetherDslMetaProcessor)
+// 5. Main Generator Logic (AetherDslMetaProcessor) - БЕЗ ИЗМЕНЕНИЙ
 // =============================================================================================
-
+// ... (код AetherDslMetaProcessor остается прежним) ...
 export class AetherDslMetaProcessor {
     private readonly generatorLogic: GeneratorLogic;
     private readonly apiGenerator: ApiGenerator;
@@ -1073,10 +1260,12 @@ export class AetherDslMetaProcessor {
 // ===============================================================================
 
 // --- External Dependencies (Core Aether Types) ---
-import { AFuture, ARFuture, AFutureImpl, ARFutureImpl } from './aether_future';
-import { DataIn, DataOut, DataInOutImpl, DataInOutStaticImpl } from './aether_datainout';
-import { FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi } from './aether_fastmeta';
-import { UUID, URI, Uint8Array } from './aether_types';
+import { AFuture, ARFuture } from './aether_future';
+import { DataIn, DataOut, DataInOut, DataInOutStatic } from './aether_datainout';
+// --- ИЗМЕНЕНИЕ: Добавлены BytesConverter, RemoteApiFuture ---
+import { FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, RemoteApiFuture } from './aether_fastmeta';
+// --- ИЗМЕНЕНИЕ: Добавлен AConsumer ---
+import { UUID, URI, Uint8Array, AConsumer } from './aether_types';
 import { ToString, AString } from './aether_astring';
 
 // NOTE: TextEncoder/TextDecoder should be available globally.
@@ -1099,6 +1288,10 @@ import { ToString, AString } from './aether_astring';
             Object.entries(dslMeta.api || {}).forEach(([apiName, apiDef]) => {
                 this.discoverAnonymousTypesInApi(apiName, apiDef as TypeDefinition);
             });
+             // --- ИЗМЕНЕНИЕ: Discover anonymous types in DTO fields too ---
+             Object.entries(dslMeta.types || {}).forEach(([typeName, typeDef]) => {
+                 this.discoverAnonymousTypesInDto(typeName, typeDef as TypeDefinition);
+             });
          });
 
         const sortedTypeNames = Array.from(mainLogic.allTypes.keys()).sort((a, b) => {
@@ -1185,15 +1378,23 @@ import { ToString, AString } from './aether_astring';
 
              const processPotentialAnon = (parts: string[], typeDef: any): string | any => {
                  if (typeof typeDef === 'object' && typeDef !== null) {
+                     // Check if it's a stream definition or a regular anonymous type
+                     const isStream = !!(typeDef as TypeDefinition).stream;
                      const anonName = this.generatorLogic.declareAnonymType(parts, typeDef as TypeDefinition);
+                      // Define the anonymous type within the generator's context
                      if (!this.generatorLogic.allTypes.has(anonName)) {
                          this.generatorLogic.allTypes.set(anonName, typeDef as TypeDefinition);
                          this.generatorLogic.declaredTypeNames.add(anonName);
+                          // If it's a stream, we might need to recursively check its 'api' field if it were complex
+                         if (isStream && (typeDef as TypeDefinition).stream?.api) {
+                            // Potentially discover types within the stream's API definition if needed
+                         }
                      }
-                     return anonName;
+                     return anonName; // Return the generated name
                  }
-                 return typeDef;
+                 return typeDef; // Not an object or null, return as is
              };
+
 
              if (mDef.params) {
                  Object.entries(mDef.params).forEach(([paramName, paramType]) => {
@@ -1207,6 +1408,62 @@ import { ToString, AString } from './aether_astring';
                  mDef.throws = processPotentialAnon([methodName + "Exception", apiName], mDef.throws);
              }
          });
+     }
+
+     // --- ИЗМЕНЕНИЕ: Added function to discover anonymous types in DTO fields ---
+     /**
+      * [MUTATING FUNCTION]
+      * Discovers anonymous types within DTO fields recursively.
+      */
+     private discoverAnonymousTypesInDto(dtoName: string, dtoDef: TypeDefinition | null | undefined): void {
+         if (!dtoDef || !dtoDef.fields) return;
+
+         if (!this.generatorLogic || typeof this.generatorLogic.declareAnonymType !== 'function') {
+             throw new Error("Internal error: generatorLogic or declareAnonymType is not available.");
+         }
+
+         const processFieldType = (parts: string[], typeDef: any): string | any => {
+             if (typeof typeDef === 'object' && typeDef !== null) {
+                 const isStream = !!(typeDef as TypeDefinition).stream;
+                 const anonName = this.generatorLogic.declareAnonymType(parts, typeDef as TypeDefinition);
+                 if (!this.generatorLogic.allTypes.has(anonName)) {
+                     this.generatorLogic.allTypes.set(anonName, typeDef as TypeDefinition);
+                     this.generatorLogic.declaredTypeNames.add(anonName);
+                     // Recursively check fields of the newly defined anonymous type
+                     this.discoverAnonymousTypesInDto(anonName, typeDef as TypeDefinition);
+                 }
+                 return anonName;
+             }
+             // Handle array types containing anonymous objects (e.g., fields: SomeType[])
+             if (typeof typeDef === 'string' && typeDef.endsWith('[]')) {
+                 // This part needs refinement if array elements themselves can be anonymous types
+                 // defined inline like 'fieldName: [{ subField: string }][]'.
+                 // Current DSL structure doesn't seem to support this directly in types, only in API params/returns.
+             }
+             return typeDef;
+         };
+
+         Object.entries(dtoDef.fields).forEach(([fieldName, fieldType]) => {
+             dtoDef.fields![fieldName] = processFieldType([fieldName, dtoName], fieldType);
+         });
+
+         // Recursively check parent DTO if it exists
+         if (dtoDef.parent) {
+             const parentDef = this.generatorLogic.findTypeDefinition(dtoDef.parent);
+             if (parentDef) {
+                 // Avoid infinite recursion for self-referential or circular definitions (though unlikely in DSL)
+                 // This basic check might not cover all circular dependency cases.
+                 if (dtoDef.parent !== dtoName) {
+                    // We typically only need to define anonymous types once.
+                    // If the parent has fields that need processing, they should be handled
+                    // when the parent itself is processed in the main loop or discover pass.
+                    // Re-processing here might lead to redundant checks.
+                    // However, if parent processing order isn't guaranteed, recursive check might be needed.
+                    // Let's assume the main pass handles parents correctly for now.
+                    // this.discoverAnonymousTypesInDto(dtoDef.parent, parentDef);
+                 }
+             }
+         }
      }
 
 
@@ -1232,9 +1489,9 @@ ${formattedCode}
 }
 
 // =============================================================================================
-// 6. Public API (generateAetherProtocol)
+// 6. Public API (generateAetherProtocol) - БЕЗ ИЗМЕНЕНИЙ
 // =============================================================================================
-
+// ... (код generateAetherProtocol остается прежним) ...
 export async function generateAetherProtocol(
     meta: AetherDslMetaMap,
     resolver: IncludeResolver,

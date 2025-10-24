@@ -2,7 +2,7 @@
 // FILE: aether.fastmeta.ts
 // PURPOSE: Contains Fast Meta API interfaces and implementation (FastFutureContext, FastMeta, PackNumber).
 // DEPENDENCIES: aether.types.ts, aether.datainout.ts, aether.future.ts, aether.logging.ts
-// (ИСПРАВЛЕННАЯ ВЕРСИЯ - Renamed makeLocal methods)
+// (ИСПРАВЛЕННАЯ ВЕРСИЯ - Added logging hooks)
 // =============================================================================================
 
 import {
@@ -11,8 +11,8 @@ import {
     UUID, URI,
 } from './aether_types';
 
-import { AFuture, AFutureImpl, ARFuture, ARFutureImpl } from './aether_future';
-import { DataIn, DataInOutImpl, DataInOutStaticImpl, DataOut } from './aether_datainout';
+import { AFuture, ARFuture } from './aether_future';
+import { DataIn, DataInOut, DataInOutStatic, DataOut } from './aether_datainout';
 import { Log, LNode } from './aether_logging';
 
 // --- Java equivalents for text processing ---
@@ -133,12 +133,12 @@ export interface FastMetaType<T> {
 
 const FastMetaTypeImpl = {
     serializeToBytes: function<T>(this: FastMetaType<T>, obj: T): Uint8Array {
-        const d = new DataInOutImpl();
+        const d = new DataInOut();
         this.serialize(FastFutureContextStub, obj, d);
         return d.toArray();
     } as FastMetaType<any>['serializeToBytes'],
     deserializeFromBytes: function<T>(this: FastMetaType<T>, data: Uint8Array): T {
-        const d = new DataInOutStaticImpl(data);
+        const d = new DataInOutStatic(data);
         return this.deserialize(FastFutureContextStub, d);
     } as FastMetaType<any>['deserializeFromBytes'],
     loadFromFile: function<T>(this: FastMetaType<T>, _file: string): T {
@@ -318,6 +318,11 @@ export interface FastFutureContext extends Destroyable {
     isEmpty(): boolean;
     size(): number;
     close(): AFuture;
+
+    // --- ADDED: Logging Hooks (from FastFutureContext.java) ---
+    invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void;
+    invokeLocalMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void;
+    invokeRemoteMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void;
 }
 
 // STUB implementation (based on FastFutureContext.STUB in Java)
@@ -333,9 +338,14 @@ const FastFutureContextStub: FastFutureContext = {
     remoteDataToArrayAsArray: () => new Uint8Array(0),
     isEmpty: () => true,
     size: () => 0,
-    close: () => AFutureImpl.completed(),
-    destroy: (_force: boolean) => AFutureImpl.of(),
+    close: () => AFuture.completed(),
+    destroy: (_force: boolean) => AFuture.of(),
     [Symbol.dispose]: () => {},
+
+    // --- ADDED: STUB Logging Hooks ---
+    invokeLocalMethodBefore: (_methodName, _argsNames, _argsValues) => { /* no-op */ },
+    invokeLocalMethodAfter: (_methodName, _result, _argsNames, _argsValues) => { /* no-op */ },
+    invokeRemoteMethodAfter: (_methodName, _result, _argsNames, _argsValues) => { /* no-op */ },
 };
 
 // --- FastMetaApi Interface (Port of FastMetaApi.java) ---
@@ -380,7 +390,7 @@ export class FastApiContext implements FastFutureContext {
     }
 
     public sendResultToRemote(requestId: number, data: Uint8Array): void {
-        const d = new DataInOutImpl();
+        const d = new DataInOut();
 
         FastMeta.META_COMMAND.serialize(FastFutureContextStub, 0, d);
         FastMeta.META_REQUEST_ID.serialize(FastFutureContextStub, requestId, d);
@@ -392,7 +402,7 @@ export class FastApiContext implements FastFutureContext {
         this.sendToRemote(d.toArray());
 
         if (this.returnTasks.decrementAndGet() === 0) {
-            this.flush(AFutureImpl.make());
+            this.flush(AFuture.make());
         }
     }
 
@@ -406,10 +416,12 @@ export class FastApiContext implements FastFutureContext {
     public size(): number { return this.sizeBytes.get(); }
 
     public remoteDataToArrayAsArray(): Uint8Array {
-        const out = new DataInOutImpl();
+        const out = new DataInOut();
         this.remoteDataToArray(out);
         return out.toArray();
     }
+
+
 
     public remoteDataToArray(out: DataOut): void {
         let data: Uint8Array | undefined;
@@ -434,11 +446,42 @@ export class FastApiContext implements FastFutureContext {
         this.toRemote.clear();
         this.sizeBytes.set(0);
         this.returnTasks.set(0);
-        return AFutureImpl.of();
+        return AFuture.of();
     }
 
     public makeRemote<RT, RT2 extends RemoteApi>(meta: FastMetaApi<RT, RT2>): RT2 {
         return meta.makeRemote(this);
+    }
+
+    // --- ADDED: Logging Hook Implementations (Ported from FastFutureContext.java defaults) ---
+    public invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void {
+            const logData: [string, any][] = [["methodName", methodName]];
+            for (let i = 0; i < argsNames.length; i++) {
+                logData.push([`arg_${argsNames[i]}`, argsValues[i]]);
+            }
+            Log.trace(`cmd local before: ${methodName}`, ...logData.flat());
+    }
+
+    public invokeLocalMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
+            const logData: [string, any][] = [
+                ["methodName", methodName],
+                ["result", result]
+            ];
+            for (let i = 0; i < argsNames.length; i++) {
+                logData.push([`arg_${argsNames[i]}`, argsValues[i]]);
+            }
+            Log.trace(`cmd local after : ${methodName}`, ...logData.flat());
+    }
+
+    public invokeRemoteMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
+            const logData: [string, any][] = [
+                ["methodName", methodName],
+                ["result", result]
+            ];
+            for (let i = 0; i < argsNames.length; i++) {
+                logData.push([`arg_${argsNames[i]}`, argsValues[i]]);
+            }
+            Log.trace(`cmd remote      : ${methodName}`, ...logData.flat());
     }
 }
 
@@ -512,7 +555,7 @@ export class RemoteApiFuture<T extends RemoteApi> {
     public runRes<R>(t: AFunction<T, ARFuture<R>>): ARFuture<R>;
     public runRes<R>(t: ABiFunction<T, AFuture, ARFuture<R>>): ARFuture<R>;
     public runRes<R>(t: AFunction<T, ARFuture<R>> | ABiFunction<T, AFuture, ARFuture<R>>): ARFuture<R> {
-        const res = ARFutureImpl.of<R>();
+        const res = ARFuture.of<R>();
         this.run((a: T, f: AFuture) => {
             let nextFuture: ARFuture<R>;
             try {
@@ -521,7 +564,7 @@ export class RemoteApiFuture<T extends RemoteApi> {
                 } else {
                     nextFuture = (t as ABiFunction<T, AFuture, ARFuture<R>>)(a, f);
                 }
-                nextFuture.to(res as ARFutureImpl<R>); // Ensure result is piped correctly
+                nextFuture.to(res as ARFuture<R>); // Ensure result is piped correctly
             } catch (e) {
                 res.error(e as Error); // Handle errors during function execution
             }

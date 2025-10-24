@@ -10,7 +10,7 @@ import {
     Destroyable, UUID,
 } from './aether_types';
 import { Log } from './aether_logging';
-import { AFuture, AFutureImpl } from './aether_future';
+import { AFuture } from './aether_future';
 import { AString } from './aether_astring';
 
 // --- HexUtils (needed by DataIO) ---
@@ -75,7 +75,7 @@ export class Destroyer implements Destroyable {
         } else if (typeof (destroyable as ScheduledFuture_C).cancel === 'function' && typeof (destroyable as ScheduledFuture_C).destroy === 'function') {
             const os = destroyable as ScheduledFuture_C;
             wrapped = {
-                destroy: (force: boolean) => { os.cancel(force); return AFutureImpl.of(); },
+                destroy: (force: boolean) => { os.cancel(force); return AFuture.of(); },
                 [Symbol.dispose]: () => os.cancel(true),
             } as Destroyable;
         } else if (typeof (destroyable as AutoCloseable).close === 'function') {
@@ -84,10 +84,10 @@ export class Destroyer implements Destroyable {
                 destroy: (force: boolean) => {
                     if (force) {
                         try { os.close(); } catch (e) { Log.warn("destroy exception", e as Error); }
-                        return AFutureImpl.of();
+                        return AFuture.of();
                     } else {
-                        try { os.close(); return AFutureImpl.of(); }
-                        catch (e) { return AFutureImpl.ofThrow(e as Error); }
+                        try { os.close(); return AFuture.of(); }
+                        catch (e) { return AFuture.ofThrow(e as Error); }
                     }
                 },
                 [Symbol.dispose]: () => { try { os.close(); } catch (e) { Log.warn("close exception", e as Error); } }
@@ -101,7 +101,7 @@ export class Destroyer implements Destroyable {
     }
 
     public destroy(force: boolean): AFuture {
-        const res = AFutureImpl.make();
+        const res = AFuture.make();
         if (!this.destroyFuture.compareAndSet(null, res)) {
             return this.destroyFuture.get()!;
         }
@@ -116,7 +116,7 @@ export class Destroyer implements Destroyable {
             }
         }
 
-        const allDestroy = AFutureImpl.all(...destroyTasks);
+        const allDestroy = AFuture.all(...destroyTasks);
 
         allDestroy.to(() => { if (res.tryDone()) { /* done */ } })
             .onError(e => res.error(e));
@@ -146,7 +146,7 @@ export const RU = {
 
         const scheduledFuture = {
             cancel: (_f: boolean) => clearInterval(timer),
-            destroy: (_f: boolean) => { clearInterval(timer); return AFutureImpl.of(); }
+            destroy: (_f: boolean) => { clearInterval(timer); return AFuture.of(); }
         } as ScheduledFuture_C;
 
         (resTo as Destroyer).add(scheduledFuture);
