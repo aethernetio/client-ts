@@ -60,7 +60,7 @@ export interface DataIn {
 
 // --- DataOut Interface (Остается без изменений) ---
 export interface DataOut {
-    /** Returns whether this output stream is writable or not. */
+    /** Returns whether this output stream is writableConsumer or not. */
     isWritable(): boolean;
     /** Returns the size of this output stream for writing, in bytes. */
     getSizeForWrite(): number;
