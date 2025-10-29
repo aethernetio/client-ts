@@ -4,7 +4,7 @@
 
 /** Basic Types */
 export type Uint8Array = globalThis.Uint8Array;
-export class UUID {
+export class UUID { // <-- EXPORTED
     static fromString(uuidString: string): UUID {
         const uuidRegex = /^([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})$/i;
         const match = uuidRegex.exec(uuidString);
@@ -41,7 +41,7 @@ export class UUID {
         ].join('-');
     }
 }
-export type URI = string;
+export type URI = string; // <-- EXPORTED
 
 export type ARunnable = () => void;
 export type Executor = (task: ARunnable) => void;
@@ -106,14 +106,12 @@ export interface Disposable {
 export interface AutoCloseable {
     close(): void;
 }
-export interface Destroyable extends Disposable {
+export interface Destroyable extends Disposable { // <-- EXPORTED
     destroy(force: boolean): any; // AFuture | void | etc.
 }
 
-// --- ИСПРАВЛЕНО: Добавлены классы ошибок ---
-
 /** Exception related to client startup and connection issues. */
-export class ClientStartException extends Error {
+export class ClientStartException extends Error { // <-- EXPORTED
     constructor(message: string, cause?: Error) {
         super(message);
         if (cause) this.cause = cause;
@@ -136,4 +134,11 @@ export class ClientTimeoutException extends Error {
         super(message);
         this.name = 'ClientTimeoutException';
     }
+}
+
+// Added to satisfy imports in aether_client_types (even if logically derived elsewhere)
+// NOTE: This type is typically part of aether_client_connection_base.ts
+export interface Connection<LT, RT> extends Destroyable { // <-- EXPORTED
+    getRootApiFuture(): any;
+    getRootApi(): RT | null;
 }

@@ -416,6 +416,17 @@ export class AFuture extends AFutureBaseImpl<AFuture> {
         return this;
     }
 
+    // FIX: Add AFuture.ofPromise static factory
+    public static ofPromise(f: ASupplier<Promise<any>>): AFuture {
+        const future = new AFuture();
+        try {
+            f().then(() => future.tryDone(), (e: Error) => future.error(e));
+        } catch (e) {
+            future.error(e as Error);
+        }
+        return future;
+    }
+
     public static make(): AFuture { return new AFuture(); }
     public static of(e?: Error): AFuture { const f = new AFuture(); if (e) f.error(e); else f.tryDone(); return f; }
     public static ofThrow(e: Error): AFuture { const f = new AFuture(); f.error(e); return f; }

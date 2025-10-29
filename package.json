@@ -17,7 +17,9 @@
     "preinstall": "npx npm-force-resolutions",
     "generate-protocol": "npx tsx src/AetherProtocolPlugin.ts",
     "prebuild": "npm run generate-protocol",
-    "build": "tsx node_modules/webpack/bin/webpack.js --config webpack.config.mjs"
+    "build": "tsx node_modules/webpack/bin/webpack.js --config webpack.config.mjs",
+    "test": "jest",
+    "test:p2p": "jest aether_point_to_point.test.ts"
   },
   "overrides": {
     "chokidar": "3.5.3",

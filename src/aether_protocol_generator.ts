@@ -38,9 +38,74 @@ export type IncludeResolver = (includeName: string) => Promise<AetherDslMeta>;
 // --- ИЗМЕНЕНИЕ: TypeDefinition теперь может содержать stream с crypto ---
 export type TypeDefinition = {
     [key: string]: any;
-    stream?: { api?: string, crypto?: boolean, name?: string }; // Добавлено crypto?
+    fields?: { [key: string]: any };
+    constants?: { [key: string]: string | number | boolean }; // <-- ДОБАВЛЕНО
+    stream?: { api?: string, crypto?: boolean, name?: string };
+    enum?: string[];
+    abstract?: boolean;
+    parent?: string;
 };
+// =============================================================================================
+// 1.A. ConstantInfo (Парсинг констант DSL)
+// =============================================================================================
+/**
+ * Вспомогательный класс для хранения информации о константе (имя, тип, значение).
+ */
+class ConstantInfo {
+    public readonly name: string;
+    public readonly type: 'string' | 'number' | 'boolean';
+    public readonly value: string | number | boolean;
+    public readonly capitalName: string;
 
+    constructor(name: string, value: any) {
+        this.name = name;
+        this.value = value;
+        this.capitalName = name.charAt(0).toUpperCase() + name.slice(1);
+        const tsType = typeof value;
+
+        if (tsType === 'string' || tsType === 'number' || tsType === 'boolean') {
+            this.type = tsType;
+        } else {
+            throw new Error(`Constant '${name}' has invalid type '${tsType}'. Must be string, number, or boolean.`);
+        }
+    }
+
+    /**
+     * Возвращает TypeScript-тип константы (e.g., "string")
+     */
+    getGetterType(): string {
+        return this.type;
+    }
+
+    /**
+     * Возвращает имя геттера (e.g., "getMessageType")
+     */
+    getGetterName(): string {
+        // Для boolean-констант (e.g., "isEvent") 'is' уже может быть в имени.
+        // Groovy-версия не делает 'is' префикс для констант, следуем ей.
+        return `get${this.capitalName}`;
+    }
+
+    /**
+     * Возвращает строковое представление значения для вставки в код
+     * (e.g., "LOGIN" -> "\"LOGIN\"", 123 -> "123")
+     */
+    getTsValue(): string {
+        if (this.type === 'string') {
+            // JSON.stringify корректно экранирует строки
+            return JSON.stringify(this.value);
+        }
+        return String(this.value);
+    }
+
+    /**
+     * Сравнивает с другой ConstantInfo (для проверки совпадения в иерархии)
+     */
+    equals(other: ConstantInfo): boolean {
+        // Мы сравниваем только имя и ТИП. Значения могут (и должны) различаться.
+        return this.name === other.name && this.type === other.type;
+    }
+}
 // =============================================================================================
 // 1. TypeInfo (Парсинг типов DSL) - БЕЗ ИЗМЕНЕНИЙ
 // =============================================================================================
@@ -557,6 +622,15 @@ const FAST_META_TYPE_IMPL_STUB_METHODS = `
     deserializeFromBytes(_data: Uint8Array): any { throw new Error('Not implemented'); }
     loadFromFile(_file: string): any { throw new Error('Not implemented'); }`;
 
+// =============================================================================================
+// 3. TypeGenerator (Генерация классов, перечислений и Stream)
+// =============================================================================================
+
+const FAST_META_TYPE_IMPL_STUB_METHODS = `
+    serializeToBytes(_obj: any): Uint8Array { throw new Error('Not implemented'); }
+    deserializeFromBytes(_data: Uint8Array): any { throw new Error('Not implemented'); }
+    loadFromFile(_file: string): any { throw new Error('Not implemented'); }`;
+
 class TypeGenerator {
     private readonly generatorLogic: GeneratorLogic;
     constructor(generatorLogic: GeneratorLogic) { this.generatorLogic = generatorLogic; }
@@ -567,6 +641,8 @@ class TypeGenerator {
         return this.generateStructure(name, defn || {});
     }
 
+    // --- (ИЗМЕНЕНИЕ) Методы для FIELDS (полей) ---
+
     private getFieldTypes(fields: { [fn: string]: any }): Map<string, TypeInfo> {
         const fieldTypes: Map<string, TypeInfo> = new Map();
         Object.entries(fields || {}).forEach(([fn, type]) => {
@@ -576,7 +652,7 @@ class TypeGenerator {
         return fieldTypes;
     }
 
-    getAllFields(cfg: TypeDefinition): Map<string, TypeInfo> {
+    public getAllFields(cfg: TypeDefinition): Map<string, TypeInfo> {
         const res: Map<string, TypeInfo> = new Map();
         this.getAllFieldsRecursive(res, cfg);
         return res;
@@ -591,6 +667,93 @@ class TypeGenerator {
         if (cfg?.fields) this.getFieldTypes(cfg.fields).forEach((v, k) => res.set(k, v));
     }
 
+    // --- (ИЗМЕНЕНИЕ) НОВЫЕ МЕТОДЫ для CONSTANTS (констант) ---
+
+    /**
+     * Парсит 'constants' из YAML, возвращая Map<string, ConstantInfo>
+     */
+    private getConstantTypes(cfgConstants: { [fn: string]: any } | undefined): Map<string, ConstantInfo> {
+        const constTypes: Map<string, ConstantInfo> = new Map();
+        Object.entries(cfgConstants || {}).forEach(([name, value]) => {
+            constTypes.set(name, new ConstantInfo(name, value));
+        });
+        return constTypes;
+    }
+
+    /**
+     * Рекурсивно (сверху-вниз) собирает все константы, включая родительские.
+     */
+    public getAllConstants(cfg: TypeDefinition): Map<string, ConstantInfo> {
+        const res: Map<string, ConstantInfo> = new Map();
+        this.getAllConstantsRecursive(res, cfg);
+        return res;
+    }
+
+    private getAllConstantsRecursive(res: Map<string, ConstantInfo>, cfg: TypeDefinition): void {
+        // 1. Сначала идем к родителю (Top-Down)
+        if (cfg?.parent) {
+             const parentName = cfg.parent as string;
+             const parentCfg = this.generatorLogic.findTypeDefinition(parentName);
+             if (parentCfg) this.getAllConstantsRecursive(res, parentCfg);
+        }
+        // 2. Затем применяем (переопределяем) константы текущего типа
+        if (cfg?.constants) this.getConstantTypes(cfg.constants).forEach((v, k) => res.set(k, v));
+    }
+
+    /**
+     * (ИЗМЕНЕНИЕ) Генерирует АБСТРАКТНЫЕ геттеры в родительском классе (Bottom-Up)
+     * Ищет общие константы у всех дочерних типов.
+     */
+    private generateAbstractGettersForCommonConstants(sb: string[], children: string[]): void {
+        if (children.length === 0) return;
+
+        // 1. Собираем константы всех дочерних типов
+        const allChildrenConstants = children.map(childName => {
+            const childCfg = this.generatorLogic.findTypeDefinition(childName);
+            return childCfg ? this.getAllConstants(childCfg) : new Map<string, ConstantInfo>();
+        });
+
+        if (allChildrenConstants.length === 0) return;
+
+        // 2. Находим 'пересечение' (общие константы)
+        // Начинаем с констант первого ребенка
+        const commonConstants = new Map<string, ConstantInfo>(allChildrenConstants[0]);
+
+        // 3. Исключаем те, которых нет у других, или у которых не совпадает тип
+        allChildrenConstants.slice(1).forEach(childConstants => {
+            // Проходим по текущему списку общих
+            for (const [name, constInfo] of commonConstants.entries()) {
+                const otherConst = childConstants.get(name);
+                if (!otherConst || !constInfo.equals(otherConst)) {
+                    // Если у ребенка нет этой константы ИЛИ тип не совпадает,
+                    // удаляем ее из 'общих'.
+                    commonConstants.delete(name);
+                }
+            }
+        });
+
+        // 4. Генерируем абстрактные геттеры для оставшихся общих констант
+        commonConstants.forEach(constInfo => {
+            sb.push(`\n    public abstract ${constInfo.getGetterName()}(): ${constInfo.getGetterType()};`);
+        });
+    }
+
+    /**
+     * (ИЗМЕНЕНИЕ) Генерирует КОНКРЕТНЫЕ геттеры для констант
+     */
+    private generateConstantGetters(sb: string[], constants: Map<string, ConstantInfo>, hasParent: boolean): void {
+        constants.forEach(constInfo => {
+            const override = hasParent ? 'override ' : ''; // Добавляем 'override', если есть родитель
+            sb.push(`\n    public ${override}${constInfo.getGetterName()}(): ${constInfo.getGetterType()} {`);
+            sb.push(`        return ${constInfo.getTsValue()};`);
+            sb.push(`    }`);
+        });
+        if (constants.size > 0) sb.push(``); // Пустая строка для разделения
+    }
+
+    // --- (КОНЕЦ ИЗМЕНЕНИЙ) ---
+
+
     private generateStructure(name: string, cfg: TypeDefinition): string {
         const sb: string[] = []; const g = this.generatorLogic;
         const isAbstract = !!cfg?.abstract;
@@ -603,13 +766,27 @@ class TypeGenerator {
         sb.push(`// --- Generated Structure: ${name} ---`);
         sb.push(`export ${isAbstract ? 'abstract class' : 'class'} ${name}${extendsClause} implements ToString {`);
 
-        currentFields.forEach((typeInfo, fieldName) => sb.push(`    public readonly ${fieldName}: ${typeInfo.getFieldType()};`));
-
+        // (ИЗМЕНЕНИЕ) Логика для определения иерархии
         const typeId = g.getTypeIdInHierarchy(name);
         const rootForChildren = g.getRootTypeFor(name) || name;
         const children = g.getConcreteTypesInHierarchy(rootForChildren);
         const needsTypeIdMethod = parent || g.isInTypeHierarchy(name) || (children.length > 0 && name !== "Message");
 
+        // (ИЗМЕНЕНИЕ) Генерируем АБСТРАКТНЫЕ геттеры для констант (Bottom-Up)
+        if (isAbstract) {
+            // (Аналог Groovy: generateAbstractGettersForCommonFields)
+            // Мы пока не знаем, какие поля общие, но для констант - можем
+            this.generateAbstractGettersForCommonConstants(sb, children);
+        }
+
+        // --- Генерируем ПОЛЯ (Fields) ---
+        currentFields.forEach((typeInfo, fieldName) => sb.push(`    public readonly ${fieldName}: ${typeInfo.getFieldType()};`));
+
+        // (ИЗМЕНЕНИЕ) Генерируем КОНКРЕТНЫЕ геттеры для КОНСТАНТ
+        const currentConstants = this.getConstantTypes(cfg?.constants);
+        this.generateConstantGetters(sb, currentConstants, !!parent);
+
+        // --- Генерируем getAetherTypeId ---
         if (needsTypeIdMethod) {
             if (parent || g.isInTypeHierarchy(name)) {
                 sb.push(`    public ${parent ? 'override ' : ''}getAetherTypeId(): number {`);
@@ -622,11 +799,11 @@ class TypeGenerator {
             }
         }
 
+        // --- Генерируем META ---
         if (!isAbstract) this.generateMeta(sb, name, 'META_BODY', true, allFields);
 
          const hierarchyHasIds = (rootForChildren && g.getTypeIdInHierarchy(rootForChildren) !== undefined) || children.some(c => g.getTypeIdInHierarchy(c) !== undefined);
          const needsMeta = isAbstract || hierarchyHasIds || (typeId !== undefined && typeId >= 0);
-
 
         if (needsMeta) {
              this.generateMeta(sb, name, 'META', false, allFields, isAbstract, children);
@@ -636,7 +813,7 @@ class TypeGenerator {
              this.generateMeta(sb, name, 'META', false, allFields, isAbstract, children);
         }
 
-
+        // --- Генерируем Конструктор ---
         sb.push(`\n    constructor(${constructorParams}) {`);
         if (superFields.length > 0) sb.push(`        super(${superFields.join(', ')});`);
         else if (parent) sb.push(`        super();`);
@@ -653,10 +830,10 @@ class TypeGenerator {
         });
         sb.push(`    }\n`);
 
-        // --- ADDED: Generate Getters ---
-        this.generateGetters(sb, allFields);
-        // --- END ADDED ---
+        // --- Генерируем Геттеры для ПОЛЕЙ ---
+        this.generateFieldGetters(sb, allFields);
 
+        // --- Генерируем toString ---
         sb.push(`    public toString(result: AString): void {`);
         const simpleClassName = name.replace(/.*\./, '');
         sb.push(`        result.addStringSequence('${simpleClassName}(');`);
@@ -666,6 +843,16 @@ class TypeGenerator {
             sb.push(`        result.addStringSequence('${fieldName}:').add(this.${fieldName});`);
             isFirstField = false;
         });
+
+        // (ИЗМЕНЕНИЕ) Добавляем константы в toString
+        const allConstants = this.getAllConstants(cfg);
+        allConstants.forEach((constInfo, constName) => {
+            if (!isFirstField) sb.push(`        result.addStringSequence(', ');`);
+            // Вызываем геттер, чтобы получить значение
+            sb.push(`        result.addStringSequence('${constName}:').add(this.${constInfo.getGetterName()}());`);
+            isFirstField = false;
+        });
+
         sb.push(`        result.addChar(')');`);
         sb.push(`    }`);
         sb.push(`}\n`);
@@ -673,6 +860,7 @@ class TypeGenerator {
     }
 
     private generateMeta(sb: string[], name: string, fieldName: string, isMetaBody: boolean, fields: Map<string, TypeInfo>, isAbstract: boolean = false, children: string[] = []): void {
+        // ... (Код generateMeta БЕЗ ИЗМЕНЕНИЙ, т.к. константы не сериализуются) ...
         const g = this.generatorLogic;
         const useSCtxSerialize = !(isMetaBody && fields.size === 0) && (isMetaBody || children.length > 0);
         const useSCtxDeserialize = !(isMetaBody && fields.size === 0) && (isMetaBody || children.length > 0);
@@ -681,7 +869,6 @@ class TypeGenerator {
         const objVar = g.getUniqueVarName('obj');
         const outVar = g.getUniqueVarName('out'); const inVar = g.getUniqueVarName('in_');
 
-        // --- FIX: Use anonymous class syntax ---
         sb.push(`\n    public static readonly ${fieldName}: FastMetaType<${name}> = new class implements FastMetaType<${name}> {`);
 
         sb.push(`        serialize(${sCtx}: FastFutureContext, ${objVar}: ${name}, ${outVar}: DataOut): void {`);
@@ -703,14 +890,12 @@ class TypeGenerator {
                 if (!isAbstract) {
                      const selfId = g.getTypeIdInHierarchy(name);
                      if (selfId !== undefined && selfId >= 0) {
-                         // Use `as any as Type` for potentially incompatible structures
                          sb.push(`                case ${selfId}: (${name} as any).META_BODY.serialize(${sCtx}, ${objVar} as any as ${name}, ${outVar}); break;`);
                      }
                 }
                 actualChildren.forEach(childName => {
                     const typeId = g.getTypeIdInHierarchy(childName);
                     if (typeId !== undefined && (isAbstract || childName !== name)) {
-                         // Use `as any as Type` for potentially incompatible structures
                         sb.push(`                case ${typeId}: (${childName} as any).META_BODY.serialize(${sCtx}, ${objVar} as any as ${childName}, ${outVar}); break;`);
                     }
                 });
@@ -747,14 +932,12 @@ class TypeGenerator {
                 if (!isAbstract) {
                      const selfId = g.getTypeIdInHierarchy(name);
                      if (selfId !== undefined && selfId >= 0) {
-                         // --- FIX: Use `as any as BaseType` cast ---
                          sb.push(`                case ${selfId}: return (${name} as any).META_BODY.deserialize(${sCtxDeser}, ${inVar}) as any as ${name};`);
                      }
                 }
                 actualChildren.forEach(childName => {
                     const typeId = g.getTypeIdInHierarchy(childName);
                      if (typeId !== undefined && (isAbstract || childName !== name)) {
-                         // --- FIX: Use `as any as BaseType` cast ---
                          sb.push(`                case ${typeId}: return (${childName} as any).META_BODY.deserialize(${sCtxDeser}, ${inVar}) as any as ${name};`);
                      }
                 });
@@ -772,11 +955,11 @@ class TypeGenerator {
 
 
     private generateEnum(name: string, values: string[]): string {
+        // ... (Код generateEnum БЕЗ ИЗМЕНЕНИЙ) ...
         const sb: string[] = [];
         sb.push(`// --- Generated Enum: ${name} ---`);
         sb.push(`export enum ${name} { ${values.map(v => `${v} = '${v}'`).join(', ')} }\n`);
         sb.push(`export namespace ${name} {`);
-        // --- FIX: Use anonymous class syntax ---
         sb.push(`    export const META: FastMetaType<${name}> = new class implements FastMetaType<${name}> {`);
         sb.push(`        serialize(_sCtx: FastFutureContext, obj: ${name}, out: DataOut): void {`);
         sb.push(`            const values = Object.keys(${name}).filter(k => isNaN(parseInt(k)));`);
@@ -794,69 +977,62 @@ class TypeGenerator {
         return sb.join('\n');
     }
 
-    // --- ИЗМЕНЕНИЕ: Добавлена поддержка crypto ---
     private generateStreamClass(name: string, cfg: TypeDefinition): string {
+        // ... (Код generateStreamClass БЕЗ ИЗМЕНЕНИЙ) ...
         const sb: string[] = [];
         const hasApi = cfg.stream?.api as string;
         const apiType = hasApi;
         const hasCrypto = !!cfg.stream?.crypto;
-        const apiRemoteType = hasApi ? `${apiType}Remote` : 'unknown'; // Тип для RemoteApiFuture
+        const apiRemoteType = hasApi ? `${apiType}Remote` : 'unknown';
 
         sb.push(`// --- Generated Stream: ${name} ---`);
         sb.push(`export class ${name} implements ToString {`);
         sb.push(`    public readonly data: Uint8Array;`);
 
-        // --- Основной конструктор ---
         sb.push(`    constructor(data: Uint8Array) { this.data = data; }\n`);
 
-        // --- META ---
         sb.push(`    public static readonly META: FastMetaType<${name}> = new class implements FastMetaType<${name}> {`);
         sb.push(`        serialize(ctx: FastFutureContext, obj: ${name}, out: DataOut): void { FastMeta.META_ARRAY_BYTE.serialize(ctx, obj.data, out); }`);
         sb.push(`        deserialize(ctx: FastFutureContext, in_: DataIn): ${name} { return new ${name}(FastMeta.META_ARRAY_BYTE.deserialize(ctx, in_)); }`);
         sb.push(FAST_META_TYPE_IMPL_STUB_METHODS);
         sb.push(`    }();\n`);
 
-        // --- toString ---
         sb.push(`    public toString(result: AString): void { result.addStringSequence('${name}(').addStringSequence('data:').add(this.data).addChar(')'); }`);
 
-        // --- Методы accept ---
         if (hasApi && hasCrypto) {
             sb.push(`\n    public accept(context: FastFutureContext, provider: BytesConverter, localApi: ${apiType}): void {`);
-            sb.push(`        const decryptedData = provider(this.data); // Расшифровка`);
+            sb.push(`        const decryptedData = provider(this.data);`);
             sb.push(`        const dataInStatic = new DataInOutStatic(decryptedData);`);
             sb.push(`        if (!(${apiType} as any).META) throw new Error(\`META not found for API type ${apiType}\`);`);
             sb.push(`        (${apiType} as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);`);
             sb.push(`    }`);
-            // TODO: Добавить перегрузки accept, если они нужны (как в Groovy)
         } else if (hasApi) {
             sb.push(`\n    public accept(context: FastFutureContext, localApi: ${apiType}): void {`);
             sb.push(`        const dataInStatic = new DataInOutStatic(this.data);`);
             sb.push(`        if (!(${apiType} as any).META) throw new Error(\`META not found for API type ${apiType}\`);`);
             sb.push(`        (${apiType} as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);`);
             sb.push(`    }`);
-             // TODO: Добавить перегрузки accept, если они нужны (как в Groovy)
         } else if (hasCrypto) {
             sb.push(`\n    public accept(provider: BytesConverter, dataConsumer: AConsumer<Uint8Array>): void {`);
-            sb.push(`        const decryptedData = provider(this.data); // Расшифровка`);
+            sb.push(`        const decryptedData = provider(this.data);`);
             sb.push(`        dataConsumer(decryptedData);`);
             sb.push(`    }`);
         }
 
-        // --- Дополнительные конструкторы ---
         if (hasApi && hasCrypto) {
             sb.push(`\n    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<${apiRemoteType}>, sendFuture: AFuture): ${name} {`);
             sb.push(`        remote.executeAll(context, sendFuture);`);
-            sb.push(`        const encryptedData = provider(context.remoteDataToArrayAsArray()); // Шифрование`);
+            sb.push(`        const encryptedData = provider(context.remoteDataToArrayAsArray());`);
             sb.push(`        return new ${name}(encryptedData);`);
             sb.push(`    }`);
             sb.push(`\n    public static fromRemoteConsumer(context: FastFutureContext, provider: BytesConverter, remoteConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
             sb.push(`        const api = (${apiType} as any).META.makeRemote(context);`);
             sb.push(`        remoteConsumer(api);`);
-            sb.push(`        const encryptedData = provider(context.remoteDataToArrayAsArray()); // Шифрование`);
+            sb.push(`        const encryptedData = provider(context.remoteDataToArrayAsArray());`);
             sb.push(`        return new ${name}(encryptedData);`);
             sb.push(`    }`);
             sb.push(`\n    public static fromRemoteBytes(provider: BytesConverter, remoteData: Uint8Array): ${name} {`);
-            sb.push(`        const encryptedData = provider(remoteData); // Шифрование`);
+            sb.push(`        const encryptedData = provider(remoteData);`);
             sb.push(`        return new ${name}(encryptedData);`);
             sb.push(`    }`);
         } else if (hasApi) {
@@ -869,10 +1045,9 @@ class TypeGenerator {
             sb.push(`        remoteConsumer(api);`);
             sb.push(`        return new ${name}(context.remoteDataToArrayAsArray());`);
             sb.push(`    }`);
-            // Конструктор fromRemoteBytes не нужен без crypto
         } else if (hasCrypto) {
             sb.push(`\n    public static fromBytes(provider: BytesConverter, data: Uint8Array): ${name} {`);
-            sb.push(`        const encryptedData = provider(data); // Шифрование`);
+            sb.push(`        const encryptedData = provider(data);`);
             sb.push(`        return new ${name}(encryptedData);`);
             sb.push(`    }`);
         }
@@ -880,10 +1055,12 @@ class TypeGenerator {
         sb.push(`}\n`);
         return sb.join('\n');
     }
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-    // --- ADDED: Method to generate getters (from TypeGenerator.groovy) ---
-    private generateGetters(sb: string[], fields: Map<string, TypeInfo>): void {
+    /**
+     * (ИЗМЕНЕНИЕ) Переименован в generateFieldGetters, чтобы отличать от
+     * generateConstantGetters
+     */
+    private generateFieldGetters(sb: string[], fields: Map<string, TypeInfo>): void {
         fields.forEach((typeInfo, fieldName) => {
             const isBoolean = typeInfo.javaType === 'boolean' && !typeInfo.isArray && !typeInfo.isNullable;
             const prefix = isBoolean ? 'is' : 'get';
@@ -895,14 +1072,10 @@ class TypeGenerator {
 
             if (typeInfo.isArray) {
                 const elType = typeInfo.getElementType().getArgumentType();
-                // In TS, Uint8Array is number[], but we want to be explicit
                 const arrayType = (typeInfo.javaType === 'byte') ? `Uint8Array` : `${elType}[]`;
                 const elTypeForCheck = (typeInfo.javaType === 'byte') ? `number` : elType;
 
                 sb.push(`\n    public ${fieldName}Contains(el: ${elTypeForCheck}): boolean {`);
-                // Use Array.prototype.includes for simplicity, which works for Uint8Array and T[]
-                // For Uint8Array, 'includes' checks for byte values (numbers).
-                // For T[], 'includes' uses SameValueZero comparison.
                 sb.push(`        return (this.${fieldName} as ${arrayType}).includes(el as any);`);
                 sb.push(`    }`);
             }
@@ -910,6 +1083,7 @@ class TypeGenerator {
         sb.push(``); // Add a newline at the end
     }
 }
+
 
 
 // =============================================================================================
