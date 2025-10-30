@@ -1,8 +1,6 @@
-// =============================================================================================
 // FILE: aether_client_state.ts
 // PURPOSE: Contains the implementation of ClientStateInMemory.
-// DEPENDENCIES: aether_client_types.ts, aether_datainout.ts
-// =============================================================================================
+
 import {
   UUID,
   URI,
@@ -10,26 +8,28 @@ import {
   CryptoLib,
   SignChecker,
   ServerDescriptor,
-  UUIDAndCloud,
   ClientInfoDTO,
   ClientStateForSave,
   ClientState,
   Log,
   RU,
-  Destroyer,
   StandardUUIDsImpl,
   AKey,
   KeyType,
   DataInOut,
-  DataInOutStatic, // Removed KeyUtil
+  DataInOutStatic,
   createAMFuture,
   AMFuture,
-  CryptoKey,
+  CryptoProviderFactory,
   Cloud,
-  CryptoProviderFactory, // Added CryptoProviderFactory
 } from "./aether_client_types";
-import { AStringBase } from "./aether_astring";
-// --- FIX: Import concrete DTO Key classes for instanceof checks ---
+import {
+    AStringBase
+} from "./aether_astring";
+import {
+    dtoKeyToAKey,
+    aKeyToDtoKey
+} from './aether_key_util';
 import {
   SodiumChacha20Poly1305,
   HydrogenSecretBox,
@@ -42,143 +42,51 @@ import {
   SodiumSignPrivate,
   HydrogenSignPrivate,
 } from "./aether_api";
-// --- End Fix ---
 
-// --- Helper Function for DTO Key -> AKey Conversion (like KeyUtil.of(Key)) ---
-function dtoKeyToAKey(key: DtoKey): AKey {
-  let providerName: string | undefined = undefined;
-  let keyType: KeyType | undefined = undefined;
-  const data = (key as any).data as Uint8Array; // Assume data property exists
 
-  if (!data || !(data instanceof Uint8Array)) {
-    throw new Error(`DTO Key is missing valid data property.`);
-  }
-
-  // Determine Provider and KeyType using instanceof
-  if (key instanceof SodiumChacha20Poly1305) {
-    providerName = "SODIUM";
-    keyType = KeyType.SYMMETRIC;
-  } else if (key instanceof HydrogenSecretBox) {
-    providerName = "HYDROGEN";
-    keyType = KeyType.SYMMETRIC;
-  } else if (key instanceof SodiumCurvePublic) {
-    providerName = "SODIUM";
-    keyType = KeyType.ASYMMETRIC_PUBLIC;
-  } else if (key instanceof HydrogenCurvePublic) {
-    providerName = "HYDROGEN";
-    keyType = KeyType.ASYMMETRIC_PUBLIC;
-  } else if (key instanceof SodiumCurvePrivate) {
-    providerName = "SODIUM";
-    keyType = KeyType.ASYMMETRIC_PRIVATE;
-  } else if (key instanceof HydrogenCurvePrivate) {
-    providerName = "HYDROGEN";
-    keyType = KeyType.ASYMMETRIC_PRIVATE;
-  } else if (key instanceof SodiumSignPublic) {
-    providerName = "SODIUM";
-    keyType = KeyType.SIGN_PUBLIC;
-  } else if (key instanceof HydrogenSignPublic) {
-    providerName = "HYDROGEN";
-    keyType = KeyType.SIGN_PUBLIC;
-  } else if (key instanceof SodiumSignPrivate) {
-    providerName = "SODIUM";
-    keyType = KeyType.SIGN_PRIVATE;
-  } else if (key instanceof HydrogenSignPrivate) {
-    providerName = "HYDROGEN";
-    keyType = KeyType.SIGN_PRIVATE;
-  }
-  // Add STUB checks if needed
-
-  if (providerName && keyType !== undefined) {
-    const provider = CryptoProviderFactory.getProvider(providerName);
-    return provider.createKey(keyType, data);
-  } else {
-    const className = (key.constructor as any).name;
-    Log.error(`dtoKeyToAKey: Could not determine provider/type`, undefined, {
-      className,
-    });
-    throw new Error(`Unsupported DTO Key type: ${className}`);
-  }
-}
-
-// --- Helper Function for AKey -> DTO Key Conversion (like KeyUtil.of<DtoKey>(AKey)) ---
-function aKeyToDtoKey<T extends DtoKey>(key: AKey): T {
-  const providerName = key.getProviderName().toLowerCase();
-  const keyType = key.getKeyType();
-  const data = key.getData();
-
-  // Use instanceof checks based on provider and type to construct DTO
-  // This relies on the imported DTO constructors
-  switch (providerName) {
-    case "sodium":
-      switch (keyType) {
-        case KeyType.SYMMETRIC:
-          return new SodiumChacha20Poly1305(data) as unknown as T;
-        case KeyType.ASYMMETRIC_PUBLIC:
-          return new SodiumCurvePublic(data) as unknown as T;
-        case KeyType.ASYMMETRIC_PRIVATE:
-          return new SodiumCurvePrivate(data) as unknown as T;
-        case KeyType.SIGN_PUBLIC:
-          return new SodiumSignPublic(data) as unknown as T;
-        case KeyType.SIGN_PRIVATE:
-          return new SodiumSignPrivate(data) as unknown as T;
-      }
-      break;
-    case "hydrogen":
-      switch (keyType) {
-        case KeyType.SYMMETRIC:
-          return new HydrogenSecretBox(data) as unknown as T;
-        case KeyType.ASYMMETRIC_PUBLIC:
-          return new HydrogenCurvePublic(data) as unknown as T;
-        case KeyType.ASYMMETRIC_PRIVATE:
-          return new HydrogenCurvePrivate(data) as unknown as T;
-        case KeyType.SIGN_PUBLIC:
-          return new HydrogenSignPublic(data) as unknown as T;
-        case KeyType.SIGN_PRIVATE:
-          return new HydrogenSignPrivate(data) as unknown as T;
-      }
-      break;
-    case "stub": // Handle stub conversion if needed
-      // Depending on how you want to handle stub DTOs, you might:
-      // 1. Create specific Stub DTO classes (not recommended if avoiding dependencies)
-      // 2. Return a generic object matching DtoKey structure (might fail runtime checks)
-      // 3. Throw an error
-      Log.warn("aKeyToDtoKey: Conversion for STUB provider is approximate.");
-      // Return a placeholder structure
-      const stubDto = {
-        getAetherTypeId: () => -99,
-        getData: () => data,
-        getProviderName: () => "STUB",
-        getCryptoProvider: () => key.getCryptoProvider(),
-        toString: (r: any) => r.add(`StubDtoKey(${key.keyToString()})`),
-      } as unknown as T;
-      return stubDto;
-  }
-  throw new Error(
-    `Unsupported AKey for DTO conversion: Provider ${providerName}, Type ${KeyType[keyType]}`
-  );
-}
-
-// --- ClientStateInMemory Implementation ---
+/**
+ * @class ClientStateInMemory
+ * @implements {ClientState}
+ * @description In-memory implementation of ClientState for temporary storage of client configuration and data.
+ */
 export class ClientStateInMemory implements ClientState {
-  // <-- EXPORTED
+
   private uid: UUID | null = null;
   private alias: UUID | null = null;
   private masterKey: DtoKey | null = null;
-  private servers = new Map<number, ClientState.ServerInfo>();
-  private clients = new Map<string, ClientState.ClientInfoMutable>();
+  private servers = new Map < number, ClientState.ServerInfo > ();
+  private clients = new Map < string, ClientState.ClientInfoMutable > ();
   private registrationUris: URI[] = [];
-  private pingDuration = createAMFuture<number>(1000);
+  private pingDuration = createAMFuture < number > (1000);
   private parentUid: UUID;
-  private cryptoLib: CryptoLib = CryptoLib.HYDROGEN;
-  private rootSigners: Set<SignChecker> = new Set();
+  private cryptoLib: CryptoLib =
+CryptoLib.HYDROGEN;
+
+  /**
+   * @private
+   * @type {Map<string, SignChecker>}
+   * @description A map used as a unique-by-content Set for trusted root signers.
+   * The key is the uppercase string representation of the public key (provider:data),
+   * which ensures proper uniqueness mirroring Java's hashCode/equals logic for keys.
+   */
+  private rootSigners = new Map < string, SignChecker > ();
+
   private timeoutForConnectToRegistrationServer = 5000;
   private countServersForRegistration = 1;
 
+  /**
+   * @constructor
+   * @param {UUID | Uint8Array | null} arg1 Parent UUID, loaded state data (Uint8Array), or null/undefined.
+   * @param {URI[] | undefined} arg2 Registration URIs.
+   * @param {Set<SignChecker> | undefined} arg3 Optional set of
+initial root signers.
+   * @param {CryptoLib | undefined} arg4 Optional CryptoLib preference.
+   */
   constructor(
     arg1: UUID | Uint8Array | null,
-    arg2?: URI[],
-    arg3?: Set<SignChecker>,
-    arg4?: CryptoLib
+    arg2 ? : URI[],
+    arg3 ? : Set < SignChecker > ,
+    arg4 ? : CryptoLib
   ) {
     const BaseUUID = StandardUUIDsImpl.ROOT_UID.constructor;
     if (arg1 instanceof Uint8Array) {
@@ -189,20 +97,34 @@ export class ClientStateInMemory implements ClientState {
       this.parentUid = arg1;
       this.registrationUris = arg2.slice();
       this.uid = null;
-      this.cryptoLib = arg4 ?? CryptoLib.HYDROGEN;
-      if (arg3) this.rootSigners = new Set(arg3);
+      /** Set default cryptoLib to SODIUM */
+      this.cryptoLib = arg4 ?? CryptoLib.SODIUM;
+
+      if (arg3) {
+          // Add initial signers from arguments, ensuring uniqueness via Map
+          for (const signer of arg3) {
+              this.addSigner(signer);
+          }
+      }
       this.addDefaultRootSigners();
     } else if (arg1 === null && arg2 instanceof Array) {
       this.parentUid = StandardUUIDsImpl.ANONYMOUS_UID;
       this.registrationUris = arg2.slice();
       this.uid = null;
-      this.cryptoLib = arg4 ?? CryptoLib.HYDROGEN;
-      if (arg3) this.rootSigners = new Set(arg3);
+      /** Set default cryptoLib to SODIUM */
+      this.cryptoLib = arg4 ?? CryptoLib.SODIUM;
+
+      if (arg3) {
+          for (const signer of arg3) {
+
+             this.addSigner(signer);
+          }
+      }
       this.addDefaultRootSigners();
     } else {
       if (
         arg1 &&
-        typeof (arg1 as any).toString === "function" &&
+        typeof(arg1 as any).toString === "function" &&
         arg2 instanceof Array
       ) {
         Log.warn(
@@ -211,8 +133,13 @@ export class ClientStateInMemory implements ClientState {
         this.parentUid = arg1 as UUID;
         this.registrationUris = arg2.slice();
         this.uid = null;
-        this.cryptoLib = arg4 ?? CryptoLib.HYDROGEN;
-        if (arg3) this.rootSigners = new Set(arg3);
+        /** Set default cryptoLib to SODIUM */
+        this.cryptoLib = arg4 ?? CryptoLib.SODIUM;
+        if (arg3) {
+            for (const signer of arg3) {
+                this.addSigner(signer);
+            }
+        }
         this.addDefaultRootSigners();
       } else {
         throw new Error("Invalid ClientStateInMemory constructor arguments");
@@ -223,63 +150,88 @@ export class ClientStateInMemory implements ClientState {
     }
   }
 
+  /**
+   * @private
+   * @description Adds default root signers if they are not already present.
+   * The expected string format for SignChecker.of() is "PROVIDER:KEY_DATA" (e.g., SODIUM:HEX_DATA).
+   * This format is necessary for the SignChecker parsing logic (via CryptoProviderFactory).
+   */
   private addDefaultRootSigners(): void {
-    const defaultSigners = [
-      "SODIUM:SIGN_PUBLIC:4F202A94AB729FE9B381613AE77A8A7D89EDAB9299C3320D1A0B994BA710CCEB",
-      "HYDROGEN:SIGN_PUBLIC:883B4D7E0FB04A38CA12B3A451B00942048858263EE6E6D61150F2EF15F40343",
-      "STUB:SIGN_PUBLIC:04",
-    ]; // Added KeyType for clarity
-    const existingKeys = new Set(
-      Array.from(this.rootSigners).map((s) =>
-        s.getPublicKey().keyToString().toUpperCase()
-      )
-    ); // Store uppercase for comparison
+    // Expected format: PROVIDER:KEY_HEX_DATA
+    const defaultSignerStrings = [
+      /** Only keep SODIUM key, remove HYDROGEN and STUB keys */
+      "SODIUM:4F202A94AB729FE9B381613AE77A8A7D89EDAB9299C3320D1A0B994BA710CCEB",
+    ];
 
-    for (const keyString of defaultSigners) {
-      // Compare full key string (case-insensitive)
-      if (!existingKeys.has(keyString.toUpperCase())) {
-        try {
-          this.rootSigners.add(SignChecker.of(keyString));
-        } catch (e) {
-          Log.error("Failed to add default root signer", e as Error, {
-            keyString,
-          });
-        }
+    for (const keyString of defaultSignerStrings) {
+      try {
+        const checker = SignChecker.of(keyString);
+        this.addSigner(checker); // Add using helper method
+      } catch
+(e) {
+        Log.error("Failed to add default root signer", e as Error, {
+          keyString,
+        });
       }
     }
   }
 
+  /**
+   * @private
+   * @description Adds a SignChecker to the internal map, ensuring uniqueness based on the public key's string representation.
+   * @param {SignChecker} signer The signer to add.
+   */
+  private addSigner(signer: SignChecker): void {
+      // Use the public key's full string representation as the unique map key
+      const keyString = signer.getPublicKey().keyToString().toUpperCase();
+      this.rootSigners.set(keyString,
+signer);
+  }
+
+
+  /** @inheritDoc */
   getUid(): UUID | null {
     return this.uid;
   }
+  /** @inheritDoc */
   setUid(uid: UUID): void {
     this.uid = uid;
   }
+  /** @inheritDoc */
   getAlias(): UUID | null {
     return this.alias;
   }
+  /** @inheritDoc */
   setAlias(alias: UUID | null): void {
     this.alias = alias;
   }
+  /** @inheritDoc */
   setMasterKey(key: DtoKey): void {
     this.masterKey = key;
   }
+  /** @inheritDoc */
   getMasterKey(): DtoKey | null {
     return this.masterKey;
   }
+  /** @inheritDoc */
   getServerInfo(sid: number): ClientState.ServerInfo {
-    if (!this.servers.has(sid)) {
+    if
+(!this.servers.has(sid)) {
       this.servers.set(sid, new ClientState.ServerInfoImpl(sid));
     }
     return this.servers.get(sid)!;
   }
+  /** @inheritDoc */
   getServerDescriptor(serverId: number): ServerDescriptor | null {
     if (serverId <= 0) {
-      Log.warn("getServerDescriptor invalid id", { serverId });
+      Log.warn("getServerDescriptor invalid id", {
+        serverId
+      });
       return null;
     }
     return this.servers.get(serverId)?.getDescriptor() ?? null;
   }
+  /** @inheritDoc */
   getClientInfo(uid: UUID): ClientState.ClientInfoMutable {
     const key = uid.toString();
     if (!this.clients.has(key)) {
@@ -287,9 +239,12 @@ export class ClientStateInMemory implements ClientState {
     }
     return this.clients.get(key)!;
   }
-  setCloud(uid: UUID, cloud: Cloud): void {
+  /** @inheritDoc */
+  setCloud(uid: UUID, cloud: Cloud):
+void {
     this.getClientInfo(uid).setCloud(cloud);
   }
+  /** @inheritDoc */
   getCloud(uid: UUID): Cloud | null {
     if (!uid) {
       Log.warn("getCloud called with null/undefined UID");
@@ -297,43 +252,56 @@ export class ClientStateInMemory implements ClientState {
     }
     return this.getClientInfo(uid).getCloud();
   }
+  /** @inheritDoc */
   getRegistrationUri(): URI[] {
     return [...this.registrationUris];
   }
-  getPingDuration(): AMFuture<number> {
+  /** @inheritDoc */
+  getPingDuration(): AMFuture < number > {
     return this.pingDuration;
   }
+  /** @inheritDoc */
   getParentUid(): UUID {
     return this.parentUid;
   }
+  /** @inheritDoc */
   setParentUid(uid: UUID): void {
     this.parentUid = uid;
   }
+  /** @inheritDoc */
   getCryptoLib(): CryptoLib {
-    return this.cryptoLib;
+
+  return this.cryptoLib;
   }
-  getRootSigners(): Set<SignChecker> {
-    return new Set(this.rootSigners);
+
+  /** @inheritDoc */
+  getRootSigners(): Set < SignChecker > {
+    // Returns a Set of the values from the internal Map to match the interface contract.
+    return new Set(this.rootSigners.values());
   }
+
+  /** @inheritDoc */
   getTimeoutForConnectToRegistrationServer(): number {
     return this.timeoutForConnectToRegistrationServer;
   }
+  /** @inheritDoc */
   getCountServersForRegistration(): number {
     return this.countServersForRegistration;
   }
 
+  /** @inheritDoc */
   save(): Uint8Array {
     if (!this.uid || !this.alias || !this.masterKey || !this.parentUid) {
       throw new Error(`Client state incomplete`);
     }
 
     const dtoRootSigners: DtoKey[] = [];
-    for (const rs of this.rootSigners) {
+    // Iterate through Map values
+
+ for (const rs of this.rootSigners.values()) {
       try {
         const aKey: AKey.SignPublic = rs.getPublicKey();
-        // --- FIX: Use dedicated conversion function ---
-        const dtoKey = aKeyToDtoKey<DtoKey>(aKey);
-        // --- End Fix ---
+        const dtoKey = aKeyToDtoKey < DtoKey > (aKey);
         if (dtoKey) {
           dtoRootSigners.push(dtoKey);
         } else {
@@ -343,7 +311,8 @@ export class ClientStateInMemory implements ClientState {
         }
       } catch (e) {
         Log.error(
-          "Failed to convert root signer public key during save",
+
+       "Failed to convert root signer public key during save",
           e as Error
         );
       }
@@ -352,12 +321,13 @@ export class ClientStateInMemory implements ClientState {
     const dto = new ClientStateForSave(
       this.registrationUris.slice(),
       Array.from(this.servers.values())
-        .map((s) => s.getDescriptor())
-        .filter((d): d is ServerDescriptor => d !== null),
+      .map((s) => s.getDescriptor())
+      .filter((d): d is ServerDescriptor => d !== null),
       Array.from(this.clients.values())
-        .filter((c) => c.getCloud() !== null)
-        .map((c) => new ClientInfoDTO(c.getUid(), c.getCloud()!)),
-      dtoRootSigners,
+      .filter((c) => c.getCloud() !== null)
+      .map((c) => new ClientInfoDTO(c.getUid(), c.getCloud()!)),
+
+dtoRootSigners,
       this.cryptoLib,
       this.pingDuration.getNow() ?? 1000,
       this.parentUid,
@@ -373,12 +343,14 @@ export class ClientStateInMemory implements ClientState {
     return d.toArray();
   }
 
+  /** @inheritDoc */
   load(data: Uint8Array): void {
     try {
       const dto = ClientStateForSave.META.deserialize(
         null as any,
         new DataInOutStatic(data)
-      );
+
+  );
       this.uid = dto.uid;
       this.alias = dto.alias;
       this.parentUid = dto.parentUid;
@@ -402,28 +374,29 @@ export class ClientStateInMemory implements ClientState {
       dto.rootSigners.forEach((k: DtoKey) => {
         let keyStringForError = "unknown DTO Key";
         try {
-          // Use AStringBase to call DTO's toString
-          if (typeof k.toString === "function" && k.toString.length === 1) {
+          if (typeof k.toString === "function" &&
+k.toString.length === 1) {
             const sb = AStringBase.ofEmpty();
             k.toString(sb);
             keyStringForError = sb.toString();
           } else if (typeof k.toString === "function") {
-            let sb=AStringBase.ofEmpty();
+            let sb = AStringBase.ofEmpty();
             k.toString(sb)
-            keyStringForError =  sb.toString();
-          } else {
+
+            keyStringForError = sb.toString();
+          }
+else {
             keyStringForError = `DTOKey(TypeID:${k.getAetherTypeId()})`;
           }
 
-          // --- FIX: Use dedicated conversion function ---
           const akey: AKey = dtoKeyToAKey(k);
-          // --- End Fix ---
 
           if (akey && akey.getKeyType() === KeyType.SIGN_PUBLIC) {
             const checker = akey.asSignPublicKey().toSignChecker();
             if (checker) {
-              this.rootSigners.add(checker);
-            } else {
+              this.addSigner(checker); // Use helper to add to map
+
+    } else {
               Log.warn("Could not create SignChecker from loaded AKey", {
                 key: akey.keyToString(),
               });
@@ -431,7 +404,8 @@ export class ClientStateInMemory implements ClientState {
           } else {
             Log.warn("Loaded root signer is not SIGN_PUBLIC", {
               key: akey?.keyToString() ?? keyStringForError,
-            });
+
+     });
           }
         } catch (e) {
           Log.error("Failed to load/convert root signer DTO Key", e as Error, {
@@ -440,7 +414,6 @@ export class ClientStateInMemory implements ClientState {
         }
       });
       this.addDefaultRootSigners();
-
       if (!this.parentUid) {
         this.parentUid = StandardUUIDsImpl.ANONYMOUS_UID;
       }

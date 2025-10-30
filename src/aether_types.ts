@@ -1,9 +1,14 @@
-// =============================================================================================
-// FILE: aether.types.ts (Полностью восстановленное и исправленное содержимое)
-// =============================================================================================
+/**
+ * @file aether.types.ts
+ * @purpose Contains core, low-level types and functional interface definitions.
+ */
 
 /** Basic Types */
 export type Uint8Array = globalThis.Uint8Array;
+
+/**
+ * A basic UUID implementation.
+ */
 export class UUID { // <-- EXPORTED
     static fromString(uuidString: string): UUID {
         const uuidRegex = /^([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})$/i;
@@ -43,6 +48,7 @@ export class UUID { // <-- EXPORTED
 }
 export type URI = string; // <-- EXPORTED
 
+/** Functional Interface Types */
 export type ARunnable = () => void;
 export type Executor = (task: ARunnable) => void;
 export type APredicate<T> = (val: T) => boolean;
@@ -51,8 +57,94 @@ export type AFunction<A, B> = (a: A) => B;
 export type AConsumer<T> = (t: T) => void;
 export type ABiConsumer<T, U> = (t: T, u: U) => void;
 export type ABiFunction<T, U, R> = (t: T, u: U) => R;
+
+/** Tuples */
 export type Tuple2<T1, T2> = [T1, T2];
 
+/**
+ * A namespace for AConsumer utilities, mirroring Java's AConsumer interface statics.
+ */
+export namespace AConsumer_T {
+    /**
+     * A consumer that does nothing.
+     */
+    export const EMPTY: AConsumer<any> = () => { /* no-op */ };
+
+    /**
+     * Returns a typed empty consumer.
+     * @template E The type.
+     * @returns An empty consumer.
+     */
+    export function stub<E>(): AConsumer<E> {
+        return EMPTY;
+    }
+}
+
+/**
+ * A type guard and helper namespace for Weak Consumers.
+ * This creates a function that acts as an AConsumer but holds a WeakRef
+ * to the original task, allowing it to be garbage collected.
+ */
+export namespace WeakConsumer_T {
+    /**
+     * A type representing a callable AConsumer that is also a weak wrapper.
+     * @internal
+     */
+    export type WeakConsumer<T> = AConsumer<T> & {
+        _isWeak: true;
+        _weakOriginalTask: AConsumer<T>;
+        _weakRef: WeakRef<AConsumer<T>>;
+    };
+
+    /**
+     * Type guard to check if a consumer is a weak consumer.
+     * @param c The consumer to check.
+     * @returns True if it is a WeakConsumer.
+     */
+    function isWeakConsumer<T>(c: AConsumer<T>): c is WeakConsumer<T> {
+        return (c as any)?._isWeak === true;
+    }
+
+    /**
+     * Creates a new weak consumer function.
+     * @param task The original AConsumer to wrap.
+     * @returns A new AConsumer function that holds a WeakRef to the task.
+     */
+    export function create<T>(task: AConsumer<T>): AConsumer<T> {
+        const ref = new WeakRef(task);
+
+        /**
+         * This is the callable function that will be stored in the listener set.
+         */
+        const weakConsumerFunc = (t: T) => {
+            ref.deref()?.(t);
+        };
+
+        /**
+         * Tag the function with properties needed by EventConsumer.
+         */
+        (weakConsumerFunc as any)._isWeak = true;
+        (weakConsumerFunc as any)._weakOriginalTask = task;
+        (weakConsumerFunc as any)._weakRef = ref;
+
+        return weakConsumerFunc;
+    }
+
+    /**
+     * Checks if a consumer is a weak consumer and its reference is dead.
+     * @param c The consumer to check.
+     * @returns True if the consumer is weak and its target has been garbage collected.
+     */
+    export function isGarbageCollected<T>(c: AConsumer<T>): boolean {
+        if (isWeakConsumer(c)) {
+            return c._weakRef.deref() === undefined;
+        }
+        return false;
+    }
+}
+
+
+/** Atomic Types (Simple JS Implementation) */
 export class AtomicInteger {
     private value: number;
     constructor(initial: number) { this.value = initial; }
@@ -85,7 +177,13 @@ export class AtomicLong {
         if (this.value === expect) { this.value = update; return true; }
         return false;
     }
+    public addAndGet(delta: number): number {
+        this.value += delta;
+        return this.value;
+    }
 }
+
+/** Concurrency Stubs (Simple JS Implementation) */
 export class ConcurrentLinkedQueue_C<T> {
     private items: T[] = [];
     public add(item: T): void { this.items.push(item); }
@@ -136,8 +234,10 @@ export class ClientTimeoutException extends Error {
     }
 }
 
-// Added to satisfy imports in aether_client_types (even if logically derived elsewhere)
-// NOTE: This type is typically part of aether_client_connection_base.ts
+/**
+ * Represents a client connection.
+ * @note This is a forward declaration, typically defined elsewhere.
+ */
 export interface Connection<LT, RT> extends Destroyable { // <-- EXPORTED
     getRootApiFuture(): any;
     getRootApi(): RT | null;

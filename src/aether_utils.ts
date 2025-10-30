@@ -195,3 +195,84 @@ export const StandardUUIDsImpl: { ROOT_UID: UUID; TEST_UID: UUID; ANONYMOUS_UID:
     TEST_UID: UUID.fromString("3ac93165-3d37-4970-87a6-fa4ee27744e4"),
     ANONYMOUS_UID: UUID.fromString("237e2dc0-21a4-4e83-8184-c43052f93b79"),
 };
+// --- ДОБАВЛЕННЫЕ УТИЛИТЫ ДЛЯ ПОРТИРОВАНИЯ ---
+
+export const Arrays = {
+  equals: (a: Uint8Array | null | undefined, b: Uint8Array | null | undefined): boolean => {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  },
+  hashCode: (a: Uint8Array | null | undefined): number => {
+    if (!a) return 0;
+    let hash = 1;
+    for (let i = 0; i < a.length; i++) {
+      hash = (31 * hash + a[i]) | 0; // | 0 to force 32-bit int
+    }
+    return hash;
+  }
+};
+
+export const Objects = {
+  hash: (...values: any[]): number => {
+    let result = 1;
+    for (const val of values) {
+      let hash;
+      if (val === null || val === undefined) {
+        hash = 0;
+      } else if (typeof (val as any).hashCode === 'function') {
+        hash = (val as any).hashCode();
+      } else if (val instanceof Uint8Array) {
+        hash = Arrays.hashCode(val);
+      } else if (typeof val === 'string') {
+        // Простой хэш для строк
+        hash = 0;
+        for (let i = 0; i < val.length; i++) {
+          hash = (31 * hash + val.charCodeAt(i)) | 0;
+        }
+      } else if (typeof val === 'number') {
+        hash = val | 0;
+      } else if (typeof val === 'boolean') {
+        hash = val ? 1231 : 1237;
+      } else {
+        // Fallback
+        hash = 0;
+        const s = String(val);
+         for (let i = 0; i < s.length; i++) {
+          hash = (31 * hash + s.charCodeAt(i)) | 0;
+        }
+      }
+      result = (31 * result + (hash | 0)) | 0;
+    }
+    return result;
+  }
+};
+
+export const DataUtils = {
+  writeLongLE: (arr: Uint8Array, offset: number, value: number): void => {
+    const view = new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
+    // Используем BigInt для 64-bit LE, если доступно, иначе аппроксимация
+    if (typeof view.setBigUint64 === 'function') {
+        try {
+             // Пытаемся использовать BigInt
+             view.setBigUint64(offset, BigInt(Math.trunc(value)), true);
+        } catch(e) {
+             // Fallback для очень больших чисел, которые не помещаются в number (редко для nonce)
+             const low = value & 0xFFFFFFFF;
+             const high = Math.floor(value / 0x100000000); // 2^32
+             view.setUint32(offset, low, true);
+             view.setUint32(offset + 4, high, true);
+        }
+    } else {
+        // Fallback для окружений без BigInt (может потерять точность > 2^53)
+        const low = value & 0xFFFFFFFF;
+        const high = Math.floor(value / 0x100000000); // 2^32
+        view.setUint32(offset, low, true);
+        view.setUint32(offset + 4, high, true);
+    }
+  }
+};

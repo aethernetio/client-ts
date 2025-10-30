@@ -1,710 +1,1626 @@
-// =============================================================================================
-// FILE: aether.rcollection.ts
-// PURPOSE: Contains all Reactive Collection (RCollection, RMap, BMap) interfaces and implementations.
-// DEPENDENCIES: aether.types.ts, aether.future.ts, aether.logging.ts, aether.utils.ts
-// =============================================================================================
+/**
+ * @file aether_rcollection.ts
+ * @purpose Contains reactive collection implementations (RMap, RSet, RQueue, BMap).
+ * @dependencies aether.types.ts, aether.logging.ts, aether.utils.ts, aether_future.ts
+ */
 
 import {
-    AConsumer, AFunction, ABiFunction,
+    AConsumer,
+    AFunction,
+    ABiFunction,
 } from './aether_types';
 import {
-    EventConsumer, ARFutureWithFlag, AFuture,
-    ARFuture
+    EventConsumer
 } from './aether_future';
-import { RU } from './aether_utils';
-
-// --- AFunction Stub Utility ---
-const AFunctionStub = {
-    /**
-     * Creates a stub function that throws an error if called.
-     * This is used for function parameters that should never be executed in a unidirectional map.
-     */
-    stub: <T1, R1>(): AFunction<T1, R1> => {
-        return (() => {
-            throw new Error("AFunction stub called, this function should not be executed.");
-        }) as AFunction<T1, R1>;
-    }
-};
+import {
+    ARFutureWithFlag,
+} from './aether_future';
 
 // =============================================================================================
-// SECTION 8: RCOLLECTIONS INTERFACES AND IMPLEMENTATION
+// SECTION 1: RMap (Reactive Map)
 // =============================================================================================
 
-// --- RCol Namespace (Hoisted to the top to resolve scoping errors) ---
-export namespace RCol {
-    export function set<T>(): RSet<T> { return new RSetBySrc(new Set<T>()); }
-    export function map<K, V>(): RMap<K, V> { return new RMapBySrc(new Map<K, V>()); }
-    export function collection<T>(): RCollection<T> { return new RCollectionBySrc(new Array<T>()); }
+/**
+ * Represents an update event in an RMap.
+ * @template K The key type.
+ * @template V The value type.
+ */
+export class RMapUpdate<K, V> {
     /**
-     * Creates an asynchronous Batching Map (BMap) implementation.
-     * @param timeoutMs The request timeout duration in milliseconds.
-     * @param name A descriptive name for logging purposes.
+     * @param key The key that was updated.
+     * @param newValue The new value associated with the key.
+     * @param oldValue The previous value (if any) associated with the key.
      */
-    export function bMap<K, V>(timeoutMs: number, name: string): BMap<K, V> {
-        return new BMapImpl<K, V>(10, name, timeoutMs);
-    }
-    /**
-     * Internal utility to wrap an RFMap implementation with default interface methods.
-     */
-    export function rfMapImpl<K, V>(map: RFMap<K, V>): RFMap<K, V> & RFMapDefaultImpl<K, V> {
-        return new RFMapDefaultImpl(map) as RFMap<K, V> & RFMapDefaultImpl<K, V>;
-    }
+    constructor(
+        public readonly key: K,
+        public readonly newValue: V | null,
+        public readonly oldValue: V | null
+    ) { }
 }
 
-// NOTE: Destroyable removed from all collection interfaces as requested.
-export interface RCollection<T> extends Iterable<T> {
-    // Collection methods
-    contains(o: any): boolean;
-    add(e: T): boolean;
-    remove(o: any): boolean;
-    clear(): void;
-    addAll(c: Array<T>): boolean;
-    [Symbol.iterator](): IterableIterator<T>;
+/**
+ * Represents a reactive Map entry, similar to java.util.Map.Entry.
+ * @template K The key type.
+ * @template V The value type.
+ */
+export interface RMapEntry<K, V> {
+    key: K;
+    value: V;
+}
 
-    // RCollection methods
-    readonly forAdd: EventConsumer<T>;
-    readonly forRemove: EventConsumer<T>;
+/**
+ * A reactive Map interface.
+ * NOTE: This does NOT extend the built-in 'Map' to avoid iterator type conflicts.
+ *
+ * @template K The key type.
+ * @template V The value type.
+ */
+export interface RMap<K, V> extends Iterable<[K, V]> {
+    // --- Standard Map Properties & Methods ---
+
     /**
-     * Creates a reactive, bi-directional mapped collection.
-     * @param f Function to map source type T to target type T2.
-     * @param f2 Function to map target type T2 back to source type T (required for modification).
+     * Gets the number of entries in the map.
      */
-    map<T2>(f: AFunction<T, T2>, f2: AFunction<T2, T>): RCollection<T2>;
     readonly size: number;
-}
-export namespace RCollection {
-    export interface Update<T> { newValue: T; oldValue: T; }
-}
 
-// Full RMap interface definition including namespace
-export interface RMap<K, V> { // Destroyable removed
-    // Map methods (explicitly defined)
-    get(key: K): V | undefined;
+    /**
+     * Sets a value for a key.
+     * @param key The key.
+     * @param value The value.
+     * @returns This RMap instance.
+     */
     set(key: K, value: V): this;
-    delete(key: K): boolean;
+
+    /**
+     * Gets a value for a key.
+     * @param key The key.
+     * @returns The value or undefined.
+     */
+    get(key: K): V | undefined;
+
+    /**
+     * Checks if a key exists.
+     * @param key The key.
+     * @returns True if the key exists.
+     */
     has(key: K): boolean;
+
+    /**
+     * Deletes an entry.
+     * @param key The key to delete.
+     * @returns True if an element was deleted, false otherwise.
+     */
+    delete(key: K): boolean;
+
+    /**
+     * Clears the map.
+     */
     clear(): void;
+
+    /**
+     * Executes a callback for each entry.
+     * @param callbackfn The callback function.
+     * @param thisArg The `this` context for the callback.
+     */
     forEach(callbackfn: (value: V, key: K, map: RMap<K, V>) => void, thisArg?: any): void;
-    keys(): IterableIterator<K>;
-    values(): IterableIterator<V>;
+
+    /**
+     * Returns an iterator for the map entries.
+     */
     entries(): IterableIterator<[K, V]>;
+
+    /**
+     * Returns an iterator for the map keys.
+     */
+    keys(): IterableIterator<K>;
+
+    /**
+     * Returns an iterator for the map values.
+     */
+    values(): IterableIterator<V>;
+
+    /**
+     * Returns an iterator for the map entries.
+     */
     [Symbol.iterator](): IterableIterator<[K, V]>;
 
-    // RMap methods
-    get size(): number;
-    forUpdate(): EventConsumer<RMap.Update<K, V>>;
-    forRemove(): EventConsumer<RMap.Entry<K, V>>;
+    // --- Reactive Methods ---
 
     /**
-     * Converts a standard RMap (V) into an RFMap (ARFutureWithFlag<V>).
-     * This method is only available on base RMap implementations, not RFMap/BMap.
+     * Fires when an entry is added or updated.
+     * @returns An EventConsumer for RMapUpdate events.
      */
-    mapToFutures(): RFMap<K, V>;
+    forUpdate(): EventConsumer<RMapUpdate<K, V>>;
 
     /**
-     * Creates a reactive map with mapped values (bi-directional).
-     * @param v1ToV2 Function to map old value V to new value V2.
-     * @param v2ToV1 Function to map new value V2 back to old value V.
+     * Fires when an entry is removed.
+     * The value in the entry is the value that was removed.
+     * @returns An EventConsumer for RMapEntry events.
      */
-    mapVal<V2>(v1ToV2: AFunction<V, V2>, v2ToV1: AFunction<V2, V>): RMap<K, V2>;
+    forRemove(): EventConsumer<RMapEntry<K, V>>;
 
     /**
-     * Creates a reactive map with mapped values (unidirectional, modifications not supported).
-     * @param v1ToV2 Function to map old value V to new value V2.
+     * Creates a new RMap by mapping the values of this map.
+     * @param v1ToV2 Function to map V to V2.
+     * @param v2ToV1 Function to map V2 back to V (for reverse operations).
      */
-    mapVal<V2>(v1ToV2: AFunction<V, V2>): RMap<K, V2>;
+    mapVal<V2>(v1ToV2: AFunction<V | null, V2 | null>, v2ToV1: AFunction<V2 | null, V | null>): RMap<K, V2>;
 
     /**
-     * Creates a reactive map with mapped keys and values (bi-directional).
-     * @param k1ToK2 Function to map source key K to target key K2.
-     * @param k2ToK1 Function to map target key K2 back to source key K.
-     * @param v1ToV2 Function to map source value V to target value V2.
-     * @param v2ToV1 Function to map target value V2 back to source value V.
+     * Creates a new RMap by mapping keys and values.
+     * @param k1ToK2 Function to map K to K2.
+     * @param k2ToK1 Function to map K2 back to K.
+     * @param v1ToV2 Function to map V to V2.
+     * @param v2ToV1 Function to map V2 back to V.
      */
-    map<K2, V2>(k1ToK2: AFunction<K, K2>, k2ToK1: AFunction<K2, K>, v1ToV2: AFunction<V, V2>, v2ToV1: AFunction<V2, V>): RMap<K2, V2>;
+    map<K2, V2>(
+        k1ToK2: AFunction<K, K2>, k2ToK1: AFunction<K2, K>,
+        v1ToV2: AFunction<V | null, V2 | null>, v2ToV1: AFunction<V2 | null, V | null>
+    ): RMap<K2, V2>;
 
     /**
-     * Creates a reactive map with mapped keys based on key and value (read-only key mapping).
-     * @param k1ToK2 Function to map source key K and value V to target key K2.
+     * Creates a new one-way RMap by mapping keys based on key and value.
+     * @param k1ToK2 A function that derives a new key (K2) from an old key (K) and value (V).
      */
     mapKey<K2>(k1ToK2: ABiFunction<K, V, K2>): RMap<K2, V>;
-}
-// Associated namespace for RMap internal types (Entry/Update)
-export namespace RMap {
-    export interface Entry<K, V> { key: K; value: V; }
-    export interface Update<K, V> { key: K; newValue: V; oldValue: V; }
-}
-
-export interface RFMap<K, V> extends RMap<K, ARFutureWithFlag<V>> {
 
     /**
-     * Creates a reactive map with mapped futures' resolved values.
-     * @param vToV2 Function to map resolved value V to new resolved value V2.
-     * @param v2ToV Function to map new resolved value V2 back to old resolved value V.
+     * Links this map to another map, synchronizing changes in both directions.
+     * @param other The other RMap to link with.
      */
-    mapValFuture<V2>(vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K, V2>;
+    link(other: RMap<K, V>): void;
 
     /**
-     * Creates a reactive map with keys mapped based on resolved values.
-     * @param vToK2 Function to map resolved value V to new key K2.
-     * @param vToK Function to map resolved value V to original key K.
+     * Converts this RMap into an RFMap, where values are wrapped in ARFutureWithFlag.
+     * @returns A new RFMap instance.
      */
-    mapKeyFuture<K2>(vToK2: AFunction<V, K2>, vToK: AFunction<V, K>): RFMap<K2, V>;
-
-    /**
-     * Creates a reactive map with mapped keys and resolved values (bi-directional).
-     */
-    mapFuture<K2, V2>(kToK2: AFunction<K, K2>, k2ToK: AFunction<K2, K>, vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K2, V2>;
-}
-export interface BMap<K, V> extends RFMap<K, V> {
-    /**
-     * Retrieves the ARFutureWithFlag associated with the key. If not present, creates one
-     * and adds the key to the global request pool.
-     */
-    getFuture(key: K): ARFutureWithFlag<V>;
-
-    /**
-     * Puts a fully resolved value into the map, fulfilling any waiting future.
-     */
-    putResolved(key: K, value: V): void;
-
-    /**
-     * Marks the future for a key as completed with an error.
-     */
-    putError(key: K, error: Error): void;
-
-    /**
-     * Returns an EventConsumer that fires when a value in the map is definitively resolved.
-     */
-    forValueUpdate(): EventConsumer<RMap.Update<K, V>>;
-
-    /**
-     * Returns a set of keys that currently require fetching from the external service (globally).
-     */
-    getPendingRequests(): Set<K>;
-
-    /**
-     * Returns an array of keys queued for network submission by this specific sender.
-     * This acts as the 'flush' operation for the sender.
-     * @param elementType The class constructor for the key type.
-     * @param sender The object responsible for sending the network request.
-     */
-    getRequestsFor(elementType: new (...args: any[]) => K, sender: Object): K[];
-
-    /**
-     * Checks if there is any work available globally.
-     */
-    isRequests(): boolean;
-
-    /**
-     * Checks if there are any pending requests for the specified sender.
-     */
-    isRequestsFor(sender: Object): boolean;
+    mapToFutures(): RFMap<K, V>;
 }
 
-export interface RSet<T> extends RCollection<T> {
-    map<T2>(f: AFunction<T, T2>, f2: AFunction<T2, T>): RSet<T2>;
-    map<T2>(f: AFunction<T, T2>): RSet<T2>;
-}
+/**
+ * Base implementation for RMap that wraps a standard Map.
+ * @template K The key type.
+ * @template V The value type.
+ */
+export class RMapBySrc<K, V> implements RMap<K, V> {
+    public readonly [Symbol.toStringTag] = "RMap";
 
-export class RCollectionBySrc<T> implements RCollection<T> {
-    public readonly forAdd: EventConsumer<T>;
-    public readonly forRemove: EventConsumer<T>;
-    protected readonly src: T[] | Set<T>;
+    private readonly updateEvent = new EventConsumer<RMapUpdate<K, V>>();
+    private readonly removeEvent = new EventConsumer<RMapEntry<K, V>>();
 
-    constructor(src: T[] | Set<T>) {
-        this.src = src;
-        this.forAdd = new EventConsumer<T>();
-        this.forRemove = new EventConsumer<T>();
-    }
-    public get size(): number { return Array.isArray(this.src) ? this.src.length : (this.src as Set<T>).size; }
-    public contains(o: any): boolean { return Array.isArray(this.src) ? this.src.includes(o) : (this.src as Set<T>).has(o); }
-    public add(e: T): boolean {
-        let added = false;
-        if (Array.isArray(this.src)) {
-            if (!this.src.includes(e)) { this.src.push(e); added = true; }
-        } else {
-            const sizeBefore = (this.src as Set<T>).size;
-            (this.src as Set<T>).add(e);
-            if ((this.src as Set<T>).size > sizeBefore) { added = true; }
+    /**
+     * @param src The underlying Map instance to wrap.
+     */
+    constructor(protected readonly src: Map<K, V>) { }
+
+    /**
+     * Fires when an entry is added or updated.
+     * @returns An EventConsumer for RMapUpdate events.
+     */
+    public forUpdate(): EventConsumer<RMapUpdate<K, V>> { return this.updateEvent; }
+
+    /**
+     * Fires when an entry is removed.
+     * @returns An EventConsumer for RMapEntry events.
+     */
+    public forRemove(): EventConsumer<RMapEntry<K, V>> { return this.removeEvent; }
+
+    /**
+     * Sets a value for a key and fires an update event.
+     * @param key The key.
+     * @param value The value.
+     * @returns This RMap instance.
+     */
+    public set(key: K, value: V): this {
+        const oldValue = this.src.get(key) ?? null;
+        if (oldValue === value) {
+            return this;
         }
-
-        if (added) this.forAdd.fire(e);
-        return added;
+        this.src.set(key, value);
+        this.updateEvent.fire(new RMapUpdate(key, value, oldValue));
+        return this;
     }
-    public remove(o: any): boolean {
-        let removed = false;
-        if (Array.isArray(this.src)) {
-            const index = this.src.indexOf(o);
-            if (index > -1) { this.src.splice(index, 1); removed = true; }
-        } else {
-            removed = (this.src as Set<T>).delete(o);
-        }
-        if (removed) this.forRemove.fire(o as T);
-        return removed;
-    }
-    public clear(): void {
-        if (this.size === 0) return;
-        const items = Array.from(this.src);
-        Array.isArray(this.src) ? this.src.length = 0 : (this.src as Set<T>).clear();
-        for (const item of items) { this.forRemove.fire(item); }
-    }
-    public map<T2>(f: AFunction<T, T2>, f2: AFunction<T2, T>): RCollection<T2> {
-        const self = this;
-        const res = RCol.collection<T2>();
 
-        self.forAdd.add((v: T) => res.add(f(v)));
-        self.forRemove.add((v: T) => res.remove(f(v)));
-        res.forAdd.add((v: T2) => self.add(f2(v)));
-        res.forRemove.add((v: T2) => self.remove(f2(v)));
-
-        for (const e of self) { res.add(f(e)); }
-
-        return res;
-    }
-    public addAll(c: Array<T>): boolean {
-        let res = false;
-        for (const v of c) { res = this.add(v) || res; }
-        return res;
-    }
-    public [Symbol.iterator](): IterableIterator<T> { return this.src[Symbol.iterator](); }
-}
-
-export class RSetBySrc<T> extends RCollectionBySrc<T> implements RSet<T> {
-    constructor(src: Set<T>) { super(src); }
-    override add(e: T): boolean {
-        const srcSet = this.src as Set<T>;
-        if (!srcSet.has(e)) {
-            srcSet.add(e);
-            this.forAdd.fire(e);
-            return true;
+    /**
+     * Deletes an entry and fires a remove event.
+     * @param key The key to delete.
+     * @returns True if an element was deleted, false otherwise.
+     */
+    public delete(key: K): boolean {
+        const oldValue = this.src.get(key);
+        if (oldValue !== undefined) {
+            const result = this.src.delete(key);
+            if (result) {
+                this.removeEvent.fire({ key: key, value: oldValue });
+            }
+            return result;
         }
         return false;
     }
-    map<T2>(f: AFunction<T, T2>, back: AFunction<T2, T>): RSet<T2>;
-    map<T2>(f: AFunction<T, T2>): RSet<T2>;
-    map<T2>(f: AFunction<T, T2>, back?: AFunction<T2, T>): RSet<T2> {
-        const self = this;
-        if (back) {
-            const res = RCol.set<T2>();
-            self.forAdd.add((v: T) => res.add(f(v)));
-            self.forRemove.add((v: T) => res.remove(f(v)));
-            res.forAdd.add((v: T2) => self.add(back(v)));
-            res.forRemove.add((v: T2) => self.remove(back(v)));
-            for (const e of self.src as Set<T>) { res.add(f(e)); }
-            return res;
+
+    /**
+     * Clears the map, firing remove events for each entry.
+     */
+    public clear(): void {
+        /**
+         * We must iterate and call this.delete() to ensure events fire
+         * for each removed item, as required by RMap.java.
+         */
+        for (const [key] of this.src.entries()) {
+            this.delete(key);
+        }
+    }
+
+    /**
+     * Gets a value for a key.
+     * @param key The key.
+     * @returns The value or undefined.
+     */
+    public get(key: K): V | undefined {
+        return this.src.get(key);
+    }
+
+    /**
+     * Checks if a key exists.
+     * @param key The key.
+     * @returns True if the key exists.
+     */
+    public has(key: K): boolean {
+        return this.src.has(key);
+    }
+
+    /**
+     * Gets the number of entries in the map.
+     */
+    public get size(): number {
+        return this.src.size;
+    }
+
+    /**
+     * Executes a callback for each entry.
+     * @param callbackfn The callback function.
+     * @param thisArg The `this` context for the callback.
+     */
+    public forEach(callbackfn: (value: V, key: K, map: RMap<K, V>) => void, thisArg?: any): void {
+        // Pass 'this' (the RMap) to the callback, not 'this.src' (the raw Map)
+        this.src.forEach((value, key) => {
+            callbackfn.call(thisArg, value, key, this);
+        });
+    }
+
+    /**
+     * Returns an iterator for the map entries.
+     */
+    public [Symbol.iterator](): IterableIterator<[K, V]> {
+        return this.src[Symbol.iterator]();
+    }
+
+    /**
+     * Returns an iterator for the map entries.
+     */
+    public entries(): IterableIterator<[K, V]> {
+        return this.src.entries();
+    }
+
+    /**
+     * Returns an iterator for the map keys.
+     */
+    public keys(): IterableIterator<K> {
+        return this.src.keys();
+    }
+
+    /**
+     * Returns an iterator for the map values.
+     */
+    public values(): IterableIterator<V> {
+        return this.src.values();
+    }
+
+    /**
+     * Implements the RMap.mapVal default method.
+     */
+    public mapVal<V2>(v1ToV2: AFunction<V | null, V2 | null>, v2ToV1: AFunction<V2 | null, V | null>): RMap<K, V2> {
+        return this.map(k => k, k => k, v1ToV2, v2ToV1);
+    }
+
+    /**
+     * Implements the RMap.map default method.
+     */
+    public map<K2, V2>(
+        k1ToK2: AFunction<K, K2>, k2ToK1: AFunction<K2, K>,
+        v1ToV2: AFunction<V | null, V2 | null>, v2ToV1: AFunction<V2 | null, V | null>
+    ): RMap<K2, V2> {
+
+        const resMap = new Map<K2, V2>();
+        for (const [k, v] of this.entries()) {
+            resMap.set(k1ToK2(k), v1ToV2(v));
         }
 
-        const res = RCol.set<T2>();
-        this.forAdd.add((v: T) => res.add(f(v)));
-        this.forRemove.add((v: T) => res.remove(f(v)));
-        for (const v of this.src as Set<T>) { res.add(f(v)); }
+        const res: RMap<K2, V2> = RCol.of(resMap);
+
+        this.forUpdate().add(u => {
+            const k2 = k1ToK2(u.key);
+            const v2 = v1ToV2(u.newValue);
+            res.set(k2, v2!);
+        });
+        this.forRemove().add(e => {
+            res.delete(k1ToK2(e.key));
+        });
+
+        res.forUpdate().add(u => {
+            const k1 = k2ToK1(u.key);
+            const v1 = v2ToV1(u.newValue);
+            this.set(k1, v1!);
+        });
+        res.forRemove().add(e => {
+            this.delete(k2ToK1(e.key));
+        });
+
         return res;
     }
-}
 
-export class RMapBySrc<K, V> implements RMap<K, V> {
-    private readonly _forUpdate: EventConsumer<RMap.Update<K, V>> = new EventConsumer<RMap.Update<K, V>>();
-    private readonly _forRemove: EventConsumer<RMap.Entry<K, V>> = new EventConsumer<RMap.Entry<K, V>>();
-    private readonly src: Map<K, V>;
-
-    constructor(src: Map<K, V>) { this.src = src; }
-
-    // RMap methods
-    public forUpdate(): EventConsumer<RMap.Update<K, V>> { return this._forUpdate; }
-    public forRemove(): EventConsumer<RMap.Entry<K, V>> { return this._forRemove; }
-    public mapToFutures(): RFMap<K, V> {
-        const targetRfMap = RCol.bMap<K, V>(5000, `mappedFutures`);
-        this.forEach((v, k) => { if (v !== null && v !== undefined) { targetRfMap.putResolved(k, v); } });
-        this.forUpdate().add((update: RMap.Update<K, V>) => {
-            if (update.newValue !== undefined && update.newValue !== null) targetRfMap.putResolved(update.key, update.newValue);
-        });
-        this.forRemove().add((entry: RMap.Entry<K, V>) => { targetRfMap.delete(entry.key); });
-        return targetRfMap;
-    }
-
-    public mapVal<V2>(v1ToV2: AFunction<V, V2>, v2ToV1: AFunction<V2, V>): RMap<K, V2>;
-    public mapVal<V2>(v1ToV2: AFunction<V, V2>): RMap<K, V2>;
-    public mapVal<V2>(v1ToV2: AFunction<V, V2>, v2ToV1?: AFunction<V2, V>): RMap<K, V2> {
-        const _stubK = AFunctionStub.stub<K, K>();
-        const backV = v2ToV1 ?? (() => { throw new Error("UnsupportedOperationException"); });
-        return this.map(_stubK, _stubK, v1ToV2, backV);
-    }
-
-    public map<K2, V2>(k1ToK2: AFunction<K, K2>, k2ToK1: AFunction<K2, K>, v1ToV2: AFunction<V, V2>, v2ToV1: AFunction<V2, V>): RMap<K2, V2> {
-        const self = this;
-        return new (class implements RMap<K2, V2> {
-            private readonly _forUpdate = new EventConsumer<RMap.Update<K2, V2>>();
-            private readonly _forRemove = new EventConsumer<RMap.Entry<K2, V2>>();
-            private mapData: Map<K2, V2> = new Map();
-
-            constructor() {
-                self.forUpdate().add(u => {
-                    const k2 = k1ToK2(u.key);
-                    const v2New = u.newValue !== undefined && u.newValue !== null ? v1ToV2(u.newValue) : undefined;
-                    const v2Old = u.oldValue !== undefined && u.oldValue !== null ? v1ToV2(u.oldValue) : undefined;
-                    this.mapData.set(k2, v2New!);
-                    this._forUpdate.fire({ key: k2, newValue: v2New, oldValue: v2Old } as RMap.Update<K2, V2>);
-                });
-                self.forRemove().add(u => {
-                    const k2 = k1ToK2(u.key);
-                    const v2 = u.value !== undefined && u.value !== null ? v1ToV2(u.value) : undefined;
-                    this.mapData.delete(k2);
-                    this._forRemove.fire({ key: k2, value: v2 } as RMap.Entry<K2, V2>);
-                });
-                self.forEach((v, k) => this.mapData.set(k1ToK2(k), v1ToV2(v)));
-            }
-
-            // --- RMap Interface Implementation (Methods) ---
-            public forUpdate(): EventConsumer<RMap.Update<K2, V2>> { return this._forUpdate; }
-            public forRemove(): EventConsumer<RMap.Entry<K2, V2>> { return this._forRemove; }
-
-            // Map methods
-            get size(): number { return self.size; }
-            get(key: K2): V2 | undefined { return this.mapData.get(key); }
-            set(key: K2, value: V2): this { self.set(k2ToK1(key), v2ToV1(value)); return this; }
-            delete(key: K2): boolean { return self.delete(k2ToK1(key)); }
-            has(key: K2): boolean { return self.has(k2ToK1(key)); }
-            clear(): void { self.clear(); }
-            public forEach(callbackfn: (value: V2, key: K2, map: RMap<K2, V2>) => void, _thisArg?: any): void {
-                this.mapData.forEach((v, k) => callbackfn.call(_thisArg, v, k, this), _thisArg);
-            }
-            public keys(): IterableIterator<K2> { return this.mapData.keys(); }
-            public values(): IterableIterator<V2> { return this.mapData.values(); }
-            public entries(): IterableIterator<[K2, V2]> { return this.mapData.entries(); }
-            public [Symbol.iterator](): IterableIterator<[K2, V2]> { return this.mapData.entries(); }
-
-            // RMap delegates
-            mapToFutures(): RFMap<K2, V2> { throw new Error("mapToFutures() is not implemented on mapped RMap."); }
-
-            // mapVal: Implement both overloads
-            public mapVal<V3>(v1ToV2: AFunction<V2, V3>, v2ToV1: AFunction<V3, V2>): RMap<K2, V3>;
-            public mapVal<V3>(v1ToV2: AFunction<V2, V3>): RMap<K2, V3>;
-            public mapVal<V3>(v1ToV2: AFunction<V2, V3>, v2ToV1?: AFunction<V3, V2>): RMap<K2, V3> {
-                const _stubK = AFunctionStub.stub<K2, K2>();
-                const backV = v2ToV1 ?? AFunctionStub.stub<V3, V2>();
-                return this.map(_stubK, _stubK, v1ToV2, backV);
-            }
-
-            // map: Single, complete signature implementation
-            public map<K3, V3>(_k1ToK2: AFunction<K2, K3>, _k2ToK1: AFunction<K3, K2>, _v1ToV2: AFunction<V2, V3>, _v2ToV1: AFunction<V3, V2>): RMap<K3, V3> {
-                 throw new Error("Recursive map implementation needed.");
-            }
-
-            mapKey<K3>(_k1ToK2: ABiFunction<K2, V2, K3>): RMap<K3, V2> { throw new Error("Method not implemented."); }
-        }) as RMap<K2, V2>;
-    }
+    /**
+     * Implements the RMap.mapKey default method .
+     */
     public mapKey<K2>(k1ToK2: ABiFunction<K, V, K2>): RMap<K2, V> {
         const res = RCol.map<K2, V>();
+
         this.forRemove().add(e => {
-            if (e.value) {
-                const _k2 = k1ToK2(e.key, e.value);
-                res.delete(_k2);
-            }
+            const k2 = k1ToK2(e.key, e.value);
+            res.delete(k2);
         });
         this.forUpdate().add(e => {
-            if (e.newValue) {
+            if (e.oldValue !== null && e.oldValue !== undefined) {
+                const oldK2 = k1ToK2(e.key, e.oldValue);
+                res.delete(oldK2);
+            }
+            if (e.newValue !== null && e.newValue !== undefined) {
                 const k2 = k1ToK2(e.key, e.newValue);
                 res.set(k2, e.newValue);
             }
         });
-        this.forEach((v, k) => res.set(k1ToK2(k, v), v));
+
+        for (const [k, v] of this.entries()) {
+            res.set(k1ToK2(k, v), v);
+        }
+
         return res;
     }
 
-    // Map methods (implementation)
-    public get(key: K): V | undefined { return this.src.get(key); }
-    public set(key: K, value: V): this {
-        const old = this.src.get(key);
-        this.src.set(key, value);
-        if (old !== value) { this._forUpdate.fire({ key, newValue: value, oldValue: old } as RMap.Update<K, V>); }
-        return this;
+    /**
+     * Implements the RMap.link default method.
+     */
+    public link(other: RMap<K, V>): void {
+        this.forUpdate().add(e => { if (e.newValue !== null) other.set(e.key, e.newValue); });
+        this.forRemove().add(e => other.delete(e.key));
+        other.forUpdate().add(e => { if (e.newValue !== null) this.set(e.key, e.newValue); });
+        other.forRemove().add(e => this.delete(e.key));
+
+        for (const [k, v] of other.entries()) {
+            this.set(k, v);
+        }
+        for (const [k, v] of this.entries()) {
+            other.set(k, v);
+        }
     }
-    public delete(key: K): boolean {
-        const old = this.src.get(key);
-        const removed = this.src.delete(key);
-        if (removed) { this._forRemove.fire({ key, value: old } as RMap.Entry<K, V>); }
-        return removed;
+
+    /**
+     * Implements the RMap.mapToFutures default method.
+     */
+    public mapToFutures(): RFMap<K, V> {
+        const map2 = new Map<K, ARFutureWithFlag<V>>();
+
+        const getOrCreateFuture = (key: K): ARFutureWithFlag<V> => {
+            let future = map2.get(key);
+            if (!future) {
+                future = new ARFutureWithFlag<V>();
+                map2.set(key, future);
+                future.to((v: V) => {
+                    if (future!.tryRequest()) {
+                        this.set(key, v);
+                    }
+                });
+            }
+            return future;
+        };
+
+        const rfMap: RFMap<K, V> = new RMapBySrc<K, ARFutureWithFlag<V>>(map2) as unknown as RFMap<K, V>;
+
+        for(const [key, value] of this.entries()) {
+            if (value !== null) {
+                const f = getOrCreateFuture(key);
+                f.tryDone(value);
+                f.tryRequest();
+            }
+        }
+
+        this.forUpdate().add(u => {
+            const f = getOrCreateFuture(u.key);
+            f.tryRequest();
+            if (u.newValue !== null) {
+                f.tryDone(u.newValue);
+            } else {
+                f.cancel();
+            }
+        });
+
+        this.forRemove().add(e => {
+            const f = map2.get(e.key);
+            if (f) {
+                f.cancel();
+                rfMap.delete(e.key);
+            }
+        });
+
+        (rfMap as any).mapValFuture = RFMapImpl.mapValFuture.bind(rfMap);
+        (rfMap as any).mapKeyFuture = RFMapImpl.mapKeyFuture.bind(rfMap);
+
+        return rfMap;
     }
-    public has(key: K): boolean { return this.src.has(key); }
-    public get size(): number { return this.src.size; }
-    public clear(): void {
-        if (this.size === 0) return;
-        const entries = Array.from(this.src.entries());
-        this.src.clear();
-        for (const [key, value] of entries) { this._forRemove.fire({ key, value }); }
-    }
-    public forEach(callbackfn: (value: V, key: K, map: RMap<K, V>) => void, _thisArg?: any): void { this.src.forEach((v, k) => callbackfn.call(_thisArg, v, k, this), _thisArg); }
-    public [Symbol.iterator](): IterableIterator<[K, V]> { return this.src.entries(); }
-    public keys(): IterableIterator<K> { return this.src.keys(); }
-    public values(): IterableIterator<V> { return this.src.values(); }
-    public entries(): IterableIterator<[K, V]> { return this.src.entries(); }
 }
 
-class Sender<K> {
-    public readonly requests: Set<K> = new RU.ConcurrentHashSet();
-    constructor(allRequests: Set<K>) { allRequests.forEach(k => this.requests.add(k)); }
-    public extract(_elementType: new (...args: any[]) => K): K[] {
-        const r: K[] = Array.from(this.requests);
+// =============================================================================================
+// SECTION 2: RFMap (Reactive Future Map)
+// =============================================================================================
+
+/**
+ * A reactive Map where values are ARFutureWithFlag.
+ *
+ * @template K The key type.
+ * @template V The value type held by the future.
+ */
+export interface RFMap<K, V> extends RMap<K, ARFutureWithFlag<V>> {
+    /**
+     * Creates a new RFMap by mapping the *values* inside the futures.
+     * @param vToV2 Function to map V to V2.
+     * @param v2ToV Function to map V2 back to V.
+     */
+    mapValFuture<V2>(vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K, V2>;
+
+    /**
+     * Creates a new RFMap by mapping the *keys* based on the *resolved value*.
+     * @param vToK2 Function to derive a new key K2 from the value V.
+     */
+    mapKeyFuture<K2>(vToK2: AFunction<V, K2>): RFMap<K2, V>;
+}
+
+/**
+ * Contains implementations for RFMap default methods.
+ */
+namespace RFMapImpl {
+    /**
+     * Implementation for RFMap.mapValFuture.
+     */
+    export function mapValFuture<K, V, V2>(this: RFMap<K, V>, vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K, V2> {
+        const newMap = new Map<K, ARFutureWithFlag<V2>>();
+        const res: RFMap<K, V2> = RCol.of(newMap) as unknown as RFMap<K, V2>;
+
+        const mapFuture = (f: ARFutureWithFlag<V> | null): ARFutureWithFlag<V2> | null => {
+            return f ? f.map(vToV2).toWithFlag() : null;
+        };
+        const mapBackFuture = (f: ARFutureWithFlag<V2> | null): ARFutureWithFlag<V> | null => {
+            return f ? f.map(v2ToV).toWithFlag() : null;
+        }
+
+        for (const [k, f] of this.entries()) {
+            newMap.set(k, mapFuture(f)!);
+        }
+
+        this.forUpdate().add(u => {
+            res.set(u.key, mapFuture(u.newValue)!);
+        });
+        this.forRemove().add(e => {
+            res.delete(e.key);
+        });
+
+        res.forUpdate().add(u => {
+            this.set(u.key, mapBackFuture(u.newValue)!);
+        });
+        res.forRemove().add(e => {
+            this.delete(e.key);
+        });
+
+        (res as any).mapValFuture = RFMapImpl.mapValFuture.bind(res);
+        (res as any).mapKeyFuture = RFMapImpl.mapKeyFuture.bind(res);
+
+        return res;
+    }
+
+    /**
+     * Implementation for RFMap.mapKeyFuture .
+     */
+    export function mapKeyFuture<K, V, K2>(this: RFMap<K, V>, vToK2: AFunction<V, K2>): RFMap<K2, V> {
+        const newMap = new Map<K2, ARFutureWithFlag<V>>();
+        const res: RFMap<K2, V> = RCol.of(newMap) as unknown as RFMap<K2, V>;
+        const keyMapping = new Map<K2, K>();
+
+        const processEntry = (key: K, future: ARFutureWithFlag<V> | null) => {
+            if (!future) return;
+
+            const processValue = (v: V) => {
+                const newKey = vToK2(v);
+                const oldOriginalKey = keyMapping.get(newKey);
+
+                if (oldOriginalKey && oldOriginalKey !== key) {
+                    this.delete(oldOriginalKey);
+                }
+
+                keyMapping.set(newKey, key);
+                res.set(newKey, future);
+            };
+
+            if (future.isDone()) {
+                const value = future.getNow();
+                if (value !== null) {
+                    processValue(value);
+                }
+            } else {
+                future.to((v: V) => {
+                    processValue(v);
+                });
+            }
+        };
+
+        for (const [k, f] of this.entries()) {
+            processEntry(k, f);
+        }
+
+        this.forUpdate().add(u => {
+            processEntry(u.key, u.newValue);
+        });
+
+        this.forRemove().add(e => {
+            let keyToRemove: K2 | null = null;
+            for(const [k2, k] of keyMapping.entries()) {
+                if (k === e.key) {
+                    keyToRemove = k2;
+                    break;
+                }
+            }
+            if (keyToRemove !== null) {
+                keyMapping.delete(keyToRemove);
+                res.delete(keyToRemove);
+            }
+        });
+
+        (res as any).mapValFuture = RFMapImpl.mapValFuture.bind(res);
+        (res as any).mapKeyFuture = RFMapImpl.mapKeyFuture.bind(res);
+
+        return res;
+    }
+}
+
+
+// =============================================================================================
+// SECTION 3: BMap (Batching Map)
+// =============================================================================================
+
+/**
+ * An asynchronous, throttling map for managing external data requests.
+ * Extends RFMap and adds methods for batching and request management.
+ *
+ * @template K The key type.
+ * @template V The value type to be retrieved asynchronously.
+ */
+export interface BMap<K, V> extends RFMap<K, V> {
+    /**
+     * Retrieves the ARFutureWithFlag for a key.
+     * If not present, this conditionally adds the key to the request pool.
+     * @param key The key.
+     * @returns An ARFutureWithFlag for the value.
+     */
+    getFuture(key: K): ARFutureWithFlag<V>;
+
+    /**
+     * Returns all keys that are currently pending a network request.
+     * @returns A Set of pending keys.
+     */
+    getPendingRequests(): Set<K>;
+
+    /**
+     * Puts a resolved value into the map, completing the pending future.
+     * @param key The key.
+     * @param value The resolved value.
+     */
+    putResolved(key: K, value: V): void;
+
+    /**
+     * Puts a resolved value, using an updater function if the value already exists.
+     * @param key The key.
+     * @param updater A function to update the existing value (v: V) => void.
+     * @param value The new value (used if no old value exists).
+     */
+    putResolved(key: K, updater: AConsumer<V>, value: V): void;
+
+    /**
+     * Marks a pending future as errored.
+     * @param key The key.
+     * @param error The error.
+     */
+    putError(key: K, error: Error): void;
+
+    /**
+     * Returns an EventConsumer that fires when a value is *definitively resolved*
+     * (not just when the future is created).
+     * @returns An EventConsumer for (K, V) updates.
+     */
+    forValueUpdate(): EventConsumer<RMapUpdate<K, V>>;
+
+    /**
+     * Gets pending request keys for a specific sender.
+     * This "flushes" the queue for that sender.
+     * @param sender The sender object (e.g., a connection).
+     * @returns An array of keys (K[]) for the sender to fetch.
+     */
+    getRequestsFor(sender: object): K[];
+
+    /**
+     * Checks if any requests are pending globally.
+     * @returns True if requests are pending.
+     */
+    isRequests(): boolean;
+
+    /**
+     * Checks if any requests are pending for a specific sender.
+     * @param sender The sender object.
+     * @returns True if requests are pending for the sender.
+     */
+    isRequestsFor(sender: object): boolean;
+}
+
+/**
+ * Represents a single network sender/flusher.
+ * @template K The key type.
+ * @internal
+ */
+class BMapSender<K> {
+    /**
+     * The set of keys this specific sender needs to fetch.
+     */
+    public readonly requests = new Set<K>();
+
+    /**
+     * @param allRequests Initial set of all pending requests to copy.
+     */
+    constructor(allRequests: Set<K>) {
+        allRequests.forEach(k => this.requests.add(k));
+    }
+
+    /**
+     * Extracts all pending keys for this sender and clears its internal queue.
+     * @returns An array of keys (K[]) that this sender should fetch.
+     */
+    public extract(): K[] {
+        const r = Array.from(this.requests);
         this.requests.clear();
         return r;
     }
 }
 
-export class BMapImpl<K, V> implements BMap<K, V> {
-    private readonly _forUpdate: EventConsumer<RMap.Update<K, ARFutureWithFlag<V>>> = new EventConsumer();
-    private readonly _forRemove: EventConsumer<RMap.Entry<K, ARFutureWithFlag<V>>> = new EventConsumer();
-    private readonly _forValueUpdate: EventConsumer<RMap.Update<K, V>> = new EventConsumer<RMap.Update<K, V>>();
-    private readonly allRequests: Set<K> = new RU.ConcurrentHashSet();
-    private readonly senders: WeakMap<Object, Sender<K>> = new WeakMap();
-    private readonly data: Map<K, ARFutureWithFlag<V>> = new Map();
-    private readonly timeoutMs: number;
-    // Removed unused private readonly _name: string;
+/**
+ * Implementation of the BMap interface.
+ * @template K The key type.
+ * @template V The value type.
+ */
+export class BMapImpl<K, V> extends RMapBySrc<K, ARFutureWithFlag<V>> implements BMap<K, V> {
 
-    constructor(_initialCapacity: number, _name: string, timeoutMs: number = 5000) {
-        this.timeoutMs = timeoutMs;
-    }
-    private getSender(key: Object): Sender<K> {
-        let sender = this.senders.get(key);
-        if (!sender) {
-            sender = new Sender<K>(this.allRequests);
-            this.senders.set(key, sender);
-        }
-        return sender;
-    }
-    private removeRequest(key: K): boolean { return this.allRequests.delete(key); }
-    private addRequest(key: K): void { if (!this.allRequests.has(key)) { this.allRequests.add(key); } }
+    /**
+     * Stores all keys that are currently requested by any sender.
+     */
+    private readonly allRequests = new Set<K>();
 
-    // BMap/RFMap methods
-    public getFuture(key: K): ARFutureWithFlag<V> {
-        let future = this.data.get(key);
+    /**
+     * Fires when a value is successfully resolved.
+     */
+    private readonly valueUpdate = new EventConsumer<RMapUpdate<K, V>>();
+
+    /**
+     * Tracks requests per sender.
+     * We use a Map, not a WeakMap, to mirror the Java implementation's
+     * ability to iterate `senders.values()`.
+     * Senders must be manually deregistered if needed.
+     */
+    private readonly senders = new Map<object, BMapSender<K>>();
+
+    /**
+     * @param _initialCapacity (Not used in TS Map).
+     * @param _name (Not used in this impl).
+     * @param _timeoutMs (Not used in this impl).
+     */
+    constructor(
+        _initialCapacity: number,
+        _name: string,
+        _timeoutMs: number
+    ) {
+        super(new Map<K, ARFutureWithFlag<V>>());
+    }
+
+    /**
+     * Gets or creates the ARFutureWithFlag associated with the key.
+     * This replicates the `ConcurrentHashMapWithDefault` logic from Java.
+     * @param key The key.
+     * @returns The existing or new future.
+     */
+    private getOrCreateFuture(key: K): ARFutureWithFlag<V> {
+        let future = this.src.get(key);
         if (!future) {
             future = new ARFutureWithFlag<V>();
-            const onFinalize = (f: ARFutureWithFlag<V>) => {
-                this.removeRequest(key);
-                if (f.isDone()) {
-                    const resolvedValue = f.getNow();
-                    this._forValueUpdate.fire({ key: key, newValue: resolvedValue, oldValue: null } as RMap.Update<K, V>);
+            this.src.set(key, future);
+
+            future.to(
+                (v: V) => {
+                    this.removeRequest(key);
+                    this.valueUpdate.fire(new RMapUpdate(key, v, null));
                 }
-            };
-            future.addListener(onFinalize as AConsumer<ARFutureWithFlag<V>>);
-            if (this.timeoutMs > 0) future.timeoutError(this.timeoutMs / 1000, `BMap future timeout for key: ${key}`);
-            this.data.set(key, future);
+            );
+
+            future.onError((_err: Error) => {
+                this.removeRequest(key);
+            });
+            future.onCancel(() => {
+                this.removeRequest(key);
+            });
+
             this.addRequest(key);
-            this._forUpdate.fire({ key, newValue: future, oldValue: undefined } as RMap.Update<K, ARFutureWithFlag<V>>);
         }
         return future;
     }
-    public putResolved(key: K, value: V): void {
-        const future = this.getFuture(key);
-        const oldValue = future.isDone() ? future.getNow() : null;
-        const resolvedNow = future.tryDone(value);
-        if (resolvedNow) { this._forValueUpdate.fire({ key: key, newValue: value, oldValue: oldValue } as RMap.Update<K, V>); }
-    }
-    public putError(key: K, error: Error): void {
-        const future = this.getFuture(key);
-        future.tryError(error);
-        this.removeRequest(key);
-    }
-    public forValueUpdate(): EventConsumer<RMap.Update<K, V>> { return this._forValueUpdate; }
-    public getPendingRequests(): Set<K> { return this.allRequests; }
-    public getRequestsFor(elementType: new (...args: any[]) => K, sender: Object): K[] {
-        return this.getSender(sender).extract(elementType);
-    }
-    public isRequests(): boolean { return this.allRequests.size > 0; }
-    public isRequestsFor(sender: Object): boolean {
-        const s = this.senders.get(sender);
-        return s ? s.requests.size > 0 : false;
-    }
-    public forUpdate(): EventConsumer<RMap.Update<K, ARFutureWithFlag<V>>> { return this._forUpdate; }
-    public forRemove(): EventConsumer<RMap.Entry<K, ARFutureWithFlag<V>>> { return this._forRemove; }
 
-    // RMap methods (implemented to satisfy RMap<K, ARFutureWithFlag<V>> contract)
-    public mapToFutures(): RFMap<K, ARFutureWithFlag<V>> { throw new Error("mapToFutures() is not implemented on BMapImpl."); }
-    public mapVal<V2>(_v1ToV2: AFunction<ARFutureWithFlag<V>, V2>, _v2ToV1?: AFunction<V2, ARFutureWithFlag<V>>): RMap<K, V2> { throw new Error("Method not implemented for BMap/RFMap."); }
-    public map<K2, V2>(_k1ToK2: AFunction<K, K2>, _k2ToK1: AFunction<K2, K>, _v1ToV2: AFunction<ARFutureWithFlag<V>, V2>, _v2ToV1: AFunction<V2, ARFutureWithFlag<V>>): RMap<K2, V2> { throw new Error("Method not implemented for BMap/RFMap."); }
-    public mapKey<K2>(_k1ToK2: ABiFunction<K, ARFutureWithFlag<V>, K2>): RMap<K2, ARFutureWithFlag<V>> { throw new Error("Method not implemented for BMap/RFMap."); }
-
-    // RFMap methods (delegated/implemented)
-    public mapValFuture<V2>(vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K, V2> {
-         return (this as unknown as BMapImpl<K, V>).mapValFuture(vToV2, v2ToV);
-    }
-    public mapKeyFuture<K2>(vToK2: AFunction<V, K2>, vToK: AFunction<V, K>): RFMap<K2, V> {
-        return RCol.rfMapImpl(this as unknown as RFMap<K, V>).mapKeyFuture(vToK2, vToK);
-    }
-    public mapFuture<K2, V2>(kToK2: AFunction<K, K2>, k2ToK: AFunction<K2, K>, vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K2, V2> {
-        return RCol.rfMapImpl(this as unknown as RFMap<K, V>).mapFuture(kToK2, k2ToK, vToV2, v2ToV);
-    }
-
-    // Map methods
-    public get size(): number { return this.data.size; }
-    public get(key: K): ARFutureWithFlag<V> | undefined { return this.data.get(key); }
-    public set(_key: K, _value: ARFutureWithFlag<V>): this { throw new Error("UnsupportedOperationException: Cannot put ARFutureWithFlag directly to BMapImpl"); }
-    public delete(key: K): boolean {
-        const future = this.data.get(key);
-        const wasPresent = this.data.delete(key);
-        if (wasPresent) {
-            this.removeRequest(key);
-            future?.cancel();
-            this._forRemove.fire({ key, value: future } as RMap.Entry<K, ARFutureWithFlag<V>>);
+    /**
+     * Removes a key from the global pool and all sender-specific pools.
+     * @param key The key to remove.
+     * @returns True if the key was present in the global pool.
+     */
+    private removeRequest(key: K): boolean {
+        const res = this.allRequests.delete(key);
+        for (const s of this.senders.values()) {
+            s.requests.delete(key);
         }
-        return wasPresent;
+        return res;
     }
-    public has(key: K): boolean { return this.data.has(key); }
-    public clear(): void { this.destroyResources(); }
-    public forEach(callbackfn: (value: ARFutureWithFlag<V>, key: K, map: RMap<K, ARFutureWithFlag<V>>) => void, _thisArg?: any): void { this.data.forEach((v, k) => callbackfn.call(_thisArg, v, k, this as unknown as RMap<K, ARFutureWithFlag<V>>), _thisArg); }
-    public [Symbol.iterator](): IterableIterator<[K, ARFutureWithFlag<V>]> { return this.data.entries(); }
-    public keys(): IterableIterator<K> { return this.data.keys(); }
-    public values(): IterableIterator<ARFutureWithFlag<V>> { return this.data.values(); }
-    public entries(): IterableIterator<[K, ARFutureWithFlag<V>]> { return this.data.entries(); }
 
-    // Cleanup logic extracted from destroy
-    private destroyResources(): AFuture {
-        this.data.forEach((future, key) => { future.cancel(); this.removeRequest(key); this._forRemove.fire({ key, value: future } as RMap.Entry<K, ARFutureWithFlag<V>>); });
-        this.data.clear();
-        this.allRequests.clear();
-        this._forUpdate.listeners.clear(); this._forRemove.listeners.clear(); this._forValueUpdate.listeners.clear();
-        return AFuture.of();
+    /**
+     * Adds a key to the global request pool and all *existing* sender pools.
+     * @param key The key to add.
+     */
+    private addRequest(key: K): void {
+        this.allRequests.add(key);
+        for (const s of this.senders.values()) {
+            s.requests.add(key);
+        }
+    }
+
+    /**
+     * Helper to retrieve or create a Sender object.
+     * @param k The sender object.
+     * @returns The Sender instance.
+     */
+    private getSender(k: object): BMapSender<K> {
+        let sender = this.senders.get(k);
+        if (!sender) {
+            sender = new BMapSender<K>(this.allRequests);
+            this.senders.set(k, sender);
+        }
+        return sender;
+    }
+
+    /**
+     * @override
+     */
+    public getFuture(key: K): ARFutureWithFlag<V> {
+        return this.getOrCreateFuture(key);
+    }
+
+    /**
+     * @override
+     */
+    public getPendingRequests(): Set<K> {
+        return this.allRequests;
+    }
+
+    /**
+     * @override
+     */
+    public putResolved(key: K, valueOrUpdater: V | AConsumer<V>, valueIfUpdater?: V): void {
+        if (arguments.length === 2) {
+            const value = valueOrUpdater as V;
+            this.getOrCreateFuture(key).tryDone(value);
+        } else {
+            const updater = valueOrUpdater as AConsumer<V>;
+            const value = valueIfUpdater as V;
+            const f = this.getOrCreateFuture(key);
+            if (!f.tryDone(value)) {
+                const v = f.getNow();
+                if (v !== null) {
+                    updater(v);
+                }
+            }
+        }
+    }
+
+    /**
+     * @override
+     */
+    public putError(key: K, error: Error): void {
+        const future = this.getOrCreateFuture(key);
+        future.tryError(error);
+    }
+
+    /**
+     * @override
+     */
+    public forValueUpdate(): EventConsumer<RMapUpdate<K, V>> {
+        return this.valueUpdate;
+    }
+
+
+
+    /**
+     * @override
+     */
+    public getRequestsFor(sender: object): K[] {
+        return this.getSender(sender).extract();
+    }
+
+    /**
+     * @override
+     */
+    public isRequests(): boolean {
+        return this.allRequests.size > 0;
+    }
+
+    /**
+     * @override
+     */
+    public isRequestsFor(sender: object): boolean {
+        return this.getSender(sender).requests.size > 0;
+    }
+
+    /**
+     * @override
+     */
+    public get(key: K): ARFutureWithFlag<V> | undefined {
+        return this.getFuture(key);
+    }
+
+    /**
+     * @override
+     */
+    public set(key: K, value: ARFutureWithFlag<V>): this {
+        throw new Error("Cannot .set() a future directly on BMap. Use putResolved() or putError().");
+    }
+
+    /**
+     * @override
+     */
+    public delete(key: K): boolean {
+        this.removeRequest(key);
+        const future = this.src.get(key);
+        if (future) {
+            future.cancel();
+        }
+        return super.delete(key);
+    }
+
+    // --- ADDED METHODS TO SATISFY RFMap INTERFACE ---
+
+    /**
+     * @override
+     */
+    public mapValFuture<V2>(vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K, V2> {
+        // This implementation is defined in RFMapImpl
+        // We bind it to `this` which is an RFMap
+        return RFMapImpl.mapValFuture.bind(this)(vToV2, v2ToV);
+    }
+
+    /**
+     * @override
+     */
+    public mapKeyFuture<K2>(vToK2: AFunction<V, K2>): RFMap<K2, V> {
+        // This implementation is defined in RFMapImpl
+        return RFMapImpl.mapKeyFuture.bind(this)(vToK2);
     }
 }
 
-class RFMapDefaultImpl<K, V> implements RFMap<K, V> {
-    private readonly self: RFMap<K, V>;
 
-    constructor(self: RFMap<K, V>) { this.self = self; }
+// =============================================================================================
+// SECTION 4: RCollection (Reactive Collection)
+// =============================================================================================
 
-    // Delegate Map methods
-    get(key: K): ARFutureWithFlag<V> | undefined { return this.self.get(key); }
-    set(key: K, value: ARFutureWithFlag<V>): this { this.self.set(key, value); return this; }
-    delete(key: K): boolean { return this.self.delete(key); }
-    has(key: K): boolean { return this.self.has(key); }
-    get size(): number { return this.self.size; }
-    clear(): void { this.self.clear(); }
-    forEach(callbackfn: (value: ARFutureWithFlag<V>, key: K, map: RMap<K, ARFutureWithFlag<V>>) => void, _thisArg?: any): void { this.self.forEach(callbackfn, _thisArg); }
-    [Symbol.iterator](): IterableIterator<[K, ARFutureWithFlag<V>]> { return this.self[Symbol.iterator](); }
-    keys(): IterableIterator<K> { return this.self.keys(); }
-    values(): IterableIterator<ARFutureWithFlag<V>> { return this.self.values(); }
-    entries(): IterableIterator<[K, ARFutureWithFlag<V>]> { return this.self.entries(); }
+/**
+ * A reactive Collection interface, providing event consumers for adds and removes.
+ *
+ * @template T The element type.
+ */
+export interface RCollection<T> extends Iterable<T> {
+    /**
+     * Fires when an element is added.
+     */
+    forAdd(): EventConsumer<T>;
 
-    // Delegate RMap methods
-    forUpdate(): EventConsumer<RMap.Update<K, ARFutureWithFlag<V>>> { return this.self.forUpdate(); }
-    forRemove(): EventConsumer<RMap.Entry<K, ARFutureWithFlag<V>>> { return this.self.forRemove(); }
-    mapToFutures(): RFMap<K, ARFutureWithFlag<V>> { throw new Error("mapToFutures() is not implemented on RFMapDefaultImpl."); }
-    mapVal<V2>(_v1ToV2: AFunction<ARFutureWithFlag<V>, V2>, _v2ToV1?: AFunction<V2, ARFutureWithFlag<V>>): RMap<K, V2> { throw new Error("Method not implemented for RFMapDefaultImpl."); }
-    map<K2, V2>(_k1ToK2: AFunction<K, K2>, _k2ToK1: AFunction<K2, K>, _v1ToV2: AFunction<ARFutureWithFlag<V>, V2>, _v2ToV1: AFunction<V2, ARFutureWithFlag<V>>): RMap<K2, V2> { throw new Error("Method not implemented for RFMapDefaultImpl."); }
-    mapKey<K2>(_k1ToK2: ABiFunction<K, ARFutureWithFlag<V>, K2>): RMap<K2, ARFutureWithFlag<V>> { throw new Error("Method not implemented for RFMapDefaultImpl."); }
+    /**
+     * Fires when an element is removed.
+     */
+    forRemove(): EventConsumer<T>;
 
-    // RFMap methods (implementations)
-    public mapValFuture<V2>(vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K, V2> {
-        return (this.self as any).mapValFuture(vToV2, v2ToV);
+    /**
+     * Gets the number of elements in the collection.
+     */
+    readonly size: number;
+
+    /**
+     * Checks if the collection is empty.
+     */
+    isEmpty(): boolean;
+
+    /**
+     * Checks if the collection contains an element.
+     * @param o The element to check.
+     */
+    contains(o: T): boolean;
+
+    /**
+     * Adds an element to the collection.
+     * @param e The element to add.
+     * @returns True if the collection changed.
+     */
+    add(e: T): boolean;
+
+    /**
+     * Removes an element from the collection.
+     * @param o The element to remove.
+     * @returns True if the collection changed.
+     */
+    remove(o: T): boolean;
+
+    /**
+     * Removes all elements from the collection.
+     */
+    clear(): void;
+
+    /**
+     * Adds all elements from an iterable to this collection.
+     * @param c The iterable of elements to add.
+     * @returns True if the collection changed.
+     */
+    addAll(c: Iterable<T>): boolean;
+
+    /**
+     * Removes all elements from this collection that are present
+     * in the specified iterable.
+     * @param c The iterable of elements to remove.
+     * @returns True if the collection changed.
+     */
+    removeAll(c: Iterable<T>): boolean;
+
+    /**
+     * Retains only the elements in this collection that are contained
+     * in the specified iterable.
+     * @param c The iterable of elements to retain.
+     * @returns True if the collection changed.
+     */
+    retainAll(c: Iterable<T>): boolean;
+
+    /**
+     * Creates a new RCollection by mapping elements.
+     * @param f Function to map T to T2.
+     * @param f2 Function to map T2 back to T.
+     */
+    map<T2>(f: AFunction<T, T2>, f2: AFunction<T2, T>): RCollection<T2>;
+}
+
+/**
+ * Base implementation for RCollection that wraps a Set or Array.
+ * @template T The element type.
+ * @template S The underlying storage type (Set or Array).
+ */
+export abstract class RCollectionBySrc<T, S extends Set<T> | Array<T>> implements RCollection<T> {
+
+    protected readonly forAddEvent = new EventConsumer<T>();
+    protected readonly forRemoveEvent = new EventConsumer<T>();
+
+    /**
+     * @param src The underlying collection (Set or Array).
+     */
+    constructor(protected readonly src: S) {}
+
+    /**
+     * Fires when an element is added.
+     */
+    public forAdd(): EventConsumer<T> { return this.forAddEvent; }
+
+    /**
+     * Fires when an element is removed.
+     */
+    public forRemove(): EventConsumer<T> { return this.forRemoveEvent; }
+
+    /**
+     * Gets the number of elements.
+     */
+    public get size(): number {
+        return (this.src as Set<T>).size ?? (this.src as Array<T>).length;
     }
-    public mapKeyFuture<K2>(vToK2: AFunction<V, K2>, vToK: AFunction<V, K>): RFMap<K2, V> {
-        // NOTE: vToK is currently unused in the implemented logic, matching the Java source.
-        const self = this.self;
-        const mappedKeys = new Map<K2, K>();
 
-        self.forEach((future, originalKey) => {
-            if (future.isDone()) {
-                const value = future.getNow();
-                if (value !== null) mappedKeys.set(vToK2(value), originalKey);
+    /**
+     * Checks if empty.
+     */
+    public isEmpty(): boolean {
+        return this.size === 0;
+    }
+
+    /**
+     * Protected method to fire add event.
+     * @param val The value added.
+     */
+    protected add0(val: T): void {
+        this.forAddEvent.fire(val);
+    }
+
+    /**
+     * Protected method to fire remove event.
+     * @param val The value removed.
+     */
+    protected remove0(val: T): void {
+        this.forRemoveEvent.fire(val);
+    }
+
+    /**
+     * @abstract
+     */
+    public abstract [Symbol.iterator](): IterableIterator<T>;
+
+    /**
+     * @abstract
+     */
+    public abstract contains(o: T): boolean;
+
+    /**
+     * @abstract
+     */
+    public abstract add(e: T): boolean;
+
+    /**
+     * @abstract
+     */
+    public abstract remove(o: T): boolean;
+
+    /**
+     * @abstract
+     */
+    public abstract clear(): void;
+
+
+    /**
+     * @override
+     */
+    public addAll(c: Iterable<T>): boolean {
+        let modified = false;
+        for (const e of c) {
+            if (this.add(e)) {
+                modified = true;
             }
+        }
+        return modified;
+    }
+
+    /**
+     * @override
+     */
+    public removeAll(c: Iterable<T>): boolean {
+        let modified = false;
+        for (const e of c) {
+            if (this.remove(e)) {
+                modified = true;
+            }
+        }
+        return modified;
+    }
+
+    /**
+     * @override
+     */
+    public retainAll(c: Iterable<T>): boolean {
+        const retainSet = new Set(c);
+        let modified = false;
+        const toRemove: T[] = [];
+
+        for (const e of this) {
+            if (!retainSet.has(e)) {
+                toRemove.push(e);
+            }
+        }
+
+        for (const e of toRemove) {
+            if (this.remove(e)) {
+                modified = true;
+            }
+        }
+        return modified;
+    }
+
+    /**
+     * @override
+     */
+    public map<T2>(f: AFunction<T, T2>, f2: AFunction<T2, T>): RCollection<T2> {
+        /**
+         * This creates a new RCollection (backed by a Set) and binds it.
+         */
+        const mappedSet = new Set<T2>();
+
+        for (const e of this) {
+            mappedSet.add(f(e));
+        }
+
+        const res: RCollection<T2> = RCol.of(mappedSet);
+
+        this.forAdd().add(v => res.add(f(v)));
+        this.forRemove().add(v => res.remove(f(v)));
+        res.forAdd().add(v => this.add(f2(v)));
+        res.forRemove().add(v => this.remove(f2(v)));
+
+        return res;
+    }
+}
+
+
+// =============================================================================================
+// SECTION 5: RSet (Reactive Set)
+// =============================================================================================
+
+/**
+ * A reactive Set interface.
+ * NOTE: This does NOT extend the built-in 'Set' to avoid iterator type conflicts.
+ * @template T The element type.
+ */
+export interface RSet<T> extends RCollection<T> {
+    // --- Standard Set Methods ---
+
+    /**
+     * Checks if a value exists.
+     * @param value The value.
+     * @returns True if the value exists.
+     */
+    has(value: T): boolean;
+
+    /**
+     * Deletes a value.
+     * @param value The value to delete.
+     * @returns True if the value was deleted.
+     */
+    delete(value: T): boolean;
+
+    /**
+     * Executes a callback for each element.
+     * @param callbackfn The callback function.
+     * @param thisArg The `this` context for the callback.
+     */
+    forEach(callbackfn: (value: T, value2: T, set: RSet<T>) => void, thisArg?: any): void;
+
+    /**
+     * Returns an iterator for the set entries.
+     */
+    entries(): IterableIterator<[T, T]>;
+
+    /**
+     * Returns an iterator for the set keys (values).
+     */
+    keys(): IterableIterator<T>;
+
+    /**
+     * Returns an iterator for the set values.
+     */
+    values(): IterableIterator<T>;
+
+
+    // --- Reactive Methods ---
+
+    /**
+     * Links this set to another set, synchronizing changes in both directions.
+     * @param other The other RSet to link with.
+     * @param f Function to map T to T2.
+     * @param back Function to map T2 back to T.
+     */
+    link<T2>(other: RSet<T2>, f: AFunction<T, T2>, back: AFunction<T2, T>): void;
+
+    /**
+     * Links this set to another set of the same type.
+     * @param other The other RSet to link with.
+     */
+    link(other: RSet<T>): void;
+
+    /**
+     * Creates a new RSet by mapping elements.
+     * @param f Function to map T to T2.
+     * @param f2 Function to map T2 back to T.
+     */
+    map<T2>(f: AFunction<T, T2>, f2: AFunction<T2, T>): RSet<T2>;
+
+    /**
+     * Creates a new one-way mapped RSet.
+     * @param f Function to map T to T2.
+     */
+    map<T2>(f: AFunction<T, T2>): RSet<T2>;
+}
+
+/**
+ * Implementation of RSet wrapping a standard Set.
+ * @template T The element type.
+ */
+export class RSetBySrc<T> extends RCollectionBySrc<T, Set<T>> implements RSet<T> {
+    public readonly [Symbol.toStringTag] = "RSet";
+
+    constructor(src: Set<T>) {
+        super(src);
+    }
+
+    /**
+     * @override
+     */
+    public [Symbol.iterator](): IterableIterator<T> {
+        return this.src[Symbol.iterator]();
+    }
+
+    /**
+     * @override
+     */
+    public contains(o: T): boolean {
+        return this.src.has(o);
+    }
+
+    /**
+     * @override
+     */
+    public add(e: T): boolean {
+        if (this.src.has(e)) {
+            return false;
+        }
+        this.src.add(e);
+        this.add0(e);
+        return true;
+    }
+
+    /**
+     * @override
+     */
+    public remove(o: T): boolean {
+        const result = this.src.delete(o);
+        if (result) {
+            this.remove0(o);
+        }
+        return result;
+    }
+
+    /**
+     * @override
+     */
+    public clear(): void {
+        for (const e of this.src) {
+            this.remove0(e);
+        }
+        this.src.clear();
+    }
+
+    /**
+     * @override
+     */
+    public entries(): IterableIterator<[T, T]> {
+        return this.src.entries();
+    }
+
+    /**
+     * @override
+     */
+    public keys(): IterableIterator<T> {
+        return this.src.keys();
+    }
+
+    /**
+     * @override
+     */
+    public values(): IterableIterator<T> {
+        return this.src.values();
+    }
+
+    /**
+     * @override
+     */
+    public forEach(callbackfn: (value: T, value2: T, set: RSet<T>) => void, thisArg?: any): void {
+        // Pass 'this' (the RSet) to the callback, not 'this.src' (the raw Set)
+        this.src.forEach((value, value2) => {
+            callbackfn.call(thisArg, value, value2, this);
         });
-
-        return new (class implements RFMap<K2, V> {
-            private readonly _forUpdate = new EventConsumer<RMap.Update<K2, ARFutureWithFlag<V>>>();
-            private readonly _forRemove = new EventConsumer<RMap.Entry<K2, ARFutureWithFlag<V>>>();
-
-            constructor() {
-                self.forUpdate().add(u => {
-                    u.newValue?.to((v: V): void => {
-                        const newKey = vToK2(v);
-                        const oldOriginalKey = mappedKeys.get(newKey);
-                        if (oldOriginalKey !== undefined && oldOriginalKey !== u.key) { self.delete(oldOriginalKey); }
-                        mappedKeys.set(newKey, u.key);
-                        this._forUpdate.fire({ key: newKey, newValue: u.newValue, oldValue: u.oldValue } as RMap.Update<K2, ARFutureWithFlag<V>>);
-                    });
-                });
-                self.forRemove().add(e => {
-                    e.value?.to((v: V): void => {
-                        const k2 = vToK2(v);
-                        if (mappedKeys.get(k2) === e.key) {
-                            mappedKeys.delete(k2);
-                            this._forRemove.fire({ key: k2, value: e.value } as RMap.Entry<K2, ARFutureWithFlag<V>>);
-                        }
-                    }, (_e: Error): void => { /* ignore error */ });
-                });
-            }
-
-            // Map methods
-            get size(): number { return mappedKeys.size; }
-            get(key: K2): ARFutureWithFlag<V> | undefined {
-                const originalKey = mappedKeys.get(key);
-                return originalKey !== undefined ? self.get(originalKey) : undefined;
-            }
-            set(key: K2, value: ARFutureWithFlag<V>): this { throw new Error("Cannot put directly to mapped RFMap"); }
-            delete(key: K2): boolean {
-                const originalKey = mappedKeys.get(key);
-                if (originalKey !== undefined) {
-                    const removed = self.delete(originalKey);
-                    if (removed) mappedKeys.delete(key);
-                    return removed;
-                }
-                return false;
-            }
-            has(key: K2): boolean { return mappedKeys.has(key); }
-            clear(): void { mappedKeys.forEach(k => self.delete(k)); mappedKeys.clear(); }
-            forEach(callbackfn: (value: ARFutureWithFlag<V>, key: K2, map: RMap<K2, ARFutureWithFlag<V>>) => void, _thisArg?: any): void { mappedKeys.forEach((originalKey, key) => callbackfn.call(_thisArg, self.get(originalKey)!, key, this as unknown as RMap<K2, ARFutureWithFlag<V>>)); }
-            [Symbol.iterator](): IterableIterator<[K2, ARFutureWithFlag<V>]> {
-                const entriesIterator = function* (m: Map<K2, K>, src: RFMap<K, V>): IterableIterator<[K2, ARFutureWithFlag<V>]> {
-                    for (const [k2, k] of m.entries()) {
-                        yield [k2, src.get(k)!];
-                    }
-                };
-                return entriesIterator(mappedKeys, self);
-            }
-            keys(): IterableIterator<K2> { return mappedKeys.keys(); }
-            public values(): IterableIterator<ARFutureWithFlag<V>> {
-                const valuesIterator = function* (m: Map<K2, K>, src: RFMap<K, V>): IterableIterator<ARFutureWithFlag<V>> {
-                    for (const originalKey of m.values()) {
-                        yield src.get(originalKey)!;
-                    }
-                };
-                return valuesIterator(mappedKeys, self);
-            }
-            entries(): IterableIterator<[K2, ARFutureWithFlag<V>]> {
-                const entriesIterator = function* (m: Map<K2, K>, src: RFMap<K, V>): IterableIterator<[K2, ARFutureWithFlag<V>]> {
-                    for (const [k2, k] of m.entries()) {
-                        yield [k2, src.get(k)!];
-                    }
-                };
-                return entriesIterator(mappedKeys, self);
-            }
-
-            // RMap/RFMap methods
-            public forUpdate(): EventConsumer<RMap.Update<K2, ARFutureWithFlag<V>>> { return this._forUpdate; }
-            public forRemove(): EventConsumer<RMap.Entry<K2, ARFutureWithFlag<V>>> { return this._forRemove; }
-            mapToFutures(): RFMap<K2, ARFutureWithFlag<V>> { throw new Error("mapToFutures() is not implemented on mapped RFMap."); }
-            mapVal<V2>(_v1ToV2: AFunction<ARFutureWithFlag<V>, V2>, _v2ToV1?: AFunction<V2, ARFutureWithFlag<V>>): RMap<K2, V2> { throw new Error("Method not implemented for RFMapDefaultImpl."); }
-            map<K3, V2>(_k1ToK2: AFunction<K2, K3>, _k2ToK1: AFunction<K3, K2>, _v1ToV2: AFunction<ARFutureWithFlag<V>, V2>, _v2ToV1: AFunction<V2, ARFutureWithFlag<V>>): RMap<K3, V2> { throw new Error("Method not implemented for RFMapDefaultImpl."); }
-            mapKey<K3>(_k1ToK2: ABiFunction<K2, ARFutureWithFlag<V>, K3>): RMap<K3, ARFutureWithFlag<V>> { throw new Error("Method not implemented for RFMapDefaultImpl."); }
-
-            // RFMap methods: Delegate mapKeyFuture/mapFuture using the correct `this` (K2)
-            mapValFuture<V2>(vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K2, V2> { return RCol.rfMapImpl(this).mapValFuture(vToV2, v2ToV); }
-            mapKeyFuture<K3>(vToK2: AFunction<V, K3>, vToK: AFunction<V, K2>): RFMap<K3, V> {
-                 return RCol.rfMapImpl(this as unknown as RFMap<K2, V>).mapKeyFuture(vToK2, vToK as AFunction<V, K2>);
-            }
-            mapFuture<K3, V2>(kToK2: AFunction<K2, K3>, k2ToK: AFunction<K3, K2>, vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K3, V2> {
-                 return RCol.rfMapImpl(this as unknown as RFMap<K2, V>).mapFuture(kToK2, k2ToK, vToV2, v2ToV);
-            }
-        }) as RFMap<K2, V>;
     }
 
-    public mapFuture<K2, V2>(kToK2: AFunction<K, K2>, k2ToK: AFunction<K2, K>, vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K2, V2> {
-        // FIX: Explicit return types for lambdas to avoid 'any' compilation error.
-        // NOTE: k2ToK is unused in the implemented logic, matching the Java source.
-        return this.mapKeyFuture(
-            (_v: V): K2 => kToK2(null!) as K2,
-            (_v: V): K => null! as K
-        ).mapValFuture(vToV2, v2ToV);
+    /**
+     * @override
+     */
+    public has(value: T): boolean {
+        return this.src.has(value);
+    }
+
+    /**
+     * @override
+     */
+    public delete(value: T): boolean {
+        return this.remove(value);
+    }
+
+    /**
+     * @override
+     */
+    public link<T2>(other: RSet<T2> | RSet<T>, f?: AFunction<T, T2>, back?: AFunction<T2, T>): void {
+        if (f && back) {
+            const otherRSet = other as RSet<T2>;
+            this.forAdd().add(v => otherRSet.add(f(v)));
+            this.forRemove().add(v => otherRSet.remove(f(v)));
+            otherRSet.forAdd().add(v => this.add(back(v)));
+            otherRSet.forRemove().add(v => this.remove(back(v)));
+
+            for (const e of otherRSet) { this.add(back(e)); }
+            for (const e of this) { otherRSet.add(f(e)); }
+
+        } else {
+            const otherRSet = other as RSet<T>;
+            this.forAdd().add(v => otherRSet.add(v));
+            this.forRemove().add(v => otherRSet.remove(v));
+            otherRSet.forAdd().add(v => this.add(v));
+            otherRSet.forRemove().add(v => this.remove(v));
+
+            otherRSet.addAll(this);
+            this.addAll(otherRSet);
+        }
+    }
+
+    /**
+     * @override
+     */
+    public map<T2>(f: AFunction<T, T2>, f2?: AFunction<T2, T>): RSet<T2> {
+        if (f2) {
+            return super.map(f, f2) as RSet<T2>;
+        } else {
+            const res = RCol.set<T2>();
+            this.forAdd().add(v => { res.add(f(v)); });
+            this.forRemove().add(v => { res.remove(f(v)); });
+            for(const e of this) { res.add(f(e)); }
+            return res;
+        }
+    }
+}
+
+
+// =============================================================================================
+// SECTION 6: RQueue (Reactive Queue)
+// =============================================================================================
+
+/**
+ * A reactive Queue interface.
+ * Based on Java's Queue interface.
+ * @template T The element type.
+ */
+export interface RQueue<T> extends RCollection<T> {
+    /**
+     * Inserts the specified element into this queue if possible.
+     * @param e The element to add.
+     * @returns True if the element was added.
+     */
+    offer(e: T): boolean;
+
+    // --- ИСПРАВЛЕНИЕ ---
+    // Удален конфликтующий метод 'remove(): T'.
+    // RQueue<T> теперь наследует только 'remove(o: T): boolean' из RCollection<T>.
+    // Для удаления и возврата элемента используйте 'poll()'.
+
+    /**
+     * Retrieves and removes the head of this queue.
+     * @returns The head of the queue, or null if this queue is empty.
+     */
+    poll(): T | null;
+
+    /**
+     * Retrieves, but does not remove, the head of this queue.
+     * Throws an error if this queue is empty.
+     * @returns The head of the queue.
+     */
+    element(): T;
+
+    /**
+     * Retrieves, but does not remove, the head of this queue.
+     * @returns The head of the queue, or null if this queue is empty.
+     */
+    peek(): T | null;
+}
+
+/**
+ * Implementation of RQueue wrapping a standard Array (as a FIFO queue).
+ * @template T The element type.
+ */
+export class RQueueBySrc<T> extends RCollectionBySrc<T, Array<T>> implements RQueue<T> {
+    public readonly [Symbol.toStringTag] = "RQueue";
+
+    /**
+     * @param src The underlying array.
+     */
+    constructor(src: Array<T>) {
+        super(src);
+    }
+
+    /**
+     * @override
+     */
+    public [Symbol.iterator](): IterableIterator<T> {
+        return this.src[Symbol.iterator]();
+    }
+
+    /**
+     * @override
+     */
+    public contains(o: T): boolean {
+        return this.src.includes(o);
+    }
+
+    /**
+     * Adds an element to the end of the queue.
+     * @override
+     */
+    public add(e: T): boolean {
+        this.src.push(e);
+        this.add0(e);
+        return true;
+    }
+
+    // --- ИСПРАВЛЕНИЕ ---
+    // Удалена перегруженная реализация 'remove'.
+    // Теперь реализован только 'remove(o: T): boolean' из RCollection.
+
+    /**
+     * Removes the first occurrence of an element.
+     * @override
+     */
+    public remove(o: T): boolean {
+        const index = this.src.indexOf(o);
+        if (index > -1) {
+            this.src.splice(index, 1);
+            this.remove0(o);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @override
+     */
+    public clear(): void {
+        for (const e of this.src) {
+            this.remove0(e);
+        }
+        this.src.length = 0;
+    }
+
+    /**
+     * @override
+     */
+    public offer(e: T): boolean {
+        return this.add(e);
+    }
+
+    /**
+     * @override
+     */
+    public poll(): T | null {
+        if (this.isEmpty()) {
+            return null;
+        }
+        const v = this.src.shift(); /** Removes from start */
+        if (v !== undefined) {
+            this.remove0(v);
+            return v;
+        }
+        return null;
+    }
+
+    /**
+     * @override
+     */
+    public element(): T {
+        if (this.isEmpty()) {
+            throw new Error("Queue is empty");
+        }
+        return this.src[0];
+    }
+
+    /**
+     * @override
+     */
+    public peek(): T | null {
+        return this.isEmpty() ? null : this.src[0];
+    }
+}
+
+// =============================================================================================
+// SECTION 7: RCol (Static Factory)
+// =============================================================================================
+
+/**
+ * Factory namespace for creating reactive collections.
+ */
+export namespace RCol {
+    /**
+     * Creates a new reactive RQueue, backed by an Array.
+     * @param src Optional initial array.
+     */
+    export function of<T>(src: Array<T>): RQueue<T>;
+
+    /**
+     * Creates a new reactive RSet, backed by a Set.
+     * @param src Optional initial set.
+     */
+    export function of<T>(src: Set<T>): RSet<T>;
+
+    /**
+     * Creates a new reactive RMap, backed by a Map.
+     * @param src Optional initial map.
+     */
+    export function of<K, V>(src: Map<K, V>): RMap<K, V>;
+
+    /**
+     * Creates a new reactive collection wrapper.
+     */
+    export function of<T, K, V>(src: Set<T> | Array<T> | Map<K, V> | Iterable<T>): RSet<T> | RQueue<T> | RMap<K, V> | RCollection<T> {
+        if (src instanceof Set) {
+            return new RSetBySrc(src);
+        }
+        if (src instanceof Array) {
+            return new RQueueBySrc(src);
+        }
+        if (src instanceof Map) {
+            return new RMapBySrc(src as Map<K, V>);
+        }
+        if (typeof (src as Iterable<T>)[Symbol.iterator] === 'function') {
+            return new RSetBySrc(new Set(src as Iterable<T>));
+        }
+        throw new Error("Unsupported source type for RCol.of");
+    }
+
+    /**
+     * Creates a new, empty, reactive RMap.
+     */
+    export function map<K, V>(): RMap<K, V> {
+        return new RMapBySrc(new Map<K, V>());
+    }
+
+    /**
+     * Creates a new, empty, reactive RSet.
+     */
+    export function set<T>(): RSet<T> {
+        return new RSetBySrc(new Set<T>());
+    }
+
+    /**
+     * Creates a new, empty, reactive RQueue.
+     */
+    export function queue<T>(): RQueue<T> {
+        return new RQueueBySrc(new Array<T>());
+    }
+
+    /**
+     * Creates an asynchronous Batching Map (BMap) implementation.
+     * @param timeoutMs The request timeout duration (not used in default impl).
+     * @param name A descriptive name (not used in default impl).
+     */
+    export function bMap<K, V>(timeoutMs: number, name: string): BMap<K, V>;
+
+    /**
+     * Creates an asynchronous Batching Map (BMap) with default parameters.
+     */
+    export function bMap<K, V>(): BMap<K, V>;
+
+    /**
+     * Implementation for bMap overloads.
+     * @internal
+     */
+    export function bMap<K, V>(timeoutMs?: number, name?: string): BMap<K, V> {
+        const finalTimeout = timeoutMs ?? 4000;
+        const finalName = name ?? "GenericBMap";
+        return new BMapImpl<K, V>(10, finalName, finalTimeout);
     }
 }

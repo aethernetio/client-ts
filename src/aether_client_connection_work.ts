@@ -216,7 +216,7 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         };
 
         this.connectFuture.to(
-             undefined, // No direct success handler here, wait for first ping
+() => {}, // No direct success handler here, wait for first ping
              (err: Error) => { this.ready.tryError(err); } // Propagate connection error to ready
         ).onCancel(() => { this.ready.cancel(); }); // Propagate cancellation
     }
@@ -230,7 +230,7 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
              // 1. Cloud Requests
              const requestCloud = this.client.clouds.getRequestsFor(null as any, this);
              if (requestCloud.length > 0) {
-                 Log.trace("Flushing cloud requests", { count: requestCloud.length, uids: requestCloud.map(u=>u.toString()) });
+Log.trace("Flushing cloud requests", { count: requestCloud.length, uids: requestCloud.map((u: UUID) => u.toString()) });
                  a.resolverClouds(requestCloud);
              }
 

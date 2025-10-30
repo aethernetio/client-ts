@@ -167,7 +167,7 @@ export class MessageNode {
     public addConsumerServerOutByDescriptor(serverDescriptor: ServerDescriptor): void {
          using _l = Log.context({ component: "MessageNode", uidTo: this.consumerUUID.toString() });
          try {
-             const connection = this.client.getConnection(serverDescriptor);
+const connection = new ConnectionWork(this.client, serverDescriptor);
              this.strategy.onResolveConsumerConnection(this, connection);
          } catch(e) {
               Log.error("Error resolving/passing connection in addConsumerServerOutByDescriptor", e as Error);

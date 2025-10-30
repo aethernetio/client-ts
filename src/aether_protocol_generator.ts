@@ -622,15 +622,6 @@ const FAST_META_TYPE_IMPL_STUB_METHODS = `
     deserializeFromBytes(_data: Uint8Array): any { throw new Error('Not implemented'); }
     loadFromFile(_file: string): any { throw new Error('Not implemented'); }`;
 
-// =============================================================================================
-// 3. TypeGenerator (Генерация классов, перечислений и Stream)
-// =============================================================================================
-
-const FAST_META_TYPE_IMPL_STUB_METHODS = `
-    serializeToBytes(_obj: any): Uint8Array { throw new Error('Not implemented'); }
-    deserializeFromBytes(_data: Uint8Array): any { throw new Error('Not implemented'); }
-    loadFromFile(_file: string): any { throw new Error('Not implemented'); }`;
-
 class TypeGenerator {
     private readonly generatorLogic: GeneratorLogic;
     constructor(generatorLogic: GeneratorLogic) { this.generatorLogic = generatorLogic; }
@@ -758,7 +749,7 @@ class TypeGenerator {
         const sb: string[] = []; const g = this.generatorLogic;
         const isAbstract = !!cfg?.abstract;
         const allFields = this.getAllFields(cfg);
-        const currentFields = this.getFieldTypes(cfg?.fields);
+const currentFields = this.getFieldTypes(cfg?.fields || {});
         const parent = cfg?.parent; const extendsClause = parent ? ` extends ${parent}` : '';
         const constructorParams = Array.from(allFields.entries()).map(([fn, ti]) => `${fn}: ${ti.getArgumentType()}`).join(', ');
         const superFields = Array.from(allFields.keys()).filter(fn => !currentFields.has(fn));
