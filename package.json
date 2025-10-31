@@ -8,6 +8,7 @@
     "bufferutil": "^4.0.8",
     "dns-query": "^0.11.2",
     "express": "^4.19.2",
+    "libsodium-wrappers": "^0.7.15",
     "nodemon": "^3.1.0",
     "universal-ws": "^0.2.9",
     "utf-8-validate": "^6.0.4",
