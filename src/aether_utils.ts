@@ -6,8 +6,8 @@
 
 import {
     ConcurrentLinkedQueue_C, Disposable, ARunnable, AConsumer,
-    AFunction, AtomicReference, AtomicLong,
-    Destroyable, UUID, ASupplier,
+    AtomicReference, AtomicLong,
+    Destroyable, UUID
 } from './aether_types';
 import { Log } from './aether_logging';
 import { AFuture } from './aether_future';
@@ -39,8 +39,8 @@ export const HexUtils = {
         if(result){
             for (let i = start; i < end; i++) {
                 const v = dataBytes[i] & 0xFF;
-                result.addChar(HexUtils.HEX_ARRAY[v >>> 4]);
-                result.addChar(HexUtils.HEX_ARRAY[v & 0x0F]);
+                result.add(HexUtils.HEX_ARRAY[v >>> 4]);
+                result.add(HexUtils.HEX_ARRAY[v & 0x0F]);
             }
             return;
         }else{
@@ -59,11 +59,10 @@ export const HexUtils = {
 // DESTROYER
 // =============================================================================================
 
-type ScheduledFuture_C = { cancel: (f: boolean) => void, destroy: (f: boolean) => AFuture };
-type AutoCloseable = { close: () => void };
-
+// <-- Destroyable реализует Disposable, поэтому Destroyer реализует оба
 export class Destroyer implements Destroyable {
     public readonly name: string;
+    // <-- Очередь может хранить оба типа, но Disposable является базовым
     private readonly queue: ConcurrentLinkedQueue_C<Disposable> = new ConcurrentLinkedQueue_C();
     private destroyFuture: AtomicReference<AFuture | null> = new AtomicReference(null);
 
@@ -71,38 +70,15 @@ export class Destroyer implements Destroyable {
 
     public isDestroyed(): boolean { return this.destroyFuture.get() !== null; }
 
-    public add(destroyable: Destroyable | ScheduledFuture_C | AutoCloseable | Disposable): void {
-        if (typeof (destroyable as Disposable)[Symbol.dispose] === 'function') {
-             this.queue.add(destroyable as Disposable);
-        } else if (typeof (destroyable as Destroyable).destroy === 'function') {
-             this.queue.add(destroyable as Destroyable);
-        }
-        else if (typeof (destroyable as ScheduledFuture_C).cancel === 'function' && typeof (destroyable as ScheduledFuture_C).destroy === 'function') {
-            const os = destroyable as ScheduledFuture_C;
-            const wrapped: Destroyable = {
-                destroy: (force: boolean) => { os.cancel(force); return AFuture.of(); },
-                [Symbol.dispose]: () => os.cancel(true),
-            };
-            this.queue.add(wrapped);
-        } else if (typeof (destroyable as AutoCloseable).close === 'function') {
-            const os = destroyable as AutoCloseable;
-            const wrapped: Destroyable = {
-                destroy: (force: boolean) => {
-                    if (force) {
-                        try { os.close(); } catch (e) { Log.warn("destroy exception", { error: e as Error }); }
-                        return AFuture.of();
-                    } else {
-                        try { os.close(); return AFuture.of(); }
-                        catch (e) { return AFuture.ofThrow(e as Error); }
-                    }
-                },
-                [Symbol.dispose]: () => { try { os.close(); } catch (e) { Log.warn("close exception", { error: e as Error }); } }
-            };
-            this.queue.add(wrapped);
+    // <-- Принимает базовый Disposable или более конкретный Destroyable
+    public add(resource: Disposable | Destroyable): void {
+        // Важно: Сначала проверяем на Destroyable, т.к. он Tакже является Disposable
+        if (typeof (resource as Destroyable).destroy === 'function') {
+             this.queue.add(resource as Destroyable);
+        } else if (typeof (resource as Disposable)[Symbol.dispose] === 'function') {
+             this.queue.add(resource as Disposable);
         } else {
-             // --- FIX: Correct logger call ---
-            Log.error("Attempted to add non-Disposable/Destroyable/AutoCloseable/ScheduledFuture to Destroyer", { object: destroyable });
-             // --- End Fix ---
+            Log.error("Attempted to add non-Disposable/Destroyable to Destroyer", { object: resource });
         }
     }
 
@@ -116,14 +92,15 @@ export class Destroyer implements Destroyable {
         let e: Disposable | undefined;
         while ((e = this.queue.poll()) !== undefined) {
             try {
+                // Важно: Сначала проверяем на асинхронный 'destroy'
                 if (typeof (e as Destroyable).destroy === 'function') {
                      destroyTasks.push((e as Destroyable).destroy(force).timeoutError(5, `Timeout destroying unit: ${e.toString()}`));
-                } else if (typeof (e as Disposable)[Symbol.dispose] === 'function') {
+                }
+                // Иначе используем синхронный 'dispose'
+                else if (typeof (e as Disposable)[Symbol.dispose] === 'function') {
                      (e as Disposable)[Symbol.dispose]();
                 } else {
-                     // --- FIX: Correct logger call ---
                      Log.warn("Object in Destroyer queue has no destroy or dispose method", { object: e });
-                     // --- End Fix ---
                 }
             } catch (err) {
                  Log.error("Error during destroy/dispose call", { error: err as Error, object: e});
@@ -138,7 +115,11 @@ export class Destroyer implements Destroyable {
         res.timeoutError(5, `Timeout destroying all units in Destroyer[${this.name}]`);
         return res;
     }
-    public [Symbol.dispose](): void { this.destroy(true); }
+
+    // <-- Реализуем [Symbol.dispose] для самого Destroyer
+    public [Symbol.dispose](): void {
+        this.destroy(true); // 'true' для force, т.к. 'using' обычно быстрый
+    }
 }
 
 // =============================================================================================
@@ -157,23 +138,33 @@ export const RU = {
         const timer = setTimeout(Log.wrap(task), ms);
         return { [Symbol.dispose]: () => clearTimeout(timer) };
     },
-    scheduleAtFixedRate: (resTo: Destroyable, period: number, timeUnit: "MILLISECONDS" | "SECONDS", t: ARunnable): ScheduledFuture_C => {
+
+    // <-- Возвращаемый тип изменен на Destroyable
+    scheduleAtFixedRate: (resTo: Destroyable, period: number, timeUnit: "MILLISECONDS" | "SECONDS", t: ARunnable): Destroyable => {
         const periodMs = period * (timeUnit === "SECONDS" ? 1000 : 1);
         const wrappedTask = Log.wrap(t);
         const timer = setInterval(wrappedTask, periodMs);
 
-        const scheduledFuture = {
-            cancel: (_f: boolean) => clearInterval(timer),
-            destroy: (_f: boolean) => { clearInterval(timer); return AFuture.of(); }
-        } as ScheduledFuture_C;
+        // Этот объект реализует оба интерфейса
+        const destroyableTimer: Destroyable = {
+            // Асинхронный destroy
+            destroy: (_f: boolean) => {
+                clearInterval(timer);
+                return AFuture.of();
+            },
+            // Синхронный dispose
+            [Symbol.dispose]: () => {
+                clearInterval(timer);
+            }
+        };
 
         if (resTo && typeof (resTo as Destroyer).add === 'function') {
-             (resTo as Destroyer).add(scheduledFuture);
+             (resTo as Destroyer).add(destroyableTimer);
         } else {
              Log.warn("scheduleAtFixedRate: Provided 'resTo' is not a Destroyer. Timer will not be automatically cleaned up.");
         }
 
-        return scheduledFuture;
+        return destroyableTimer;
     },
     cast: <T>(t: any): T => t as T,
     error: <T>(e: Error): T => { Log.error(e); throw e; },

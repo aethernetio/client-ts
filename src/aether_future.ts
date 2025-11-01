@@ -505,14 +505,24 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
      */
     public getError(): Error | null { return this.errorValue; }
 
+    public tryError(e: Error): boolean {
+        if (this.status === FutureStatus.PENDING) {
+            this.errorValue = e;
+            this.resolve(FutureStatus.ERROR);
+            return true;
+        }
+        return false;
+    }
     /**
      * Completes the future with an error.
      * @param e The error.
      * @returns This future instance.
      */
     public error(e: Error): Self {
-        if (this.status === FutureStatus.PENDING) { this.errorValue = e; }
-        this.resolve(FutureStatus.ERROR);
+        if (this.status === FutureStatus.PENDING) {
+            this.errorValue = e;
+            this.resolve(FutureStatus.ERROR);
+        }
         return this as unknown as Self;
     }
 
@@ -1050,7 +1060,7 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
                 }
             }
         ).onError((err: Error) => res.error(err)) /** Propagate error from all() */
-         .onCancel(() => res.cancel());       /** Propagate cancel from all() */
+            .onCancel(() => res.cancel());       /** Propagate cancel from all() */
         return res;
     }
 
@@ -1363,7 +1373,7 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
                 result.tryDone(results as T[]);
             }
         ).onError((err: Error) => result.error(err)) /** Propagate error */
-         .onCancel(() => result.cancel());       /** Propagate cancel */
+            .onCancel(() => result.cancel());       /** Propagate cancel */
         return result;
     }
 }

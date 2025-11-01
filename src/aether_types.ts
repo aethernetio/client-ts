@@ -3,13 +3,15 @@
  * @purpose Contains core, low-level types and functional interface definitions.
  */
 
+import { AFuture } from './aether_future'; // <-- Импорт AFuture для Destroyable
+import { AString, ToString } from './aether_astring'
 /** Basic Types */
 export type Uint8Array = globalThis.Uint8Array;
 
 /**
  * A basic UUID implementation.
  */
-export class UUID { // <-- EXPORTED
+export class UUID implements ToString { // <-- EXPORTED
     static fromString(uuidString: string): UUID {
         const uuidRegex = /^([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})$/i;
         const match = uuidRegex.exec(uuidString);
@@ -29,7 +31,8 @@ export class UUID { // <-- EXPORTED
     }
 
     data!: Uint8Array;
-    toString(): string {
+    toString(s?: AString): AString {
+        if(!s)s=AString.of();
         if (!this.data || this.data.length !== 16) {
             throw new Error('UUID data is missing or incorrect size.');
         }
@@ -37,13 +40,14 @@ export class UUID { // <-- EXPORTED
         for (let i = 0; i < 16; i++) {
             hexParts.push(this.data[i].toString(16).padStart(2, '0'));
         }
-        return [
+        s.add([
             hexParts.slice(0, 4).join(''),
             hexParts.slice(4, 6).join(''),
             hexParts.slice(6, 8).join(''),
             hexParts.slice(8, 10).join(''),
             hexParts.slice(10, 16).join(''),
-        ].join('-');
+        ].join('-'));
+        return s;
     }
 }
 export type URI = string; // <-- EXPORTED
@@ -68,7 +72,7 @@ export namespace AConsumer_T {
     /**
      * A consumer that does nothing.
      */
-    export const EMPTY: AConsumer<any> = () => { /* no-op */ };
+    export const EMPTY: AConsumer<unknown> = () => { /* no-op */ };
 
     /**
      * Returns a typed empty consumer.
@@ -102,7 +106,7 @@ export namespace WeakConsumer_T {
      * @returns True if it is a WeakConsumer.
      */
     function isWeakConsumer<T>(c: AConsumer<T>): c is WeakConsumer<T> {
-        return (c as any)?._isWeak === true;
+        return (c as WeakConsumer<T>)?._isWeak === true;
     }
 
     /**
@@ -123,9 +127,9 @@ export namespace WeakConsumer_T {
         /**
          * Tag the function with properties needed by EventConsumer.
          */
-        (weakConsumerFunc as any)._isWeak = true;
-        (weakConsumerFunc as any)._weakOriginalTask = task;
-        (weakConsumerFunc as any)._weakRef = ref;
+        (weakConsumerFunc as WeakConsumer<T>)._isWeak = true;
+        (weakConsumerFunc as WeakConsumer<T>)._weakOriginalTask = task;
+        (weakConsumerFunc as WeakConsumer<T>)._weakRef = ref;
 
         return weakConsumerFunc;
     }
@@ -192,20 +196,22 @@ export class ConcurrentLinkedQueue_C<T> {
     public clear(): void { this.items = []; }
     public get length(): number { return this.items.length; }
 }
-export type ScheduledFuture_C = {
-    cancel(mayInterruptIfRunning: boolean): boolean;
-    isDone(): boolean;
-};
 
 /** Resource Management (Java/TS) */
+
+/**
+ * Синхронный интерфейс освобождения ресурсов (соответствует нативному).
+ */
 export interface Disposable {
     [Symbol.dispose](): void;
 }
-export interface AutoCloseable {
-    close(): void;
-}
-export interface Destroyable extends Disposable { // <-- EXPORTED
-    destroy(force: boolean): any; // AFuture | void | etc.
+
+/**
+ * Асинхронный интерфейс освобождения ресурсов (аналог нативного AsyncDisposable,
+ * но адаптированный для AFuture и параметра 'force').
+ */
+export interface Destroyable extends Disposable {
+    destroy(force: boolean): AFuture; // <-- Уточнен тип
 }
 
 /** Exception related to client startup and connection issues. */
@@ -232,13 +238,4 @@ export class ClientTimeoutException extends Error {
         super(message);
         this.name = 'ClientTimeoutException';
     }
-}
-
-/**
- * Represents a client connection.
- * @note This is a forward declaration, typically defined elsewhere.
- */
-export interface Connection<LT, RT> extends Destroyable { // <-- EXPORTED
-    getRootApiFuture(): any;
-    getRootApi(): RT | null;
 }

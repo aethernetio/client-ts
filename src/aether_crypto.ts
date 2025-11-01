@@ -70,7 +70,7 @@ export interface PairSymKeys extends CryptoProviderUnit { clientKey: AKey.Symmet
 export interface SignedKey extends CryptoProviderUnit { readonly key: AKey; readonly sign: Sign; check(signer: AKey.SignPublic): boolean; check(signChecker: SignChecker): boolean; toString(): string; }
 
 // DTO structure for Asymmetrically Signed Key Pair (Uses DTO Key/Sign)
-export type DtoPairKeysAsymSigned = { getPublicKey():
+export type DtoPairKeysAsymSigned = { getKey():
 { getKey(): DtoKey, getSign(): Sign }, getPrivateKey(): DtoKey | null };
 
 // CryptoProvider Interface
@@ -168,8 +168,8 @@ const providers: Map<string, CryptoProvider> = new Map();
  * @param obj The object to check.
  * @returns True if the object has getProviderName, false otherwise.
  */
-function hasGetProviderName(obj: any): obj is { getProviderName(): string } {
-    return obj && typeof obj.getProviderName === 'function';
+function hasGetProviderName(obj: unknown): obj is { getProviderName(): string } {
+    return !!obj && typeof (obj as { getProviderName: unknown }).getProviderName === 'function';
 }
 
 /**
@@ -181,7 +181,7 @@ export const CryptoProviderFactory = {
      * @param provider The provider instance to register.
      */
     register: (provider: CryptoProvider): void => { const nameLower = provider.getCryptoLibName().toLowerCase(); if (providers.has(nameLower)) { Log.warn(`CryptoProvider already registered: ${nameLower}. Overwriting.`); } providers.set(nameLower, provider); Log.debug(`Registered CryptoProvider: ${provider.getCryptoLibName()}`); },
-    /**
+     /**
      * Retrieves a registered CryptoProvider by name.
      * @param libName The name of the cryptographic library.
      * @returns The registered CryptoProvider.
@@ -257,7 +257,7 @@ privateKeyHex)); },
                 // Skip providers that can't create a default signer
                 Log.warn(`Skipping crypto provider ${p.getCryptoLibName()} for signer creation: ${(e as Error).message}`);
             }
-        }
+         }
         return res;
     }
 };

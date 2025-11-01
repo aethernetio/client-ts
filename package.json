@@ -16,7 +16,7 @@
   },
   "scripts": {
     "preinstall": "npx npm-force-resolutions",
-    "generate-protocol": "npx tsx src/AetherProtocolPlugin.ts",
+    "protocol": "npx tsx src/generator/AetherProtocolPlugin.ts",
     "prebuild": "npm run generate-protocol",
     "build": "tsx node_modules/webpack/bin/webpack.js --config webpack.config.mjs",
     "test": "jest",

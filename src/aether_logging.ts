@@ -3,11 +3,13 @@
 // PURPOSE: A powerful contextual and structured logger, adapted from Java's architecture.
 // =============================================================================================
 
-import { ToString, AStringBase, UUID } from './aether_astring';
+import { ToString, AString } from './aether_astring';
 import {
     Disposable, Executor, ARunnable, AConsumer, APredicate,
     ASupplier, AFunction, ABiConsumer
 } from './aether_types';
+// ИМПОРТИРУЕМ НОВЫЙ LogPrinter
+import { LogPrinter } from './LogPrinter';
 
 // --- Type Definitions ---
 
@@ -106,10 +108,14 @@ class SimpleLNode implements LNode {
 
     /** @inheritDoc */
     logPrint(): void {
-        console.log(`[LNode #${this.id}] ${this.get(LogKeys.MSG)}`);
+        // This method is no longer the primary output.
+        // It can be used for debugging.
+        const sb = AString.of();
+        sb.add(`[LNode #${this.id}] ${this.get(LogKeys.MSG) ?? ''}\n`);
         this.forEach((k, v) => {
-            if (k !== LogKeys.MSG) console.log(`  ${k}: ${v}`);
+            if (k !== LogKeys.MSG) sb.add(`  ${k}: ${v}\n`);
         });
+        console.log(sb.toString());
     }
 
     get msg() { return this.get(LogKeys.MSG); }
@@ -159,20 +165,32 @@ export class LogStatics {
 
     /** Creates a new LNode from structured data. */
     public static of(data: LogData = {}): LNode {
-        if (!LogStatics.IS_ENABLED) return {} as LNode;
+        if (!LogStatics.IS_ENABLED) return { } as LNode; // Dummy
         return new SimpleLNode(++LogStatics.ID_COUNTER, data, null);
     }
 
-    /** * Creates an auto-closing context (from data) OR pushes an existing LNode onto the stack.
-     * @param dataOrNode The structured log data (`{key: value}`) OR an existing LNode instance.
-     * @returns A ContextCloser object to be used in try-finally or using().
+    /**
+     * Creates a new LNode, combining provided data with the current
+     * stack context (snapshot), but DOES NOT push the node to the stack.
+     */
+    public static createContext(data: LogData = {}): LNode {
+        if (!LogStatics.IS_ENABLED) return {} as LNode; // Dummy
+        const newNode = LogStatics.of(data);
+        const currentContext = LogStatics.get();
+        if (currentContext) {
+            (newNode as SimpleLNode).parent = currentContext;
+        }
+        return newNode;
+    }
+
+
+    /**
+     * Creates an auto-closing context (from data) OR pushes an existing LNode onto the stack.
      */
     public static context(dataOrNode: LogData | LNode): ContextCloser {
         if (!LogStatics.IS_ENABLED) return { [Symbol.dispose]: () => {} } as ContextCloser;
 
         let node: LNode;
-
-        // Check if the argument is already an LNode instance
         const isLNode = dataOrNode &&
             (typeof (dataOrNode as LNode).id === 'number') &&
             (typeof (dataOrNode as LNode).get === 'function');
@@ -180,11 +198,9 @@ export class LogStatics {
         if (isLNode) {
             node = dataOrNode as LNode;
         } else {
-            // Treat as LogData and create a new node
             node = LogStatics.of(dataOrNode as LogData);
         }
 
-        // Push the LNode onto the stack
         LogStatics.push(node);
         return new ContextCloserImpl(node);
     }
@@ -203,11 +219,12 @@ export class LogStatics {
 
         if (throwable) {
             logData[LogKeys.EXCEPTION_STR] = throwable;
-            logData[LogKeys.MSG] = (msg && typeof msg === 'string') ? msg : (throwable.message || 'Error occurred');
+            if (!msg) {
+                 logData[LogKeys.MSG] = throwable.message || 'Error occurred';
+            }
         }
 
         const logNode = LogStatics.of(logData);
-
         (logNode as SimpleLNode).parent = this.get();
 
         if (LogStatics.LOG_FILTER(logNode)) {
@@ -218,10 +235,9 @@ export class LogStatics {
 
     private static resolveMessage(msg: string | ToString): string {
         if (typeof msg === 'string') return msg;
-        if (msg instanceof UUID) return msg.toString();
 
         try {
-            const sb = AStringBase.ofEmpty();
+            const sb = AString.of();
             (msg as ToString).toString(sb);
             return sb.toString();
         } catch (e) {
@@ -229,34 +245,16 @@ export class LogStatics {
         }
     }
 
+    /**
+     * Publishes the log node to all registered listeners.
+     * This method NO LONGER prints to the console directly.
+     */
     private static publish(node: LNode): void {
-        const time = node.get(LogKeys.TIME) as Date;
-        const level = node.get(LogKeys.LEVEL) as LogLevel;
-        const msg = node.get(LogKeys.MSG) as string;
-        const component = node.get(LogKeys.SYSTEM_COMPONENT) || 'GLOBAL';
-
-        const contextData: LogData = {};
-        node.forEach((k, v) => {
-            if (!Object.values(LogKeys).includes(k)) { contextData[k] = v; }
-        });
-
-        const exception = node.get(LogKeys.EXCEPTION_STR) as Error;
-        const exceptionStr = exception ? `\n\tException: ${exception.stack || exception.message}` : '';
-
-        const logFunc = (l: LogLevel) => {
-            if (l === LogLevel.ERROR) return console.error.bind(console);
-            if (l === LogLevel.WARN) return console.warn.bind(console);
-            if (l === LogLevel.INFO) return console.info.bind(console);
-            if (l === LogLevel.DEBUG) return console.debug.bind(console);
-            return console.log.bind(console);
-        };
-
-        const logMessage = `[${time.toISOString().substring(11, 23)}][${level}][${component}] ${msg}${exceptionStr}`;
-        logFunc(level)(logMessage, Object.keys(contextData).length > 0 ? contextData : '');
-
         this.LISTENERS.forEach(listener => {
             try {
-                if (listener.filter(node)) { listener.consumer(node); }
+                if (listener.filter(node)) {
+                    listener.consumer(node);
+                }
             } catch (e) {
                 console.error("Error in log listener:", e);
             }
@@ -265,40 +263,11 @@ export class LogStatics {
 
     // --- Logging API Methods ---
 
-    /** * Logs a TRACE level message.
-     * @param msg The log message string or a ToString object.
-     * @param data Optional structured data object (`{key: value}`).
-     * @returns The created LNode.
-     */
     public static trace(msg: string | ToString, data: LogData = {}): LNode { return this.log(LogLevel.TRACE, msg, data); }
-
-    /** * Logs a DEBUG level message.
-     * @param msg The log message string or a ToString object.
-     * @param data Optional structured data object (`{key: value}`).
-     * @returns The created LNode.
-     */
     public static debug(msg: string | ToString, data: LogData = {}): LNode { return this.log(LogLevel.DEBUG, msg, data); }
-
-    /** * Logs an INFO level message.
-     * @param msg The log message string or a ToString object.
-     * @param data Optional structured data object (`{key: value}`).
-     * @returns The created LNode.
-     */
     public static info(msg: string | ToString, data: LogData = {}): LNode { return this.log(LogLevel.INFO, msg, data); }
-
-    /** * Logs a WARN level message.
-     * @param msg The log message string or a ToString object.
-     * @param data Optional structured data object (`{key: value}`).
-     * @returns The created LNode.
-     */
     public static warn(msg: string | ToString, data: LogData = {}): LNode { return this.log(LogLevel.WARN, msg, data); }
 
-    /** * Logs an ERROR level message. Supports multiple signature styles.
-     * @param msgOrThrowable The primary message string or the Error object itself.
-     * @param throwableOrData The optional Error object to log stack trace, or the data object.
-     * @param data Optional structured data object (`{key: value}`).
-     * @returns The created LNode.
-     */
     public static error(msgOrThrowable: string | ToString | Error, throwableOrData?: Error | LogData, data: LogData = {}): LNode {
         let msg: string | ToString;
         let throwable: Error | undefined;
@@ -314,7 +283,7 @@ export class LogStatics {
                 throwable = throwableOrData;
                 if (data) finalData = data;
             } else if (throwableOrData) {
-                finalData = throwableOrData as LogData;
+                finalData = { ...throwableOrData, ...data };
             }
         }
         return this.log(LogLevel.ERROR, msg, finalData, throwable);
@@ -328,7 +297,6 @@ export class LogStatics {
 
         const wrapper = function(this: any, ...args: any[]) {
             const needsPush = !LogStatics.LOG_STACK.includes(capturedContextNode);
-
             if (needsPush) { LogStatics.push(capturedContextNode); }
             try { return fn.apply(this, args); }
             finally { if (needsPush) { LogStatics.pop(capturedContextNode); } }
@@ -336,11 +304,6 @@ export class LogStatics {
         return wrapper as unknown as T;
     }
 
-    /** * Wraps an Executor function to ensure the current logging context is preserved
-     * when the task (ARunnable) is executed.
-     * @param executor The original Executor function.
-     * @returns The wrapped Executor function.
-     */
     public static wrapExecutor(executor: Executor): Executor {
         return (command: ARunnable) => {
             const wrappedCommand = this.wrapInternal(command);
@@ -348,30 +311,19 @@ export class LogStatics {
         };
     }
 
-    /** * Wraps a function (Runnable, Supplier, Consumer, Function, BiConsumer) to preserve logging context.
-     * @param fn The function to wrap.
-     * @returns The wrapped function.
-     */
     public static wrap<T extends ARunnable | ASupplier<any> | AConsumer<any> | AFunction<any, any> | ABiConsumer<any, any>>(fn: T): T {
         return this.wrapInternal(fn as unknown as Function) as unknown as T;
     }
 
     // --- Global Controls ---
 
-    /** Disables all logging globally. */
     public static loggerOff(): void { this.IS_ENABLED = false; }
-
-    /** Enables all logging globally. */
     public static loggerOn(): void { this.IS_ENABLED = true; }
+    public static addFilter(filter: LogFilter): void {
+        const oldFilter = this.LOG_FILTER;
+        this.LOG_FILTER = (node) => oldFilter(node) && filter(node);
+    }
 
-    /** Adds a log filter predicate. */
-    public static addFilter(_filter: LogFilter): void { /* filter logic here */ }
-
-    /** * Adds a listener for published log events.
-     * @param filter Filter for which events to receive.
-     * @param consumer Consumer to handle the filtered log events.
-     * @returns Disposable object to remove the listener.
-     */
     public static addListener(filter: LogFilter, consumer: AConsumer<LNode>): Disposable {
         const listenerEntry = { filter, consumer: this.wrapInternal(consumer), disposer: { [Symbol.dispose]: () => { } } };
         const disposer: Disposable = {
@@ -384,6 +336,67 @@ export class LogStatics {
         this.LISTENERS.push(listenerEntry);
         return disposer;
     }
+
+    // --- Printer Factory (NEW) ---
+
+    private static consolePrinter: LogPrinter | null = null;
+
+    /**
+     * Creates and attaches a colored console printer, similar to the Java version.
+     * Ensures only one console printer is created.
+     * @param filter An optional filter to apply just for this printer.
+     */
+    public static printConsoleColored(filter: LogFilter = () => true): LogPrinter {
+        if (LogStatics.consolePrinter) {
+            return LogStatics.consolePrinter;
+        }
+
+        // Define columns based on Java implementation
+        const columns = [
+            LogPrinter.col(LogKeys.TIME, (v: Date) =>
+                // Simple ISO time format
+                v.toISOString().substring(11, 23)
+            ).min(12),
+            LogPrinter.splitter(" "),
+            LogPrinter.col(LogKeys.LEVEL).min(5),
+            LogPrinter.splitter("│"),
+            LogPrinter.col(LogKeys.SYSTEM_COMPONENT).min(10),
+            LogPrinter.splitter("│"),
+            LogPrinter.col(LogKeys.MSG).min(50), // Java has custom logic, we'll keep it simple
+            LogPrinter.splitter("  "),
+            LogPrinter.colAll()
+        ];
+
+        // Create a LogPrinter subclass that applies color
+        const printer = new class extends LogPrinter {
+            constructor() {
+                super(columns, filter);
+            }
+
+            override printNode(s: AString, n: LNode): AString {
+                const level = n.getLevel();
+                if (level) {
+                    switch (level) {
+                        case LogLevel.TRACE: s.styleForeground(null, 150, 150, 150); break;
+                        case LogLevel.DEBUG: s.styleForeground(null, 100, 255, 100); break;
+                        case LogLevel.INFO: s.styleForeground(null, 100, 100, 255); break;
+                        case LogLevel.WARN: s.styleForeground(null, 255, 50, 50); break;
+                        case LogLevel.ERROR: s.styleForeground(null, 255, 0, 0); break;
+                    }
+                }
+
+                // Call super.printNode to print columns
+                super.printNode(s, n);
+                // Clear style
+                s.styleClear();
+                return s;
+            }
+        }();
+
+        LogStatics.consolePrinter = printer;
+        return printer;
+    }
+
 
     /** The public, globally accessible logging facade. */
     public static readonly Log: LogFacadeInterface = {
@@ -398,9 +411,6 @@ export class LogStatics {
 
 // --- LogFacade Interface (Public API) ---
 
-/**
- * Interface representing the public Log object.
- */
 export interface LogFacadeInterface {
     // Keys
     readonly LEVEL: string;
@@ -409,44 +419,33 @@ export interface LogFacadeInterface {
     readonly EXCEPTION_STR: string;
 
     // Context
-    /** Creates an LNode from key-value pairs. */
     of(data: LogData): LNode;
-    /** Gets the current combined context node. */
     get(): LNode | null;
-    /** Pushes an LNode onto the context stack. */
     push(n: LNode): void;
-    /** Pops the expected LNode from the context stack. */
     pop(n: LNode): void;
-    /** Creates and pushes an auto-closing context (from data) or pushes an existing LNode. */
     context(dataOrNode: LogData | LNode): ContextCloser;
+    createContext(data?: LogData): LNode;
 
     // Logging Methods
-    /** Logs a TRACE level message. */
     trace(msg: string | ToString, data?: LogData): LNode;
-    /** Logs a DEBUG level message. */
     debug(msg: string | ToString, data?: LogData): LNode;
-    /** Logs an INFO level message. */
     info(msg: string | ToString, data?: LogData): LNode;
-    /** Logs a WARN level message. */
     warn(msg: string | ToString, data?: LogData): LNode;
-    /** Logs an ERROR level message. */
     error(msg: string | ToString | Error, throwable?: Error | LogData, data?: LogData): LNode;
 
     // Wrappers
-    /** Wraps an Executor function to preserve logging context in executed tasks. */
     wrapExecutor(executor: Executor): Executor;
-    /** Wraps a function (Runnable, Supplier, Consumer, Function, BiConsumer) to preserve logging context. */
     wrap<T extends ARunnable | ASupplier<any> | AConsumer<any> | AFunction<any, any> | ABiConsumer<any, any>>(fn: T): T;
 
     // Controls
-    /** Disables all logging globally. */
     loggerOff(): void;
-    /** Enables all logging globally. */
     loggerOn(): void;
-    /** Adds a log filter predicate. */
     addFilter(filter: LogFilter): void;
-    /** Adds a listener for log events with filtering. */
     addListener(filter: LogFilter, consumer: AConsumer<LNode>): Disposable;
+
+    // Printers (NEW)
+    /** Creates and attaches a colored console printer. */
+    printConsoleColored(filter?: LogFilter): LogPrinter;
 }
 
 // Final Log Export (assigning method properties to the initialized readonly instance)
@@ -455,6 +454,7 @@ LogStatics.Log.get = LogStatics.get.bind(LogStatics);
 LogStatics.Log.push = LogStatics.push.bind(LogStatics);
 LogStatics.Log.pop = LogStatics.pop.bind(LogStatics);
 LogStatics.Log.context = LogStatics.context.bind(LogStatics);
+LogStatics.Log.createContext = LogStatics.createContext.bind(LogStatics);
 LogStatics.Log.trace = LogStatics.trace.bind(LogStatics) as any;
 LogStatics.Log.debug = LogStatics.debug.bind(LogStatics) as any;
 LogStatics.Log.info = LogStatics.info.bind(LogStatics) as any;
@@ -466,6 +466,7 @@ LogStatics.Log.loggerOff = LogStatics.loggerOff.bind(LogStatics);
 LogStatics.Log.loggerOn = LogStatics.loggerOn.bind(LogStatics);
 LogStatics.Log.addFilter = LogStatics.addFilter.bind(LogStatics);
 LogStatics.Log.addListener = LogStatics.addListener.bind(LogStatics);
+LogStatics.Log.printConsoleColored = LogStatics.printConsoleColored.bind(LogStatics); // <<< ДОБАВЛЕНО
 
 /**
  * The globally accessible logging object (Facade), providing static-like methods

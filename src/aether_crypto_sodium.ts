@@ -572,4 +572,6 @@ if (typeof sodium !== 'undefined') {
  * SodiumCryptoProvider is exported via its `export class` declaration.
  * All key classes are internal implementation details and not exported.
  */
-export { SodiumSign };
+export function applySodium(){
+    CryptoProviderFactory.register(SodiumCryptoProvider.INSTANCE)
+};

@@ -6,9 +6,8 @@
 // =============================================================================================
 
 import {
-    UUID as BaseUUID, URI as BaseURI, AtomicLong as BaseAtomicLong, AtomicInteger, ConcurrentLinkedQueue_C as BaseConcurrentLinkedQueue_C, Destroyable as BaseDestroyable, AConsumer, AFunction, ABiConsumer,
-    ClientStartException as BaseClientStartException, ClientApiException as BaseClientApiException, ClientTimeoutException, ARunnable, Disposable, AtomicReference as BaseAtomicReference,
-    Connection as BaseConnection
+    UUID as BaseUUID, URI as BaseURI, AtomicLong as BaseAtomicLong, ConcurrentLinkedQueue_C as BaseConcurrentLinkedQueue_C, Destroyable as BaseDestroyable,
+    ClientStartException as BaseClientStartException, ClientApiException as BaseClientApiException, AtomicReference as BaseAtomicReference
 } from './aether_types';
 import { Log, LNode } from './aether_logging';
 import { RU, Destroyer, StandardUUIDsImpl, HexUtils } from './aether_utils';
@@ -25,7 +24,6 @@ import {
     KeyType,
     SignedKey,
     CryptoKey, // Interface from aether_crypto
-    PairKeys as CryptoPairKeys,
     PairSymKeys
 } from './aether_crypto';
 import {
@@ -57,7 +55,6 @@ import { FastMetaClientWebSocket } from './aether_fastmeta_websocket';
 export type UUID = BaseUUID;
 export type URI = BaseURI;
 export type Destroyable = BaseDestroyable;
-export type Connection<LT, RT> = BaseConnection<LT, RT>;
 export { BaseClientStartException as ClientStartException };
 export { BaseAtomicLong as AtomicLong };
 export { BaseAtomicReference as AtomicReference };
@@ -115,8 +112,8 @@ export namespace ClientState {
             if (typeof sidOrDescriptor === 'number') {
                 this.sid = sidOrDescriptor;
             } else {
-                 this.sid = sidOrDescriptor.id;
-                 this.descriptor = sidOrDescriptor;
+                this.sid = sidOrDescriptor.id;
+                this.descriptor = sidOrDescriptor;
             }
         }
         getServerId(): number { return this.sid; }
@@ -127,12 +124,12 @@ export namespace ClientState {
         readonly uid: UUID;
         cloud: Cloud | null = null;
         constructor(uidOrDto: UUID | ClientInfoDTO, cloud?: Cloud) {
-             if (BaseUUID && uidOrDto instanceof BaseUUID) {
+            if (BaseUUID && uidOrDto instanceof BaseUUID) {
                 this.uid = uidOrDto;
                 this.cloud = cloud ?? null;
             } else { // DTO
-                 this.uid = (uidOrDto as ClientInfoDTO).uid;
-                 this.cloud = (uidOrDto as ClientInfoDTO).cloud;
+                this.uid = (uidOrDto as ClientInfoDTO).uid;
+                this.cloud = (uidOrDto as ClientInfoDTO).cloud;
             }
         }
         getUid(): UUID { return this.uid; }

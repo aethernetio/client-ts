@@ -134,8 +134,9 @@ types:
   AetherCodec:
     enum:
       - TCP
-      - WEBSOCKET
       - UDP
+      - WS
+      - WSS
   CoderAndPort:
     fields:
       codec: AetherCodec
