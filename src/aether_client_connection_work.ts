@@ -2,6 +2,7 @@
 // FILE: aether_client_connection_work.ts
 // PURPOSE: Contains ConnectionWork and MyClientApiSafe implementation.
 // DEPENDENCIES: aether_client_types.ts, aether_client_connection_base.ts, aether_client_core.ts (for AetherCloudClient)
+// (ИСПРАВЛЕНА ОШИБКА DEADLOCK: Удалена проверка !this.hasPendingMessages() из apiSafeCtx.flush)
 // =============================================================================================
 // Import necessary types from aether_client_types.ts (assuming it's in the same directory)
 import {
@@ -37,14 +38,14 @@ class MyClientApiSafe implements ClientApiSafe {
     }
 
     newChild(uid: UUID): AFuture {
-        Log.trace("newChild received", { ...this.client.logClientContext.data, component: "MyClientApiSafe", uid: uid.toString() });
+        Log.trace("newChild received", {  component: "MyClientApiSafe", uid: uid.toString() });
         this.client.onNewChild.fire(uid);
         return AFuture.of();
     }
 
 
     sendMessages(msg: Message[]): AFuture {
-        Log.trace("receive messages", { ...this.client.logClientContext.data, component: "MyClientApiSafe", count: msg.length });
+        Log.trace("receive messages", {  component: "MyClientApiSafe", count: msg.length });
         for (const m of msg) {
             const targetUid = m.getUid(); // In DTO, this is the ORIGINAL SENDER from SERVER's perspective for received messages
             const sourceUid = this.client.getUid(); // This client's UID
@@ -60,26 +61,26 @@ class MyClientApiSafe implements ClientApiSafe {
     }
 
     sendServerDescriptor(v: ServerDescriptor): AFuture {
-        Log.trace("sendServerDescriptor received", { ...this.client.logClientContext.data, component: "MyClientApiSafe", serverId: v.id });
+        Log.trace("sendServerDescriptor received", {  component: "MyClientApiSafe", serverId: v.id });
         this.client.servers.putResolved(v.id, v);
         return AFuture.of();
     }
 
     sendServerDescriptors(serverDescriptors: ServerDescriptor[]): AFuture {
-        Log.trace("sendServerDescriptors received", { ...this.client.logClientContext.data, component: "MyClientApiSafe", count: serverDescriptors.length });
+        Log.trace("sendServerDescriptors received", {  component: "MyClientApiSafe", count: serverDescriptors.length });
         serverDescriptors.forEach(c => this.sendServerDescriptor(c));
         return AFuture.of();
     }
 
 
     sendCloud(uid: UUID, cloud: Cloud): AFuture {
-        Log.trace("sendCloud received", { ...this.client.logClientContext.data, component: "MyClientApiSafe", uid: uid.toString() });
+        Log.trace("sendCloud received", {  component: "MyClientApiSafe", uid: uid.toString() });
         this.client.setCloud(uid, cloud);
         return AFuture.of();
     }
 
     sendClouds(clouds: UUIDAndCloud[]): AFuture {
-        Log.trace("sendClouds received", { ...this.client.logClientContext.data, component: "MyClientApiSafe", count: clouds.length });
+        Log.trace("sendClouds received", {  component: "MyClientApiSafe", count: clouds.length });
         clouds.forEach(c => this.sendCloud(c.getUid(), c.getCloud()));
         return AFuture.of();
     }
@@ -107,9 +108,20 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
     basicStatus: boolean = false;
     lastWorkTime: number = 0;
     firstAuth: boolean = false;
-
+/**
+ * Проверяет, есть ли ожидающие сообщения в MessageNodes,
+ * связанных с этим соединением.
+ */
+private hasPendingMessages(): boolean {
+    for (const m of this.client.messageNodeMap.values()) {
+        if (m.connectionsOut.has(this) && !m.bufferOut.isEmpty()) {
+            return true;
+        }
+    }
+    return false;
+}
     constructor(client: AetherCloudClient, s: ServerDescriptor) {
-        const uri = getUriFromServerDescriptor(s, AetherCodec.WEBSOCKET);
+        const uri = getUriFromServerDescriptor(s, AetherCodec.WS);
         if (!uri) {
             throw new ClientStartException(`Could not determine a valid WebSocket URI for ServerDescriptor ID ${s.id}`);
         }
@@ -129,22 +141,31 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         this.apiSafeCtx = new FastApiContext();
 
         this.apiSafeCtx.flush = (sendFuture: AFuture): void => {
-            const parentData = this.client.logClientContext?.data ? Object.fromEntries(this.client.logClientContext.data) : {};
-            Log.trace("apiSafeCtx.flush initiated", { ...parentData, component: "ConnectionWorkFlush", uri: this.uri });
+            Log.trace("apiSafeCtx.flush initiated", { component: "ConnectionWorkFlush", uri: this.uri });
 
-            if (this.remoteApiFutureAuth.isEmpty() && !client.clouds.isRequestsFor(this as unknown as object) && !client.servers.isRequestsFor(this as unknown as object)) {
+            // --- [ИСПРАВЛЕНИЕ: DEADLOCK] ---
+            // Удалена проверка !this.hasPendingMessages()
+            // Java-версия не имеет этой проверки, и она вызывает deadlock,
+            // т.к. hasPendingMessages() = false, пока getCloud() не завершится,
+            // а getCloud() не завершится, пока flush() не отправит запрос.
+            if (this.remoteApiFutureAuth.isEmpty() &&
+                !client.clouds.isRequestsFor(this as unknown as object) &&
+                !client.servers.isRequestsFor(this as unknown as object)
+                /* && !this.hasPendingMessages() */ // <--- ЭТА ПРОВЕРКА ВЫЗЫВАЛА DEADLOCK
+            ){
                 Log.trace("apiSafeCtx.flush: Nothing to send.");
                 sendFuture.tryDone();
                 return;
             }
+            // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
             if (!this.connectFuture.isDone()) {
-                Log.warn("apiSafeCtx.flush: Root connection not established yet. Skipping flush.");
+//                 Log.warn("apiSafeCtx.flush: Root connection not established yet. Skipping flush.");
                 sendFuture.error(new ClientApiException("Cannot flush apiSafeCtx: Root connection not ready."));
                 return;
             }
             if (this.connectFuture.isError()) {
-                Log.warn("apiSafeCtx.flush: Root connection failed. Skipping flush.");
+//                 Log.warn("apiSafeCtx.flush: Root connection failed. Skipping flush.");
                 sendFuture.error(new ClientApiException("Cannot flush apiSafeCtx: Root connection failed.", this.connectFuture.getError() ?? undefined));
                 return;
             }
@@ -375,7 +396,7 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
      * Returns a string representation of the connection.
      */
     override toString(): string {
-        const uri = getUriFromServerDescriptor(this.serverDescriptor, AetherCodec.WEBSOCKET) ?? `serverID=${this.serverDescriptor.id}`;
+        const uri = getUriFromServerDescriptor(this.serverDescriptor, AetherCodec.WS) ?? `serverID=${this.serverDescriptor.id}`;
         return `work(${uri})`;
     }
 

@@ -29,21 +29,21 @@ export const HexUtils = {
         }
         return byteArray;
     },
-    toHexString(bytes: Uint8Array | number[] | null | undefined, offset?: number, endIndex?: number, result?:AString): string | void {
+    toHexString(bytes: Uint8Array | number[] | null | undefined, offset?: number, endIndex?: number, result?: AString): string | void {
         if (!bytes) {
-             if (result) { result.addNull(); return; } else { return "null"; }
+            if (result) { result.addNull(); return; } else { return "null"; }
         }
         const dataBytes = bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes);
         const start = offset === undefined ? 0 : offset;
         const end = endIndex === undefined ? dataBytes.length : endIndex;
-        if(result){
+        if (result) {
             for (let i = start; i < end; i++) {
                 const v = dataBytes[i] & 0xFF;
                 result.add(HexUtils.HEX_ARRAY[v >>> 4]);
                 result.add(HexUtils.HEX_ARRAY[v & 0x0F]);
             }
             return;
-        }else{
+        } else {
             let res: string[] = [];
             for (let i = start; i < end; i++) {
                 const v = dataBytes[i] & 0xFF;
@@ -74,9 +74,9 @@ export class Destroyer implements Destroyable {
     public add(resource: Disposable | Destroyable): void {
         // Важно: Сначала проверяем на Destroyable, т.к. он Tакже является Disposable
         if (typeof (resource as Destroyable).destroy === 'function') {
-             this.queue.add(resource as Destroyable);
+            this.queue.add(resource as Destroyable);
         } else if (typeof (resource as Disposable)[Symbol.dispose] === 'function') {
-             this.queue.add(resource as Disposable);
+            this.queue.add(resource as Disposable);
         } else {
             Log.error("Attempted to add non-Disposable/Destroyable to Destroyer", { object: resource });
         }
@@ -94,16 +94,16 @@ export class Destroyer implements Destroyable {
             try {
                 // Важно: Сначала проверяем на асинхронный 'destroy'
                 if (typeof (e as Destroyable).destroy === 'function') {
-                     destroyTasks.push((e as Destroyable).destroy(force).timeoutError(5, `Timeout destroying unit: ${e.toString()}`));
+                    destroyTasks.push((e as Destroyable).destroy(force).timeoutError(5, `Timeout destroying unit: ${e.toString()}`));
                 }
                 // Иначе используем синхронный 'dispose'
                 else if (typeof (e as Disposable)[Symbol.dispose] === 'function') {
-                     (e as Disposable)[Symbol.dispose]();
+                    (e as Disposable)[Symbol.dispose]();
                 } else {
-                     Log.warn("Object in Destroyer queue has no destroy or dispose method", { object: e });
+                    Log.warn("Object in Destroyer queue has no destroy or dispose method", { object: e });
                 }
             } catch (err) {
-                 Log.error("Error during destroy/dispose call", { error: err as Error, object: e});
+                Log.error("Error during destroy/dispose call", { error: err as Error, object: e });
             }
         }
 
@@ -159,9 +159,9 @@ export const RU = {
         };
 
         if (resTo && typeof (resTo as Destroyer).add === 'function') {
-             (resTo as Destroyer).add(destroyableTimer);
+            (resTo as Destroyer).add(destroyableTimer);
         } else {
-             Log.warn("scheduleAtFixedRate: Provided 'resTo' is not a Destroyer. Timer will not be automatically cleaned up.");
+            Log.warn("scheduleAtFixedRate: Provided 'resTo' is not a Destroyer. Timer will not be automatically cleaned up.");
         }
 
         return destroyableTimer;
@@ -172,7 +172,7 @@ export const RU = {
     readAll: <T>(q: ConcurrentLinkedQueue_C<T>, o: AConsumer<T>) => {
         let element: T | undefined;
         while ((element = q.poll()) !== undefined) {
-            try { o(element); } catch(err) { Log.error("Error processing item in readAll", { error: err as Error, item: element}); }
+            try { o(element); } catch (err) { Log.error("Error processing item in readAll", { error: err as Error, item: element }); }
         }
     },
 };
@@ -189,81 +189,77 @@ export const StandardUUIDsImpl: { ROOT_UID: UUID; TEST_UID: UUID; ANONYMOUS_UID:
 // --- ДОБАВЛЕННЫЕ УТИЛИТЫ ДЛЯ ПОРТИРОВАНИЯ ---
 
 export const Arrays = {
-  equals: (a: Uint8Array | null | undefined, b: Uint8Array | null | undefined): boolean => {
-    if (a === b) return true;
-    if (!a || !b) return false;
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return false;
+    equals: (a: Uint8Array | null | undefined, b: Uint8Array | null | undefined): boolean => {
+        if (a === b) return true;
+        if (!a || !b) return false;
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) return false;
+        }
+        return true;
+    },
+    hashCode: (a: Uint8Array | null | undefined): number => {
+        if (!a) return 0;
+        let hash = 1;
+        for (let i = 0; i < a.length; i++) {
+            hash = (31 * hash + a[i]) | 0; // | 0 to force 32-bit int
+        }
+        return hash;
     }
-    return true;
-  },
-  hashCode: (a: Uint8Array | null | undefined): number => {
-    if (!a) return 0;
-    let hash = 1;
-    for (let i = 0; i < a.length; i++) {
-      hash = (31 * hash + a[i]) | 0; // | 0 to force 32-bit int
-    }
-    return hash;
-  }
 };
 
 export const Objects = {
-  hash: (...values: any[]): number => {
-    let result = 1;
-    for (const val of values) {
-      let hash;
-      if (val === null || val === undefined) {
-        hash = 0;
-      } else if (typeof (val as any).hashCode === 'function') {
-        hash = (val as any).hashCode();
-      } else if (val instanceof Uint8Array) {
-        hash = Arrays.hashCode(val);
-      } else if (typeof val === 'string') {
-        // Простой хэш для строк
-        hash = 0;
-        for (let i = 0; i < val.length; i++) {
-          hash = (31 * hash + val.charCodeAt(i)) | 0;
+    hash: (...values: any[]): number => {
+        let result = 1;
+        for (const val of values) {
+            let hash;
+            if (val === null || val === undefined) {
+                hash = 0;
+            } else if (typeof (val as any).hashCode === 'function') {
+                hash = (val as any).hashCode();
+            } else if (val instanceof Uint8Array) {
+                hash = Arrays.hashCode(val);
+            } else if (typeof val === 'string') {
+                // Простой хэш для строк
+                hash = 0;
+                for (let i = 0; i < val.length; i++) {
+                    hash = (31 * hash + val.charCodeAt(i)) | 0;
+                }
+            } else if (typeof val === 'number') {
+                hash = val | 0;
+            } else if (typeof val === 'boolean') {
+                hash = val ? 1231 : 1237;
+            } else {
+                // Fallback
+                hash = 0;
+                const s = String(val);
+                for (let i = 0; i < s.length; i++) {
+                    hash = (31 * hash + s.charCodeAt(i)) | 0;
+                }
+            }
+            result = (31 * result + (hash | 0)) | 0;
         }
-      } else if (typeof val === 'number') {
-        hash = val | 0;
-      } else if (typeof val === 'boolean') {
-        hash = val ? 1231 : 1237;
-      } else {
-        // Fallback
-        hash = 0;
-        const s = String(val);
-         for (let i = 0; i < s.length; i++) {
-          hash = (31 * hash + s.charCodeAt(i)) | 0;
-        }
-      }
-      result = (31 * result + (hash | 0)) | 0;
+        return result;
     }
-    return result;
-  }
 };
 
 export const DataUtils = {
-  writeLongLE: (arr: Uint8Array, offset: number, value: number): void => {
-    const view = new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
-    // Используем BigInt для 64-bit LE, если доступно, иначе аппроксимация
-    if (typeof view.setBigUint64 === 'function') {
-        try {
-             // Пытаемся использовать BigInt
-             view.setBigUint64(offset, BigInt(Math.trunc(value)), true);
-        } catch(e) {
-             // Fallback для очень больших чисел, которые не помещаются в number (редко для nonce)
-             const low = value & 0xFFFFFFFF;
-             const high = Math.floor(value / 0x100000000); // 2^32
-             view.setUint32(offset, low, true);
-             view.setUint32(offset + 4, high, true);
+    writeLongLE: (arr: Uint8Array, offset: number, value: number | bigint): void => {
+        const view = new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
+        let valueAsBigInt: bigint;
+        if (typeof value === 'bigint') {
+            valueAsBigInt = value;
+        } else {
+            valueAsBigInt = BigInt(Math.trunc(value));
         }
-    } else {
-        // Fallback для окружений без BigInt (может потерять точность > 2^53)
-        const low = value & 0xFFFFFFFF;
-        const high = Math.floor(value / 0x100000000); // 2^32
-        view.setUint32(offset, low, true);
-        view.setUint32(offset + 4, high, true);
+
+        if (typeof view.setBigUint64 === 'function') {
+            view.setBigUint64(offset, valueAsBigInt, true); // true = Little-Endian
+        } else {
+            const high = Number(BigInt.asUintN(32, valueAsBigInt >> 32n));
+            const low = Number(BigInt.asUintN(32, valueAsBigInt));
+            view.setUint32(offset, low, true);
+            view.setUint32(offset + 4, high, true);
+        }
     }
-  }
 };

@@ -20,7 +20,7 @@ export interface MessageEventListener {
 export const MessageEventListenerDefault: MessageEventListener = {
     setConsumerCloud: (messageNode: MessageNode, cloud: Cloud) => {
         Log.trace("setConsumerCloud called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString() });
-        if (cloud?.data && cloud.data.length > 0) {
+        if (cloud?.data?.length > 0) {
             messageNode.addConsumerServerOutById(cloud.data[0]);
         } else {
             Log.warn("Received null or empty cloud, cannot establish connection.", { cloud });
@@ -159,46 +159,19 @@ export class MessageNode {
     }
 
     public addConsumerConnectionOut(conn: ConnectionWork): void {
-        if (this.connectionsOut.has(conn)) {
-            Log.trace("Connection already added, skipping.", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri });
-            return;
+            // [БЫЛО: сложная логика с conn.ready.to(...), poll() и trySendDirectly()]
+
+            // СТАЛО: (Просто добавляем соединение в Set, как в Java)
+            if (this.connectionsOut.has(conn)) {
+                Log.trace("Connection already added, skipping.", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri });
+                return;
+            }
+            this.connectionsOut.add(conn);
+            Log.debug("Added outgoing connection for messages", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri });
+
+            // Мы *не* вытаскиваем сообщения из буфера здесь.
+            // Мы позволяем ConnectionWork.flushMessageQueue() сделать это по расписанию.
         }
-        this.connectionsOut.add(conn);
-        Log.debug("Added outgoing connection for messages", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri });
-
-        conn.ready.to(() => {
-            Log.trace("Connection became ready, attempting to send buffered messages.", { component: "MessageNode", bufferSize: this.bufferOut.length });
-            const requeue: { data: Uint8Array, future: AFuture }[] = [];
-            let message: { data: Uint8Array, future: AFuture } | undefined;
-            let sentCount = 0;
-            while ((message = this.bufferOut.poll()) !== undefined) {
-                if (this.trySendDirectly(conn, message)) {
-                    sentCount++;
-                } else {
-                    requeue.push(message);
-                    Log.warn("Failed to send message via newly ready connection, requeuing.", { component: "MessageNode" });
-                    break;
-                }
-            }
-            while ((message = this.bufferOut.poll()) !== undefined) {
-                requeue.push(message);
-            }
-            if (requeue.length > 0) {
-                Log.warn(`Requeued ${requeue.length} messages after attempting send on ready connection.`, { component: "MessageNode" });
-                requeue.reverse().forEach(msg => this.bufferOut.add(msg));
-            }
-            if (sentCount > 0) {
-                Log.trace(`Sent ${sentCount} buffered messages via connection ${conn.uri}`, { component: "MessageNode" });
-            }
-        })
-            .onError((err: Error) => Log.warn("Error waiting for connection readiness in addConsumerConnectionOut", err)); // Add Error type
-
-        conn.connectFuture.onError((err: Error) => { // Add Error type
-            Log.warn("Connection failed after being added to MessageNode, removing.",  { component: "MessageNode" });
-            this.removeConsumerConnectionOut(conn);
-        });
-    }
-
 
     public removeConsumerConnectionOut(conn: ConnectionWork): void {
         if (this.connectionsOut.delete(conn)) {

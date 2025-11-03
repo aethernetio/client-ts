@@ -28,7 +28,7 @@ from './aether_astring';
 // --- Generated Structures and APIs ---
 // --- Generated Enum: AetherCodec ---
 export enum AetherCodec  {
-    TCP = 'TCP', WEBSOCKET = 'WEBSOCKET', UDP = 'UDP' 
+    TCP = 'TCP', UDP = 'UDP', WS = 'WS'
 }
 export namespace AetherCodec  {
     export const META: FastMetaType<AetherCodec> = new class implements FastMetaType<AetherCodec>  {

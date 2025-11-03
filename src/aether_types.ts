@@ -11,7 +11,12 @@ export type Uint8Array = globalThis.Uint8Array;
 /**
  * A basic UUID implementation.
  */
-export class UUID implements ToString { // <-- EXPORTED
+// Предполагается, что интерфейс ToString и класс AString
+// (или их аналоги) определены где-то в вашем проекте.
+// interface ToString { ... }
+// declare class AString { ... }
+
+export class UUID implements ToString {
     static fromString(uuidString: string): UUID {
         const uuidRegex = /^([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})$/i;
         const match = uuidRegex.exec(uuidString);
@@ -31,8 +36,9 @@ export class UUID implements ToString { // <-- EXPORTED
     }
 
     data!: Uint8Array;
+
     toString(s?: AString): AString {
-        if(!s)s=AString.of();
+        if(!s)s=AString.of(); // Предполагаем, что AString.of() существует
         if (!this.data || this.data.length !== 16) {
             throw new Error('UUID data is missing or incorrect size.');
         }
@@ -40,7 +46,7 @@ export class UUID implements ToString { // <-- EXPORTED
         for (let i = 0; i < 16; i++) {
             hexParts.push(this.data[i].toString(16).padStart(2, '0'));
         }
-        s.add([
+        s.add([ // Предполагаем, что s.add() принимает массив
             hexParts.slice(0, 4).join(''),
             hexParts.slice(4, 6).join(''),
             hexParts.slice(6, 8).join(''),
@@ -48,6 +54,76 @@ export class UUID implements ToString { // <-- EXPORTED
             hexParts.slice(10, 16).join(''),
         ].join('-'));
         return s;
+    }
+
+    // --- ДОБАВЛЕННЫЕ МЕТОДЫ ---
+
+    /**
+     * Проверяет, равен ли этот UUID другому объекту.
+     * Два UUID равны, если все 16 байт их данных идентичны.
+     * @param other Другой объект для сравнения.
+     * @returns true, если объекты равны, иначе false.
+     */
+    equals(other: unknown): boolean {
+        if (this === other) {
+            return true; // Тот же самый экземпляр
+        }
+
+        // Проверка, что other является экземпляром UUID и у него есть данные
+        if (!(other instanceof UUID) || !other.data) {
+            return false;
+        }
+
+        // У этого экземпляра тоже должны быть данные
+        if (!this.data) {
+            return false;
+        }
+
+        // UUID должны иметь одинаковую длину (16 байт)
+        if (this.data.length !== other.data.length) {
+            return false;
+        }
+
+        // Побайтное сравнение
+        for (let i = 0; i < this.data.length; i++) {
+            if (this.data[i] !== other.data[i]) {
+                return false; // Найдено различие
+            }
+        }
+
+        return true; // Все байты совпадают
+    }
+
+    /**
+     * Вычисляет 32-битный хеш-код для этого UUID.
+     * * Реализация основана на стандартном подходе для 128-битных
+     * идентификаторов: 16 байт делятся на четыре 32-битных
+     * числа, которые затем складываются по XOR.
+     * * @returns 32-битное число (хеш-код).
+     */
+    hashCode(): number {
+        if (!this.data || this.data.length !== 16) {
+            return 0; // Хеш-код для невалидного или пустого UUID
+        }
+
+        // Используем DataView для эффективного чтения 32-битных чисел
+        // из 16-байтного буфера Uint8Array
+        const view = new DataView(this.data.buffer, this.data.byteOffset, this.data.byteLength);
+
+        // Читаем 4 части по 32 бита (4 байта).
+        // false означает big-endian (сетевой порядок байт),
+        // что является стандартом для многих форматов UUID.
+        const int1 = view.getInt32(0, false);
+        const int2 = view.getInt32(4, false);
+        const int3 = view.getInt32(8, false);
+        const int4 = view.getInt32(12, false);
+
+        // Складываем все части по XOR, чтобы получить 32-битный хеш
+        const hash = int1 ^ int2 ^ int3 ^ int4;
+
+        // | 0 гарантирует, что результат является 32-битным
+        // знаковым целым числом, как это принято в Java/C#.
+        return hash | 0;
     }
 }
 export type URI = string; // <-- EXPORTED

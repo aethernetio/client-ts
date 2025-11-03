@@ -13,7 +13,7 @@ import {
 
 import { AFuture, ARFuture } from './aether_future';
 import { DataIn, DataInOut, DataInOutStatic, DataOut } from './aether_datainout';
-import { Log, LNode } from './aether_logging';
+import { Log, LNode, LogData } from './aether_logging';
 
 // --- Java equivalents for text processing ---
 const TEXT_ENCODER = new TextEncoder();
@@ -455,33 +455,42 @@ export class FastApiContext implements FastFutureContext {
 
     // --- ADDED: Logging Hook Implementations (Ported from FastFutureContext.java defaults) ---
     public invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void {
-            const logData: [string, any][] = [["methodName", methodName]];
+            // ИСПРАВЛЕНО: Создаем объект LogData
+            const logData: LogData = {
+                "methodName": methodName
+            };
             for (let i = 0; i < argsNames.length; i++) {
-                logData.push([`arg_${argsNames[i]}`, argsValues[i]]);
+                logData[`arg_${argsNames[i]}`] = argsValues[i];
             }
-            Log.trace(`cmd local before: ${methodName}`, ...logData.flat());
+            Log.trace(`cmd local before: ${methodName}`, logData);
     }
 
     public invokeLocalMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
-            const logData: [string, any][] = [
-                ["methodName", methodName],
-                ["result", result]
-            ];
+            // ИСПРАВЛЕНО: Создаем объект LogData
+            const logData: LogData = {
+                "methodName": methodName,
+                "result": result
+            };
             for (let i = 0; i < argsNames.length; i++) {
-                logData.push([`arg_${argsNames[i]}`, argsValues[i]]);
+                logData[`arg_${argsNames[i]}`] = argsValues[i];
             }
-            Log.trace(`cmd local after : ${methodName}`, ...logData.flat());
+            Log.trace(`cmd local after : ${methodName}`, logData);
     }
 
     public invokeRemoteMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
-            const logData: [string, any][] = [
-                ["methodName", methodName],
-                ["result", result]
-            ];
-            for (let i = 0; i < argsNames.length; i++) {
-                logData.push([`arg_${argsNames[i]}`, argsValues[i]]);
-            }
-            Log.trace(`cmd remote      : ${methodName}`, ...logData.flat());
+        // 1. Сразу создаем объект LogData
+        const logData: LogData = {
+            "methodName": methodName,
+            "result": result
+        };
+
+        // 2. Добавляем аргументы в этот же объект
+        for (let i = 0; i < argsNames.length; i++) {
+            logData[`arg_${argsNames[i]}`] = argsValues[i];
+        }
+
+        // 3. Передаем готовый объект в Log.trace
+        Log.trace(`cmd remote      : ${methodName}`, logData);
     }
 }
 

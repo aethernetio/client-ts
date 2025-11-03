@@ -1,19 +1,20 @@
 // =============================================================================================
 // FILE: aether_point_to_point.test.ts
 // PURPOSE: Point-to-Point communication tests ported from Java's PointToPointTest.java.
+//
+// ИСПРАВЛЕНО: Удалена функция-заглушка 'setupP2PEnvironment'.
+// Тесты теперь полагаются на AetherCloudClient для автоматического
+// обнаружения пиров (peer discovery) через регистрационный сервер.
 // =============================================================================================
-
-/** @ignore */
-import './aether_crypto_sodium';
 
 import {
     UUID, URI, AtomicInteger
 } from './aether_types';
 import {
-    Log
+    Log, LNode
 } from './aether_logging';
 import { AFuture } from './aether_future';
-import { CryptoLib, Cloud, ServerDescriptor, IPAddressV4 } from './aether_api';
+import { CryptoLib, Cloud, ServerDescriptor, IPAddressV4, Message } from './aether_api';
 import {
     AetherCloudClient,
     ClientStateInMemory,
@@ -22,38 +23,50 @@ import {
 import {
     applySodium as applySodium,
 } from './aether_crypto_sodium';
-applySodium();
+import { MessageNode } from './aether_client_message';
 
+// Включаем логгирование в консоль
+Log.printConsoleColored((node: LNode) => {
+    // Фильтруем слишком частые сообщения 'TRACE'
+    const level = node.getLevel();
+    return level !== 'TRACE';
+});
 
 
 describe('PointToPointCommunication', () => {
+    beforeAll(async () => {
+        await applySodium();
+    });
+
+    // Эти переменные объявлены здесь, чтобы afterEach мог их очистить
+    let client1: AetherCloudClient;
+    let client2: AetherCloudClient;
+    let service: AetherCloudClient;
+
+    afterEach(async () => {
+        // Эта функция будет вызываться после КАЖДОГО теста
+        // и гарантированно очистит ресурсы
+        if (client1) {
+            await client1.destroy(true).toPromise();
+            // @ts-ignore
+            client1 = undefined; // Помогаем сборщику мусора
+        }
+        if (client2) {
+            await client2.destroy(true).toPromise();
+            // @ts-ignore
+            client2 = undefined;
+        }
+        if (service) {
+            await service.destroy(true).toPromise();
+            // @ts-ignore
+            service = undefined;
+        }
+    });
 
     // Общие конфигурации для тестов
-    const registrationUri: URI[] = ["tcp://reg-dev.aethernet.io:9010"];
+    // Убедитесь, что этот URI указывает на ваш запущенный Java-сервер (AetherMockServer или полный)
+    const registrationUri: URI[] = ["ws://localhost:9011"];
     const defaultPingDuration = 100; // 100ms
-
-    /**
-     * Helper to simulate setting a cloud/server for the client for P2P to work.
-     * @param client The AetherCloudClient instance.
-     * @param peerUid The peer's UUID.
-     * @param serverId The server ID.
-     */
-    const setupP2PEnvironment = (client:
-        AetherCloudClient, peerUid: UUID, serverId: number) => {
-        // 1. Set the peer's cloud in the current client's state/cache
-        const mockCloud = new Cloud([serverId]);
-        client.setCloud(peerUid, mockCloud);
-
-        // 2. Set the server's descriptor in the current client's state/cache
-        const mockServerDescriptor = new ServerDescriptor(serverId, {
-            addresses: [{
-                address: new IPAddressV4(new Uint8Array([127, 0, 0, 1])),
-                coderAndPorts: [{ codec: "WEBSOCKET" as any, port: 9000 + serverId }]
-            }]
-        } as any);
-        client.servers.putResolved(serverId, mockServerDescriptor);
-        client.state.getServerInfo(serverId).setDescriptor(mockServerDescriptor);
-    };
 
     /**
      * @see PointToPointTest.java: p2p()
@@ -62,37 +75,37 @@ describe('PointToPointCommunication', () => {
     test('P2P_01: Should send and receive a single message between two clients', async () => {
         const parent = UUID.fromString("B1AC52C8-8D94-BD39-4C01-A631AC594165");
 
-        /** Use SODIUM for both clients (CryptoLib.HYDROGEN removed) */
+        // Используем SODIUM для обоих клиентов (как в PointToPointTest.java)
+        // В Java-тесте client2 использует HYDROGEN, но в TS-порте, похоже, используется только SODIUM.
         const clientConfig1 = new ClientStateInMemory(parent, registrationUri, undefined, CryptoLib.SODIUM);
-        const clientConfig2 = new ClientStateInMemory(parent, registrationUri,
-            undefined, CryptoLib.SODIUM);
+        const clientConfig2 = new ClientStateInMemory(parent, registrationUri, undefined, CryptoLib.SODIUM);
 
         clientConfig1.getPingDuration().set(defaultPingDuration);
         clientConfig2.getPingDuration().set(defaultPingDuration);
 
-        const client1 = new AetherCloudClient(clientConfig1, "client1");
-        const client2 = new AetherCloudClient(clientConfig2, "client2");
+        client1 = new AetherCloudClient(clientConfig1, "client1");
+        client2 = new AetherCloudClient(clientConfig2, "client2");
 
-        // Wait for connection to mock registration server
+        // Ждем, пока ОБА клиента зарегистрируются
         await AFuture.all(client1.startFuture, client2.startFuture).toPromise(25000);
 
         const uid1 = client1.getUid()!;
         const uid2 = client2.getUid()!;
 
-        Log.info(`Clients registered: uid1: ${uid1} uid2: ${uid2}`);
+        Log.info(`Clients registered: uid1: $uid1 uid2: $uid2`,{uid1:uid1,uid2:uid2});
 
-        /** Manually set up the environment for P2P to bypass full resolution logic */
-        // Client1 needs to know where to find Client2 (via Server ID 1)
-        setupP2PEnvironment(client1, uid2, 1);
-        // Client2 needs to know where to find Client1 (via Server ID 2)
-        setupP2PEnvironment(client2, uid1, 2);
+        // --- УДАЛЕНО ---
+        // setupP2PEnvironment(client1, uid2, 1);
+        // setupP2PEnvironment(client2, uid1, 2);
+        // Клиенты теперь сами найдут друг друга
 
         const checkReceiveMessage = AFuture.make();
         const message = new Uint8Array([1, 2, 3, 4]);
 
         let receiveCount = 0;
-        // Client 2: Register onMessage listener
-        client2.onMessage.add((_uid: UUID, msg: Uint8Array) => {
+        // Client 2: Регистрируем слушателя onMessage
+        client2.onMessage.add((senderUid: UUID, msg: Uint8Array) => {
+            expect(senderUid.equals(uid1)).toBe(true);
             expect(msg).toEqual(message);
 
             receiveCount++;
@@ -103,177 +116,220 @@ describe('PointToPointCommunication', () => {
                 Log.warn("Second message confirm");
             }
         });
-        /** START two clients! Sending message. */
+
         Log.info("START two clients! Sending message.");
 
-        /** The sendMessage method returns an AFuture. */
+        // Client 1: Отправляем сообщение
         const messageFuture = client1.sendMessage(uid2, message);
 
+        // Ждем, пока client2 подтвердит получение
         await checkReceiveMessage.toPromise(15000);
 
+        // Ждем, пока future отправки завершится
         await expect(messageFuture.toPromise(5000)).resolves.toBeUndefined();
-
-        await client1.destroy(false).toPromise();
-        await client2.destroy(false).toPromise();
 
         Log.info("TEST IS DONE!");
         expect(receiveCount).toBe(1);
+
+        // Очистка в afterEach
     }, 45000);
 
     /**
      * @see PointToPointTest.java: p2pAndBack()
+     * Тест: Отправка сообщения и получение ответа по обратному каналу.
+     * Этот тест проверяет `onClientStreamCreated` и `MessageNode.send`.
      */
     test('P2P_02: Should send a message and receive a back-channel response', async () => {
         const parent = UUID.fromString("B0600A31-1ACC-BB39-35C9-F1476C1F40E2");
 
-        /** Use SODIUM for both clients (CryptoLib.HYDROGEN removed) */
         const clientConfig1 = new ClientStateInMemory(parent, registrationUri, undefined, CryptoLib.SODIUM);
         const clientConfig2 = new ClientStateInMemory(parent, registrationUri, undefined, CryptoLib.SODIUM);
-        const client1
-            = new AetherCloudClient(clientConfig1, "client1");
-        const client2 = new AetherCloudClient(clientConfig2, "client2");
+        client1 = new AetherCloudClient(clientConfig1, "client1");
+        client2 = new AetherCloudClient(clientConfig2, "client2");
 
         await AFuture.all(client1.startFuture, client2.startFuture).toPromise(25000);
 
         const uid1 = client1.getUid()!;
         const uid2 = client2.getUid()!;
 
-        Log.info(`Clients registered: uid1: ${uid1} uid2: ${uid2}`);
-
-        /** Manually set up the environment for P2P to bypass full resolution logic */
-        setupP2PEnvironment(client1, uid2, 1);
-        setupP2PEnvironment(client2, uid1, 2);
+        Log.info(`Clients registered: uid1: $uid1 uid2: $uid2`,{uid1:uid1,uid2:uid2});
 
         const checkReceiveMessageBack = AFuture.make();
-        const message = new Uint8Array([1, 2,
-            3, 4]);
+        const message = new Uint8Array([1, 2, 3, 4]);
         const messageBack = new Uint8Array([1, 1, 1, 1]);
 
-        // Client 2: Client 2 receives the initial message via onMessage, then uses MessageNode.send to reply
-        client2.onMessage.add((senderUid: UUID, _msg: Uint8Array) => {
-            const chToC1 = client2.getMessageNode(senderUid); // The sender is C1
-            chToC1.send(messageBack, AFuture.make());
-            Log.debug("Client2 received and sent back.");
+        // Client 2: Слушаем создание стрима (эквивалент onClientStream в Java)
+        client2.onClientStreamCreated.add((streamNode: MessageNode) => {
+            // Нас интересует только стрим от client1
+            if (streamNode.consumerUUID.equals(uid1)) {
+                // Слушаем входящие данные в этом стриме (эквивалент toConsumer)
+                streamNode.bufferIn.add((msg: { data: Uint8Array }) => {
+                    Log.debug("Client2 received, sending back...");
+                    expect(msg.data).toEqual(message);
+                    // Отправляем ответ по тому же стриму
+                    streamNode.send(messageBack, AFuture.make());
+                });
+            }
         });
 
-        // Client 1: Client 1 receives the back message via onMessage
-        client1.onMessage.add((_senderUid: UUID, msg: Uint8Array) => {
-            expect(msg).toEqual(messageBack);
-            checkReceiveMessageBack.tryDone();
-            Log.debug("Client1 received back-message.");
+        // Client 1: Слушаем создание стрима
+        client1.onClientStreamCreated.add((streamNode: MessageNode) => {
+            // Нас интересует только стрим от client2
+            if (streamNode.consumerUUID.equals(uid2)) {
+                // Слушаем входящие данные (ответ)
+                streamNode.bufferIn.add((msg: { data: Uint8Array }) => {
+                    expect(msg.data).toEqual(messageBack);
+                    checkReceiveMessageBack.tryDone();
+                    Log.debug("Client1 received back-message.");
+                });
+            }
         });
 
         Log.info("START two clients for p2p and back!");
 
-        const sendFuture = client1.sendMessage(uid2, message);
+        // Client 1: Получаем MessageNode и отправляем
+        const chToC2 = client1.getMessageNode(uid2);
+        const sendFuture = chToC2.send(message, AFuture.make());
 
+        // Ждем ответа
         await checkReceiveMessageBack.toPromise(15000);
         await sendFuture.toPromise(5000);
 
-        await client1.destroy(true).toPromise();
-        await client2.destroy(true).toPromise();
-
         Log.info("TEST IS DONE!");
+
+        // Очистка в afterEach
     }, 45000);
 
 
     /**
-     * @see PointToPointTest.java: p2pMany()
+     * @see PointToPointTest.java: pointToPointWithReconnect()
+     * Тест: Проверяет, что клиенты могут переподключиться, используя
+     * сохраненное состояние (state), и продолжить общение.
      */
-    test('P2P_03: Should send and receive multiple sequential messages (10 messages)', async () => {
+    test('P2P_03: pointToPointWithReconnect - Should reconnect and send message', async () => {
+        const parent = UUID.fromString("84AE8BD0-2BE4-FF65-406C-B1B655444D54");
 
-        const parent = UUID.fromString("d1401d8c-674d-4948-8d41-c395334ad391");
-        const ITERATIONS = 10;
+        // 1. Создаем конфиги. Они будут ПЕРЕИСПОЛЬЗОВАНЫ.
+        const clientConfig1_recon = new ClientStateInMemory(parent, registrationUri, undefined, CryptoLib.SODIUM);
+        const clientConfig2_recon = new ClientStateInMemory(parent, registrationUri, undefined, CryptoLib.SODIUM);
 
-        /** Use SODIUM for both clients (CryptoLib.HYDROGEN removed) */
-        const clientConfig1 = new ClientStateInMemory(parent, registrationUri, undefined, CryptoLib.SODIUM);
-        const clientConfig2 = new ClientStateInMemory(parent, registrationUri, undefined, CryptoLib.SODIUM);
-        const client1 = new AetherCloudClient(clientConfig1, "client1");
-        const client2 = new AetherCloudClient(clientConfig2, "client2");
+        // --- ИТЕРАЦИЯ 1 ---
+        Log.info("RECONNECT TEST: Starting Iteration 1...");
+        {
+            // Используем 'client1' и 'client2', чтобы afterEach их очистил
+            client1 = new AetherCloudClient(clientConfig1_recon, "client1_iter1");
+            client2 = new AetherCloudClient(clientConfig2_recon, "client2_iter1");
 
-        await AFuture.all(client1.startFuture, client2.startFuture).toPromise(25000);
+            await AFuture.all(client1.startFuture, client2.startFuture).toPromise(25000);
+            const uid1 = client1.getUid()!;
+            const uid2 = client2.getUid()!;
+            Log.info(`Iter1 clients registered: uid1: $uid1 uid2: $uid2`,{uid1:uid1,uid2:uid2});
 
-        const uid1 = client1.getUid()!;
-        const uid2 = client2.getUid()!;
+            // *** NO MOCKS ***
 
+            const checkReceiveMessage = AFuture.make();
+            const message = new Uint8Array([1, 1, 1, 1]);
 
-        Log.info(`Clients registered: uid1: ${uid1} uid2: ${uid2}`);
-
-        /** Manually set up the environment for P2P to bypass full resolution logic */
-        setupP2PEnvironment(client1, uid2, 1);
-        setupP2PEnvironment(client2, uid1, 2);
-
-        const checkReceiveMessage = AFuture.make();
-        const message = new Uint8Array([1, 2, 3, 4]);
-        const counter = new AtomicInteger(ITERATIONS);
-        let receivedCount = 0;
-
-        // Client 2: Register onMessage listener
-        client2.onMessage.add((_uid: UUID, _msg: Uint8Array) => {
-            receivedCount++;
-            if (counter.decrementAndGet() === 0) {
+            client2.onMessage.add((senderUid: UUID, msg: Uint8Array) => {
+                expect(senderUid.equals(uid1)).toBe(true);
+                expect(msg).toEqual(message);
                 checkReceiveMessage.tryDone();
-            }
-        });
+            });
 
-        Log.info(`START two clients! Sending ${ITERATIONS} messages.`);
-        const chToc2n = client1.getMessageNode(uid2, MessageEventListenerDefault);
+            // Ждем отправки и получения
+            await client1.sendMessage(uid2, message).toPromise(5000);
+            await checkReceiveMessage.toPromise(15000);
+            Log.info("RECONNECT TEST: Iteration 1 message received.");
 
-        const sendFutures: AFuture[] = [];
-        for (let i = 0; i < ITERATIONS; i++) {
-            /** MessageNode.send returns AFuture */
-            const f = chToc2n.send(message, AFuture.make());
-            sendFutures.push(f);
+            // Уничтожаем клиентов, но конфиги остаются
+            await AFuture.all(client1.destroy(true), client2.destroy(true)).toPromise(10000);
+            Log.info("RECONNECT TEST: Iteration 1 clients destroyed.");
         }
 
-        await checkReceiveMessage.toPromise(15000);
+        // --- ИТЕРАЦИЯ 2 ---
+        Log.info("RECONNECT TEST: Starting Iteration 2...");
+        {
+            // Создаем НОВЫХ клиентов с ТЕМИ ЖЕ конфигами
+            // 'client1' и 'client2' будут очищены в afterEach
+            client1 = new AetherCloudClient(clientConfig1_recon, "client1_iter2");
+            client2 = new AetherCloudClient(clientConfig2_recon, "client2_iter2");
 
-        await AFuture.all(...sendFutures).toPromise(10000);
+            // Клиенты должны "войти" (login), а не "регистрироваться"
+            await AFuture.all(client1.startFuture, client2.startFuture).toPromise(25000);
+            const uid1 = client1.getUid()!;
+            const uid2 = client2.getUid()!;
+            Log.info(`Iter2 clients logged in: uid1: ${uid1} uid2: ${uid2}`);
 
-        await client1.destroy(true).toPromise();
-        await client2.destroy(true).toPromise();
+            // *** NO MOCKS ***
+
+            // Проверяем, что UIDы те же, что и в итерации 1
+            expect(clientConfig1_recon.getUid()!.equals(uid1)).toBe(true);
+            expect(clientConfig2_recon.getUid()!.equals(uid2)).toBe(true);
+
+            const checkReceiveMessage = AFuture.make();
+            const message = new Uint8Array([2, 2, 2, 2]);
+
+            client2.onMessage.add((senderUid: UUID, msg: Uint8Array) => {
+                expect(senderUid.equals(uid1)).toBe(true);
+                expect(msg).toEqual(message);
+                checkReceiveMessage.tryDone();
+            });
+
+            // Ждем отправки и получения
+            await client1.sendMessage(uid2, message).toPromise(5000);
+            await checkReceiveMessage.toPromise(15000);
+            Log.info("RECONNECT TEST: Iteration 2 message received.");
+
+            // Клиенты будут уничтожены в afterEach
+        }
 
         Log.info("TEST IS DONE!");
-        expect(receivedCount).toBe(ITERATIONS);
-    }, 45000);
+    }, 60000); // Увеличенный таймаут для двух полных циклов
 
     /**
      * @see PointToPointTest.java: pointToPointWithService()
+     * Тест: Проверяет, что два клиента, зарегистрированные под одним
+     * "сервисом" (родителем), могут общаться друг с другом
+     * (неявное разрешение).
      */
     test('P2P_04: Should send message when mediation service grants access', async () => {
         const parent = UUID.fromString("A8348A48-64CC-A8EF-6902-090F446247C8");
 
+        // 1. Регистрируем сервис
         const serviceConfig = new ClientStateInMemory(parent, registrationUri);
-        const service = new AetherCloudClient(serviceConfig, "service");
+        // 'service' будет очищен в afterEach
+        service = new AetherCloudClient(serviceConfig, "service");
 
         await service.startFuture.toPromise(25000);
         const serviceUid = service.getUid()!;
-        Log.info(`Service registered: ${serviceUid}`);
+        Log.info(`Service registered: $serviceUid`,{serviceUid:serviceUid});
 
-        /** 2. Client 1 and Client 2 register under Service's UID */
+        // 2. Клиенты 1 и 2 регистрируются, используя UID сервиса как parentUid
         const clientConfig1 = new ClientStateInMemory(serviceUid, registrationUri);
         const clientConfig2 = new ClientStateInMemory(serviceUid, registrationUri);
-        const client1 = new AetherCloudClient(clientConfig1, "client1");
-        const client2 = new AetherCloudClient(clientConfig2, "client2");
+        // 'client1' и 'client2' будут очищены в afterEach
+        client1 = new AetherCloudClient(clientConfig1, "client1");
+        client2 = new AetherCloudClient(clientConfig2, "client2");
 
+        // Ждем регистрации всех (сервис уже готов, ждем клиентов)
         await AFuture.all(client1.startFuture, client2.startFuture).toPromise(25000);
 
         const uid1 = client1.getUid()!;
         const uid2 = client2.getUid()!;
-        Log.info(`Clients registered: uid1: ${uid1} uid2: ${uid2}`);
+        Log.info(`Clients registered: uid1: $uid1 uid2: $uid2`,{uid1:uid1,uid2:uid2});
 
-        /** Manually set up the environment for P2P */
-        // C1 needs C2's info (via Server ID 1)
-        setupP2PEnvironment(client1, uid2, 1);
-        // C2 needs C1's info (via Server ID 2)
-        setupP2PEnvironment(client2, uid1, 2);
+        // --- УДАЛЕНО ---
+        // setupP2PEnvironment(client1, uid2, 1);
+        // setupP2PEnvironment(client2, uid1, 2);
 
         const checkReceiveMessage = AFuture.make();
         const message = new Uint8Array([0, 0, 0, 0]);
         let receiveCount = 0;
 
-        // Client 2: Upon receiving message -> completes checkReceiveMessage
-        client2.onMessage.add((_uid: UUID, _msg: Uint8Array) => {
+        // Client 2: Ждет сообщения
+        client2.onMessage.add((senderUid: UUID, msg: Uint8Array) => {
+            expect(senderUid.equals(uid1)).toBe(true);
+            expect(msg).toEqual(message);
             receiveCount++;
             checkReceiveMessage.tryDone();
         });
@@ -284,12 +340,10 @@ describe('PointToPointCommunication', () => {
 
         await checkReceiveMessage.toPromise(15000);
         await sendFuture.toPromise(5000);
-        /** Cleanup */
-        await client1.destroy(true).toPromise();
-        await client2.destroy(true).toPromise();
-        await service.destroy(true).toPromise();
 
         Log.info("TEST IS DONE!");
         expect(receiveCount).toBe(1);
+
+        // Очистка всех трех клиентов в afterEach
     }, 45000);
 });

@@ -25,14 +25,34 @@ export interface CryptoProviderUnit { getProviderName(): string; getCryptoProvid
 export interface CryptoKey extends CryptoProviderUnit { getData(): Uint8Array; keyToString(): string; }
 
 // --- Exceptions ---
-export class EncryptException extends Error { constructor(message?: string, cause?: Error)
-{ super(message); this.name = 'EncryptException'; if (cause) this.stack = `${this.stack}\nCaused by: ${cause.stack}`; } }
+export class EncryptException extends Error {
+    constructor(message?: string, cause?: Error) { super(message); this.name = 'EncryptException'; if (cause) this.stack = `${this.stack}\nCaused by: ${cause.stack}`; }
+}
 export class DecryptException extends Error { constructor(message?: string, cause?: Error) { super(message); this.name = 'DecryptException'; if (cause) this.stack = `${this.stack}\nCaused by: ${cause.stack}`; } }
 
 // --- Enum and Core Interfaces ---
 export enum KeyType { SYMMETRIC, ASYMMETRIC_PUBLIC, ASYMMETRIC_PRIVATE, SIGN_PUBLIC, SIGN_PRIVATE }
 export interface CryptoEngine extends CryptoProviderUnit { encrypt(data: Uint8Array): Uint8Array; decrypt(data: Uint8Array): Uint8Array; }
-export namespace CryptoEngine { export function of(encoder: CryptoEngine, decoder: CryptoEngine): CryptoEngine { return { encrypt: encoder.encrypt, decrypt: decoder.decrypt, getProviderName: encoder.getProviderName, getCryptoProvider: encoder.getCryptoProvider }; } }
+export namespace CryptoEngine {
+    export function of(encoder: CryptoEngine, decoder: CryptoEngine): CryptoEngine {
+        return new class implements CryptoEngine{
+            getCryptoProvider(): CryptoProvider {
+                return encoder.getCryptoProvider();
+            }
+            getProviderName(): string {
+                return this.getCryptoProvider().getCryptoLibName();
+            }
+            decrypt(data: Uint8Array): Uint8Array {
+                return decoder.decrypt(data);
+            }
+            encrypt(data: Uint8Array): Uint8Array {
+                return encoder.encrypt(data);
+            }
+
+        };
+    }
+}
+
 export interface Sign extends CryptoProviderUnit { getSignData(): Uint8Array; }
 export interface SignChecker extends CryptoProviderUnit { checkSign(data: Uint8Array, sign: Sign): boolean; getPublicKey(): AKey.SignPublic; }
 export namespace SignChecker { /** Factory moved */ }
@@ -52,10 +72,14 @@ export interface AKey extends CryptoKey { // Inherits CryptoKey structure
 }
 export namespace AKey {
     export interface Symmetric extends AKey { toCryptoEngine(): CryptoEngine; }
-    export interface AsymmetricPublic extends AKey { toCryptoEngine(): CryptoEngine; }
+    export interface AsymmetricPublic extends AKey {
+        toCryptoEngine(): CryptoEngine;
+    }
     export interface AsymmetricPrivate extends AKey { /* No specific methods */ }
-    export interface SignPublic extends AKey { toSignChecker():
-SignChecker; }
+    export interface SignPublic extends AKey {
+        toSignChecker():
+            SignChecker;
+    }
     export interface SignPrivate extends AKey { /* No specific methods */ }
     // Factory moved
 }
@@ -70,8 +94,9 @@ export interface PairSymKeys extends CryptoProviderUnit { clientKey: AKey.Symmet
 export interface SignedKey extends CryptoProviderUnit { readonly key: AKey; readonly sign: Sign; check(signer: AKey.SignPublic): boolean; check(signChecker: SignChecker): boolean; toString(): string; }
 
 // DTO structure for Asymmetrically Signed Key Pair (Uses DTO Key/Sign)
-export type DtoPairKeysAsymSigned = { getKey():
-{ getKey(): DtoKey, getSign(): Sign }, getPrivateKey(): DtoKey | null };
+export type DtoPairKeysAsymSigned = {
+    getKey(): { getKey(): DtoKey, getSign(): Sign }, getPrivateKey(): DtoKey | null
+};
 
 // CryptoProvider Interface
 export interface CryptoProvider {
@@ -119,7 +144,9 @@ export interface CryptoProvider {
      * @param publicKey Optional public key (required if privateKey is provided).
      * @param keys Optional asymmetric key pair.
      */
-    createAsymmetricEngine(key: AKey.AsymmetricPublic): CryptoEngine; createAsymmetricEngine(privateKey: AKey.AsymmetricPrivate, publicKey: AKey.AsymmetricPublic): CryptoEngine; createAsymmetricEngine(keys: PairAsymKeys): CryptoEngine;
+    createAsymmetricEngine(key: AKey.AsymmetricPublic): CryptoEngine;
+    createAsymmetricEngine(privateKey: AKey.AsymmetricPrivate, publicKey: AKey.AsymmetricPublic): CryptoEngine;
+    createAsymmetricEngine(keys: PairAsymKeys): CryptoEngine;
     /**
      * Creates an AKey instance from type and data, or from a string representation.
      * @param keyTypeOrString The key type or key string.
@@ -137,7 +164,7 @@ export interface CryptoProvider {
      * @param sid The server ID.
      */
     createKeyForServer(masterKey: AKey.Symmetric,
-sid: number): PairSymKeys; createKeyForClient(masterKey: AKey.Symmetric, sid: number): PairSymKeys;
+        sid: number): PairSymKeys; createKeyForClient(masterKey: AKey.Symmetric, sid: number): PairSymKeys;
     /**
      * Creates a SignPublic key instance from raw data.
      * @param data Raw key data.
@@ -181,14 +208,16 @@ export const CryptoProviderFactory = {
      * @param provider The provider instance to register.
      */
     register: (provider: CryptoProvider): void => { const nameLower = provider.getCryptoLibName().toLowerCase(); if (providers.has(nameLower)) { Log.warn(`CryptoProvider already registered: ${nameLower}. Overwriting.`); } providers.set(nameLower, provider); Log.debug(`Registered CryptoProvider: ${provider.getCryptoLibName()}`); },
-     /**
-     * Retrieves a registered CryptoProvider by name.
-     * @param libName The name of the cryptographic library.
-     * @returns The registered CryptoProvider.
-     * @throws {Error} If the provider is not registered.
-     */
-    getProvider: (libName: string): CryptoProvider => { const nameLower
-= libName.toLowerCase(); const res = providers.get(nameLower); if (res == null) { throw new Error(`Provider not registered: ${libName}`); } return res; },
+    /**
+    * Retrieves a registered CryptoProvider by name.
+    * @param libName The name of the cryptographic library.
+    * @returns The registered CryptoProvider.
+    * @throws {Error} If the provider is not registered.
+    */
+    getProvider: (libName: string): CryptoProvider => {
+        const nameLower
+            = libName.toLowerCase(); const res = providers.get(nameLower); if (res == null) { throw new Error(`Provider not registered: ${libName}`); } return res;
+    },
     /**
      * Retrieves a registered CryptoProvider using a key object.
      * @param key The CryptoKey instance.
@@ -197,10 +226,10 @@ export const CryptoProviderFactory = {
      */
     getProviderByKey: (key: CryptoKey): CryptoProvider => { // Expects CryptoKey interface
         if (!hasGetProviderName(key)) {
-             let keyIdentifier = 'unknown key object';
-             if (key && typeof key === 'object') { /* ... provide details ... */ keyIdentifier = `object with keys: ${Object.keys(key).join(', ')}`; }
+            let keyIdentifier = 'unknown key object';
+            if (key && typeof key === 'object') { /* ... provide details ... */ keyIdentifier = `object with keys: ${Object.keys(key).join(', ')}`; }
 
-throw new Error(`Invalid key object passed to getProviderByKey: missing getProviderName method. Key: ${keyIdentifier}`);
+            throw new Error(`Invalid key object passed to getProviderByKey: missing getProviderName method. Key: ${keyIdentifier}`);
         }
         return CryptoProviderFactory.getProvider(key.getProviderName());
     },
@@ -227,8 +256,12 @@ throw new Error(`Invalid key object passed to getProviderByKey: missing getProvi
      * @param data Optional raw key data.
      * @returns The created AKey instance.
      */
-    createKey<T extends AKey>(providerNameOrString: string, keyType?: KeyType, data?: Uint8Array): T { if (keyType !== undefined && data !== undefined) { const provider = CryptoProviderFactory.getProvider(providerNameOrString); return provider.createKey<T>(keyType, data); } else if (keyType === undefined && data === undefined) { const s = providerNameOrString; if (s == null || s.length === 0) { return RU.cast(null); } const parts = s.split(":"); if (parts.length !==
-3) { throw new Error(`Invalid key string format: ${s}`); } const providerName = parts[0]; const provider = CryptoProviderFactory.getProvider(providerName); return provider.createKey<T>(s); } throw new Error("Invalid arguments for CryptoProviderFactory.createKey"); },
+    createKey<T extends AKey>(providerNameOrString: string, keyType?: KeyType, data?: Uint8Array): T {
+        if (keyType !== undefined && data !== undefined) { const provider = CryptoProviderFactory.getProvider(providerNameOrString); return provider.createKey<T>(keyType, data); } else if (keyType === undefined && data === undefined) {
+            const s = providerNameOrString; if (s == null || s.length === 0) { return RU.cast(null); } const parts = s.split(":"); if (parts.length !==
+                3) { throw new Error(`Invalid key string format: ${s}`); } const providerName = parts[0]; const provider = CryptoProviderFactory.getProvider(providerName); return provider.createKey<T>(s);
+        } throw new Error("Invalid arguments for CryptoProviderFactory.createKey");
+    },
     /**
      * Creates a SignChecker instance from a key string.
      * @param s The key string (e.g., "PROVIDER:KEY_HEX").
@@ -242,8 +275,10 @@ throw new Error(`Invalid key object passed to getProviderByKey: missing getProvi
      * @param privateKeyHex The hex string of the private key.
      * @returns The created Signer.
      */
-    createSigner: (providerName: string, publicKeyHex: string, privateKeyHex: string): Signer => { const p = CryptoProviderFactory.getProvider(providerName); return p.createSigner(p.createSignKeys(publicKeyHex,
-privateKeyHex)); },
+    createSigner: (providerName: string, publicKeyHex: string, privateKeyHex: string): Signer => {
+        const p = CryptoProviderFactory.getProvider(providerName); return p.createSigner(p.createSignKeys(publicKeyHex,
+            privateKeyHex));
+    },
     /**
      * Creates a Set of Signer instances, one for each registered provider.
      * @returns A Set of Signer instances.
@@ -251,13 +286,13 @@ privateKeyHex)); },
     makeSigners: (): Set<Signer> => {
         const res = new Set<Signer>();
         for (const p of CryptoProviderFactory.all()) {
-             try {
+            try {
                 res.add(p.createSigner());
             } catch (e) {
                 // Skip providers that can't create a default signer
                 Log.warn(`Skipping crypto provider ${p.getCryptoLibName()} for signer creation: ${(e as Error).message}`);
             }
-         }
+        }
         return res;
     }
 };

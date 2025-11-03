@@ -24,10 +24,7 @@ import {
 import {
     AString,
 } from "./aether_astring";
-import {
-    dtoKeyToAKey,
-    aKeyToDtoKey
-} from './aether_key_util';
+import { CryptoUtils } from "./aether_crypto_utils";
 
 /**
  * @class ClientStateInMemory
@@ -285,7 +282,7 @@ export class ClientStateInMemory implements ClientState {
         for (const rs of this.rootSigners.values()) {
             try {
                 const aKey: AKey.SignPublic = rs.getPublicKey();
-                const dtoKey = aKeyToDtoKey<DtoKey>(aKey);
+                const dtoKey = CryptoUtils.aKeyToDtoKey<DtoKey>(aKey);
                 if (dtoKey) {
                     dtoRootSigners.push(dtoKey);
                 } else {
@@ -370,7 +367,7 @@ export class ClientStateInMemory implements ClientState {
                         keyStringForError = `DTOKey(TypeID:${k.getAetherTypeId()})`;
                     }
 
-                    const akey: AKey = dtoKeyToAKey(k);
+                    const akey: AKey = CryptoUtils.dtoKeyToAKey(k);
 
                     if (akey && akey.getKeyType() === KeyType.SIGN_PUBLIC) {
                         const checker = akey.asSignPublicKey().toSignChecker();

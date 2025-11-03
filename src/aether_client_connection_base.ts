@@ -83,7 +83,7 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
             const ipString = ipAddressToString(addrInfo.address);
             if (ipString) {
                  const hostString = addrInfo.address instanceof IPAddressV6 ? `[${ipString}]` : ipString;
-                const scheme = cap.codec === AetherCodec.WEBSOCKET ? 'wss' : 'tcp'; // Assuming wss for WebSocket
+                const scheme = cap.codec === AetherCodec.WS ? 'wss' : 'tcp'; // Assuming wss for WebSocket
                 const uri = `${scheme}://${hostString}:${cap.port}`;
                 if (cap.codec === preferredCodec) {
                     Log.trace(`Found preferred URI: ${uri}`, { serverId: sd.id });
@@ -128,7 +128,7 @@ export class Connection<LT, RT extends RemoteApi> implements Destroyable { // <-
         this.uri = uri;
         this.client = client;
         // Set up logging context for this specific connection
-        this.logCtxData = { ...client.logClientContext.data, component: "Connection", uri: this.uri };
+        this.logCtxData = {  component: "Connection", uri: this.uri };
 
         Log.debug("Connection: Initializing...", this.logCtxData);
 

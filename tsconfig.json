@@ -1,15 +1,16 @@
-// --- tsconfig.json (Обновлено) ---
 {
   "compilerOptions": {
     "outDir": "./build/",
     "noImplicitAny": true,
-    "module": "ES2020",
+    "module": "CommonJS",
     "target": "ES2022",
     "jsx": "react",
     "sourceMap": true,
     "moduleResolution": "node",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "lib": [
       "ES2022",
       "DOM",

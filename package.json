@@ -5,12 +5,14 @@
   "dependencies": {
     "@types/libsodium-wrappers": "^0.7.14",
     "assert": "^2.1.0",
+    "bcryptjs": "^3.0.2",
     "bufferutil": "^4.0.8",
+    "crc-32": "^1.2.2",
     "dns-query": "^0.11.2",
     "express": "^4.19.2",
+    "isomorphic-ws": "^5.0.0",
     "libsodium-wrappers": "^0.7.15",
     "nodemon": "^3.1.0",
-    "universal-ws": "^0.2.9",
     "utf-8-validate": "^6.0.4",
     "util": "^0.12.5"
   },
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@testdeck/mocha": "^0.3.3",
+    "@types/bcryptjs": "^3.0.0",
     "@types/chai": "^4.3.16",
     "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.5",

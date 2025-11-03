@@ -153,7 +153,12 @@ export class LogPrinter implements Disposable {
      * @param n The LNode to print.
      */
     public printRow(s: AString, n: LNode): void {
-        console.log(this.printNode(s, n).toString());
+        let line = this.printNode(s, n).toString();
+        if (process) {
+            process.stdout.write(line + '\n');
+        } else if (console) {
+            console.log(line);
+        }
     }
 
     /**
