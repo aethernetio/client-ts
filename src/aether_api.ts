@@ -28,7 +28,7 @@ from './aether_astring';
 // --- Generated Structures and APIs ---
 // --- Generated Enum: AetherCodec ---
 export enum AetherCodec  {
-    TCP = 'TCP', UDP = 'UDP', WS = 'WS'
+    TCP = 'TCP', UDP = 'UDP', WS = 'WS', WSS = 'WSS' 
 }
 export namespace AetherCodec  {
     export const META: FastMetaType<AetherCodec> = new class implements FastMetaType<AetherCodec>  {
@@ -1011,37 +1011,164 @@ export abstract class WorkProofConfig implements ToString  {
     }
     
 }
+// --- Generated Structure: AccessCheckPair ---
+export class AccessCheckPair implements ToString  {
+    public readonly sourceUid: UUID;
+    public readonly targetUid: UUID;
+    public static readonly META_BODY: FastMetaType<AccessCheckPair> = new class implements FastMetaType<AccessCheckPair>  {
+        serialize(sCtx_59: FastFutureContext, obj_60: AccessCheckPair, _out_61: DataOut): void  {
+            FastMeta.META_UUID.serialize(sCtx_59, obj_60.sourceUid, _out_61);
+            FastMeta.META_UUID.serialize(sCtx_59, obj_60.targetUid, _out_61);
+            
+        }
+        deserialize(sCtx_59: FastFutureContext, in__62: DataIn): AccessCheckPair  {
+            let sourceUid_65: UUID;
+            let targetUid_66: UUID;
+            sourceUid_65 = FastMeta.META_UUID.deserialize(sCtx_59, in__62);
+            targetUid_66 = FastMeta.META_UUID.deserialize(sCtx_59, in__62);
+            return new AccessCheckPair(sourceUid_65, targetUid_66);
+            
+        }
+        serializeToBytes(_obj: any): Uint8Array  {
+            throw new Error('Not implemented');
+            
+        }
+        deserializeFromBytes(_data: Uint8Array): any  {
+            throw new Error('Not implemented');
+            
+        }
+        loadFromFile(_file: string): any  {
+            throw new Error('Not implemented');
+            
+        }
+        
+    }
+    ();
+    public static readonly META: FastMetaType<AccessCheckPair> = AccessCheckPair.META_BODY;
+    constructor(sourceUid: UUID, targetUid: UUID)  {
+        this.sourceUid = sourceUid;
+        this.targetUid = targetUid;
+        
+    }
+    public getSourceUid(): UUID  {
+        return this.sourceUid;
+        
+    }
+    public getTargetUid(): UUID  {
+        return this.targetUid;
+        
+    }
+    public toString(result: AString): AString  {
+        result.add('AccessCheckPair(');
+        result.add('sourceUid:').add(this.sourceUid);
+        result.add(', ');
+        result.add('targetUid:').add(this.targetUid);
+        result.add(')');
+        return result;
+        
+    }
+    
+}
+// --- Generated Structure: AccessCheckResult ---
+export class AccessCheckResult implements ToString  {
+    public readonly sourceUid: UUID;
+    public readonly targetUid: UUID;
+    public readonly hasAccess: boolean;
+    public static readonly META_BODY: FastMetaType<AccessCheckResult> = new class implements FastMetaType<AccessCheckResult>  {
+        serialize(sCtx_69: FastFutureContext, obj_70: AccessCheckResult, _out_71: DataOut): void  {
+            FastMeta.META_UUID.serialize(sCtx_69, obj_70.sourceUid, _out_71);
+            FastMeta.META_UUID.serialize(sCtx_69, obj_70.targetUid, _out_71);
+            _out_71.writeBoolean(obj_70.hasAccess);
+            
+        }
+        deserialize(sCtx_69: FastFutureContext, in__72: DataIn): AccessCheckResult  {
+            let sourceUid_76: UUID;
+            let targetUid_77: UUID;
+            let hasAccess_78: boolean;
+            sourceUid_76 = FastMeta.META_UUID.deserialize(sCtx_69, in__72);
+            targetUid_77 = FastMeta.META_UUID.deserialize(sCtx_69, in__72);
+            hasAccess_78 = in__72.readBoolean();
+            return new AccessCheckResult(sourceUid_76, targetUid_77, hasAccess_78);
+            
+        }
+        serializeToBytes(_obj: any): Uint8Array  {
+            throw new Error('Not implemented');
+            
+        }
+        deserializeFromBytes(_data: Uint8Array): any  {
+            throw new Error('Not implemented');
+            
+        }
+        loadFromFile(_file: string): any  {
+            throw new Error('Not implemented');
+            
+        }
+        
+    }
+    ();
+    public static readonly META: FastMetaType<AccessCheckResult> = AccessCheckResult.META_BODY;
+    constructor(sourceUid: UUID, targetUid: UUID, hasAccess: boolean)  {
+        this.sourceUid = sourceUid;
+        this.targetUid = targetUid;
+        this.hasAccess = hasAccess;
+        
+    }
+    public getSourceUid(): UUID  {
+        return this.sourceUid;
+        
+    }
+    public getTargetUid(): UUID  {
+        return this.targetUid;
+        
+    }
+    public isHasAccess(): boolean  {
+        return this.hasAccess;
+        
+    }
+    public toString(result: AString): AString  {
+        result.add('AccessCheckResult(');
+        result.add('sourceUid:').add(this.sourceUid);
+        result.add(', ');
+        result.add('targetUid:').add(this.targetUid);
+        result.add(', ');
+        result.add('hasAccess:').add(this.hasAccess);
+        result.add(')');
+        return result;
+        
+    }
+    
+}
 // --- Generated Structure: AccessGroup ---
 export class AccessGroup implements ToString  {
     public readonly owner: UUID;
     public readonly id: number;
     public readonly data: UUID[];
     public static readonly META_BODY: FastMetaType<AccessGroup> = new class implements FastMetaType<AccessGroup>  {
-        serialize(sCtx_59: FastFutureContext, obj_60: AccessGroup, _out_61: DataOut): void  {
-            FastMeta.META_UUID.serialize(sCtx_59, obj_60.owner, _out_61);
-            _out_61.writeLong(obj_60.id);
-            SerializerPackNumber.INSTANCE.put(_out_61, obj_60.data.length);
-            for (const el_65 of obj_60.data)  {
-                FastMeta.META_UUID.serialize(sCtx_59, el_65, _out_61);
+        serialize(sCtx_82: FastFutureContext, obj_83: AccessGroup, _out_84: DataOut): void  {
+            FastMeta.META_UUID.serialize(sCtx_82, obj_83.owner, _out_84);
+            _out_84.writeLong(obj_83.id);
+            SerializerPackNumber.INSTANCE.put(_out_84, obj_83.data.length);
+            for (const el_88 of obj_83.data)  {
+                FastMeta.META_UUID.serialize(sCtx_82, el_88, _out_84);
                 
             }
             
         }
-        deserialize(sCtx_59: FastFutureContext, in__62: DataIn): AccessGroup  {
-            let owner_67: UUID;
-            let id_68: number;
-            let data_69: UUID[];
-            owner_67 = FastMeta.META_UUID.deserialize(sCtx_59, in__62);
-            id_68 = in__62.readLong();
-            const len_73 = DeserializerPackNumber.INSTANCE.put(in__62).valueOf();
-            data_69 = new Array<UUID>(len_73);
-            for (let idx_72 = 0;
-            idx_72 < len_73;
-            idx_72++)  {
-                data_69[idx_72] = FastMeta.META_UUID.deserialize(sCtx_59, in__62);
+        deserialize(sCtx_82: FastFutureContext, in__85: DataIn): AccessGroup  {
+            let owner_90: UUID;
+            let id_91: number;
+            let data_92: UUID[];
+            owner_90 = FastMeta.META_UUID.deserialize(sCtx_82, in__85);
+            id_91 = in__85.readLong();
+            const len_96 = DeserializerPackNumber.INSTANCE.put(in__85).valueOf();
+            data_92 = new Array<UUID>(len_96);
+            for (let idx_95 = 0;
+            idx_95 < len_96;
+            idx_95++)  {
+                data_92[idx_95] = FastMeta.META_UUID.deserialize(sCtx_82, in__85);
                 
             }
-            return new AccessGroup(owner_67, id_68, data_69);
+            return new AccessGroup(owner_90, id_91, data_92);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -1101,17 +1228,17 @@ export class ClientInfo implements ToString  {
     public readonly uid: UUID;
     public readonly cloud: Cloud;
     public static readonly META_BODY: FastMetaType<ClientInfo> = new class implements FastMetaType<ClientInfo>  {
-        serialize(sCtx_75: FastFutureContext, obj_76: ClientInfo, _out_77: DataOut): void  {
-            FastMeta.META_UUID.serialize(sCtx_75, obj_76.uid, _out_77);
-            Cloud.META.serialize(sCtx_75, obj_76.cloud, _out_77);
+        serialize(sCtx_98: FastFutureContext, obj_99: ClientInfo, _out_100: DataOut): void  {
+            FastMeta.META_UUID.serialize(sCtx_98, obj_99.uid, _out_100);
+            Cloud.META.serialize(sCtx_98, obj_99.cloud, _out_100);
             
         }
-        deserialize(sCtx_75: FastFutureContext, in__78: DataIn): ClientInfo  {
-            let uid_81: UUID;
-            let cloud_82: Cloud;
-            uid_81 = FastMeta.META_UUID.deserialize(sCtx_75, in__78);
-            cloud_82 = Cloud.META.deserialize(sCtx_75, in__78);
-            return new ClientInfo(uid_81, cloud_82);
+        deserialize(sCtx_98: FastFutureContext, in__101: DataIn): ClientInfo  {
+            let uid_104: UUID;
+            let cloud_105: Cloud;
+            uid_104 = FastMeta.META_UUID.deserialize(sCtx_98, in__101);
+            cloud_105 = Cloud.META.deserialize(sCtx_98, in__101);
+            return new ClientInfo(uid_104, cloud_105);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -1170,91 +1297,91 @@ export class ClientStateForSave implements ToString  {
     public readonly alias: UUID;
     public readonly masterKey: Key;
     public static readonly META_BODY: FastMetaType<ClientStateForSave> = new class implements FastMetaType<ClientStateForSave>  {
-        serialize(sCtx_85: FastFutureContext, obj_86: ClientStateForSave, _out_87: DataOut): void  {
-            SerializerPackNumber.INSTANCE.put(_out_87, obj_86.registrationUri.length);
-            for (const el_89 of obj_86.registrationUri)  {
-                FastMeta.META_URI.serialize(sCtx_85, el_89, _out_87);
+        serialize(sCtx_108: FastFutureContext, obj_109: ClientStateForSave, _out_110: DataOut): void  {
+            SerializerPackNumber.INSTANCE.put(_out_110, obj_109.registrationUri.length);
+            for (const el_112 of obj_109.registrationUri)  {
+                FastMeta.META_URI.serialize(sCtx_108, el_112, _out_110);
                 
             }
-            SerializerPackNumber.INSTANCE.put(_out_87, obj_86.servers.length);
-            for (const el_91 of obj_86.servers)  {
-                ServerDescriptor.META.serialize(sCtx_85, el_91, _out_87);
+            SerializerPackNumber.INSTANCE.put(_out_110, obj_109.servers.length);
+            for (const el_114 of obj_109.servers)  {
+                ServerDescriptor.META.serialize(sCtx_108, el_114, _out_110);
                 
             }
-            SerializerPackNumber.INSTANCE.put(_out_87, obj_86.clients.length);
-            for (const el_93 of obj_86.clients)  {
-                ClientInfo.META.serialize(sCtx_85, el_93, _out_87);
+            SerializerPackNumber.INSTANCE.put(_out_110, obj_109.clients.length);
+            for (const el_116 of obj_109.clients)  {
+                ClientInfo.META.serialize(sCtx_108, el_116, _out_110);
                 
             }
-            SerializerPackNumber.INSTANCE.put(_out_87, obj_86.rootSigners.length);
-            for (const el_95 of obj_86.rootSigners)  {
-                Key.META.serialize(sCtx_85, el_95, _out_87);
+            SerializerPackNumber.INSTANCE.put(_out_110, obj_109.rootSigners.length);
+            for (const el_118 of obj_109.rootSigners)  {
+                Key.META.serialize(sCtx_108, el_118, _out_110);
                 
             }
-            CryptoLib.META.serialize(sCtx_85, obj_86.cryptoLib, _out_87);
-            _out_87.writeLong(obj_86.pingDuration);
-            FastMeta.META_UUID.serialize(sCtx_85, obj_86.parentUid, _out_87);
-            _out_87.writeInt(obj_86.countServersForRegistration);
-            _out_87.writeLong(obj_86.timeoutForConnectToRegistrationServer);
-            FastMeta.META_UUID.serialize(sCtx_85, obj_86.uid, _out_87);
-            FastMeta.META_UUID.serialize(sCtx_85, obj_86.alias, _out_87);
-            Key.META.serialize(sCtx_85, obj_86.masterKey, _out_87);
+            CryptoLib.META.serialize(sCtx_108, obj_109.cryptoLib, _out_110);
+            _out_110.writeLong(obj_109.pingDuration);
+            FastMeta.META_UUID.serialize(sCtx_108, obj_109.parentUid, _out_110);
+            _out_110.writeInt(obj_109.countServersForRegistration);
+            _out_110.writeLong(obj_109.timeoutForConnectToRegistrationServer);
+            FastMeta.META_UUID.serialize(sCtx_108, obj_109.uid, _out_110);
+            FastMeta.META_UUID.serialize(sCtx_108, obj_109.alias, _out_110);
+            Key.META.serialize(sCtx_108, obj_109.masterKey, _out_110);
             
         }
-        deserialize(sCtx_85: FastFutureContext, in__88: DataIn): ClientStateForSave  {
-            let registrationUri_105: URI[];
-            let servers_106: ServerDescriptor[];
-            let clients_107: ClientInfo[];
-            let rootSigners_108: Key[];
-            let cryptoLib_109: CryptoLib;
-            let pingDuration_110: number;
-            let parentUid_111: UUID;
-            let countServersForRegistration_112: number;
-            let timeoutForConnectToRegistrationServer_113: number;
-            let uid_114: UUID;
-            let alias_115: UUID;
-            let masterKey_116: Key;
-            const len_118 = DeserializerPackNumber.INSTANCE.put(in__88).valueOf();
-            registrationUri_105 = new Array<URI>(len_118);
-            for (let idx_117 = 0;
-            idx_117 < len_118;
-            idx_117++)  {
-                registrationUri_105[idx_117] = FastMeta.META_URI.deserialize(sCtx_85, in__88);
+        deserialize(sCtx_108: FastFutureContext, in__111: DataIn): ClientStateForSave  {
+            let registrationUri_128: URI[];
+            let servers_129: ServerDescriptor[];
+            let clients_130: ClientInfo[];
+            let rootSigners_131: Key[];
+            let cryptoLib_132: CryptoLib;
+            let pingDuration_133: number;
+            let parentUid_134: UUID;
+            let countServersForRegistration_135: number;
+            let timeoutForConnectToRegistrationServer_136: number;
+            let uid_137: UUID;
+            let alias_138: UUID;
+            let masterKey_139: Key;
+            const len_141 = DeserializerPackNumber.INSTANCE.put(in__111).valueOf();
+            registrationUri_128 = new Array<URI>(len_141);
+            for (let idx_140 = 0;
+            idx_140 < len_141;
+            idx_140++)  {
+                registrationUri_128[idx_140] = FastMeta.META_URI.deserialize(sCtx_108, in__111);
                 
             }
-            const len_121 = DeserializerPackNumber.INSTANCE.put(in__88).valueOf();
-            servers_106 = new Array<ServerDescriptor>(len_121);
-            for (let idx_120 = 0;
-            idx_120 < len_121;
-            idx_120++)  {
-                servers_106[idx_120] = ServerDescriptor.META.deserialize(sCtx_85, in__88);
+            const len_144 = DeserializerPackNumber.INSTANCE.put(in__111).valueOf();
+            servers_129 = new Array<ServerDescriptor>(len_144);
+            for (let idx_143 = 0;
+            idx_143 < len_144;
+            idx_143++)  {
+                servers_129[idx_143] = ServerDescriptor.META.deserialize(sCtx_108, in__111);
                 
             }
-            const len_124 = DeserializerPackNumber.INSTANCE.put(in__88).valueOf();
-            clients_107 = new Array<ClientInfo>(len_124);
-            for (let idx_123 = 0;
-            idx_123 < len_124;
-            idx_123++)  {
-                clients_107[idx_123] = ClientInfo.META.deserialize(sCtx_85, in__88);
+            const len_147 = DeserializerPackNumber.INSTANCE.put(in__111).valueOf();
+            clients_130 = new Array<ClientInfo>(len_147);
+            for (let idx_146 = 0;
+            idx_146 < len_147;
+            idx_146++)  {
+                clients_130[idx_146] = ClientInfo.META.deserialize(sCtx_108, in__111);
                 
             }
-            const len_127 = DeserializerPackNumber.INSTANCE.put(in__88).valueOf();
-            rootSigners_108 = new Array<Key>(len_127);
-            for (let idx_126 = 0;
-            idx_126 < len_127;
-            idx_126++)  {
-                rootSigners_108[idx_126] = Key.META.deserialize(sCtx_85, in__88);
+            const len_150 = DeserializerPackNumber.INSTANCE.put(in__111).valueOf();
+            rootSigners_131 = new Array<Key>(len_150);
+            for (let idx_149 = 0;
+            idx_149 < len_150;
+            idx_149++)  {
+                rootSigners_131[idx_149] = Key.META.deserialize(sCtx_108, in__111);
                 
             }
-            cryptoLib_109 = CryptoLib.META.deserialize(sCtx_85, in__88);
-            pingDuration_110 = in__88.readLong();
-            parentUid_111 = FastMeta.META_UUID.deserialize(sCtx_85, in__88);
-            countServersForRegistration_112 = in__88.readInt();
-            timeoutForConnectToRegistrationServer_113 = in__88.readLong();
-            uid_114 = FastMeta.META_UUID.deserialize(sCtx_85, in__88);
-            alias_115 = FastMeta.META_UUID.deserialize(sCtx_85, in__88);
-            masterKey_116 = Key.META.deserialize(sCtx_85, in__88);
-            return new ClientStateForSave(registrationUri_105, servers_106, clients_107, rootSigners_108, cryptoLib_109, pingDuration_110, parentUid_111, countServersForRegistration_112, timeoutForConnectToRegistrationServer_113, uid_114, alias_115, masterKey_116);
+            cryptoLib_132 = CryptoLib.META.deserialize(sCtx_108, in__111);
+            pingDuration_133 = in__111.readLong();
+            parentUid_134 = FastMeta.META_UUID.deserialize(sCtx_108, in__111);
+            countServersForRegistration_135 = in__111.readInt();
+            timeoutForConnectToRegistrationServer_136 = in__111.readLong();
+            uid_137 = FastMeta.META_UUID.deserialize(sCtx_108, in__111);
+            alias_138 = FastMeta.META_UUID.deserialize(sCtx_108, in__111);
+            masterKey_139 = Key.META.deserialize(sCtx_108, in__111);
+            return new ClientStateForSave(registrationUri_128, servers_129, clients_130, rootSigners_131, cryptoLib_132, pingDuration_133, parentUid_134, countServersForRegistration_135, timeoutForConnectToRegistrationServer_136, uid_137, alias_138, masterKey_139);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -1393,25 +1520,25 @@ export class ClientStateForSave implements ToString  {
 export class Cloud implements ToString  {
     public readonly data: number[];
     public static readonly META_BODY: FastMetaType<Cloud> = new class implements FastMetaType<Cloud>  {
-        serialize(sCtx_137: FastFutureContext, obj_138: Cloud, _out_139: DataOut): void  {
-            SerializerPackNumber.INSTANCE.put(_out_139, obj_138.data.length);
-            for (const el_141 of obj_138.data)  {
-                _out_139.writeShort(el_141);
+        serialize(sCtx_160: FastFutureContext, obj_161: Cloud, _out_162: DataOut): void  {
+            SerializerPackNumber.INSTANCE.put(_out_162, obj_161.data.length);
+            for (const el_164 of obj_161.data)  {
+                _out_162.writeShort(el_164);
                 
             }
             
         }
-        deserialize(sCtx_137: FastFutureContext, in__140: DataIn): Cloud  {
-            let data_143: number[];
-            const len_145 = DeserializerPackNumber.INSTANCE.put(in__140).valueOf();
-            data_143 = new Array<number>(len_145);
-            for (let idx_144 = 0;
-            idx_144 < len_145;
-            idx_144++)  {
-                data_143[idx_144] = in__140.readShort();
+        deserialize(sCtx_160: FastFutureContext, in__163: DataIn): Cloud  {
+            let data_166: number[];
+            const len_168 = DeserializerPackNumber.INSTANCE.put(in__163).valueOf();
+            data_166 = new Array<number>(len_168);
+            for (let idx_167 = 0;
+            idx_167 < len_168;
+            idx_167++)  {
+                data_166[idx_167] = in__163.readShort();
                 
             }
-            return new Cloud(data_143);
+            return new Cloud(data_166);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -1457,17 +1584,17 @@ export class CoderAndPort implements ToString  {
     public readonly codec: AetherCodec;
     public readonly port: number;
     public static readonly META_BODY: FastMetaType<CoderAndPort> = new class implements FastMetaType<CoderAndPort>  {
-        serialize(sCtx_147: FastFutureContext, obj_148: CoderAndPort, _out_149: DataOut): void  {
-            AetherCodec.META.serialize(sCtx_147, obj_148.codec, _out_149);
-            _out_149.writeShort(obj_148.port);
+        serialize(sCtx_170: FastFutureContext, obj_171: CoderAndPort, _out_172: DataOut): void  {
+            AetherCodec.META.serialize(sCtx_170, obj_171.codec, _out_172);
+            _out_172.writeShort(obj_171.port);
             
         }
-        deserialize(sCtx_147: FastFutureContext, in__150: DataIn): CoderAndPort  {
-            let codec_153: AetherCodec;
-            let port_154: number;
-            codec_153 = AetherCodec.META.deserialize(sCtx_147, in__150);
-            port_154 = in__150.readShort();
-            return new CoderAndPort(codec_153, port_154);
+        deserialize(sCtx_170: FastFutureContext, in__173: DataIn): CoderAndPort  {
+            let codec_176: AetherCodec;
+            let port_177: number;
+            codec_176 = AetherCodec.META.deserialize(sCtx_170, in__173);
+            port_177 = in__173.readShort();
+            return new CoderAndPort(codec_176, port_177);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -1517,20 +1644,20 @@ export class FinishResultGlobalRegServerApi implements ToString  {
     public readonly uid: UUID;
     public readonly cloud: Cloud;
     public static readonly META_BODY: FastMetaType<FinishResultGlobalRegServerApi> = new class implements FastMetaType<FinishResultGlobalRegServerApi>  {
-        serialize(sCtx_157: FastFutureContext, obj_158: FinishResultGlobalRegServerApi, _out_159: DataOut): void  {
-            FastMeta.META_UUID.serialize(sCtx_157, obj_158.alias, _out_159);
-            FastMeta.META_UUID.serialize(sCtx_157, obj_158.uid, _out_159);
-            Cloud.META.serialize(sCtx_157, obj_158.cloud, _out_159);
+        serialize(sCtx_180: FastFutureContext, obj_181: FinishResultGlobalRegServerApi, _out_182: DataOut): void  {
+            FastMeta.META_UUID.serialize(sCtx_180, obj_181.alias, _out_182);
+            FastMeta.META_UUID.serialize(sCtx_180, obj_181.uid, _out_182);
+            Cloud.META.serialize(sCtx_180, obj_181.cloud, _out_182);
             
         }
-        deserialize(sCtx_157: FastFutureContext, in__160: DataIn): FinishResultGlobalRegServerApi  {
-            let alias_164: UUID;
-            let uid_165: UUID;
-            let cloud_166: Cloud;
-            alias_164 = FastMeta.META_UUID.deserialize(sCtx_157, in__160);
-            uid_165 = FastMeta.META_UUID.deserialize(sCtx_157, in__160);
-            cloud_166 = Cloud.META.deserialize(sCtx_157, in__160);
-            return new FinishResultGlobalRegServerApi(alias_164, uid_165, cloud_166);
+        deserialize(sCtx_180: FastFutureContext, in__183: DataIn): FinishResultGlobalRegServerApi  {
+            let alias_187: UUID;
+            let uid_188: UUID;
+            let cloud_189: Cloud;
+            alias_187 = FastMeta.META_UUID.deserialize(sCtx_180, in__183);
+            uid_188 = FastMeta.META_UUID.deserialize(sCtx_180, in__183);
+            cloud_189 = Cloud.META.deserialize(sCtx_180, in__183);
+            return new FinishResultGlobalRegServerApi(alias_187, uid_188, cloud_189);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -1589,20 +1716,20 @@ export class HydrogenCurvePrivate extends KeyAsymmetricPrivate implements ToStri
         
     }
     public static readonly META_BODY: FastMetaType<HydrogenCurvePrivate> = new class implements FastMetaType<HydrogenCurvePrivate>  {
-        serialize(sCtx_170: FastFutureContext, obj_171: HydrogenCurvePrivate, _out_172: DataOut): void  {
-            if (obj_171.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_171.data must be 32 but was $ {
-                obj_171.data.length
+        serialize(sCtx_193: FastFutureContext, obj_194: HydrogenCurvePrivate, _out_195: DataOut): void  {
+            if (obj_194.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_194.data must be 32 but was $ {
+                obj_194.data.length
             }
             `);
-            _out_172.write(obj_171.data);
+            _out_195.write(obj_194.data);
             
         }
-        deserialize(sCtx_170: FastFutureContext, in__173: DataIn): HydrogenCurvePrivate  {
-            let data_175: Uint8Array;
-            const len_177 = 32;
-            const bytes_178 = in__173.readBytes(len_177);
-            data_175 = bytes_178;
-            return new HydrogenCurvePrivate(data_175);
+        deserialize(sCtx_193: FastFutureContext, in__196: DataIn): HydrogenCurvePrivate  {
+            let data_198: Uint8Array;
+            const len_200 = 32;
+            const bytes_201 = in__196.readBytes(len_200);
+            data_198 = bytes_201;
+            return new HydrogenCurvePrivate(data_198);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -1621,33 +1748,33 @@ export class HydrogenCurvePrivate extends KeyAsymmetricPrivate implements ToStri
     }
     ();
     public static readonly META: FastMetaType<HydrogenCurvePrivate> = new class implements FastMetaType<HydrogenCurvePrivate>  {
-        serialize(sCtx_179: FastFutureContext, obj_180: HydrogenCurvePrivate, _out_181: DataOut): void  {
-            const typeId = typeof (obj_180 as any).getAetherTypeId === 'function' ? obj_180.getAetherTypeId() : -1;
+        serialize(sCtx_202: FastFutureContext, obj_203: HydrogenCurvePrivate, _out_204: DataOut): void  {
+            const typeId = typeof (obj_203 as any).getAetherTypeId === 'function' ? obj_203.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'HydrogenCurvePrivate' with invalid type id $ {
                 typeId
             }
             `);
-            _out_181.writeByte(typeId);
+            _out_204.writeByte(typeId);
             switch(typeId)  {
-                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_179, obj_180 as any as HydrogenCurvePrivate, _out_181);
+                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_202, obj_203 as any as HydrogenCurvePrivate, _out_204);
                 break;
-                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_179, obj_180 as any as SodiumChacha20Poly1305, _out_181);
+                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_202, obj_203 as any as SodiumChacha20Poly1305, _out_204);
                 break;
-                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_179, obj_180 as any as HydrogenSecretBox, _out_181);
+                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_202, obj_203 as any as HydrogenSecretBox, _out_204);
                 break;
-                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_179, obj_180 as any as HydrogenCurvePublic, _out_181);
+                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_202, obj_203 as any as HydrogenCurvePublic, _out_204);
                 break;
-                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_179, obj_180 as any as SodiumCurvePublic, _out_181);
+                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_202, obj_203 as any as SodiumCurvePublic, _out_204);
                 break;
-                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_179, obj_180 as any as SodiumCurvePrivate, _out_181);
+                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_202, obj_203 as any as SodiumCurvePrivate, _out_204);
                 break;
-                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_179, obj_180 as any as SodiumSignPublic, _out_181);
+                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_202, obj_203 as any as SodiumSignPublic, _out_204);
                 break;
-                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_179, obj_180 as any as HydrogenSignPublic, _out_181);
+                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_202, obj_203 as any as HydrogenSignPublic, _out_204);
                 break;
-                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_179, obj_180 as any as SodiumSignPrivate, _out_181);
+                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_202, obj_203 as any as SodiumSignPrivate, _out_204);
                 break;
-                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_179, obj_180 as any as HydrogenSignPrivate, _out_181);
+                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_202, obj_203 as any as HydrogenSignPrivate, _out_204);
                 break;
                 default: throw new Error(`Cannot serialize 'HydrogenCurvePrivate' with unknown type id $ {
                     typeId
@@ -1657,19 +1784,19 @@ export class HydrogenCurvePrivate extends KeyAsymmetricPrivate implements ToStri
             }
             
         }
-        deserialize(sCtx_179: FastFutureContext, in__182: DataIn): HydrogenCurvePrivate  {
-            const typeId = in__182.readUByte();
+        deserialize(sCtx_202: FastFutureContext, in__205: DataIn): HydrogenCurvePrivate  {
+            const typeId = in__205.readUByte();
             switch(typeId)  {
-                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_179, in__182) as any as HydrogenCurvePrivate;
-                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_179, in__182) as any as HydrogenCurvePrivate;
-                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_179, in__182) as any as HydrogenCurvePrivate;
-                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_179, in__182) as any as HydrogenCurvePrivate;
-                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_179, in__182) as any as HydrogenCurvePrivate;
-                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_179, in__182) as any as HydrogenCurvePrivate;
-                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_179, in__182) as any as HydrogenCurvePrivate;
-                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_179, in__182) as any as HydrogenCurvePrivate;
-                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_179, in__182) as any as HydrogenCurvePrivate;
-                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_179, in__182) as any as HydrogenCurvePrivate;
+                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_202, in__205) as any as HydrogenCurvePrivate;
+                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_202, in__205) as any as HydrogenCurvePrivate;
+                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_202, in__205) as any as HydrogenCurvePrivate;
+                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_202, in__205) as any as HydrogenCurvePrivate;
+                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_202, in__205) as any as HydrogenCurvePrivate;
+                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_202, in__205) as any as HydrogenCurvePrivate;
+                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_202, in__205) as any as HydrogenCurvePrivate;
+                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_202, in__205) as any as HydrogenCurvePrivate;
+                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_202, in__205) as any as HydrogenCurvePrivate;
+                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_202, in__205) as any as HydrogenCurvePrivate;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -1728,20 +1855,20 @@ export class HydrogenCurvePublic extends KeyAsymmetricPublic implements ToString
         
     }
     public static readonly META_BODY: FastMetaType<HydrogenCurvePublic> = new class implements FastMetaType<HydrogenCurvePublic>  {
-        serialize(sCtx_183: FastFutureContext, obj_184: HydrogenCurvePublic, _out_185: DataOut): void  {
-            if (obj_184.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_184.data must be 32 but was $ {
-                obj_184.data.length
+        serialize(sCtx_206: FastFutureContext, obj_207: HydrogenCurvePublic, _out_208: DataOut): void  {
+            if (obj_207.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_207.data must be 32 but was $ {
+                obj_207.data.length
             }
             `);
-            _out_185.write(obj_184.data);
+            _out_208.write(obj_207.data);
             
         }
-        deserialize(sCtx_183: FastFutureContext, in__186: DataIn): HydrogenCurvePublic  {
-            let data_188: Uint8Array;
-            const len_190 = 32;
-            const bytes_191 = in__186.readBytes(len_190);
-            data_188 = bytes_191;
-            return new HydrogenCurvePublic(data_188);
+        deserialize(sCtx_206: FastFutureContext, in__209: DataIn): HydrogenCurvePublic  {
+            let data_211: Uint8Array;
+            const len_213 = 32;
+            const bytes_214 = in__209.readBytes(len_213);
+            data_211 = bytes_214;
+            return new HydrogenCurvePublic(data_211);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -1760,33 +1887,33 @@ export class HydrogenCurvePublic extends KeyAsymmetricPublic implements ToString
     }
     ();
     public static readonly META: FastMetaType<HydrogenCurvePublic> = new class implements FastMetaType<HydrogenCurvePublic>  {
-        serialize(sCtx_192: FastFutureContext, obj_193: HydrogenCurvePublic, _out_194: DataOut): void  {
-            const typeId = typeof (obj_193 as any).getAetherTypeId === 'function' ? obj_193.getAetherTypeId() : -1;
+        serialize(sCtx_215: FastFutureContext, obj_216: HydrogenCurvePublic, _out_217: DataOut): void  {
+            const typeId = typeof (obj_216 as any).getAetherTypeId === 'function' ? obj_216.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'HydrogenCurvePublic' with invalid type id $ {
                 typeId
             }
             `);
-            _out_194.writeByte(typeId);
+            _out_217.writeByte(typeId);
             switch(typeId)  {
-                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_192, obj_193 as any as HydrogenCurvePublic, _out_194);
+                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_215, obj_216 as any as HydrogenCurvePublic, _out_217);
                 break;
-                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_192, obj_193 as any as SodiumChacha20Poly1305, _out_194);
+                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_215, obj_216 as any as SodiumChacha20Poly1305, _out_217);
                 break;
-                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_192, obj_193 as any as HydrogenSecretBox, _out_194);
+                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_215, obj_216 as any as HydrogenSecretBox, _out_217);
                 break;
-                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_192, obj_193 as any as SodiumCurvePublic, _out_194);
+                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_215, obj_216 as any as SodiumCurvePublic, _out_217);
                 break;
-                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_192, obj_193 as any as HydrogenCurvePrivate, _out_194);
+                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_215, obj_216 as any as HydrogenCurvePrivate, _out_217);
                 break;
-                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_192, obj_193 as any as SodiumCurvePrivate, _out_194);
+                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_215, obj_216 as any as SodiumCurvePrivate, _out_217);
                 break;
-                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_192, obj_193 as any as SodiumSignPublic, _out_194);
+                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_215, obj_216 as any as SodiumSignPublic, _out_217);
                 break;
-                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_192, obj_193 as any as HydrogenSignPublic, _out_194);
+                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_215, obj_216 as any as HydrogenSignPublic, _out_217);
                 break;
-                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_192, obj_193 as any as SodiumSignPrivate, _out_194);
+                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_215, obj_216 as any as SodiumSignPrivate, _out_217);
                 break;
-                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_192, obj_193 as any as HydrogenSignPrivate, _out_194);
+                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_215, obj_216 as any as HydrogenSignPrivate, _out_217);
                 break;
                 default: throw new Error(`Cannot serialize 'HydrogenCurvePublic' with unknown type id $ {
                     typeId
@@ -1796,19 +1923,19 @@ export class HydrogenCurvePublic extends KeyAsymmetricPublic implements ToString
             }
             
         }
-        deserialize(sCtx_192: FastFutureContext, in__195: DataIn): HydrogenCurvePublic  {
-            const typeId = in__195.readUByte();
+        deserialize(sCtx_215: FastFutureContext, in__218: DataIn): HydrogenCurvePublic  {
+            const typeId = in__218.readUByte();
             switch(typeId)  {
-                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_192, in__195) as any as HydrogenCurvePublic;
-                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_192, in__195) as any as HydrogenCurvePublic;
-                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_192, in__195) as any as HydrogenCurvePublic;
-                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_192, in__195) as any as HydrogenCurvePublic;
-                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_192, in__195) as any as HydrogenCurvePublic;
-                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_192, in__195) as any as HydrogenCurvePublic;
-                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_192, in__195) as any as HydrogenCurvePublic;
-                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_192, in__195) as any as HydrogenCurvePublic;
-                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_192, in__195) as any as HydrogenCurvePublic;
-                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_192, in__195) as any as HydrogenCurvePublic;
+                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_215, in__218) as any as HydrogenCurvePublic;
+                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_215, in__218) as any as HydrogenCurvePublic;
+                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_215, in__218) as any as HydrogenCurvePublic;
+                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_215, in__218) as any as HydrogenCurvePublic;
+                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_215, in__218) as any as HydrogenCurvePublic;
+                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_215, in__218) as any as HydrogenCurvePublic;
+                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_215, in__218) as any as HydrogenCurvePublic;
+                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_215, in__218) as any as HydrogenCurvePublic;
+                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_215, in__218) as any as HydrogenCurvePublic;
+                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_215, in__218) as any as HydrogenCurvePublic;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -1867,20 +1994,20 @@ export class HydrogenSecretBox extends KeySymmetric implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<HydrogenSecretBox> = new class implements FastMetaType<HydrogenSecretBox>  {
-        serialize(sCtx_196: FastFutureContext, obj_197: HydrogenSecretBox, _out_198: DataOut): void  {
-            if (obj_197.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_197.data must be 32 but was $ {
-                obj_197.data.length
+        serialize(sCtx_219: FastFutureContext, obj_220: HydrogenSecretBox, _out_221: DataOut): void  {
+            if (obj_220.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_220.data must be 32 but was $ {
+                obj_220.data.length
             }
             `);
-            _out_198.write(obj_197.data);
+            _out_221.write(obj_220.data);
             
         }
-        deserialize(sCtx_196: FastFutureContext, in__199: DataIn): HydrogenSecretBox  {
-            let data_201: Uint8Array;
-            const len_203 = 32;
-            const bytes_204 = in__199.readBytes(len_203);
-            data_201 = bytes_204;
-            return new HydrogenSecretBox(data_201);
+        deserialize(sCtx_219: FastFutureContext, in__222: DataIn): HydrogenSecretBox  {
+            let data_224: Uint8Array;
+            const len_226 = 32;
+            const bytes_227 = in__222.readBytes(len_226);
+            data_224 = bytes_227;
+            return new HydrogenSecretBox(data_224);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -1899,33 +2026,33 @@ export class HydrogenSecretBox extends KeySymmetric implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<HydrogenSecretBox> = new class implements FastMetaType<HydrogenSecretBox>  {
-        serialize(sCtx_205: FastFutureContext, obj_206: HydrogenSecretBox, _out_207: DataOut): void  {
-            const typeId = typeof (obj_206 as any).getAetherTypeId === 'function' ? obj_206.getAetherTypeId() : -1;
+        serialize(sCtx_228: FastFutureContext, obj_229: HydrogenSecretBox, _out_230: DataOut): void  {
+            const typeId = typeof (obj_229 as any).getAetherTypeId === 'function' ? obj_229.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'HydrogenSecretBox' with invalid type id $ {
                 typeId
             }
             `);
-            _out_207.writeByte(typeId);
+            _out_230.writeByte(typeId);
             switch(typeId)  {
-                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_205, obj_206 as any as HydrogenSecretBox, _out_207);
+                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_228, obj_229 as any as HydrogenSecretBox, _out_230);
                 break;
-                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_205, obj_206 as any as SodiumChacha20Poly1305, _out_207);
+                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_228, obj_229 as any as SodiumChacha20Poly1305, _out_230);
                 break;
-                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_205, obj_206 as any as HydrogenCurvePublic, _out_207);
+                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_228, obj_229 as any as HydrogenCurvePublic, _out_230);
                 break;
-                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_205, obj_206 as any as SodiumCurvePublic, _out_207);
+                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_228, obj_229 as any as SodiumCurvePublic, _out_230);
                 break;
-                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_205, obj_206 as any as HydrogenCurvePrivate, _out_207);
+                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_228, obj_229 as any as HydrogenCurvePrivate, _out_230);
                 break;
-                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_205, obj_206 as any as SodiumCurvePrivate, _out_207);
+                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_228, obj_229 as any as SodiumCurvePrivate, _out_230);
                 break;
-                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_205, obj_206 as any as SodiumSignPublic, _out_207);
+                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_228, obj_229 as any as SodiumSignPublic, _out_230);
                 break;
-                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_205, obj_206 as any as HydrogenSignPublic, _out_207);
+                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_228, obj_229 as any as HydrogenSignPublic, _out_230);
                 break;
-                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_205, obj_206 as any as SodiumSignPrivate, _out_207);
+                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_228, obj_229 as any as SodiumSignPrivate, _out_230);
                 break;
-                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_205, obj_206 as any as HydrogenSignPrivate, _out_207);
+                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_228, obj_229 as any as HydrogenSignPrivate, _out_230);
                 break;
                 default: throw new Error(`Cannot serialize 'HydrogenSecretBox' with unknown type id $ {
                     typeId
@@ -1935,19 +2062,19 @@ export class HydrogenSecretBox extends KeySymmetric implements ToString  {
             }
             
         }
-        deserialize(sCtx_205: FastFutureContext, in__208: DataIn): HydrogenSecretBox  {
-            const typeId = in__208.readUByte();
+        deserialize(sCtx_228: FastFutureContext, in__231: DataIn): HydrogenSecretBox  {
+            const typeId = in__231.readUByte();
             switch(typeId)  {
-                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_205, in__208) as any as HydrogenSecretBox;
-                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_205, in__208) as any as HydrogenSecretBox;
-                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_205, in__208) as any as HydrogenSecretBox;
-                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_205, in__208) as any as HydrogenSecretBox;
-                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_205, in__208) as any as HydrogenSecretBox;
-                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_205, in__208) as any as HydrogenSecretBox;
-                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_205, in__208) as any as HydrogenSecretBox;
-                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_205, in__208) as any as HydrogenSecretBox;
-                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_205, in__208) as any as HydrogenSecretBox;
-                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_205, in__208) as any as HydrogenSecretBox;
+                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_228, in__231) as any as HydrogenSecretBox;
+                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_228, in__231) as any as HydrogenSecretBox;
+                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_228, in__231) as any as HydrogenSecretBox;
+                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_228, in__231) as any as HydrogenSecretBox;
+                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_228, in__231) as any as HydrogenSecretBox;
+                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_228, in__231) as any as HydrogenSecretBox;
+                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_228, in__231) as any as HydrogenSecretBox;
+                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_228, in__231) as any as HydrogenSecretBox;
+                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_228, in__231) as any as HydrogenSecretBox;
+                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_228, in__231) as any as HydrogenSecretBox;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -2006,20 +2133,20 @@ export class HydrogenSignPrivate extends KeySignPrivate implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<HydrogenSignPrivate> = new class implements FastMetaType<HydrogenSignPrivate>  {
-        serialize(sCtx_209: FastFutureContext, obj_210: HydrogenSignPrivate, _out_211: DataOut): void  {
-            if (obj_210.data.length !== 64) throw new Error(`IllegalStateException: Array length for obj_210.data must be 64 but was $ {
-                obj_210.data.length
+        serialize(sCtx_232: FastFutureContext, obj_233: HydrogenSignPrivate, _out_234: DataOut): void  {
+            if (obj_233.data.length !== 64) throw new Error(`IllegalStateException: Array length for obj_233.data must be 64 but was $ {
+                obj_233.data.length
             }
             `);
-            _out_211.write(obj_210.data);
+            _out_234.write(obj_233.data);
             
         }
-        deserialize(sCtx_209: FastFutureContext, in__212: DataIn): HydrogenSignPrivate  {
-            let data_214: Uint8Array;
-            const len_216 = 64;
-            const bytes_217 = in__212.readBytes(len_216);
-            data_214 = bytes_217;
-            return new HydrogenSignPrivate(data_214);
+        deserialize(sCtx_232: FastFutureContext, in__235: DataIn): HydrogenSignPrivate  {
+            let data_237: Uint8Array;
+            const len_239 = 64;
+            const bytes_240 = in__235.readBytes(len_239);
+            data_237 = bytes_240;
+            return new HydrogenSignPrivate(data_237);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -2038,33 +2165,33 @@ export class HydrogenSignPrivate extends KeySignPrivate implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<HydrogenSignPrivate> = new class implements FastMetaType<HydrogenSignPrivate>  {
-        serialize(sCtx_218: FastFutureContext, obj_219: HydrogenSignPrivate, _out_220: DataOut): void  {
-            const typeId = typeof (obj_219 as any).getAetherTypeId === 'function' ? obj_219.getAetherTypeId() : -1;
+        serialize(sCtx_241: FastFutureContext, obj_242: HydrogenSignPrivate, _out_243: DataOut): void  {
+            const typeId = typeof (obj_242 as any).getAetherTypeId === 'function' ? obj_242.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'HydrogenSignPrivate' with invalid type id $ {
                 typeId
             }
             `);
-            _out_220.writeByte(typeId);
+            _out_243.writeByte(typeId);
             switch(typeId)  {
-                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_218, obj_219 as any as HydrogenSignPrivate, _out_220);
+                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_241, obj_242 as any as HydrogenSignPrivate, _out_243);
                 break;
-                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_218, obj_219 as any as SodiumChacha20Poly1305, _out_220);
+                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_241, obj_242 as any as SodiumChacha20Poly1305, _out_243);
                 break;
-                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_218, obj_219 as any as HydrogenSecretBox, _out_220);
+                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_241, obj_242 as any as HydrogenSecretBox, _out_243);
                 break;
-                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_218, obj_219 as any as HydrogenCurvePublic, _out_220);
+                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_241, obj_242 as any as HydrogenCurvePublic, _out_243);
                 break;
-                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_218, obj_219 as any as SodiumCurvePublic, _out_220);
+                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_241, obj_242 as any as SodiumCurvePublic, _out_243);
                 break;
-                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_218, obj_219 as any as HydrogenCurvePrivate, _out_220);
+                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_241, obj_242 as any as HydrogenCurvePrivate, _out_243);
                 break;
-                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_218, obj_219 as any as SodiumCurvePrivate, _out_220);
+                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_241, obj_242 as any as SodiumCurvePrivate, _out_243);
                 break;
-                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_218, obj_219 as any as SodiumSignPublic, _out_220);
+                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_241, obj_242 as any as SodiumSignPublic, _out_243);
                 break;
-                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_218, obj_219 as any as HydrogenSignPublic, _out_220);
+                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_241, obj_242 as any as HydrogenSignPublic, _out_243);
                 break;
-                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_218, obj_219 as any as SodiumSignPrivate, _out_220);
+                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_241, obj_242 as any as SodiumSignPrivate, _out_243);
                 break;
                 default: throw new Error(`Cannot serialize 'HydrogenSignPrivate' with unknown type id $ {
                     typeId
@@ -2074,19 +2201,19 @@ export class HydrogenSignPrivate extends KeySignPrivate implements ToString  {
             }
             
         }
-        deserialize(sCtx_218: FastFutureContext, in__221: DataIn): HydrogenSignPrivate  {
-            const typeId = in__221.readUByte();
+        deserialize(sCtx_241: FastFutureContext, in__244: DataIn): HydrogenSignPrivate  {
+            const typeId = in__244.readUByte();
             switch(typeId)  {
-                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_218, in__221) as any as HydrogenSignPrivate;
-                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_218, in__221) as any as HydrogenSignPrivate;
-                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_218, in__221) as any as HydrogenSignPrivate;
-                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_218, in__221) as any as HydrogenSignPrivate;
-                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_218, in__221) as any as HydrogenSignPrivate;
-                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_218, in__221) as any as HydrogenSignPrivate;
-                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_218, in__221) as any as HydrogenSignPrivate;
-                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_218, in__221) as any as HydrogenSignPrivate;
-                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_218, in__221) as any as HydrogenSignPrivate;
-                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_218, in__221) as any as HydrogenSignPrivate;
+                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_241, in__244) as any as HydrogenSignPrivate;
+                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_241, in__244) as any as HydrogenSignPrivate;
+                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_241, in__244) as any as HydrogenSignPrivate;
+                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_241, in__244) as any as HydrogenSignPrivate;
+                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_241, in__244) as any as HydrogenSignPrivate;
+                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_241, in__244) as any as HydrogenSignPrivate;
+                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_241, in__244) as any as HydrogenSignPrivate;
+                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_241, in__244) as any as HydrogenSignPrivate;
+                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_241, in__244) as any as HydrogenSignPrivate;
+                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_241, in__244) as any as HydrogenSignPrivate;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -2145,20 +2272,20 @@ export class HydrogenSignPublic extends KeySignPublic implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<HydrogenSignPublic> = new class implements FastMetaType<HydrogenSignPublic>  {
-        serialize(sCtx_222: FastFutureContext, obj_223: HydrogenSignPublic, _out_224: DataOut): void  {
-            if (obj_223.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_223.data must be 32 but was $ {
-                obj_223.data.length
+        serialize(sCtx_245: FastFutureContext, obj_246: HydrogenSignPublic, _out_247: DataOut): void  {
+            if (obj_246.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_246.data must be 32 but was $ {
+                obj_246.data.length
             }
             `);
-            _out_224.write(obj_223.data);
+            _out_247.write(obj_246.data);
             
         }
-        deserialize(sCtx_222: FastFutureContext, in__225: DataIn): HydrogenSignPublic  {
-            let data_227: Uint8Array;
-            const len_229 = 32;
-            const bytes_230 = in__225.readBytes(len_229);
-            data_227 = bytes_230;
-            return new HydrogenSignPublic(data_227);
+        deserialize(sCtx_245: FastFutureContext, in__248: DataIn): HydrogenSignPublic  {
+            let data_250: Uint8Array;
+            const len_252 = 32;
+            const bytes_253 = in__248.readBytes(len_252);
+            data_250 = bytes_253;
+            return new HydrogenSignPublic(data_250);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -2177,33 +2304,33 @@ export class HydrogenSignPublic extends KeySignPublic implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<HydrogenSignPublic> = new class implements FastMetaType<HydrogenSignPublic>  {
-        serialize(sCtx_231: FastFutureContext, obj_232: HydrogenSignPublic, _out_233: DataOut): void  {
-            const typeId = typeof (obj_232 as any).getAetherTypeId === 'function' ? obj_232.getAetherTypeId() : -1;
+        serialize(sCtx_254: FastFutureContext, obj_255: HydrogenSignPublic, _out_256: DataOut): void  {
+            const typeId = typeof (obj_255 as any).getAetherTypeId === 'function' ? obj_255.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'HydrogenSignPublic' with invalid type id $ {
                 typeId
             }
             `);
-            _out_233.writeByte(typeId);
+            _out_256.writeByte(typeId);
             switch(typeId)  {
-                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_231, obj_232 as any as HydrogenSignPublic, _out_233);
+                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_254, obj_255 as any as HydrogenSignPublic, _out_256);
                 break;
-                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_231, obj_232 as any as SodiumChacha20Poly1305, _out_233);
+                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_254, obj_255 as any as SodiumChacha20Poly1305, _out_256);
                 break;
-                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_231, obj_232 as any as HydrogenSecretBox, _out_233);
+                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_254, obj_255 as any as HydrogenSecretBox, _out_256);
                 break;
-                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_231, obj_232 as any as HydrogenCurvePublic, _out_233);
+                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_254, obj_255 as any as HydrogenCurvePublic, _out_256);
                 break;
-                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_231, obj_232 as any as SodiumCurvePublic, _out_233);
+                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_254, obj_255 as any as SodiumCurvePublic, _out_256);
                 break;
-                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_231, obj_232 as any as HydrogenCurvePrivate, _out_233);
+                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_254, obj_255 as any as HydrogenCurvePrivate, _out_256);
                 break;
-                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_231, obj_232 as any as SodiumCurvePrivate, _out_233);
+                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_254, obj_255 as any as SodiumCurvePrivate, _out_256);
                 break;
-                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_231, obj_232 as any as SodiumSignPublic, _out_233);
+                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_254, obj_255 as any as SodiumSignPublic, _out_256);
                 break;
-                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_231, obj_232 as any as SodiumSignPrivate, _out_233);
+                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_254, obj_255 as any as SodiumSignPrivate, _out_256);
                 break;
-                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_231, obj_232 as any as HydrogenSignPrivate, _out_233);
+                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_254, obj_255 as any as HydrogenSignPrivate, _out_256);
                 break;
                 default: throw new Error(`Cannot serialize 'HydrogenSignPublic' with unknown type id $ {
                     typeId
@@ -2213,19 +2340,19 @@ export class HydrogenSignPublic extends KeySignPublic implements ToString  {
             }
             
         }
-        deserialize(sCtx_231: FastFutureContext, in__234: DataIn): HydrogenSignPublic  {
-            const typeId = in__234.readUByte();
+        deserialize(sCtx_254: FastFutureContext, in__257: DataIn): HydrogenSignPublic  {
+            const typeId = in__257.readUByte();
             switch(typeId)  {
-                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_231, in__234) as any as HydrogenSignPublic;
-                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_231, in__234) as any as HydrogenSignPublic;
-                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_231, in__234) as any as HydrogenSignPublic;
-                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_231, in__234) as any as HydrogenSignPublic;
-                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_231, in__234) as any as HydrogenSignPublic;
-                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_231, in__234) as any as HydrogenSignPublic;
-                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_231, in__234) as any as HydrogenSignPublic;
-                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_231, in__234) as any as HydrogenSignPublic;
-                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_231, in__234) as any as HydrogenSignPublic;
-                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_231, in__234) as any as HydrogenSignPublic;
+                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_254, in__257) as any as HydrogenSignPublic;
+                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_254, in__257) as any as HydrogenSignPublic;
+                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_254, in__257) as any as HydrogenSignPublic;
+                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_254, in__257) as any as HydrogenSignPublic;
+                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_254, in__257) as any as HydrogenSignPublic;
+                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_254, in__257) as any as HydrogenSignPublic;
+                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_254, in__257) as any as HydrogenSignPublic;
+                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_254, in__257) as any as HydrogenSignPublic;
+                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_254, in__257) as any as HydrogenSignPublic;
+                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_254, in__257) as any as HydrogenSignPublic;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -2281,28 +2408,28 @@ export class IPAddressAndPorts implements ToString  {
     public readonly address: IPAddress;
     public readonly coderAndPorts: CoderAndPort[];
     public static readonly META_BODY: FastMetaType<IPAddressAndPorts> = new class implements FastMetaType<IPAddressAndPorts>  {
-        serialize(sCtx_235: FastFutureContext, obj_236: IPAddressAndPorts, _out_237: DataOut): void  {
-            IPAddress.META.serialize(sCtx_235, obj_236.address, _out_237);
-            SerializerPackNumber.INSTANCE.put(_out_237, obj_236.coderAndPorts.length);
-            for (const el_240 of obj_236.coderAndPorts)  {
-                CoderAndPort.META.serialize(sCtx_235, el_240, _out_237);
+        serialize(sCtx_258: FastFutureContext, obj_259: IPAddressAndPorts, _out_260: DataOut): void  {
+            IPAddress.META.serialize(sCtx_258, obj_259.address, _out_260);
+            SerializerPackNumber.INSTANCE.put(_out_260, obj_259.coderAndPorts.length);
+            for (const el_263 of obj_259.coderAndPorts)  {
+                CoderAndPort.META.serialize(sCtx_258, el_263, _out_260);
                 
             }
             
         }
-        deserialize(sCtx_235: FastFutureContext, in__238: DataIn): IPAddressAndPorts  {
-            let address_242: IPAddress;
-            let coderAndPorts_243: CoderAndPort[];
-            address_242 = IPAddress.META.deserialize(sCtx_235, in__238);
-            const len_246 = DeserializerPackNumber.INSTANCE.put(in__238).valueOf();
-            coderAndPorts_243 = new Array<CoderAndPort>(len_246);
-            for (let idx_245 = 0;
-            idx_245 < len_246;
-            idx_245++)  {
-                coderAndPorts_243[idx_245] = CoderAndPort.META.deserialize(sCtx_235, in__238);
+        deserialize(sCtx_258: FastFutureContext, in__261: DataIn): IPAddressAndPorts  {
+            let address_265: IPAddress;
+            let coderAndPorts_266: CoderAndPort[];
+            address_265 = IPAddress.META.deserialize(sCtx_258, in__261);
+            const len_269 = DeserializerPackNumber.INSTANCE.put(in__261).valueOf();
+            coderAndPorts_266 = new Array<CoderAndPort>(len_269);
+            for (let idx_268 = 0;
+            idx_268 < len_269;
+            idx_268++)  {
+                coderAndPorts_266[idx_268] = CoderAndPort.META.deserialize(sCtx_258, in__261);
                 
             }
-            return new IPAddressAndPorts(address_242, coderAndPorts_243);
+            return new IPAddressAndPorts(address_265, coderAndPorts_266);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -2355,25 +2482,25 @@ export class IPAddressAndPorts implements ToString  {
 export class IPAddressAndPortsList implements ToString  {
     public readonly addresses: IPAddressAndPorts[];
     public static readonly META_BODY: FastMetaType<IPAddressAndPortsList> = new class implements FastMetaType<IPAddressAndPortsList>  {
-        serialize(sCtx_248: FastFutureContext, obj_249: IPAddressAndPortsList, _out_250: DataOut): void  {
-            SerializerPackNumber.INSTANCE.put(_out_250, obj_249.addresses.length);
-            for (const el_252 of obj_249.addresses)  {
-                IPAddressAndPorts.META.serialize(sCtx_248, el_252, _out_250);
+        serialize(sCtx_271: FastFutureContext, obj_272: IPAddressAndPortsList, _out_273: DataOut): void  {
+            SerializerPackNumber.INSTANCE.put(_out_273, obj_272.addresses.length);
+            for (const el_275 of obj_272.addresses)  {
+                IPAddressAndPorts.META.serialize(sCtx_271, el_275, _out_273);
                 
             }
             
         }
-        deserialize(sCtx_248: FastFutureContext, in__251: DataIn): IPAddressAndPortsList  {
-            let addresses_254: IPAddressAndPorts[];
-            const len_256 = DeserializerPackNumber.INSTANCE.put(in__251).valueOf();
-            addresses_254 = new Array<IPAddressAndPorts>(len_256);
-            for (let idx_255 = 0;
-            idx_255 < len_256;
-            idx_255++)  {
-                addresses_254[idx_255] = IPAddressAndPorts.META.deserialize(sCtx_248, in__251);
+        deserialize(sCtx_271: FastFutureContext, in__274: DataIn): IPAddressAndPortsList  {
+            let addresses_277: IPAddressAndPorts[];
+            const len_279 = DeserializerPackNumber.INSTANCE.put(in__274).valueOf();
+            addresses_277 = new Array<IPAddressAndPorts>(len_279);
+            for (let idx_278 = 0;
+            idx_278 < len_279;
+            idx_278++)  {
+                addresses_277[idx_278] = IPAddressAndPorts.META.deserialize(sCtx_271, in__274);
                 
             }
-            return new IPAddressAndPortsList(addresses_254);
+            return new IPAddressAndPortsList(addresses_277);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -2422,20 +2549,20 @@ export class IPAddressV4 extends IPAddress implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<IPAddressV4> = new class implements FastMetaType<IPAddressV4>  {
-        serialize(sCtx_258: FastFutureContext, obj_259: IPAddressV4, _out_260: DataOut): void  {
-            if (obj_259.data.length !== 4) throw new Error(`IllegalStateException: Array length for obj_259.data must be 4 but was $ {
-                obj_259.data.length
+        serialize(sCtx_281: FastFutureContext, obj_282: IPAddressV4, _out_283: DataOut): void  {
+            if (obj_282.data.length !== 4) throw new Error(`IllegalStateException: Array length for obj_282.data must be 4 but was $ {
+                obj_282.data.length
             }
             `);
-            _out_260.write(obj_259.data);
+            _out_283.write(obj_282.data);
             
         }
-        deserialize(sCtx_258: FastFutureContext, in__261: DataIn): IPAddressV4  {
-            let data_263: Uint8Array;
-            const len_265 = 4;
-            const bytes_266 = in__261.readBytes(len_265);
-            data_263 = bytes_266;
-            return new IPAddressV4(data_263);
+        deserialize(sCtx_281: FastFutureContext, in__284: DataIn): IPAddressV4  {
+            let data_286: Uint8Array;
+            const len_288 = 4;
+            const bytes_289 = in__284.readBytes(len_288);
+            data_286 = bytes_289;
+            return new IPAddressV4(data_286);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -2454,17 +2581,17 @@ export class IPAddressV4 extends IPAddress implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<IPAddressV4> = new class implements FastMetaType<IPAddressV4>  {
-        serialize(sCtx_267: FastFutureContext, obj_268: IPAddressV4, _out_269: DataOut): void  {
-            const typeId = typeof (obj_268 as any).getAetherTypeId === 'function' ? obj_268.getAetherTypeId() : -1;
+        serialize(sCtx_290: FastFutureContext, obj_291: IPAddressV4, _out_292: DataOut): void  {
+            const typeId = typeof (obj_291 as any).getAetherTypeId === 'function' ? obj_291.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'IPAddressV4' with invalid type id $ {
                 typeId
             }
             `);
-            _out_269.writeByte(typeId);
+            _out_292.writeByte(typeId);
             switch(typeId)  {
-                case 1: (IPAddressV4 as any).META_BODY.serialize(sCtx_267, obj_268 as any as IPAddressV4, _out_269);
+                case 1: (IPAddressV4 as any).META_BODY.serialize(sCtx_290, obj_291 as any as IPAddressV4, _out_292);
                 break;
-                case 2: (IPAddressV6 as any).META_BODY.serialize(sCtx_267, obj_268 as any as IPAddressV6, _out_269);
+                case 2: (IPAddressV6 as any).META_BODY.serialize(sCtx_290, obj_291 as any as IPAddressV6, _out_292);
                 break;
                 default: throw new Error(`Cannot serialize 'IPAddressV4' with unknown type id $ {
                     typeId
@@ -2474,11 +2601,11 @@ export class IPAddressV4 extends IPAddress implements ToString  {
             }
             
         }
-        deserialize(sCtx_267: FastFutureContext, in__270: DataIn): IPAddressV4  {
-            const typeId = in__270.readUByte();
+        deserialize(sCtx_290: FastFutureContext, in__293: DataIn): IPAddressV4  {
+            const typeId = in__293.readUByte();
             switch(typeId)  {
-                case 1: return (IPAddressV4 as any).META_BODY.deserialize(sCtx_267, in__270) as any as IPAddressV4;
-                case 2: return (IPAddressV6 as any).META_BODY.deserialize(sCtx_267, in__270) as any as IPAddressV4;
+                case 1: return (IPAddressV4 as any).META_BODY.deserialize(sCtx_290, in__293) as any as IPAddressV4;
+                case 2: return (IPAddressV6 as any).META_BODY.deserialize(sCtx_290, in__293) as any as IPAddressV4;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -2537,20 +2664,20 @@ export class IPAddressV6 extends IPAddress implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<IPAddressV6> = new class implements FastMetaType<IPAddressV6>  {
-        serialize(sCtx_271: FastFutureContext, obj_272: IPAddressV6, _out_273: DataOut): void  {
-            if (obj_272.data.length !== 6) throw new Error(`IllegalStateException: Array length for obj_272.data must be 6 but was $ {
-                obj_272.data.length
+        serialize(sCtx_294: FastFutureContext, obj_295: IPAddressV6, _out_296: DataOut): void  {
+            if (obj_295.data.length !== 6) throw new Error(`IllegalStateException: Array length for obj_295.data must be 6 but was $ {
+                obj_295.data.length
             }
             `);
-            _out_273.write(obj_272.data);
+            _out_296.write(obj_295.data);
             
         }
-        deserialize(sCtx_271: FastFutureContext, in__274: DataIn): IPAddressV6  {
-            let data_276: Uint8Array;
-            const len_278 = 6;
-            const bytes_279 = in__274.readBytes(len_278);
-            data_276 = bytes_279;
-            return new IPAddressV6(data_276);
+        deserialize(sCtx_294: FastFutureContext, in__297: DataIn): IPAddressV6  {
+            let data_299: Uint8Array;
+            const len_301 = 6;
+            const bytes_302 = in__297.readBytes(len_301);
+            data_299 = bytes_302;
+            return new IPAddressV6(data_299);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -2569,17 +2696,17 @@ export class IPAddressV6 extends IPAddress implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<IPAddressV6> = new class implements FastMetaType<IPAddressV6>  {
-        serialize(sCtx_280: FastFutureContext, obj_281: IPAddressV6, _out_282: DataOut): void  {
-            const typeId = typeof (obj_281 as any).getAetherTypeId === 'function' ? obj_281.getAetherTypeId() : -1;
+        serialize(sCtx_303: FastFutureContext, obj_304: IPAddressV6, _out_305: DataOut): void  {
+            const typeId = typeof (obj_304 as any).getAetherTypeId === 'function' ? obj_304.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'IPAddressV6' with invalid type id $ {
                 typeId
             }
             `);
-            _out_282.writeByte(typeId);
+            _out_305.writeByte(typeId);
             switch(typeId)  {
-                case 2: (IPAddressV6 as any).META_BODY.serialize(sCtx_280, obj_281 as any as IPAddressV6, _out_282);
+                case 2: (IPAddressV6 as any).META_BODY.serialize(sCtx_303, obj_304 as any as IPAddressV6, _out_305);
                 break;
-                case 1: (IPAddressV4 as any).META_BODY.serialize(sCtx_280, obj_281 as any as IPAddressV4, _out_282);
+                case 1: (IPAddressV4 as any).META_BODY.serialize(sCtx_303, obj_304 as any as IPAddressV4, _out_305);
                 break;
                 default: throw new Error(`Cannot serialize 'IPAddressV6' with unknown type id $ {
                     typeId
@@ -2589,11 +2716,11 @@ export class IPAddressV6 extends IPAddress implements ToString  {
             }
             
         }
-        deserialize(sCtx_280: FastFutureContext, in__283: DataIn): IPAddressV6  {
-            const typeId = in__283.readUByte();
+        deserialize(sCtx_303: FastFutureContext, in__306: DataIn): IPAddressV6  {
+            const typeId = in__306.readUByte();
             switch(typeId)  {
-                case 2: return (IPAddressV6 as any).META_BODY.deserialize(sCtx_280, in__283) as any as IPAddressV6;
-                case 1: return (IPAddressV4 as any).META_BODY.deserialize(sCtx_280, in__283) as any as IPAddressV6;
+                case 2: return (IPAddressV6 as any).META_BODY.deserialize(sCtx_303, in__306) as any as IPAddressV6;
+                case 1: return (IPAddressV4 as any).META_BODY.deserialize(sCtx_303, in__306) as any as IPAddressV6;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -2649,20 +2776,20 @@ export class Message implements ToString  {
     public readonly uid: UUID;
     public readonly data: Uint8Array;
     public static readonly META_BODY: FastMetaType<Message> = new class implements FastMetaType<Message>  {
-        serialize(sCtx_284: FastFutureContext, obj_285: Message, _out_286: DataOut): void  {
-            FastMeta.META_UUID.serialize(sCtx_284, obj_285.uid, _out_286);
-            SerializerPackNumber.INSTANCE.put(_out_286, obj_285.data.length);
-            _out_286.write(obj_285.data);
+        serialize(sCtx_307: FastFutureContext, obj_308: Message, _out_309: DataOut): void  {
+            FastMeta.META_UUID.serialize(sCtx_307, obj_308.uid, _out_309);
+            SerializerPackNumber.INSTANCE.put(_out_309, obj_308.data.length);
+            _out_309.write(obj_308.data);
             
         }
-        deserialize(sCtx_284: FastFutureContext, in__287: DataIn): Message  {
-            let uid_290: UUID;
-            let data_291: Uint8Array;
-            uid_290 = FastMeta.META_UUID.deserialize(sCtx_284, in__287);
-            const len_294 = DeserializerPackNumber.INSTANCE.put(in__287).valueOf();
-            const bytes_295 = in__287.readBytes(len_294);
-            data_291 = bytes_295;
-            return new Message(uid_290, data_291);
+        deserialize(sCtx_307: FastFutureContext, in__310: DataIn): Message  {
+            let uid_313: UUID;
+            let data_314: Uint8Array;
+            uid_313 = FastMeta.META_UUID.deserialize(sCtx_307, in__310);
+            const len_317 = DeserializerPackNumber.INSTANCE.put(in__310).valueOf();
+            const bytes_318 = in__310.readBytes(len_317);
+            data_314 = bytes_318;
+            return new Message(uid_313, data_314);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -2720,32 +2847,32 @@ export class MoneyOperation implements ToString  {
     public readonly credit: boolean;
     public readonly status: Status;
     public static readonly META_BODY: FastMetaType<MoneyOperation> = new class implements FastMetaType<MoneyOperation>  {
-        serialize(sCtx_296: FastFutureContext, obj_297: MoneyOperation, _out_298: DataOut): void  {
-            _out_298.writeLong(obj_297.id);
-            FastMeta.META_UUID.serialize(sCtx_296, obj_297.from, _out_298);
-            FastMeta.META_UUID.serialize(sCtx_296, obj_297.to, _out_298);
-            _out_298.writeLong(obj_297.amount);
-            _out_298.writeLong(obj_297.time);
-            _out_298.writeBoolean(obj_297.credit);
-            Status.META.serialize(sCtx_296, obj_297.status, _out_298);
+        serialize(sCtx_319: FastFutureContext, obj_320: MoneyOperation, _out_321: DataOut): void  {
+            _out_321.writeLong(obj_320.id);
+            FastMeta.META_UUID.serialize(sCtx_319, obj_320.from, _out_321);
+            FastMeta.META_UUID.serialize(sCtx_319, obj_320.to, _out_321);
+            _out_321.writeLong(obj_320.amount);
+            _out_321.writeLong(obj_320.time);
+            _out_321.writeBoolean(obj_320.credit);
+            Status.META.serialize(sCtx_319, obj_320.status, _out_321);
             
         }
-        deserialize(sCtx_296: FastFutureContext, in__299: DataIn): MoneyOperation  {
-            let id_307: number;
-            let from_308: UUID;
-            let to_309: UUID;
-            let amount_310: number;
-            let time_311: number;
-            let credit_312: boolean;
-            let status_313: Status;
-            id_307 = in__299.readLong();
-            from_308 = FastMeta.META_UUID.deserialize(sCtx_296, in__299);
-            to_309 = FastMeta.META_UUID.deserialize(sCtx_296, in__299);
-            amount_310 = in__299.readLong();
-            time_311 = in__299.readLong();
-            credit_312 = in__299.readBoolean();
-            status_313 = Status.META.deserialize(sCtx_296, in__299);
-            return new MoneyOperation(id_307, from_308, to_309, amount_310, time_311, credit_312, status_313);
+        deserialize(sCtx_319: FastFutureContext, in__322: DataIn): MoneyOperation  {
+            let id_330: number;
+            let from_331: UUID;
+            let to_332: UUID;
+            let amount_333: number;
+            let time_334: number;
+            let credit_335: boolean;
+            let status_336: Status;
+            id_330 = in__322.readLong();
+            from_331 = FastMeta.META_UUID.deserialize(sCtx_319, in__322);
+            to_332 = FastMeta.META_UUID.deserialize(sCtx_319, in__322);
+            amount_333 = in__322.readLong();
+            time_334 = in__322.readLong();
+            credit_335 = in__322.readBoolean();
+            status_336 = Status.META.deserialize(sCtx_319, in__322);
+            return new MoneyOperation(id_330, from_331, to_332, amount_333, time_334, credit_335, status_336);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -2833,17 +2960,17 @@ export class PairKeysAsym extends PairKeys implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<PairKeysAsym> = new class implements FastMetaType<PairKeysAsym>  {
-        serialize(sCtx_321: FastFutureContext, obj_322: PairKeysAsym, _out_323: DataOut): void  {
-            Key.META.serialize(sCtx_321, obj_322.privateKey, _out_323);
-            Key.META.serialize(sCtx_321, obj_322.publicKey, _out_323);
+        serialize(sCtx_344: FastFutureContext, obj_345: PairKeysAsym, _out_346: DataOut): void  {
+            Key.META.serialize(sCtx_344, obj_345.privateKey, _out_346);
+            Key.META.serialize(sCtx_344, obj_345.publicKey, _out_346);
             
         }
-        deserialize(sCtx_321: FastFutureContext, in__324: DataIn): PairKeysAsym  {
-            let privateKey_327: Key;
-            let publicKey_328: Key;
-            privateKey_327 = Key.META.deserialize(sCtx_321, in__324);
-            publicKey_328 = Key.META.deserialize(sCtx_321, in__324);
-            return new PairKeysAsym(privateKey_327, publicKey_328);
+        deserialize(sCtx_344: FastFutureContext, in__347: DataIn): PairKeysAsym  {
+            let privateKey_350: Key;
+            let publicKey_351: Key;
+            privateKey_350 = Key.META.deserialize(sCtx_344, in__347);
+            publicKey_351 = Key.META.deserialize(sCtx_344, in__347);
+            return new PairKeysAsym(privateKey_350, publicKey_351);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -2862,19 +2989,19 @@ export class PairKeysAsym extends PairKeys implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<PairKeysAsym> = new class implements FastMetaType<PairKeysAsym>  {
-        serialize(sCtx_331: FastFutureContext, obj_332: PairKeysAsym, _out_333: DataOut): void  {
-            const typeId = typeof (obj_332 as any).getAetherTypeId === 'function' ? obj_332.getAetherTypeId() : -1;
+        serialize(sCtx_354: FastFutureContext, obj_355: PairKeysAsym, _out_356: DataOut): void  {
+            const typeId = typeof (obj_355 as any).getAetherTypeId === 'function' ? obj_355.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'PairKeysAsym' with invalid type id $ {
                 typeId
             }
             `);
-            _out_333.writeByte(typeId);
+            _out_356.writeByte(typeId);
             switch(typeId)  {
-                case 1: (PairKeysAsym as any).META_BODY.serialize(sCtx_331, obj_332 as any as PairKeysAsym, _out_333);
+                case 1: (PairKeysAsym as any).META_BODY.serialize(sCtx_354, obj_355 as any as PairKeysAsym, _out_356);
                 break;
-                case 3: (PairKeysSign as any).META_BODY.serialize(sCtx_331, obj_332 as any as PairKeysSign, _out_333);
+                case 3: (PairKeysSign as any).META_BODY.serialize(sCtx_354, obj_355 as any as PairKeysSign, _out_356);
                 break;
-                case 2: (PairKeysAsymSigned as any).META_BODY.serialize(sCtx_331, obj_332 as any as PairKeysAsymSigned, _out_333);
+                case 2: (PairKeysAsymSigned as any).META_BODY.serialize(sCtx_354, obj_355 as any as PairKeysAsymSigned, _out_356);
                 break;
                 default: throw new Error(`Cannot serialize 'PairKeysAsym' with unknown type id $ {
                     typeId
@@ -2884,12 +3011,12 @@ export class PairKeysAsym extends PairKeys implements ToString  {
             }
             
         }
-        deserialize(sCtx_331: FastFutureContext, in__334: DataIn): PairKeysAsym  {
-            const typeId = in__334.readUByte();
+        deserialize(sCtx_354: FastFutureContext, in__357: DataIn): PairKeysAsym  {
+            const typeId = in__357.readUByte();
             switch(typeId)  {
-                case 1: return (PairKeysAsym as any).META_BODY.deserialize(sCtx_331, in__334) as any as PairKeysAsym;
-                case 3: return (PairKeysSign as any).META_BODY.deserialize(sCtx_331, in__334) as any as PairKeysAsym;
-                case 2: return (PairKeysAsymSigned as any).META_BODY.deserialize(sCtx_331, in__334) as any as PairKeysAsym;
+                case 1: return (PairKeysAsym as any).META_BODY.deserialize(sCtx_354, in__357) as any as PairKeysAsym;
+                case 3: return (PairKeysSign as any).META_BODY.deserialize(sCtx_354, in__357) as any as PairKeysAsym;
+                case 2: return (PairKeysAsymSigned as any).META_BODY.deserialize(sCtx_354, in__357) as any as PairKeysAsym;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -2949,17 +3076,17 @@ export class PairKeysAsymSigned extends PairKeys implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<PairKeysAsymSigned> = new class implements FastMetaType<PairKeysAsymSigned>  {
-        serialize(sCtx_335: FastFutureContext, obj_336: PairKeysAsymSigned, _out_337: DataOut): void  {
-            Key.META.serialize(sCtx_335, obj_336.privateKey, _out_337);
-            SignedKey.META.serialize(sCtx_335, obj_336.publicKey, _out_337);
+        serialize(sCtx_358: FastFutureContext, obj_359: PairKeysAsymSigned, _out_360: DataOut): void  {
+            Key.META.serialize(sCtx_358, obj_359.privateKey, _out_360);
+            SignedKey.META.serialize(sCtx_358, obj_359.publicKey, _out_360);
             
         }
-        deserialize(sCtx_335: FastFutureContext, in__338: DataIn): PairKeysAsymSigned  {
-            let privateKey_341: Key;
-            let publicKey_342: SignedKey;
-            privateKey_341 = Key.META.deserialize(sCtx_335, in__338);
-            publicKey_342 = SignedKey.META.deserialize(sCtx_335, in__338);
-            return new PairKeysAsymSigned(privateKey_341, publicKey_342);
+        deserialize(sCtx_358: FastFutureContext, in__361: DataIn): PairKeysAsymSigned  {
+            let privateKey_364: Key;
+            let publicKey_365: SignedKey;
+            privateKey_364 = Key.META.deserialize(sCtx_358, in__361);
+            publicKey_365 = SignedKey.META.deserialize(sCtx_358, in__361);
+            return new PairKeysAsymSigned(privateKey_364, publicKey_365);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -2978,19 +3105,19 @@ export class PairKeysAsymSigned extends PairKeys implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<PairKeysAsymSigned> = new class implements FastMetaType<PairKeysAsymSigned>  {
-        serialize(sCtx_345: FastFutureContext, obj_346: PairKeysAsymSigned, _out_347: DataOut): void  {
-            const typeId = typeof (obj_346 as any).getAetherTypeId === 'function' ? obj_346.getAetherTypeId() : -1;
+        serialize(sCtx_368: FastFutureContext, obj_369: PairKeysAsymSigned, _out_370: DataOut): void  {
+            const typeId = typeof (obj_369 as any).getAetherTypeId === 'function' ? obj_369.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'PairKeysAsymSigned' with invalid type id $ {
                 typeId
             }
             `);
-            _out_347.writeByte(typeId);
+            _out_370.writeByte(typeId);
             switch(typeId)  {
-                case 2: (PairKeysAsymSigned as any).META_BODY.serialize(sCtx_345, obj_346 as any as PairKeysAsymSigned, _out_347);
+                case 2: (PairKeysAsymSigned as any).META_BODY.serialize(sCtx_368, obj_369 as any as PairKeysAsymSigned, _out_370);
                 break;
-                case 3: (PairKeysSign as any).META_BODY.serialize(sCtx_345, obj_346 as any as PairKeysSign, _out_347);
+                case 3: (PairKeysSign as any).META_BODY.serialize(sCtx_368, obj_369 as any as PairKeysSign, _out_370);
                 break;
-                case 1: (PairKeysAsym as any).META_BODY.serialize(sCtx_345, obj_346 as any as PairKeysAsym, _out_347);
+                case 1: (PairKeysAsym as any).META_BODY.serialize(sCtx_368, obj_369 as any as PairKeysAsym, _out_370);
                 break;
                 default: throw new Error(`Cannot serialize 'PairKeysAsymSigned' with unknown type id $ {
                     typeId
@@ -3000,12 +3127,12 @@ export class PairKeysAsymSigned extends PairKeys implements ToString  {
             }
             
         }
-        deserialize(sCtx_345: FastFutureContext, in__348: DataIn): PairKeysAsymSigned  {
-            const typeId = in__348.readUByte();
+        deserialize(sCtx_368: FastFutureContext, in__371: DataIn): PairKeysAsymSigned  {
+            const typeId = in__371.readUByte();
             switch(typeId)  {
-                case 2: return (PairKeysAsymSigned as any).META_BODY.deserialize(sCtx_345, in__348) as any as PairKeysAsymSigned;
-                case 3: return (PairKeysSign as any).META_BODY.deserialize(sCtx_345, in__348) as any as PairKeysAsymSigned;
-                case 1: return (PairKeysAsym as any).META_BODY.deserialize(sCtx_345, in__348) as any as PairKeysAsymSigned;
+                case 2: return (PairKeysAsymSigned as any).META_BODY.deserialize(sCtx_368, in__371) as any as PairKeysAsymSigned;
+                case 3: return (PairKeysSign as any).META_BODY.deserialize(sCtx_368, in__371) as any as PairKeysAsymSigned;
+                case 1: return (PairKeysAsym as any).META_BODY.deserialize(sCtx_368, in__371) as any as PairKeysAsymSigned;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -3065,17 +3192,17 @@ export class PairKeysSign extends PairKeys implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<PairKeysSign> = new class implements FastMetaType<PairKeysSign>  {
-        serialize(sCtx_349: FastFutureContext, obj_350: PairKeysSign, _out_351: DataOut): void  {
-            Key.META.serialize(sCtx_349, obj_350.privateKey, _out_351);
-            Key.META.serialize(sCtx_349, obj_350.publicKey, _out_351);
+        serialize(sCtx_372: FastFutureContext, obj_373: PairKeysSign, _out_374: DataOut): void  {
+            Key.META.serialize(sCtx_372, obj_373.privateKey, _out_374);
+            Key.META.serialize(sCtx_372, obj_373.publicKey, _out_374);
             
         }
-        deserialize(sCtx_349: FastFutureContext, in__352: DataIn): PairKeysSign  {
-            let privateKey_355: Key;
-            let publicKey_356: Key;
-            privateKey_355 = Key.META.deserialize(sCtx_349, in__352);
-            publicKey_356 = Key.META.deserialize(sCtx_349, in__352);
-            return new PairKeysSign(privateKey_355, publicKey_356);
+        deserialize(sCtx_372: FastFutureContext, in__375: DataIn): PairKeysSign  {
+            let privateKey_378: Key;
+            let publicKey_379: Key;
+            privateKey_378 = Key.META.deserialize(sCtx_372, in__375);
+            publicKey_379 = Key.META.deserialize(sCtx_372, in__375);
+            return new PairKeysSign(privateKey_378, publicKey_379);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -3094,19 +3221,19 @@ export class PairKeysSign extends PairKeys implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<PairKeysSign> = new class implements FastMetaType<PairKeysSign>  {
-        serialize(sCtx_359: FastFutureContext, obj_360: PairKeysSign, _out_361: DataOut): void  {
-            const typeId = typeof (obj_360 as any).getAetherTypeId === 'function' ? obj_360.getAetherTypeId() : -1;
+        serialize(sCtx_382: FastFutureContext, obj_383: PairKeysSign, _out_384: DataOut): void  {
+            const typeId = typeof (obj_383 as any).getAetherTypeId === 'function' ? obj_383.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'PairKeysSign' with invalid type id $ {
                 typeId
             }
             `);
-            _out_361.writeByte(typeId);
+            _out_384.writeByte(typeId);
             switch(typeId)  {
-                case 3: (PairKeysSign as any).META_BODY.serialize(sCtx_359, obj_360 as any as PairKeysSign, _out_361);
+                case 3: (PairKeysSign as any).META_BODY.serialize(sCtx_382, obj_383 as any as PairKeysSign, _out_384);
                 break;
-                case 1: (PairKeysAsym as any).META_BODY.serialize(sCtx_359, obj_360 as any as PairKeysAsym, _out_361);
+                case 1: (PairKeysAsym as any).META_BODY.serialize(sCtx_382, obj_383 as any as PairKeysAsym, _out_384);
                 break;
-                case 2: (PairKeysAsymSigned as any).META_BODY.serialize(sCtx_359, obj_360 as any as PairKeysAsymSigned, _out_361);
+                case 2: (PairKeysAsymSigned as any).META_BODY.serialize(sCtx_382, obj_383 as any as PairKeysAsymSigned, _out_384);
                 break;
                 default: throw new Error(`Cannot serialize 'PairKeysSign' with unknown type id $ {
                     typeId
@@ -3116,12 +3243,12 @@ export class PairKeysSign extends PairKeys implements ToString  {
             }
             
         }
-        deserialize(sCtx_359: FastFutureContext, in__362: DataIn): PairKeysSign  {
-            const typeId = in__362.readUByte();
+        deserialize(sCtx_382: FastFutureContext, in__385: DataIn): PairKeysSign  {
+            const typeId = in__385.readUByte();
             switch(typeId)  {
-                case 3: return (PairKeysSign as any).META_BODY.deserialize(sCtx_359, in__362) as any as PairKeysSign;
-                case 1: return (PairKeysAsym as any).META_BODY.deserialize(sCtx_359, in__362) as any as PairKeysSign;
-                case 2: return (PairKeysAsymSigned as any).META_BODY.deserialize(sCtx_359, in__362) as any as PairKeysSign;
+                case 3: return (PairKeysSign as any).META_BODY.deserialize(sCtx_382, in__385) as any as PairKeysSign;
+                case 1: return (PairKeysAsym as any).META_BODY.deserialize(sCtx_382, in__385) as any as PairKeysSign;
+                case 2: return (PairKeysAsymSigned as any).META_BODY.deserialize(sCtx_382, in__385) as any as PairKeysSign;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -3177,17 +3304,17 @@ export class ServerDescriptor implements ToString  {
     public readonly id: number;
     public readonly ipAddress: IPAddressAndPortsList;
     public static readonly META_BODY: FastMetaType<ServerDescriptor> = new class implements FastMetaType<ServerDescriptor>  {
-        serialize(sCtx_363: FastFutureContext, obj_364: ServerDescriptor, _out_365: DataOut): void  {
-            _out_365.writeShort(obj_364.id);
-            IPAddressAndPortsList.META.serialize(sCtx_363, obj_364.ipAddress, _out_365);
+        serialize(sCtx_386: FastFutureContext, obj_387: ServerDescriptor, _out_388: DataOut): void  {
+            _out_388.writeShort(obj_387.id);
+            IPAddressAndPortsList.META.serialize(sCtx_386, obj_387.ipAddress, _out_388);
             
         }
-        deserialize(sCtx_363: FastFutureContext, in__366: DataIn): ServerDescriptor  {
-            let id_369: number;
-            let ipAddress_370: IPAddressAndPortsList;
-            id_369 = in__366.readShort();
-            ipAddress_370 = IPAddressAndPortsList.META.deserialize(sCtx_363, in__366);
-            return new ServerDescriptor(id_369, ipAddress_370);
+        deserialize(sCtx_386: FastFutureContext, in__389: DataIn): ServerDescriptor  {
+            let id_392: number;
+            let ipAddress_393: IPAddressAndPortsList;
+            id_392 = in__389.readShort();
+            ipAddress_393 = IPAddressAndPortsList.META.deserialize(sCtx_386, in__389);
+            return new ServerDescriptor(id_392, ipAddress_393);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -3239,20 +3366,20 @@ export class SignAE_ED25519 extends Sign implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<SignAE_ED25519> = new class implements FastMetaType<SignAE_ED25519>  {
-        serialize(sCtx_373: FastFutureContext, obj_374: SignAE_ED25519, _out_375: DataOut): void  {
-            if (obj_374.data.length !== 64) throw new Error(`IllegalStateException: Array length for obj_374.data must be 64 but was $ {
-                obj_374.data.length
+        serialize(sCtx_396: FastFutureContext, obj_397: SignAE_ED25519, _out_398: DataOut): void  {
+            if (obj_397.data.length !== 64) throw new Error(`IllegalStateException: Array length for obj_397.data must be 64 but was $ {
+                obj_397.data.length
             }
             `);
-            _out_375.write(obj_374.data);
+            _out_398.write(obj_397.data);
             
         }
-        deserialize(sCtx_373: FastFutureContext, in__376: DataIn): SignAE_ED25519  {
-            let data_378: Uint8Array;
-            const len_380 = 64;
-            const bytes_381 = in__376.readBytes(len_380);
-            data_378 = bytes_381;
-            return new SignAE_ED25519(data_378);
+        deserialize(sCtx_396: FastFutureContext, in__399: DataIn): SignAE_ED25519  {
+            let data_401: Uint8Array;
+            const len_403 = 64;
+            const bytes_404 = in__399.readBytes(len_403);
+            data_401 = bytes_404;
+            return new SignAE_ED25519(data_401);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -3271,17 +3398,17 @@ export class SignAE_ED25519 extends Sign implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<SignAE_ED25519> = new class implements FastMetaType<SignAE_ED25519>  {
-        serialize(sCtx_382: FastFutureContext, obj_383: SignAE_ED25519, _out_384: DataOut): void  {
-            const typeId = typeof (obj_383 as any).getAetherTypeId === 'function' ? obj_383.getAetherTypeId() : -1;
+        serialize(sCtx_405: FastFutureContext, obj_406: SignAE_ED25519, _out_407: DataOut): void  {
+            const typeId = typeof (obj_406 as any).getAetherTypeId === 'function' ? obj_406.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'SignAE_ED25519' with invalid type id $ {
                 typeId
             }
             `);
-            _out_384.writeByte(typeId);
+            _out_407.writeByte(typeId);
             switch(typeId)  {
-                case 1: (SignAE_ED25519 as any).META_BODY.serialize(sCtx_382, obj_383 as any as SignAE_ED25519, _out_384);
+                case 1: (SignAE_ED25519 as any).META_BODY.serialize(sCtx_405, obj_406 as any as SignAE_ED25519, _out_407);
                 break;
-                case 2: (SignHYDROGEN as any).META_BODY.serialize(sCtx_382, obj_383 as any as SignHYDROGEN, _out_384);
+                case 2: (SignHYDROGEN as any).META_BODY.serialize(sCtx_405, obj_406 as any as SignHYDROGEN, _out_407);
                 break;
                 default: throw new Error(`Cannot serialize 'SignAE_ED25519' with unknown type id $ {
                     typeId
@@ -3291,11 +3418,11 @@ export class SignAE_ED25519 extends Sign implements ToString  {
             }
             
         }
-        deserialize(sCtx_382: FastFutureContext, in__385: DataIn): SignAE_ED25519  {
-            const typeId = in__385.readUByte();
+        deserialize(sCtx_405: FastFutureContext, in__408: DataIn): SignAE_ED25519  {
+            const typeId = in__408.readUByte();
             switch(typeId)  {
-                case 1: return (SignAE_ED25519 as any).META_BODY.deserialize(sCtx_382, in__385) as any as SignAE_ED25519;
-                case 2: return (SignHYDROGEN as any).META_BODY.deserialize(sCtx_382, in__385) as any as SignAE_ED25519;
+                case 1: return (SignAE_ED25519 as any).META_BODY.deserialize(sCtx_405, in__408) as any as SignAE_ED25519;
+                case 2: return (SignHYDROGEN as any).META_BODY.deserialize(sCtx_405, in__408) as any as SignAE_ED25519;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -3351,17 +3478,17 @@ export class SignedKey implements ToString  {
     public readonly key: Key;
     public readonly sign: Sign;
     public static readonly META_BODY: FastMetaType<SignedKey> = new class implements FastMetaType<SignedKey>  {
-        serialize(sCtx_386: FastFutureContext, obj_387: SignedKey, _out_388: DataOut): void  {
-            Key.META.serialize(sCtx_386, obj_387.key, _out_388);
-            Sign.META.serialize(sCtx_386, obj_387.sign, _out_388);
+        serialize(sCtx_409: FastFutureContext, obj_410: SignedKey, _out_411: DataOut): void  {
+            Key.META.serialize(sCtx_409, obj_410.key, _out_411);
+            Sign.META.serialize(sCtx_409, obj_410.sign, _out_411);
             
         }
-        deserialize(sCtx_386: FastFutureContext, in__389: DataIn): SignedKey  {
-            let _key_392: Key;
-            let sign_393: Sign;
-            _key_392 = Key.META.deserialize(sCtx_386, in__389);
-            sign_393 = Sign.META.deserialize(sCtx_386, in__389);
-            return new SignedKey(_key_392, sign_393);
+        deserialize(sCtx_409: FastFutureContext, in__412: DataIn): SignedKey  {
+            let _key_415: Key;
+            let sign_416: Sign;
+            _key_415 = Key.META.deserialize(sCtx_409, in__412);
+            sign_416 = Sign.META.deserialize(sCtx_409, in__412);
+            return new SignedKey(_key_415, sign_416);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -3414,20 +3541,20 @@ export class SignHYDROGEN extends Sign implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<SignHYDROGEN> = new class implements FastMetaType<SignHYDROGEN>  {
-        serialize(sCtx_396: FastFutureContext, obj_397: SignHYDROGEN, _out_398: DataOut): void  {
-            if (obj_397.data.length !== 64) throw new Error(`IllegalStateException: Array length for obj_397.data must be 64 but was $ {
-                obj_397.data.length
+        serialize(sCtx_419: FastFutureContext, obj_420: SignHYDROGEN, _out_421: DataOut): void  {
+            if (obj_420.data.length !== 64) throw new Error(`IllegalStateException: Array length for obj_420.data must be 64 but was $ {
+                obj_420.data.length
             }
             `);
-            _out_398.write(obj_397.data);
+            _out_421.write(obj_420.data);
             
         }
-        deserialize(sCtx_396: FastFutureContext, in__399: DataIn): SignHYDROGEN  {
-            let data_401: Uint8Array;
-            const len_403 = 64;
-            const bytes_404 = in__399.readBytes(len_403);
-            data_401 = bytes_404;
-            return new SignHYDROGEN(data_401);
+        deserialize(sCtx_419: FastFutureContext, in__422: DataIn): SignHYDROGEN  {
+            let data_424: Uint8Array;
+            const len_426 = 64;
+            const bytes_427 = in__422.readBytes(len_426);
+            data_424 = bytes_427;
+            return new SignHYDROGEN(data_424);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -3446,17 +3573,17 @@ export class SignHYDROGEN extends Sign implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<SignHYDROGEN> = new class implements FastMetaType<SignHYDROGEN>  {
-        serialize(sCtx_405: FastFutureContext, obj_406: SignHYDROGEN, _out_407: DataOut): void  {
-            const typeId = typeof (obj_406 as any).getAetherTypeId === 'function' ? obj_406.getAetherTypeId() : -1;
+        serialize(sCtx_428: FastFutureContext, obj_429: SignHYDROGEN, _out_430: DataOut): void  {
+            const typeId = typeof (obj_429 as any).getAetherTypeId === 'function' ? obj_429.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'SignHYDROGEN' with invalid type id $ {
                 typeId
             }
             `);
-            _out_407.writeByte(typeId);
+            _out_430.writeByte(typeId);
             switch(typeId)  {
-                case 2: (SignHYDROGEN as any).META_BODY.serialize(sCtx_405, obj_406 as any as SignHYDROGEN, _out_407);
+                case 2: (SignHYDROGEN as any).META_BODY.serialize(sCtx_428, obj_429 as any as SignHYDROGEN, _out_430);
                 break;
-                case 1: (SignAE_ED25519 as any).META_BODY.serialize(sCtx_405, obj_406 as any as SignAE_ED25519, _out_407);
+                case 1: (SignAE_ED25519 as any).META_BODY.serialize(sCtx_428, obj_429 as any as SignAE_ED25519, _out_430);
                 break;
                 default: throw new Error(`Cannot serialize 'SignHYDROGEN' with unknown type id $ {
                     typeId
@@ -3466,11 +3593,11 @@ export class SignHYDROGEN extends Sign implements ToString  {
             }
             
         }
-        deserialize(sCtx_405: FastFutureContext, in__408: DataIn): SignHYDROGEN  {
-            const typeId = in__408.readUByte();
+        deserialize(sCtx_428: FastFutureContext, in__431: DataIn): SignHYDROGEN  {
+            const typeId = in__431.readUByte();
             switch(typeId)  {
-                case 2: return (SignHYDROGEN as any).META_BODY.deserialize(sCtx_405, in__408) as any as SignHYDROGEN;
-                case 1: return (SignAE_ED25519 as any).META_BODY.deserialize(sCtx_405, in__408) as any as SignHYDROGEN;
+                case 2: return (SignHYDROGEN as any).META_BODY.deserialize(sCtx_428, in__431) as any as SignHYDROGEN;
+                case 1: return (SignAE_ED25519 as any).META_BODY.deserialize(sCtx_428, in__431) as any as SignHYDROGEN;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -3529,20 +3656,20 @@ export class SodiumChacha20Poly1305 extends KeySymmetric implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<SodiumChacha20Poly1305> = new class implements FastMetaType<SodiumChacha20Poly1305>  {
-        serialize(sCtx_409: FastFutureContext, obj_410: SodiumChacha20Poly1305, _out_411: DataOut): void  {
-            if (obj_410.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_410.data must be 32 but was $ {
-                obj_410.data.length
+        serialize(sCtx_432: FastFutureContext, obj_433: SodiumChacha20Poly1305, _out_434: DataOut): void  {
+            if (obj_433.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_433.data must be 32 but was $ {
+                obj_433.data.length
             }
             `);
-            _out_411.write(obj_410.data);
+            _out_434.write(obj_433.data);
             
         }
-        deserialize(sCtx_409: FastFutureContext, in__412: DataIn): SodiumChacha20Poly1305  {
-            let data_414: Uint8Array;
-            const len_416 = 32;
-            const bytes_417 = in__412.readBytes(len_416);
-            data_414 = bytes_417;
-            return new SodiumChacha20Poly1305(data_414);
+        deserialize(sCtx_432: FastFutureContext, in__435: DataIn): SodiumChacha20Poly1305  {
+            let data_437: Uint8Array;
+            const len_439 = 32;
+            const bytes_440 = in__435.readBytes(len_439);
+            data_437 = bytes_440;
+            return new SodiumChacha20Poly1305(data_437);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -3561,33 +3688,33 @@ export class SodiumChacha20Poly1305 extends KeySymmetric implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<SodiumChacha20Poly1305> = new class implements FastMetaType<SodiumChacha20Poly1305>  {
-        serialize(sCtx_418: FastFutureContext, obj_419: SodiumChacha20Poly1305, _out_420: DataOut): void  {
-            const typeId = typeof (obj_419 as any).getAetherTypeId === 'function' ? obj_419.getAetherTypeId() : -1;
+        serialize(sCtx_441: FastFutureContext, obj_442: SodiumChacha20Poly1305, _out_443: DataOut): void  {
+            const typeId = typeof (obj_442 as any).getAetherTypeId === 'function' ? obj_442.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'SodiumChacha20Poly1305' with invalid type id $ {
                 typeId
             }
             `);
-            _out_420.writeByte(typeId);
+            _out_443.writeByte(typeId);
             switch(typeId)  {
-                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_418, obj_419 as any as SodiumChacha20Poly1305, _out_420);
+                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_441, obj_442 as any as SodiumChacha20Poly1305, _out_443);
                 break;
-                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_418, obj_419 as any as HydrogenSecretBox, _out_420);
+                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_441, obj_442 as any as HydrogenSecretBox, _out_443);
                 break;
-                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_418, obj_419 as any as HydrogenCurvePublic, _out_420);
+                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_441, obj_442 as any as HydrogenCurvePublic, _out_443);
                 break;
-                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_418, obj_419 as any as SodiumCurvePublic, _out_420);
+                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_441, obj_442 as any as SodiumCurvePublic, _out_443);
                 break;
-                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_418, obj_419 as any as HydrogenCurvePrivate, _out_420);
+                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_441, obj_442 as any as HydrogenCurvePrivate, _out_443);
                 break;
-                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_418, obj_419 as any as SodiumCurvePrivate, _out_420);
+                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_441, obj_442 as any as SodiumCurvePrivate, _out_443);
                 break;
-                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_418, obj_419 as any as SodiumSignPublic, _out_420);
+                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_441, obj_442 as any as SodiumSignPublic, _out_443);
                 break;
-                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_418, obj_419 as any as HydrogenSignPublic, _out_420);
+                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_441, obj_442 as any as HydrogenSignPublic, _out_443);
                 break;
-                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_418, obj_419 as any as SodiumSignPrivate, _out_420);
+                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_441, obj_442 as any as SodiumSignPrivate, _out_443);
                 break;
-                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_418, obj_419 as any as HydrogenSignPrivate, _out_420);
+                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_441, obj_442 as any as HydrogenSignPrivate, _out_443);
                 break;
                 default: throw new Error(`Cannot serialize 'SodiumChacha20Poly1305' with unknown type id $ {
                     typeId
@@ -3597,19 +3724,19 @@ export class SodiumChacha20Poly1305 extends KeySymmetric implements ToString  {
             }
             
         }
-        deserialize(sCtx_418: FastFutureContext, in__421: DataIn): SodiumChacha20Poly1305  {
-            const typeId = in__421.readUByte();
+        deserialize(sCtx_441: FastFutureContext, in__444: DataIn): SodiumChacha20Poly1305  {
+            const typeId = in__444.readUByte();
             switch(typeId)  {
-                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_418, in__421) as any as SodiumChacha20Poly1305;
-                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_418, in__421) as any as SodiumChacha20Poly1305;
-                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_418, in__421) as any as SodiumChacha20Poly1305;
-                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_418, in__421) as any as SodiumChacha20Poly1305;
-                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_418, in__421) as any as SodiumChacha20Poly1305;
-                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_418, in__421) as any as SodiumChacha20Poly1305;
-                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_418, in__421) as any as SodiumChacha20Poly1305;
-                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_418, in__421) as any as SodiumChacha20Poly1305;
-                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_418, in__421) as any as SodiumChacha20Poly1305;
-                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_418, in__421) as any as SodiumChacha20Poly1305;
+                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_441, in__444) as any as SodiumChacha20Poly1305;
+                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_441, in__444) as any as SodiumChacha20Poly1305;
+                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_441, in__444) as any as SodiumChacha20Poly1305;
+                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_441, in__444) as any as SodiumChacha20Poly1305;
+                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_441, in__444) as any as SodiumChacha20Poly1305;
+                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_441, in__444) as any as SodiumChacha20Poly1305;
+                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_441, in__444) as any as SodiumChacha20Poly1305;
+                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_441, in__444) as any as SodiumChacha20Poly1305;
+                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_441, in__444) as any as SodiumChacha20Poly1305;
+                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_441, in__444) as any as SodiumChacha20Poly1305;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -3668,20 +3795,20 @@ export class SodiumCurvePrivate extends KeyAsymmetricPrivate implements ToString
         
     }
     public static readonly META_BODY: FastMetaType<SodiumCurvePrivate> = new class implements FastMetaType<SodiumCurvePrivate>  {
-        serialize(sCtx_422: FastFutureContext, obj_423: SodiumCurvePrivate, _out_424: DataOut): void  {
-            if (obj_423.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_423.data must be 32 but was $ {
-                obj_423.data.length
+        serialize(sCtx_445: FastFutureContext, obj_446: SodiumCurvePrivate, _out_447: DataOut): void  {
+            if (obj_446.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_446.data must be 32 but was $ {
+                obj_446.data.length
             }
             `);
-            _out_424.write(obj_423.data);
+            _out_447.write(obj_446.data);
             
         }
-        deserialize(sCtx_422: FastFutureContext, in__425: DataIn): SodiumCurvePrivate  {
-            let data_427: Uint8Array;
-            const len_429 = 32;
-            const bytes_430 = in__425.readBytes(len_429);
-            data_427 = bytes_430;
-            return new SodiumCurvePrivate(data_427);
+        deserialize(sCtx_445: FastFutureContext, in__448: DataIn): SodiumCurvePrivate  {
+            let data_450: Uint8Array;
+            const len_452 = 32;
+            const bytes_453 = in__448.readBytes(len_452);
+            data_450 = bytes_453;
+            return new SodiumCurvePrivate(data_450);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -3700,33 +3827,33 @@ export class SodiumCurvePrivate extends KeyAsymmetricPrivate implements ToString
     }
     ();
     public static readonly META: FastMetaType<SodiumCurvePrivate> = new class implements FastMetaType<SodiumCurvePrivate>  {
-        serialize(sCtx_431: FastFutureContext, obj_432: SodiumCurvePrivate, _out_433: DataOut): void  {
-            const typeId = typeof (obj_432 as any).getAetherTypeId === 'function' ? obj_432.getAetherTypeId() : -1;
+        serialize(sCtx_454: FastFutureContext, obj_455: SodiumCurvePrivate, _out_456: DataOut): void  {
+            const typeId = typeof (obj_455 as any).getAetherTypeId === 'function' ? obj_455.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'SodiumCurvePrivate' with invalid type id $ {
                 typeId
             }
             `);
-            _out_433.writeByte(typeId);
+            _out_456.writeByte(typeId);
             switch(typeId)  {
-                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_431, obj_432 as any as SodiumCurvePrivate, _out_433);
+                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_454, obj_455 as any as SodiumCurvePrivate, _out_456);
                 break;
-                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_431, obj_432 as any as SodiumChacha20Poly1305, _out_433);
+                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_454, obj_455 as any as SodiumChacha20Poly1305, _out_456);
                 break;
-                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_431, obj_432 as any as HydrogenSecretBox, _out_433);
+                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_454, obj_455 as any as HydrogenSecretBox, _out_456);
                 break;
-                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_431, obj_432 as any as HydrogenCurvePublic, _out_433);
+                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_454, obj_455 as any as HydrogenCurvePublic, _out_456);
                 break;
-                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_431, obj_432 as any as SodiumCurvePublic, _out_433);
+                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_454, obj_455 as any as SodiumCurvePublic, _out_456);
                 break;
-                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_431, obj_432 as any as HydrogenCurvePrivate, _out_433);
+                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_454, obj_455 as any as HydrogenCurvePrivate, _out_456);
                 break;
-                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_431, obj_432 as any as SodiumSignPublic, _out_433);
+                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_454, obj_455 as any as SodiumSignPublic, _out_456);
                 break;
-                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_431, obj_432 as any as HydrogenSignPublic, _out_433);
+                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_454, obj_455 as any as HydrogenSignPublic, _out_456);
                 break;
-                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_431, obj_432 as any as SodiumSignPrivate, _out_433);
+                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_454, obj_455 as any as SodiumSignPrivate, _out_456);
                 break;
-                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_431, obj_432 as any as HydrogenSignPrivate, _out_433);
+                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_454, obj_455 as any as HydrogenSignPrivate, _out_456);
                 break;
                 default: throw new Error(`Cannot serialize 'SodiumCurvePrivate' with unknown type id $ {
                     typeId
@@ -3736,19 +3863,19 @@ export class SodiumCurvePrivate extends KeyAsymmetricPrivate implements ToString
             }
             
         }
-        deserialize(sCtx_431: FastFutureContext, in__434: DataIn): SodiumCurvePrivate  {
-            const typeId = in__434.readUByte();
+        deserialize(sCtx_454: FastFutureContext, in__457: DataIn): SodiumCurvePrivate  {
+            const typeId = in__457.readUByte();
             switch(typeId)  {
-                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_431, in__434) as any as SodiumCurvePrivate;
-                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_431, in__434) as any as SodiumCurvePrivate;
-                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_431, in__434) as any as SodiumCurvePrivate;
-                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_431, in__434) as any as SodiumCurvePrivate;
-                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_431, in__434) as any as SodiumCurvePrivate;
-                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_431, in__434) as any as SodiumCurvePrivate;
-                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_431, in__434) as any as SodiumCurvePrivate;
-                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_431, in__434) as any as SodiumCurvePrivate;
-                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_431, in__434) as any as SodiumCurvePrivate;
-                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_431, in__434) as any as SodiumCurvePrivate;
+                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_454, in__457) as any as SodiumCurvePrivate;
+                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_454, in__457) as any as SodiumCurvePrivate;
+                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_454, in__457) as any as SodiumCurvePrivate;
+                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_454, in__457) as any as SodiumCurvePrivate;
+                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_454, in__457) as any as SodiumCurvePrivate;
+                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_454, in__457) as any as SodiumCurvePrivate;
+                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_454, in__457) as any as SodiumCurvePrivate;
+                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_454, in__457) as any as SodiumCurvePrivate;
+                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_454, in__457) as any as SodiumCurvePrivate;
+                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_454, in__457) as any as SodiumCurvePrivate;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -3807,20 +3934,20 @@ export class SodiumCurvePublic extends KeyAsymmetricPublic implements ToString  
         
     }
     public static readonly META_BODY: FastMetaType<SodiumCurvePublic> = new class implements FastMetaType<SodiumCurvePublic>  {
-        serialize(sCtx_435: FastFutureContext, obj_436: SodiumCurvePublic, _out_437: DataOut): void  {
-            if (obj_436.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_436.data must be 32 but was $ {
-                obj_436.data.length
+        serialize(sCtx_458: FastFutureContext, obj_459: SodiumCurvePublic, _out_460: DataOut): void  {
+            if (obj_459.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_459.data must be 32 but was $ {
+                obj_459.data.length
             }
             `);
-            _out_437.write(obj_436.data);
+            _out_460.write(obj_459.data);
             
         }
-        deserialize(sCtx_435: FastFutureContext, in__438: DataIn): SodiumCurvePublic  {
-            let data_440: Uint8Array;
-            const len_442 = 32;
-            const bytes_443 = in__438.readBytes(len_442);
-            data_440 = bytes_443;
-            return new SodiumCurvePublic(data_440);
+        deserialize(sCtx_458: FastFutureContext, in__461: DataIn): SodiumCurvePublic  {
+            let data_463: Uint8Array;
+            const len_465 = 32;
+            const bytes_466 = in__461.readBytes(len_465);
+            data_463 = bytes_466;
+            return new SodiumCurvePublic(data_463);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -3839,33 +3966,33 @@ export class SodiumCurvePublic extends KeyAsymmetricPublic implements ToString  
     }
     ();
     public static readonly META: FastMetaType<SodiumCurvePublic> = new class implements FastMetaType<SodiumCurvePublic>  {
-        serialize(sCtx_444: FastFutureContext, obj_445: SodiumCurvePublic, _out_446: DataOut): void  {
-            const typeId = typeof (obj_445 as any).getAetherTypeId === 'function' ? obj_445.getAetherTypeId() : -1;
+        serialize(sCtx_467: FastFutureContext, obj_468: SodiumCurvePublic, _out_469: DataOut): void  {
+            const typeId = typeof (obj_468 as any).getAetherTypeId === 'function' ? obj_468.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'SodiumCurvePublic' with invalid type id $ {
                 typeId
             }
             `);
-            _out_446.writeByte(typeId);
+            _out_469.writeByte(typeId);
             switch(typeId)  {
-                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_444, obj_445 as any as SodiumCurvePublic, _out_446);
+                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_467, obj_468 as any as SodiumCurvePublic, _out_469);
                 break;
-                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_444, obj_445 as any as SodiumChacha20Poly1305, _out_446);
+                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_467, obj_468 as any as SodiumChacha20Poly1305, _out_469);
                 break;
-                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_444, obj_445 as any as HydrogenSecretBox, _out_446);
+                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_467, obj_468 as any as HydrogenSecretBox, _out_469);
                 break;
-                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_444, obj_445 as any as HydrogenCurvePublic, _out_446);
+                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_467, obj_468 as any as HydrogenCurvePublic, _out_469);
                 break;
-                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_444, obj_445 as any as HydrogenCurvePrivate, _out_446);
+                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_467, obj_468 as any as HydrogenCurvePrivate, _out_469);
                 break;
-                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_444, obj_445 as any as SodiumCurvePrivate, _out_446);
+                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_467, obj_468 as any as SodiumCurvePrivate, _out_469);
                 break;
-                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_444, obj_445 as any as SodiumSignPublic, _out_446);
+                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_467, obj_468 as any as SodiumSignPublic, _out_469);
                 break;
-                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_444, obj_445 as any as HydrogenSignPublic, _out_446);
+                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_467, obj_468 as any as HydrogenSignPublic, _out_469);
                 break;
-                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_444, obj_445 as any as SodiumSignPrivate, _out_446);
+                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_467, obj_468 as any as SodiumSignPrivate, _out_469);
                 break;
-                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_444, obj_445 as any as HydrogenSignPrivate, _out_446);
+                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_467, obj_468 as any as HydrogenSignPrivate, _out_469);
                 break;
                 default: throw new Error(`Cannot serialize 'SodiumCurvePublic' with unknown type id $ {
                     typeId
@@ -3875,19 +4002,19 @@ export class SodiumCurvePublic extends KeyAsymmetricPublic implements ToString  
             }
             
         }
-        deserialize(sCtx_444: FastFutureContext, in__447: DataIn): SodiumCurvePublic  {
-            const typeId = in__447.readUByte();
+        deserialize(sCtx_467: FastFutureContext, in__470: DataIn): SodiumCurvePublic  {
+            const typeId = in__470.readUByte();
             switch(typeId)  {
-                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_444, in__447) as any as SodiumCurvePublic;
-                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_444, in__447) as any as SodiumCurvePublic;
-                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_444, in__447) as any as SodiumCurvePublic;
-                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_444, in__447) as any as SodiumCurvePublic;
-                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_444, in__447) as any as SodiumCurvePublic;
-                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_444, in__447) as any as SodiumCurvePublic;
-                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_444, in__447) as any as SodiumCurvePublic;
-                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_444, in__447) as any as SodiumCurvePublic;
-                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_444, in__447) as any as SodiumCurvePublic;
-                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_444, in__447) as any as SodiumCurvePublic;
+                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_467, in__470) as any as SodiumCurvePublic;
+                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_467, in__470) as any as SodiumCurvePublic;
+                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_467, in__470) as any as SodiumCurvePublic;
+                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_467, in__470) as any as SodiumCurvePublic;
+                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_467, in__470) as any as SodiumCurvePublic;
+                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_467, in__470) as any as SodiumCurvePublic;
+                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_467, in__470) as any as SodiumCurvePublic;
+                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_467, in__470) as any as SodiumCurvePublic;
+                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_467, in__470) as any as SodiumCurvePublic;
+                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_467, in__470) as any as SodiumCurvePublic;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -3946,20 +4073,20 @@ export class SodiumSignPrivate extends KeySignPrivate implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<SodiumSignPrivate> = new class implements FastMetaType<SodiumSignPrivate>  {
-        serialize(sCtx_448: FastFutureContext, obj_449: SodiumSignPrivate, _out_450: DataOut): void  {
-            if (obj_449.data.length !== 64) throw new Error(`IllegalStateException: Array length for obj_449.data must be 64 but was $ {
-                obj_449.data.length
+        serialize(sCtx_471: FastFutureContext, obj_472: SodiumSignPrivate, _out_473: DataOut): void  {
+            if (obj_472.data.length !== 64) throw new Error(`IllegalStateException: Array length for obj_472.data must be 64 but was $ {
+                obj_472.data.length
             }
             `);
-            _out_450.write(obj_449.data);
+            _out_473.write(obj_472.data);
             
         }
-        deserialize(sCtx_448: FastFutureContext, in__451: DataIn): SodiumSignPrivate  {
-            let data_453: Uint8Array;
-            const len_455 = 64;
-            const bytes_456 = in__451.readBytes(len_455);
-            data_453 = bytes_456;
-            return new SodiumSignPrivate(data_453);
+        deserialize(sCtx_471: FastFutureContext, in__474: DataIn): SodiumSignPrivate  {
+            let data_476: Uint8Array;
+            const len_478 = 64;
+            const bytes_479 = in__474.readBytes(len_478);
+            data_476 = bytes_479;
+            return new SodiumSignPrivate(data_476);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -3978,33 +4105,33 @@ export class SodiumSignPrivate extends KeySignPrivate implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<SodiumSignPrivate> = new class implements FastMetaType<SodiumSignPrivate>  {
-        serialize(sCtx_457: FastFutureContext, obj_458: SodiumSignPrivate, _out_459: DataOut): void  {
-            const typeId = typeof (obj_458 as any).getAetherTypeId === 'function' ? obj_458.getAetherTypeId() : -1;
+        serialize(sCtx_480: FastFutureContext, obj_481: SodiumSignPrivate, _out_482: DataOut): void  {
+            const typeId = typeof (obj_481 as any).getAetherTypeId === 'function' ? obj_481.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'SodiumSignPrivate' with invalid type id $ {
                 typeId
             }
             `);
-            _out_459.writeByte(typeId);
+            _out_482.writeByte(typeId);
             switch(typeId)  {
-                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_457, obj_458 as any as SodiumSignPrivate, _out_459);
+                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_480, obj_481 as any as SodiumSignPrivate, _out_482);
                 break;
-                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_457, obj_458 as any as SodiumChacha20Poly1305, _out_459);
+                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_480, obj_481 as any as SodiumChacha20Poly1305, _out_482);
                 break;
-                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_457, obj_458 as any as HydrogenSecretBox, _out_459);
+                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_480, obj_481 as any as HydrogenSecretBox, _out_482);
                 break;
-                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_457, obj_458 as any as HydrogenCurvePublic, _out_459);
+                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_480, obj_481 as any as HydrogenCurvePublic, _out_482);
                 break;
-                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_457, obj_458 as any as SodiumCurvePublic, _out_459);
+                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_480, obj_481 as any as SodiumCurvePublic, _out_482);
                 break;
-                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_457, obj_458 as any as HydrogenCurvePrivate, _out_459);
+                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_480, obj_481 as any as HydrogenCurvePrivate, _out_482);
                 break;
-                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_457, obj_458 as any as SodiumCurvePrivate, _out_459);
+                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_480, obj_481 as any as SodiumCurvePrivate, _out_482);
                 break;
-                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_457, obj_458 as any as SodiumSignPublic, _out_459);
+                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_480, obj_481 as any as SodiumSignPublic, _out_482);
                 break;
-                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_457, obj_458 as any as HydrogenSignPublic, _out_459);
+                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_480, obj_481 as any as HydrogenSignPublic, _out_482);
                 break;
-                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_457, obj_458 as any as HydrogenSignPrivate, _out_459);
+                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_480, obj_481 as any as HydrogenSignPrivate, _out_482);
                 break;
                 default: throw new Error(`Cannot serialize 'SodiumSignPrivate' with unknown type id $ {
                     typeId
@@ -4014,19 +4141,19 @@ export class SodiumSignPrivate extends KeySignPrivate implements ToString  {
             }
             
         }
-        deserialize(sCtx_457: FastFutureContext, in__460: DataIn): SodiumSignPrivate  {
-            const typeId = in__460.readUByte();
+        deserialize(sCtx_480: FastFutureContext, in__483: DataIn): SodiumSignPrivate  {
+            const typeId = in__483.readUByte();
             switch(typeId)  {
-                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_457, in__460) as any as SodiumSignPrivate;
-                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_457, in__460) as any as SodiumSignPrivate;
-                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_457, in__460) as any as SodiumSignPrivate;
-                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_457, in__460) as any as SodiumSignPrivate;
-                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_457, in__460) as any as SodiumSignPrivate;
-                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_457, in__460) as any as SodiumSignPrivate;
-                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_457, in__460) as any as SodiumSignPrivate;
-                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_457, in__460) as any as SodiumSignPrivate;
-                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_457, in__460) as any as SodiumSignPrivate;
-                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_457, in__460) as any as SodiumSignPrivate;
+                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_480, in__483) as any as SodiumSignPrivate;
+                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_480, in__483) as any as SodiumSignPrivate;
+                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_480, in__483) as any as SodiumSignPrivate;
+                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_480, in__483) as any as SodiumSignPrivate;
+                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_480, in__483) as any as SodiumSignPrivate;
+                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_480, in__483) as any as SodiumSignPrivate;
+                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_480, in__483) as any as SodiumSignPrivate;
+                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_480, in__483) as any as SodiumSignPrivate;
+                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_480, in__483) as any as SodiumSignPrivate;
+                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_480, in__483) as any as SodiumSignPrivate;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -4085,20 +4212,20 @@ export class SodiumSignPublic extends KeySignPublic implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<SodiumSignPublic> = new class implements FastMetaType<SodiumSignPublic>  {
-        serialize(sCtx_461: FastFutureContext, obj_462: SodiumSignPublic, _out_463: DataOut): void  {
-            if (obj_462.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_462.data must be 32 but was $ {
-                obj_462.data.length
+        serialize(sCtx_484: FastFutureContext, obj_485: SodiumSignPublic, _out_486: DataOut): void  {
+            if (obj_485.data.length !== 32) throw new Error(`IllegalStateException: Array length for obj_485.data must be 32 but was $ {
+                obj_485.data.length
             }
             `);
-            _out_463.write(obj_462.data);
+            _out_486.write(obj_485.data);
             
         }
-        deserialize(sCtx_461: FastFutureContext, in__464: DataIn): SodiumSignPublic  {
-            let data_466: Uint8Array;
-            const len_468 = 32;
-            const bytes_469 = in__464.readBytes(len_468);
-            data_466 = bytes_469;
-            return new SodiumSignPublic(data_466);
+        deserialize(sCtx_484: FastFutureContext, in__487: DataIn): SodiumSignPublic  {
+            let data_489: Uint8Array;
+            const len_491 = 32;
+            const bytes_492 = in__487.readBytes(len_491);
+            data_489 = bytes_492;
+            return new SodiumSignPublic(data_489);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -4117,33 +4244,33 @@ export class SodiumSignPublic extends KeySignPublic implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<SodiumSignPublic> = new class implements FastMetaType<SodiumSignPublic>  {
-        serialize(sCtx_470: FastFutureContext, obj_471: SodiumSignPublic, _out_472: DataOut): void  {
-            const typeId = typeof (obj_471 as any).getAetherTypeId === 'function' ? obj_471.getAetherTypeId() : -1;
+        serialize(sCtx_493: FastFutureContext, obj_494: SodiumSignPublic, _out_495: DataOut): void  {
+            const typeId = typeof (obj_494 as any).getAetherTypeId === 'function' ? obj_494.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'SodiumSignPublic' with invalid type id $ {
                 typeId
             }
             `);
-            _out_472.writeByte(typeId);
+            _out_495.writeByte(typeId);
             switch(typeId)  {
-                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_470, obj_471 as any as SodiumSignPublic, _out_472);
+                case 10: (SodiumSignPublic as any).META_BODY.serialize(sCtx_493, obj_494 as any as SodiumSignPublic, _out_495);
                 break;
-                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_470, obj_471 as any as SodiumChacha20Poly1305, _out_472);
+                case 6: (SodiumChacha20Poly1305 as any).META_BODY.serialize(sCtx_493, obj_494 as any as SodiumChacha20Poly1305, _out_495);
                 break;
-                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_470, obj_471 as any as HydrogenSecretBox, _out_472);
+                case 3: (HydrogenSecretBox as any).META_BODY.serialize(sCtx_493, obj_494 as any as HydrogenSecretBox, _out_495);
                 break;
-                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_470, obj_471 as any as HydrogenCurvePublic, _out_472);
+                case 2: (HydrogenCurvePublic as any).META_BODY.serialize(sCtx_493, obj_494 as any as HydrogenCurvePublic, _out_495);
                 break;
-                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_470, obj_471 as any as SodiumCurvePublic, _out_472);
+                case 8: (SodiumCurvePublic as any).META_BODY.serialize(sCtx_493, obj_494 as any as SodiumCurvePublic, _out_495);
                 break;
-                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_470, obj_471 as any as HydrogenCurvePrivate, _out_472);
+                case 1: (HydrogenCurvePrivate as any).META_BODY.serialize(sCtx_493, obj_494 as any as HydrogenCurvePrivate, _out_495);
                 break;
-                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_470, obj_471 as any as SodiumCurvePrivate, _out_472);
+                case 7: (SodiumCurvePrivate as any).META_BODY.serialize(sCtx_493, obj_494 as any as SodiumCurvePrivate, _out_495);
                 break;
-                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_470, obj_471 as any as HydrogenSignPublic, _out_472);
+                case 5: (HydrogenSignPublic as any).META_BODY.serialize(sCtx_493, obj_494 as any as HydrogenSignPublic, _out_495);
                 break;
-                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_470, obj_471 as any as SodiumSignPrivate, _out_472);
+                case 9: (SodiumSignPrivate as any).META_BODY.serialize(sCtx_493, obj_494 as any as SodiumSignPrivate, _out_495);
                 break;
-                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_470, obj_471 as any as HydrogenSignPrivate, _out_472);
+                case 4: (HydrogenSignPrivate as any).META_BODY.serialize(sCtx_493, obj_494 as any as HydrogenSignPrivate, _out_495);
                 break;
                 default: throw new Error(`Cannot serialize 'SodiumSignPublic' with unknown type id $ {
                     typeId
@@ -4153,19 +4280,19 @@ export class SodiumSignPublic extends KeySignPublic implements ToString  {
             }
             
         }
-        deserialize(sCtx_470: FastFutureContext, in__473: DataIn): SodiumSignPublic  {
-            const typeId = in__473.readUByte();
+        deserialize(sCtx_493: FastFutureContext, in__496: DataIn): SodiumSignPublic  {
+            const typeId = in__496.readUByte();
             switch(typeId)  {
-                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_470, in__473) as any as SodiumSignPublic;
-                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_470, in__473) as any as SodiumSignPublic;
-                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_470, in__473) as any as SodiumSignPublic;
-                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_470, in__473) as any as SodiumSignPublic;
-                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_470, in__473) as any as SodiumSignPublic;
-                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_470, in__473) as any as SodiumSignPublic;
-                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_470, in__473) as any as SodiumSignPublic;
-                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_470, in__473) as any as SodiumSignPublic;
-                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_470, in__473) as any as SodiumSignPublic;
-                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_470, in__473) as any as SodiumSignPublic;
+                case 10: return (SodiumSignPublic as any).META_BODY.deserialize(sCtx_493, in__496) as any as SodiumSignPublic;
+                case 6: return (SodiumChacha20Poly1305 as any).META_BODY.deserialize(sCtx_493, in__496) as any as SodiumSignPublic;
+                case 3: return (HydrogenSecretBox as any).META_BODY.deserialize(sCtx_493, in__496) as any as SodiumSignPublic;
+                case 2: return (HydrogenCurvePublic as any).META_BODY.deserialize(sCtx_493, in__496) as any as SodiumSignPublic;
+                case 8: return (SodiumCurvePublic as any).META_BODY.deserialize(sCtx_493, in__496) as any as SodiumSignPublic;
+                case 1: return (HydrogenCurvePrivate as any).META_BODY.deserialize(sCtx_493, in__496) as any as SodiumSignPublic;
+                case 7: return (SodiumCurvePrivate as any).META_BODY.deserialize(sCtx_493, in__496) as any as SodiumSignPublic;
+                case 5: return (HydrogenSignPublic as any).META_BODY.deserialize(sCtx_493, in__496) as any as SodiumSignPublic;
+                case 9: return (SodiumSignPrivate as any).META_BODY.deserialize(sCtx_493, in__496) as any as SodiumSignPublic;
+                case 4: return (HydrogenSignPrivate as any).META_BODY.deserialize(sCtx_493, in__496) as any as SodiumSignPublic;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -4228,47 +4355,47 @@ export class TelemetryCPP extends Telemetry implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<TelemetryCPP> = new class implements FastMetaType<TelemetryCPP>  {
-        serialize(sCtx_474: FastFutureContext, obj_475: TelemetryCPP, _out_476: DataOut): void  {
-            _out_476.writeInt(obj_475.utm_id);
-            SerializerPackNumber.INSTANCE.put(_out_476, obj_475.blob.length);
-            _out_476.write(obj_475.blob);
-            const stringBytes_481 = new TextEncoder().encode(obj_475.lib_version);
-            SerializerPackNumber.INSTANCE.put(_out_476, stringBytes_481.length);
-            _out_476.write(stringBytes_481);
-            const stringBytes_484 = new TextEncoder().encode(obj_475.os);
-            SerializerPackNumber.INSTANCE.put(_out_476, stringBytes_484.length);
-            _out_476.write(stringBytes_484);
-            const stringBytes_487 = new TextEncoder().encode(obj_475.compiler);
-            SerializerPackNumber.INSTANCE.put(_out_476, stringBytes_487.length);
-            _out_476.write(stringBytes_487);
+        serialize(sCtx_497: FastFutureContext, obj_498: TelemetryCPP, _out_499: DataOut): void  {
+            _out_499.writeInt(obj_498.utm_id);
+            SerializerPackNumber.INSTANCE.put(_out_499, obj_498.blob.length);
+            _out_499.write(obj_498.blob);
+            const stringBytes_504 = new TextEncoder().encode(obj_498.lib_version);
+            SerializerPackNumber.INSTANCE.put(_out_499, stringBytes_504.length);
+            _out_499.write(stringBytes_504);
+            const stringBytes_507 = new TextEncoder().encode(obj_498.os);
+            SerializerPackNumber.INSTANCE.put(_out_499, stringBytes_507.length);
+            _out_499.write(stringBytes_507);
+            const stringBytes_510 = new TextEncoder().encode(obj_498.compiler);
+            SerializerPackNumber.INSTANCE.put(_out_499, stringBytes_510.length);
+            _out_499.write(stringBytes_510);
             
         }
-        deserialize(sCtx_474: FastFutureContext, in__477: DataIn): TelemetryCPP  {
-            let utm_id_489: number;
-            let blob_490: Uint8Array;
-            let lib_version_491: string;
-            let os_492: string;
-            let compiler_493: string;
-            utm_id_489 = in__477.readInt();
-            const len_496 = DeserializerPackNumber.INSTANCE.put(in__477).valueOf();
-            const bytes_497 = in__477.readBytes(len_496);
-            blob_490 = bytes_497;
-            let stringBytes_499: Uint8Array;
-            const len_501 = DeserializerPackNumber.INSTANCE.put(in__477).valueOf();
-            const bytes_502 = in__477.readBytes(len_501);
-            stringBytes_499 = bytes_502;
-            lib_version_491 = new TextDecoder('utf-8').decode(stringBytes_499);
-            let stringBytes_504: Uint8Array;
-            const len_506 = DeserializerPackNumber.INSTANCE.put(in__477).valueOf();
-            const bytes_507 = in__477.readBytes(len_506);
-            stringBytes_504 = bytes_507;
-            os_492 = new TextDecoder('utf-8').decode(stringBytes_504);
-            let stringBytes_509: Uint8Array;
-            const len_511 = DeserializerPackNumber.INSTANCE.put(in__477).valueOf();
-            const bytes_512 = in__477.readBytes(len_511);
-            stringBytes_509 = bytes_512;
-            compiler_493 = new TextDecoder('utf-8').decode(stringBytes_509);
-            return new TelemetryCPP(utm_id_489, blob_490, lib_version_491, os_492, compiler_493);
+        deserialize(sCtx_497: FastFutureContext, in__500: DataIn): TelemetryCPP  {
+            let utm_id_512: number;
+            let blob_513: Uint8Array;
+            let lib_version_514: string;
+            let os_515: string;
+            let compiler_516: string;
+            utm_id_512 = in__500.readInt();
+            const len_519 = DeserializerPackNumber.INSTANCE.put(in__500).valueOf();
+            const bytes_520 = in__500.readBytes(len_519);
+            blob_513 = bytes_520;
+            let stringBytes_522: Uint8Array;
+            const len_524 = DeserializerPackNumber.INSTANCE.put(in__500).valueOf();
+            const bytes_525 = in__500.readBytes(len_524);
+            stringBytes_522 = bytes_525;
+            lib_version_514 = new TextDecoder('utf-8').decode(stringBytes_522);
+            let stringBytes_527: Uint8Array;
+            const len_529 = DeserializerPackNumber.INSTANCE.put(in__500).valueOf();
+            const bytes_530 = in__500.readBytes(len_529);
+            stringBytes_527 = bytes_530;
+            os_515 = new TextDecoder('utf-8').decode(stringBytes_527);
+            let stringBytes_532: Uint8Array;
+            const len_534 = DeserializerPackNumber.INSTANCE.put(in__500).valueOf();
+            const bytes_535 = in__500.readBytes(len_534);
+            stringBytes_532 = bytes_535;
+            compiler_516 = new TextDecoder('utf-8').decode(stringBytes_532);
+            return new TelemetryCPP(utm_id_512, blob_513, lib_version_514, os_515, compiler_516);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -4287,15 +4414,15 @@ export class TelemetryCPP extends Telemetry implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<TelemetryCPP> = new class implements FastMetaType<TelemetryCPP>  {
-        serialize(sCtx_513: FastFutureContext, obj_514: TelemetryCPP, _out_515: DataOut): void  {
-            const typeId = typeof (obj_514 as any).getAetherTypeId === 'function' ? obj_514.getAetherTypeId() : -1;
+        serialize(sCtx_536: FastFutureContext, obj_537: TelemetryCPP, _out_538: DataOut): void  {
+            const typeId = typeof (obj_537 as any).getAetherTypeId === 'function' ? obj_537.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'TelemetryCPP' with invalid type id $ {
                 typeId
             }
             `);
-            _out_515.writeByte(typeId);
+            _out_538.writeByte(typeId);
             switch(typeId)  {
-                case 1: (TelemetryCPP as any).META_BODY.serialize(sCtx_513, obj_514 as any as TelemetryCPP, _out_515);
+                case 1: (TelemetryCPP as any).META_BODY.serialize(sCtx_536, obj_537 as any as TelemetryCPP, _out_538);
                 break;
                 default: throw new Error(`Cannot serialize 'TelemetryCPP' with unknown type id $ {
                     typeId
@@ -4305,10 +4432,10 @@ export class TelemetryCPP extends Telemetry implements ToString  {
             }
             
         }
-        deserialize(sCtx_513: FastFutureContext, in__516: DataIn): TelemetryCPP  {
-            const typeId = in__516.readUByte();
+        deserialize(sCtx_536: FastFutureContext, in__539: DataIn): TelemetryCPP  {
+            const typeId = in__539.readUByte();
             switch(typeId)  {
-                case 1: return (TelemetryCPP as any).META_BODY.deserialize(sCtx_513, in__516) as any as TelemetryCPP;
+                case 1: return (TelemetryCPP as any).META_BODY.deserialize(sCtx_536, in__539) as any as TelemetryCPP;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -4391,17 +4518,17 @@ export class UUIDAndCloud implements ToString  {
     public readonly uid: UUID;
     public readonly cloud: Cloud;
     public static readonly META_BODY: FastMetaType<UUIDAndCloud> = new class implements FastMetaType<UUIDAndCloud>  {
-        serialize(sCtx_517: FastFutureContext, obj_518: UUIDAndCloud, _out_519: DataOut): void  {
-            FastMeta.META_UUID.serialize(sCtx_517, obj_518.uid, _out_519);
-            Cloud.META.serialize(sCtx_517, obj_518.cloud, _out_519);
+        serialize(sCtx_540: FastFutureContext, obj_541: UUIDAndCloud, _out_542: DataOut): void  {
+            FastMeta.META_UUID.serialize(sCtx_540, obj_541.uid, _out_542);
+            Cloud.META.serialize(sCtx_540, obj_541.cloud, _out_542);
             
         }
-        deserialize(sCtx_517: FastFutureContext, in__520: DataIn): UUIDAndCloud  {
-            let uid_523: UUID;
-            let cloud_524: Cloud;
-            uid_523 = FastMeta.META_UUID.deserialize(sCtx_517, in__520);
-            cloud_524 = Cloud.META.deserialize(sCtx_517, in__520);
-            return new UUIDAndCloud(uid_523, cloud_524);
+        deserialize(sCtx_540: FastFutureContext, in__543: DataIn): UUIDAndCloud  {
+            let uid_546: UUID;
+            let cloud_547: Cloud;
+            uid_546 = FastMeta.META_UUID.deserialize(sCtx_540, in__543);
+            cloud_547 = Cloud.META.deserialize(sCtx_540, in__543);
+            return new UUIDAndCloud(uid_546, cloud_547);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -4455,20 +4582,20 @@ export class WorkProofBCrypt extends WorkProofConfig implements ToString  {
         
     }
     public static readonly META_BODY: FastMetaType<WorkProofBCrypt> = new class implements FastMetaType<WorkProofBCrypt>  {
-        serialize(sCtx_527: FastFutureContext, obj_528: WorkProofBCrypt, _out_529: DataOut): void  {
-            _out_529.writeByte(obj_528.costBCrypt);
-            _out_529.writeByte(obj_528.poolSize);
-            _out_529.writeInt(obj_528.maxHashVal);
+        serialize(sCtx_550: FastFutureContext, obj_551: WorkProofBCrypt, _out_552: DataOut): void  {
+            _out_552.writeByte(obj_551.costBCrypt);
+            _out_552.writeByte(obj_551.poolSize);
+            _out_552.writeInt(obj_551.maxHashVal);
             
         }
-        deserialize(sCtx_527: FastFutureContext, in__530: DataIn): WorkProofBCrypt  {
-            let costBCrypt_534: number;
-            let poolSize_535: number;
-            let maxHashVal_536: number;
-            costBCrypt_534 = in__530.readByte();
-            poolSize_535 = in__530.readByte();
-            maxHashVal_536 = in__530.readInt();
-            return new WorkProofBCrypt(costBCrypt_534, poolSize_535, maxHashVal_536);
+        deserialize(sCtx_550: FastFutureContext, in__553: DataIn): WorkProofBCrypt  {
+            let costBCrypt_557: number;
+            let poolSize_558: number;
+            let maxHashVal_559: number;
+            costBCrypt_557 = in__553.readByte();
+            poolSize_558 = in__553.readByte();
+            maxHashVal_559 = in__553.readInt();
+            return new WorkProofBCrypt(costBCrypt_557, poolSize_558, maxHashVal_559);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -4487,15 +4614,15 @@ export class WorkProofBCrypt extends WorkProofConfig implements ToString  {
     }
     ();
     public static readonly META: FastMetaType<WorkProofBCrypt> = new class implements FastMetaType<WorkProofBCrypt>  {
-        serialize(sCtx_540: FastFutureContext, obj_541: WorkProofBCrypt, _out_542: DataOut): void  {
-            const typeId = typeof (obj_541 as any).getAetherTypeId === 'function' ? obj_541.getAetherTypeId() : -1;
+        serialize(sCtx_563: FastFutureContext, obj_564: WorkProofBCrypt, _out_565: DataOut): void  {
+            const typeId = typeof (obj_564 as any).getAetherTypeId === 'function' ? obj_564.getAetherTypeId() : -1;
             if (typeId === undefined || typeId < 0) throw new Error(`Cannot serialize 'WorkProofBCrypt' with invalid type id $ {
                 typeId
             }
             `);
-            _out_542.writeByte(typeId);
+            _out_565.writeByte(typeId);
             switch(typeId)  {
-                case 1: (WorkProofBCrypt as any).META_BODY.serialize(sCtx_540, obj_541 as any as WorkProofBCrypt, _out_542);
+                case 1: (WorkProofBCrypt as any).META_BODY.serialize(sCtx_563, obj_564 as any as WorkProofBCrypt, _out_565);
                 break;
                 default: throw new Error(`Cannot serialize 'WorkProofBCrypt' with unknown type id $ {
                     typeId
@@ -4505,10 +4632,10 @@ export class WorkProofBCrypt extends WorkProofConfig implements ToString  {
             }
             
         }
-        deserialize(sCtx_540: FastFutureContext, in__543: DataIn): WorkProofBCrypt  {
-            const typeId = in__543.readUByte();
+        deserialize(sCtx_563: FastFutureContext, in__566: DataIn): WorkProofBCrypt  {
+            const typeId = in__566.readUByte();
             switch(typeId)  {
-                case 1: return (WorkProofBCrypt as any).META_BODY.deserialize(sCtx_540, in__543) as any as WorkProofBCrypt;
+                case 1: return (WorkProofBCrypt as any).META_BODY.deserialize(sCtx_563, in__566) as any as WorkProofBCrypt;
                 default: throw new Error(`Bad type id $ {
                     typeId
                 }
@@ -4572,38 +4699,38 @@ export class WorkProofDTO implements ToString  {
     public readonly maxHashVal: number;
     public readonly globalKey: SignedKey;
     public static readonly META_BODY: FastMetaType<WorkProofDTO> = new class implements FastMetaType<WorkProofDTO>  {
-        serialize(sCtx_544: FastFutureContext, obj_545: WorkProofDTO, _out_546: DataOut): void  {
-            const stringBytes_549 = new TextEncoder().encode(obj_545.salt);
-            SerializerPackNumber.INSTANCE.put(_out_546, stringBytes_549.length);
-            _out_546.write(stringBytes_549);
-            const stringBytes_552 = new TextEncoder().encode(obj_545.suffix);
-            SerializerPackNumber.INSTANCE.put(_out_546, stringBytes_552.length);
-            _out_546.write(stringBytes_552);
-            _out_546.writeByte(obj_545.poolSize);
-            _out_546.writeInt(obj_545.maxHashVal);
-            SignedKey.META.serialize(sCtx_544, obj_545.globalKey, _out_546);
+        serialize(sCtx_567: FastFutureContext, obj_568: WorkProofDTO, _out_569: DataOut): void  {
+            const stringBytes_572 = new TextEncoder().encode(obj_568.salt);
+            SerializerPackNumber.INSTANCE.put(_out_569, stringBytes_572.length);
+            _out_569.write(stringBytes_572);
+            const stringBytes_575 = new TextEncoder().encode(obj_568.suffix);
+            SerializerPackNumber.INSTANCE.put(_out_569, stringBytes_575.length);
+            _out_569.write(stringBytes_575);
+            _out_569.writeByte(obj_568.poolSize);
+            _out_569.writeInt(obj_568.maxHashVal);
+            SignedKey.META.serialize(sCtx_567, obj_568.globalKey, _out_569);
             
         }
-        deserialize(sCtx_544: FastFutureContext, in__547: DataIn): WorkProofDTO  {
-            let salt_557: string;
-            let suffix_558: string;
-            let poolSize_559: number;
-            let maxHashVal_560: number;
-            let globalKey_561: SignedKey;
-            let stringBytes_563: Uint8Array;
-            const len_565 = DeserializerPackNumber.INSTANCE.put(in__547).valueOf();
-            const bytes_566 = in__547.readBytes(len_565);
-            stringBytes_563 = bytes_566;
-            salt_557 = new TextDecoder('utf-8').decode(stringBytes_563);
-            let stringBytes_568: Uint8Array;
-            const len_570 = DeserializerPackNumber.INSTANCE.put(in__547).valueOf();
-            const bytes_571 = in__547.readBytes(len_570);
-            stringBytes_568 = bytes_571;
-            suffix_558 = new TextDecoder('utf-8').decode(stringBytes_568);
-            poolSize_559 = in__547.readByte();
-            maxHashVal_560 = in__547.readInt();
-            globalKey_561 = SignedKey.META.deserialize(sCtx_544, in__547);
-            return new WorkProofDTO(salt_557, suffix_558, poolSize_559, maxHashVal_560, globalKey_561);
+        deserialize(sCtx_567: FastFutureContext, in__570: DataIn): WorkProofDTO  {
+            let salt_580: string;
+            let suffix_581: string;
+            let poolSize_582: number;
+            let maxHashVal_583: number;
+            let globalKey_584: SignedKey;
+            let stringBytes_586: Uint8Array;
+            const len_588 = DeserializerPackNumber.INSTANCE.put(in__570).valueOf();
+            const bytes_589 = in__570.readBytes(len_588);
+            stringBytes_586 = bytes_589;
+            salt_580 = new TextDecoder('utf-8').decode(stringBytes_586);
+            let stringBytes_591: Uint8Array;
+            const len_593 = DeserializerPackNumber.INSTANCE.put(in__570).valueOf();
+            const bytes_594 = in__570.readBytes(len_593);
+            stringBytes_591 = bytes_594;
+            suffix_581 = new TextDecoder('utf-8').decode(stringBytes_591);
+            poolSize_582 = in__570.readByte();
+            maxHashVal_583 = in__570.readInt();
+            globalKey_584 = SignedKey.META.deserialize(sCtx_567, in__570);
+            return new WorkProofDTO(salt_580, suffix_581, poolSize_582, maxHashVal_583, globalKey_584);
             
         }
         serializeToBytes(_obj: any): Uint8Array  {
@@ -5185,26 +5312,26 @@ export namespace ClientApiUnsafe  {
                         
                     }
                     case 3:  {
-                        let backId_576: number;
-                        let data_577: LoginClientStream;
-                        backId_576 = dataIn.readByte();
-                        data_577 = LoginClientStream.META.deserialize(ctx, dataIn);
-                        const argsNames_580: string[] = ["backId", "data"];
-                        const argsValues_581: any[] = [backId_576, data_577];
-                        ctx.invokeLocalMethodBefore("sendSafeApiDataMulti", argsNames_580, argsValues_581);
-                        localApi.sendSafeApiDataMulti(backId_576, data_577);
-                        ctx.invokeLocalMethodAfter("sendSafeApiDataMulti", null, argsNames_580, argsValues_581);
+                        let backId_599: number;
+                        let data_600: LoginClientStream;
+                        backId_599 = dataIn.readByte();
+                        data_600 = LoginClientStream.META.deserialize(ctx, dataIn);
+                        const argsNames_603: string[] = ["backId", "data"];
+                        const argsValues_604: any[] = [backId_599, data_600];
+                        ctx.invokeLocalMethodBefore("sendSafeApiDataMulti", argsNames_603, argsValues_604);
+                        localApi.sendSafeApiDataMulti(backId_599, data_600);
+                        ctx.invokeLocalMethodAfter("sendSafeApiDataMulti", null, argsNames_603, argsValues_604);
                         break;
                         
                     }
                     case 4:  {
-                        let data_583: LoginClientStream;
-                        data_583 = LoginClientStream.META.deserialize(ctx, dataIn);
-                        const argsNames_585: string[] = ["data"];
-                        const argsValues_586: any[] = [data_583];
-                        ctx.invokeLocalMethodBefore("sendSafeApiData", argsNames_585, argsValues_586);
-                        localApi.sendSafeApiData(data_583);
-                        ctx.invokeLocalMethodAfter("sendSafeApiData", null, argsNames_585, argsValues_586);
+                        let data_606: LoginClientStream;
+                        data_606 = LoginClientStream.META.deserialize(ctx, dataIn);
+                        const argsNames_608: string[] = ["data"];
+                        const argsValues_609: any[] = [data_606];
+                        ctx.invokeLocalMethodBefore("sendSafeApiData", argsNames_608, argsValues_609);
+                        localApi.sendSafeApiData(data_606);
+                        ctx.invokeLocalMethodAfter("sendSafeApiData", null, argsNames_608, argsValues_609);
                         break;
                         
                     }
@@ -5225,32 +5352,32 @@ export namespace ClientApiUnsafe  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_587: FastFutureContext): ClientApiUnsafeRemote  {
+        makeRemote(sCtx_610: FastFutureContext): ClientApiUnsafeRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_587.flush(sendFuture || AFuture.make());
+                    sCtx_610.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_587, sendSafeApiDataMulti: (backId: number, data: LoginClientStream): AFuture =>  {
-                    const dataOut_589 = new DataInOut();
-                    dataOut_589.writeByte(3);
-                    const argsNames_591: string[] = ["backId", "data"];
-                    const argsValues_592: any[] = [backId, data];
-                    sCtx_587.invokeRemoteMethodAfter("sendSafeApiDataMulti", null, argsNames_591, argsValues_592);
-                    dataOut_589.writeByte(backId);
-                    LoginClientStream.META.serialize(sCtx_587, data, dataOut_589);
-                    sCtx_587.sendToRemote(dataOut_589.toArray());
+                , getFastMetaContext: () => sCtx_610, sendSafeApiDataMulti: (backId: number, data: LoginClientStream): AFuture =>  {
+                    const dataOut_612 = new DataInOut();
+                    dataOut_612.writeByte(3);
+                    const argsNames_614: string[] = ["backId", "data"];
+                    const argsValues_615: any[] = [backId, data];
+                    sCtx_610.invokeRemoteMethodAfter("sendSafeApiDataMulti", null, argsNames_614, argsValues_615);
+                    dataOut_612.writeByte(backId);
+                    LoginClientStream.META.serialize(sCtx_610, data, dataOut_612);
+                    sCtx_610.sendToRemote(dataOut_612.toArray());
                     return AFuture.of();
                     
                 }
                 , sendSafeApiData: (data: LoginClientStream): AFuture =>  {
-                    const dataOut_596 = new DataInOut();
-                    dataOut_596.writeByte(4);
-                    const argsNames_598: string[] = ["data"];
-                    const argsValues_599: any[] = [data];
-                    sCtx_587.invokeRemoteMethodAfter("sendSafeApiData", null, argsNames_598, argsValues_599);
-                    LoginClientStream.META.serialize(sCtx_587, data, dataOut_596);
-                    sCtx_587.sendToRemote(dataOut_596.toArray());
+                    const dataOut_619 = new DataInOut();
+                    dataOut_619.writeByte(4);
+                    const argsNames_621: string[] = ["data"];
+                    const argsValues_622: any[] = [data];
+                    sCtx_610.invokeRemoteMethodAfter("sendSafeApiData", null, argsNames_621, argsValues_622);
+                    LoginClientStream.META.serialize(sCtx_610, data, dataOut_619);
+                    sCtx_610.sendToRemote(dataOut_619.toArray());
                     return AFuture.of();
                     
                 }
@@ -5294,6 +5421,14 @@ export interface ClientApiSafe  {
     sendCloud(uid: UUID, cloud: Cloud): AFuture;
     sendClouds(clouds: UUIDAndCloud[]): AFuture;
     requestTelemetry(): AFuture;
+    sendAccessGroups(groups: AccessGroup[]): AFuture;
+    sendAccessGroupForClient(uid: UUID, groups: number[]): AFuture;
+    addItemsToAccessGroup(id: number, groups: UUID[]): AFuture;
+    removeItemsFromAccessGroup(id: number, groups: UUID[]): AFuture;
+    addAccessGroupsToClient(uid: UUID, groups: number[]): AFuture;
+    removeAccessGroupsFromClient(uid: UUID, groups: number[]): AFuture;
+    sendAllAccessedClients(uid: UUID, accessedClients: UUID[]): AFuture;
+    sendAccessCheckResults(results: AccessCheckResult[]): AFuture;
     
 }
 export namespace ClientApiSafe  {
@@ -5317,122 +5452,278 @@ export namespace ClientApiSafe  {
                         
                     }
                     case 3:  {
-                        let uid_602: UUID;
-                        uid_602 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const argsNames_604: string[] = ["uid"];
-                        const argsValues_605: any[] = [uid_602];
-                        ctx.invokeLocalMethodBefore("changeParent", argsNames_604, argsValues_605);
-                        localApi.changeParent(uid_602);
-                        ctx.invokeLocalMethodAfter("changeParent", null, argsNames_604, argsValues_605);
+                        let uid_625: UUID;
+                        uid_625 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const argsNames_627: string[] = ["uid"];
+                        const argsValues_628: any[] = [uid_625];
+                        ctx.invokeLocalMethodBefore("changeParent", argsNames_627, argsValues_628);
+                        localApi.changeParent(uid_625);
+                        ctx.invokeLocalMethodAfter("changeParent", null, argsNames_627, argsValues_628);
                         break;
                         
                     }
                     case 4:  {
-                        let alias_607: UUID;
-                        alias_607 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const argsNames_609: string[] = ["alias"];
-                        const argsValues_610: any[] = [alias_607];
-                        ctx.invokeLocalMethodBefore("changeAlias", argsNames_609, argsValues_610);
-                        localApi.changeAlias(alias_607);
-                        ctx.invokeLocalMethodAfter("changeAlias", null, argsNames_609, argsValues_610);
+                        let alias_630: UUID;
+                        alias_630 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const argsNames_632: string[] = ["alias"];
+                        const argsValues_633: any[] = [alias_630];
+                        ctx.invokeLocalMethodBefore("changeAlias", argsNames_632, argsValues_633);
+                        localApi.changeAlias(alias_630);
+                        ctx.invokeLocalMethodAfter("changeAlias", null, argsNames_632, argsValues_633);
                         break;
                         
                     }
                     case 5:  {
-                        let uid_612: UUID;
-                        uid_612 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const argsNames_614: string[] = ["uid"];
-                        const argsValues_615: any[] = [uid_612];
-                        ctx.invokeLocalMethodBefore("newChild", argsNames_614, argsValues_615);
-                        localApi.newChild(uid_612);
-                        ctx.invokeLocalMethodAfter("newChild", null, argsNames_614, argsValues_615);
+                        let uid_635: UUID;
+                        uid_635 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const argsNames_637: string[] = ["uid"];
+                        const argsValues_638: any[] = [uid_635];
+                        ctx.invokeLocalMethodBefore("newChild", argsNames_637, argsValues_638);
+                        localApi.newChild(uid_635);
+                        ctx.invokeLocalMethodAfter("newChild", null, argsNames_637, argsValues_638);
                         break;
                         
                     }
                     case 6:  {
-                        let msg_617: Message[];
-                        const len_619 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
-                        msg_617 = new Array<Message>(len_619);
-                        for (let idx_618 = 0;
-                        idx_618 < len_619;
-                        idx_618++)  {
-                            msg_617[idx_618] = Message.META.deserialize(ctx, dataIn);
+                        let msg_640: Message[];
+                        const len_642 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        msg_640 = new Array<Message>(len_642);
+                        for (let idx_641 = 0;
+                        idx_641 < len_642;
+                        idx_641++)  {
+                            msg_640[idx_641] = Message.META.deserialize(ctx, dataIn);
                             
                         }
-                        const argsNames_621: string[] = ["msg"];
-                        const argsValues_622: any[] = [msg_617];
-                        ctx.invokeLocalMethodBefore("sendMessages", argsNames_621, argsValues_622);
-                        localApi.sendMessages(msg_617);
-                        ctx.invokeLocalMethodAfter("sendMessages", null, argsNames_621, argsValues_622);
+                        const argsNames_644: string[] = ["msg"];
+                        const argsValues_645: any[] = [msg_640];
+                        ctx.invokeLocalMethodBefore("sendMessages", argsNames_644, argsValues_645);
+                        localApi.sendMessages(msg_640);
+                        ctx.invokeLocalMethodAfter("sendMessages", null, argsNames_644, argsValues_645);
                         break;
                         
                     }
                     case 7:  {
-                        let serverDescriptor_624: ServerDescriptor;
-                        serverDescriptor_624 = ServerDescriptor.META.deserialize(ctx, dataIn);
-                        const argsNames_626: string[] = ["serverDescriptor"];
-                        const argsValues_627: any[] = [serverDescriptor_624];
-                        ctx.invokeLocalMethodBefore("sendServerDescriptor", argsNames_626, argsValues_627);
-                        localApi.sendServerDescriptor(serverDescriptor_624);
-                        ctx.invokeLocalMethodAfter("sendServerDescriptor", null, argsNames_626, argsValues_627);
+                        let serverDescriptor_647: ServerDescriptor;
+                        serverDescriptor_647 = ServerDescriptor.META.deserialize(ctx, dataIn);
+                        const argsNames_649: string[] = ["serverDescriptor"];
+                        const argsValues_650: any[] = [serverDescriptor_647];
+                        ctx.invokeLocalMethodBefore("sendServerDescriptor", argsNames_649, argsValues_650);
+                        localApi.sendServerDescriptor(serverDescriptor_647);
+                        ctx.invokeLocalMethodAfter("sendServerDescriptor", null, argsNames_649, argsValues_650);
                         break;
                         
                     }
                     case 8:  {
-                        let serverDescriptors_629: ServerDescriptor[];
-                        const len_631 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
-                        serverDescriptors_629 = new Array<ServerDescriptor>(len_631);
-                        for (let idx_630 = 0;
-                        idx_630 < len_631;
-                        idx_630++)  {
-                            serverDescriptors_629[idx_630] = ServerDescriptor.META.deserialize(ctx, dataIn);
+                        let serverDescriptors_652: ServerDescriptor[];
+                        const len_654 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        serverDescriptors_652 = new Array<ServerDescriptor>(len_654);
+                        for (let idx_653 = 0;
+                        idx_653 < len_654;
+                        idx_653++)  {
+                            serverDescriptors_652[idx_653] = ServerDescriptor.META.deserialize(ctx, dataIn);
                             
                         }
-                        const argsNames_633: string[] = ["serverDescriptors"];
-                        const argsValues_634: any[] = [serverDescriptors_629];
-                        ctx.invokeLocalMethodBefore("sendServerDescriptors", argsNames_633, argsValues_634);
-                        localApi.sendServerDescriptors(serverDescriptors_629);
-                        ctx.invokeLocalMethodAfter("sendServerDescriptors", null, argsNames_633, argsValues_634);
+                        const argsNames_656: string[] = ["serverDescriptors"];
+                        const argsValues_657: any[] = [serverDescriptors_652];
+                        ctx.invokeLocalMethodBefore("sendServerDescriptors", argsNames_656, argsValues_657);
+                        localApi.sendServerDescriptors(serverDescriptors_652);
+                        ctx.invokeLocalMethodAfter("sendServerDescriptors", null, argsNames_656, argsValues_657);
                         break;
                         
                     }
                     case 9:  {
-                        let uid_636: UUID;
-                        let cloud_637: Cloud;
-                        uid_636 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        cloud_637 = Cloud.META.deserialize(ctx, dataIn);
-                        const argsNames_640: string[] = ["uid", "cloud"];
-                        const argsValues_641: any[] = [uid_636, cloud_637];
-                        ctx.invokeLocalMethodBefore("sendCloud", argsNames_640, argsValues_641);
-                        localApi.sendCloud(uid_636, cloud_637);
-                        ctx.invokeLocalMethodAfter("sendCloud", null, argsNames_640, argsValues_641);
+                        let uid_659: UUID;
+                        let cloud_660: Cloud;
+                        uid_659 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        cloud_660 = Cloud.META.deserialize(ctx, dataIn);
+                        const argsNames_663: string[] = ["uid", "cloud"];
+                        const argsValues_664: any[] = [uid_659, cloud_660];
+                        ctx.invokeLocalMethodBefore("sendCloud", argsNames_663, argsValues_664);
+                        localApi.sendCloud(uid_659, cloud_660);
+                        ctx.invokeLocalMethodAfter("sendCloud", null, argsNames_663, argsValues_664);
                         break;
                         
                     }
                     case 10:  {
-                        let clouds_643: UUIDAndCloud[];
-                        const len_645 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
-                        clouds_643 = new Array<UUIDAndCloud>(len_645);
-                        for (let idx_644 = 0;
-                        idx_644 < len_645;
-                        idx_644++)  {
-                            clouds_643[idx_644] = UUIDAndCloud.META.deserialize(ctx, dataIn);
+                        let clouds_666: UUIDAndCloud[];
+                        const len_668 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        clouds_666 = new Array<UUIDAndCloud>(len_668);
+                        for (let idx_667 = 0;
+                        idx_667 < len_668;
+                        idx_667++)  {
+                            clouds_666[idx_667] = UUIDAndCloud.META.deserialize(ctx, dataIn);
                             
                         }
-                        const argsNames_647: string[] = ["clouds"];
-                        const argsValues_648: any[] = [clouds_643];
-                        ctx.invokeLocalMethodBefore("sendClouds", argsNames_647, argsValues_648);
-                        localApi.sendClouds(clouds_643);
-                        ctx.invokeLocalMethodAfter("sendClouds", null, argsNames_647, argsValues_648);
+                        const argsNames_670: string[] = ["clouds"];
+                        const argsValues_671: any[] = [clouds_666];
+                        ctx.invokeLocalMethodBefore("sendClouds", argsNames_670, argsValues_671);
+                        localApi.sendClouds(clouds_666);
+                        ctx.invokeLocalMethodAfter("sendClouds", null, argsNames_670, argsValues_671);
                         break;
                         
                     }
                     case 11:  {
-                        const argsNames_650: string[] = [];
-                        const argsValues_651: any[] = [];
-                        ctx.invokeLocalMethodBefore("requestTelemetry", argsNames_650, argsValues_651);
+                        const argsNames_673: string[] = [];
+                        const argsValues_674: any[] = [];
+                        ctx.invokeLocalMethodBefore("requestTelemetry", argsNames_673, argsValues_674);
                         localApi.requestTelemetry();
-                        ctx.invokeLocalMethodAfter("requestTelemetry", null, argsNames_650, argsValues_651);
+                        ctx.invokeLocalMethodAfter("requestTelemetry", null, argsNames_673, argsValues_674);
+                        break;
+                        
+                    }
+                    case 12:  {
+                        let groups_676: AccessGroup[];
+                        const len_678 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        groups_676 = new Array<AccessGroup>(len_678);
+                        for (let idx_677 = 0;
+                        idx_677 < len_678;
+                        idx_677++)  {
+                            groups_676[idx_677] = AccessGroup.META.deserialize(ctx, dataIn);
+                            
+                        }
+                        const argsNames_680: string[] = ["groups"];
+                        const argsValues_681: any[] = [groups_676];
+                        ctx.invokeLocalMethodBefore("sendAccessGroups", argsNames_680, argsValues_681);
+                        localApi.sendAccessGroups(groups_676);
+                        ctx.invokeLocalMethodAfter("sendAccessGroups", null, argsNames_680, argsValues_681);
+                        break;
+                        
+                    }
+                    case 13:  {
+                        let uid_683: UUID;
+                        let groups_684: number[];
+                        uid_683 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const len_687 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        groups_684 = new Array<number>(len_687);
+                        for (let idx_686 = 0;
+                        idx_686 < len_687;
+                        idx_686++)  {
+                            groups_684[idx_686] = dataIn.readLong();
+                            
+                        }
+                        const argsNames_689: string[] = ["uid", "groups"];
+                        const argsValues_690: any[] = [uid_683, groups_684];
+                        ctx.invokeLocalMethodBefore("sendAccessGroupForClient", argsNames_689, argsValues_690);
+                        localApi.sendAccessGroupForClient(uid_683, groups_684);
+                        ctx.invokeLocalMethodAfter("sendAccessGroupForClient", null, argsNames_689, argsValues_690);
+                        break;
+                        
+                    }
+                    case 14:  {
+                        let id_692: number;
+                        let groups_693: UUID[];
+                        id_692 = dataIn.readLong();
+                        const len_696 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        groups_693 = new Array<UUID>(len_696);
+                        for (let idx_695 = 0;
+                        idx_695 < len_696;
+                        idx_695++)  {
+                            groups_693[idx_695] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                            
+                        }
+                        const argsNames_698: string[] = ["id", "groups"];
+                        const argsValues_699: any[] = [id_692, groups_693];
+                        ctx.invokeLocalMethodBefore("addItemsToAccessGroup", argsNames_698, argsValues_699);
+                        localApi.addItemsToAccessGroup(id_692, groups_693);
+                        ctx.invokeLocalMethodAfter("addItemsToAccessGroup", null, argsNames_698, argsValues_699);
+                        break;
+                        
+                    }
+                    case 15:  {
+                        let id_701: number;
+                        let groups_702: UUID[];
+                        id_701 = dataIn.readLong();
+                        const len_705 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        groups_702 = new Array<UUID>(len_705);
+                        for (let idx_704 = 0;
+                        idx_704 < len_705;
+                        idx_704++)  {
+                            groups_702[idx_704] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                            
+                        }
+                        const argsNames_707: string[] = ["id", "groups"];
+                        const argsValues_708: any[] = [id_701, groups_702];
+                        ctx.invokeLocalMethodBefore("removeItemsFromAccessGroup", argsNames_707, argsValues_708);
+                        localApi.removeItemsFromAccessGroup(id_701, groups_702);
+                        ctx.invokeLocalMethodAfter("removeItemsFromAccessGroup", null, argsNames_707, argsValues_708);
+                        break;
+                        
+                    }
+                    case 16:  {
+                        let uid_710: UUID;
+                        let groups_711: number[];
+                        uid_710 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const len_714 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        groups_711 = new Array<number>(len_714);
+                        for (let idx_713 = 0;
+                        idx_713 < len_714;
+                        idx_713++)  {
+                            groups_711[idx_713] = dataIn.readLong();
+                            
+                        }
+                        const argsNames_716: string[] = ["uid", "groups"];
+                        const argsValues_717: any[] = [uid_710, groups_711];
+                        ctx.invokeLocalMethodBefore("addAccessGroupsToClient", argsNames_716, argsValues_717);
+                        localApi.addAccessGroupsToClient(uid_710, groups_711);
+                        ctx.invokeLocalMethodAfter("addAccessGroupsToClient", null, argsNames_716, argsValues_717);
+                        break;
+                        
+                    }
+                    case 17:  {
+                        let uid_719: UUID;
+                        let groups_720: number[];
+                        uid_719 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const len_723 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        groups_720 = new Array<number>(len_723);
+                        for (let idx_722 = 0;
+                        idx_722 < len_723;
+                        idx_722++)  {
+                            groups_720[idx_722] = dataIn.readLong();
+                            
+                        }
+                        const argsNames_725: string[] = ["uid", "groups"];
+                        const argsValues_726: any[] = [uid_719, groups_720];
+                        ctx.invokeLocalMethodBefore("removeAccessGroupsFromClient", argsNames_725, argsValues_726);
+                        localApi.removeAccessGroupsFromClient(uid_719, groups_720);
+                        ctx.invokeLocalMethodAfter("removeAccessGroupsFromClient", null, argsNames_725, argsValues_726);
+                        break;
+                        
+                    }
+                    case 18:  {
+                        let uid_728: UUID;
+                        let accessedClients_729: UUID[];
+                        uid_728 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const len_732 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        accessedClients_729 = new Array<UUID>(len_732);
+                        for (let idx_731 = 0;
+                        idx_731 < len_732;
+                        idx_731++)  {
+                            accessedClients_729[idx_731] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                            
+                        }
+                        const argsNames_734: string[] = ["uid", "accessedClients"];
+                        const argsValues_735: any[] = [uid_728, accessedClients_729];
+                        ctx.invokeLocalMethodBefore("sendAllAccessedClients", argsNames_734, argsValues_735);
+                        localApi.sendAllAccessedClients(uid_728, accessedClients_729);
+                        ctx.invokeLocalMethodAfter("sendAllAccessedClients", null, argsNames_734, argsValues_735);
+                        break;
+                        
+                    }
+                    case 19:  {
+                        let results_737: AccessCheckResult[];
+                        const len_739 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        results_737 = new Array<AccessCheckResult>(len_739);
+                        for (let idx_738 = 0;
+                        idx_738 < len_739;
+                        idx_738++)  {
+                            results_737[idx_738] = AccessCheckResult.META.deserialize(ctx, dataIn);
+                            
+                        }
+                        const argsNames_741: string[] = ["results"];
+                        const argsValues_742: any[] = [results_737];
+                        ctx.invokeLocalMethodBefore("sendAccessCheckResults", argsNames_741, argsValues_742);
+                        localApi.sendAccessCheckResults(results_737);
+                        ctx.invokeLocalMethodAfter("sendAccessCheckResults", null, argsNames_741, argsValues_742);
                         break;
                         
                     }
@@ -5453,120 +5744,246 @@ export namespace ClientApiSafe  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_652: FastFutureContext): ClientApiSafeRemote  {
+        makeRemote(sCtx_743: FastFutureContext): ClientApiSafeRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_652.flush(sendFuture || AFuture.make());
+                    sCtx_743.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_652, changeParent: (uid: UUID): AFuture =>  {
-                    const dataOut_654 = new DataInOut();
-                    dataOut_654.writeByte(3);
-                    const argsNames_656: string[] = ["uid"];
-                    const argsValues_657: any[] = [uid];
-                    sCtx_652.invokeRemoteMethodAfter("changeParent", null, argsNames_656, argsValues_657);
-                    FastMeta.META_UUID.serialize(sCtx_652, uid, dataOut_654);
-                    sCtx_652.sendToRemote(dataOut_654.toArray());
+                , getFastMetaContext: () => sCtx_743, changeParent: (uid: UUID): AFuture =>  {
+                    const dataOut_745 = new DataInOut();
+                    dataOut_745.writeByte(3);
+                    const argsNames_747: string[] = ["uid"];
+                    const argsValues_748: any[] = [uid];
+                    sCtx_743.invokeRemoteMethodAfter("changeParent", null, argsNames_747, argsValues_748);
+                    FastMeta.META_UUID.serialize(sCtx_743, uid, dataOut_745);
+                    sCtx_743.sendToRemote(dataOut_745.toArray());
                     return AFuture.of();
                     
                 }
                 , changeAlias: (alias: UUID): AFuture =>  {
-                    const dataOut_660 = new DataInOut();
-                    dataOut_660.writeByte(4);
-                    const argsNames_662: string[] = ["alias"];
-                    const argsValues_663: any[] = [alias];
-                    sCtx_652.invokeRemoteMethodAfter("changeAlias", null, argsNames_662, argsValues_663);
-                    FastMeta.META_UUID.serialize(sCtx_652, alias, dataOut_660);
-                    sCtx_652.sendToRemote(dataOut_660.toArray());
+                    const dataOut_751 = new DataInOut();
+                    dataOut_751.writeByte(4);
+                    const argsNames_753: string[] = ["alias"];
+                    const argsValues_754: any[] = [alias];
+                    sCtx_743.invokeRemoteMethodAfter("changeAlias", null, argsNames_753, argsValues_754);
+                    FastMeta.META_UUID.serialize(sCtx_743, alias, dataOut_751);
+                    sCtx_743.sendToRemote(dataOut_751.toArray());
                     return AFuture.of();
                     
                 }
                 , newChild: (uid: UUID): AFuture =>  {
-                    const dataOut_666 = new DataInOut();
-                    dataOut_666.writeByte(5);
-                    const argsNames_668: string[] = ["uid"];
-                    const argsValues_669: any[] = [uid];
-                    sCtx_652.invokeRemoteMethodAfter("newChild", null, argsNames_668, argsValues_669);
-                    FastMeta.META_UUID.serialize(sCtx_652, uid, dataOut_666);
-                    sCtx_652.sendToRemote(dataOut_666.toArray());
+                    const dataOut_757 = new DataInOut();
+                    dataOut_757.writeByte(5);
+                    const argsNames_759: string[] = ["uid"];
+                    const argsValues_760: any[] = [uid];
+                    sCtx_743.invokeRemoteMethodAfter("newChild", null, argsNames_759, argsValues_760);
+                    FastMeta.META_UUID.serialize(sCtx_743, uid, dataOut_757);
+                    sCtx_743.sendToRemote(dataOut_757.toArray());
                     return AFuture.of();
                     
                 }
                 , sendMessages: (msg: Message[]): AFuture =>  {
-                    const dataOut_672 = new DataInOut();
-                    dataOut_672.writeByte(6);
-                    const argsNames_674: string[] = ["msg"];
-                    const argsValues_675: any[] = [msg];
-                    sCtx_652.invokeRemoteMethodAfter("sendMessages", null, argsNames_674, argsValues_675);
-                    SerializerPackNumber.INSTANCE.put(dataOut_672, msg.length);
-                    for (const el_676 of msg)  {
-                        Message.META.serialize(sCtx_652, el_676, dataOut_672);
+                    const dataOut_763 = new DataInOut();
+                    dataOut_763.writeByte(6);
+                    const argsNames_765: string[] = ["msg"];
+                    const argsValues_766: any[] = [msg];
+                    sCtx_743.invokeRemoteMethodAfter("sendMessages", null, argsNames_765, argsValues_766);
+                    SerializerPackNumber.INSTANCE.put(dataOut_763, msg.length);
+                    for (const el_767 of msg)  {
+                        Message.META.serialize(sCtx_743, el_767, dataOut_763);
                         
                     }
-                    sCtx_652.sendToRemote(dataOut_672.toArray());
+                    sCtx_743.sendToRemote(dataOut_763.toArray());
                     return AFuture.of();
                     
                 }
                 , sendServerDescriptor: (serverDescriptor: ServerDescriptor): AFuture =>  {
-                    const dataOut_679 = new DataInOut();
-                    dataOut_679.writeByte(7);
-                    const argsNames_681: string[] = ["serverDescriptor"];
-                    const argsValues_682: any[] = [serverDescriptor];
-                    sCtx_652.invokeRemoteMethodAfter("sendServerDescriptor", null, argsNames_681, argsValues_682);
-                    ServerDescriptor.META.serialize(sCtx_652, serverDescriptor, dataOut_679);
-                    sCtx_652.sendToRemote(dataOut_679.toArray());
+                    const dataOut_770 = new DataInOut();
+                    dataOut_770.writeByte(7);
+                    const argsNames_772: string[] = ["serverDescriptor"];
+                    const argsValues_773: any[] = [serverDescriptor];
+                    sCtx_743.invokeRemoteMethodAfter("sendServerDescriptor", null, argsNames_772, argsValues_773);
+                    ServerDescriptor.META.serialize(sCtx_743, serverDescriptor, dataOut_770);
+                    sCtx_743.sendToRemote(dataOut_770.toArray());
                     return AFuture.of();
                     
                 }
                 , sendServerDescriptors: (serverDescriptors: ServerDescriptor[]): AFuture =>  {
-                    const dataOut_685 = new DataInOut();
-                    dataOut_685.writeByte(8);
-                    const argsNames_687: string[] = ["serverDescriptors"];
-                    const argsValues_688: any[] = [serverDescriptors];
-                    sCtx_652.invokeRemoteMethodAfter("sendServerDescriptors", null, argsNames_687, argsValues_688);
-                    SerializerPackNumber.INSTANCE.put(dataOut_685, serverDescriptors.length);
-                    for (const el_689 of serverDescriptors)  {
-                        ServerDescriptor.META.serialize(sCtx_652, el_689, dataOut_685);
+                    const dataOut_776 = new DataInOut();
+                    dataOut_776.writeByte(8);
+                    const argsNames_778: string[] = ["serverDescriptors"];
+                    const argsValues_779: any[] = [serverDescriptors];
+                    sCtx_743.invokeRemoteMethodAfter("sendServerDescriptors", null, argsNames_778, argsValues_779);
+                    SerializerPackNumber.INSTANCE.put(dataOut_776, serverDescriptors.length);
+                    for (const el_780 of serverDescriptors)  {
+                        ServerDescriptor.META.serialize(sCtx_743, el_780, dataOut_776);
                         
                     }
-                    sCtx_652.sendToRemote(dataOut_685.toArray());
+                    sCtx_743.sendToRemote(dataOut_776.toArray());
                     return AFuture.of();
                     
                 }
                 , sendCloud: (uid: UUID, cloud: Cloud): AFuture =>  {
-                    const dataOut_692 = new DataInOut();
-                    dataOut_692.writeByte(9);
-                    const argsNames_694: string[] = ["uid", "cloud"];
-                    const argsValues_695: any[] = [uid, cloud];
-                    sCtx_652.invokeRemoteMethodAfter("sendCloud", null, argsNames_694, argsValues_695);
-                    FastMeta.META_UUID.serialize(sCtx_652, uid, dataOut_692);
-                    Cloud.META.serialize(sCtx_652, cloud, dataOut_692);
-                    sCtx_652.sendToRemote(dataOut_692.toArray());
+                    const dataOut_783 = new DataInOut();
+                    dataOut_783.writeByte(9);
+                    const argsNames_785: string[] = ["uid", "cloud"];
+                    const argsValues_786: any[] = [uid, cloud];
+                    sCtx_743.invokeRemoteMethodAfter("sendCloud", null, argsNames_785, argsValues_786);
+                    FastMeta.META_UUID.serialize(sCtx_743, uid, dataOut_783);
+                    Cloud.META.serialize(sCtx_743, cloud, dataOut_783);
+                    sCtx_743.sendToRemote(dataOut_783.toArray());
                     return AFuture.of();
                     
                 }
                 , sendClouds: (clouds: UUIDAndCloud[]): AFuture =>  {
-                    const dataOut_699 = new DataInOut();
-                    dataOut_699.writeByte(10);
-                    const argsNames_701: string[] = ["clouds"];
-                    const argsValues_702: any[] = [clouds];
-                    sCtx_652.invokeRemoteMethodAfter("sendClouds", null, argsNames_701, argsValues_702);
-                    SerializerPackNumber.INSTANCE.put(dataOut_699, clouds.length);
-                    for (const el_703 of clouds)  {
-                        UUIDAndCloud.META.serialize(sCtx_652, el_703, dataOut_699);
+                    const dataOut_790 = new DataInOut();
+                    dataOut_790.writeByte(10);
+                    const argsNames_792: string[] = ["clouds"];
+                    const argsValues_793: any[] = [clouds];
+                    sCtx_743.invokeRemoteMethodAfter("sendClouds", null, argsNames_792, argsValues_793);
+                    SerializerPackNumber.INSTANCE.put(dataOut_790, clouds.length);
+                    for (const el_794 of clouds)  {
+                        UUIDAndCloud.META.serialize(sCtx_743, el_794, dataOut_790);
                         
                     }
-                    sCtx_652.sendToRemote(dataOut_699.toArray());
+                    sCtx_743.sendToRemote(dataOut_790.toArray());
                     return AFuture.of();
                     
                 }
                 , requestTelemetry: (): AFuture =>  {
-                    const dataOut_706 = new DataInOut();
-                    dataOut_706.writeByte(11);
-                    const argsNames_708: string[] = [];
-                    const argsValues_709: any[] = [];
-                    sCtx_652.invokeRemoteMethodAfter("requestTelemetry", null, argsNames_708, argsValues_709);
-                    sCtx_652.sendToRemote(dataOut_706.toArray());
+                    const dataOut_797 = new DataInOut();
+                    dataOut_797.writeByte(11);
+                    const argsNames_799: string[] = [];
+                    const argsValues_800: any[] = [];
+                    sCtx_743.invokeRemoteMethodAfter("requestTelemetry", null, argsNames_799, argsValues_800);
+                    sCtx_743.sendToRemote(dataOut_797.toArray());
+                    return AFuture.of();
+                    
+                }
+                , sendAccessGroups: (groups: AccessGroup[]): AFuture =>  {
+                    const dataOut_802 = new DataInOut();
+                    dataOut_802.writeByte(12);
+                    const argsNames_804: string[] = ["groups"];
+                    const argsValues_805: any[] = [groups];
+                    sCtx_743.invokeRemoteMethodAfter("sendAccessGroups", null, argsNames_804, argsValues_805);
+                    SerializerPackNumber.INSTANCE.put(dataOut_802, groups.length);
+                    for (const el_806 of groups)  {
+                        AccessGroup.META.serialize(sCtx_743, el_806, dataOut_802);
+                        
+                    }
+                    sCtx_743.sendToRemote(dataOut_802.toArray());
+                    return AFuture.of();
+                    
+                }
+                , sendAccessGroupForClient: (uid: UUID, groups: number[]): AFuture =>  {
+                    const dataOut_809 = new DataInOut();
+                    dataOut_809.writeByte(13);
+                    const argsNames_811: string[] = ["uid", "groups"];
+                    const argsValues_812: any[] = [uid, groups];
+                    sCtx_743.invokeRemoteMethodAfter("sendAccessGroupForClient", null, argsNames_811, argsValues_812);
+                    FastMeta.META_UUID.serialize(sCtx_743, uid, dataOut_809);
+                    SerializerPackNumber.INSTANCE.put(dataOut_809, groups.length);
+                    for (const el_814 of groups)  {
+                        dataOut_809.writeLong(el_814);
+                        
+                    }
+                    sCtx_743.sendToRemote(dataOut_809.toArray());
+                    return AFuture.of();
+                    
+                }
+                , addItemsToAccessGroup: (id: number, groups: UUID[]): AFuture =>  {
+                    const dataOut_817 = new DataInOut();
+                    dataOut_817.writeByte(14);
+                    const argsNames_819: string[] = ["id", "groups"];
+                    const argsValues_820: any[] = [id, groups];
+                    sCtx_743.invokeRemoteMethodAfter("addItemsToAccessGroup", null, argsNames_819, argsValues_820);
+                    dataOut_817.writeLong(id);
+                    SerializerPackNumber.INSTANCE.put(dataOut_817, groups.length);
+                    for (const el_822 of groups)  {
+                        FastMeta.META_UUID.serialize(sCtx_743, el_822, dataOut_817);
+                        
+                    }
+                    sCtx_743.sendToRemote(dataOut_817.toArray());
+                    return AFuture.of();
+                    
+                }
+                , removeItemsFromAccessGroup: (id: number, groups: UUID[]): AFuture =>  {
+                    const dataOut_825 = new DataInOut();
+                    dataOut_825.writeByte(15);
+                    const argsNames_827: string[] = ["id", "groups"];
+                    const argsValues_828: any[] = [id, groups];
+                    sCtx_743.invokeRemoteMethodAfter("removeItemsFromAccessGroup", null, argsNames_827, argsValues_828);
+                    dataOut_825.writeLong(id);
+                    SerializerPackNumber.INSTANCE.put(dataOut_825, groups.length);
+                    for (const el_830 of groups)  {
+                        FastMeta.META_UUID.serialize(sCtx_743, el_830, dataOut_825);
+                        
+                    }
+                    sCtx_743.sendToRemote(dataOut_825.toArray());
+                    return AFuture.of();
+                    
+                }
+                , addAccessGroupsToClient: (uid: UUID, groups: number[]): AFuture =>  {
+                    const dataOut_833 = new DataInOut();
+                    dataOut_833.writeByte(16);
+                    const argsNames_835: string[] = ["uid", "groups"];
+                    const argsValues_836: any[] = [uid, groups];
+                    sCtx_743.invokeRemoteMethodAfter("addAccessGroupsToClient", null, argsNames_835, argsValues_836);
+                    FastMeta.META_UUID.serialize(sCtx_743, uid, dataOut_833);
+                    SerializerPackNumber.INSTANCE.put(dataOut_833, groups.length);
+                    for (const el_838 of groups)  {
+                        dataOut_833.writeLong(el_838);
+                        
+                    }
+                    sCtx_743.sendToRemote(dataOut_833.toArray());
+                    return AFuture.of();
+                    
+                }
+                , removeAccessGroupsFromClient: (uid: UUID, groups: number[]): AFuture =>  {
+                    const dataOut_841 = new DataInOut();
+                    dataOut_841.writeByte(17);
+                    const argsNames_843: string[] = ["uid", "groups"];
+                    const argsValues_844: any[] = [uid, groups];
+                    sCtx_743.invokeRemoteMethodAfter("removeAccessGroupsFromClient", null, argsNames_843, argsValues_844);
+                    FastMeta.META_UUID.serialize(sCtx_743, uid, dataOut_841);
+                    SerializerPackNumber.INSTANCE.put(dataOut_841, groups.length);
+                    for (const el_846 of groups)  {
+                        dataOut_841.writeLong(el_846);
+                        
+                    }
+                    sCtx_743.sendToRemote(dataOut_841.toArray());
+                    return AFuture.of();
+                    
+                }
+                , sendAllAccessedClients: (uid: UUID, accessedClients: UUID[]): AFuture =>  {
+                    const dataOut_849 = new DataInOut();
+                    dataOut_849.writeByte(18);
+                    const argsNames_851: string[] = ["uid", "accessedClients"];
+                    const argsValues_852: any[] = [uid, accessedClients];
+                    sCtx_743.invokeRemoteMethodAfter("sendAllAccessedClients", null, argsNames_851, argsValues_852);
+                    FastMeta.META_UUID.serialize(sCtx_743, uid, dataOut_849);
+                    SerializerPackNumber.INSTANCE.put(dataOut_849, accessedClients.length);
+                    for (const el_854 of accessedClients)  {
+                        FastMeta.META_UUID.serialize(sCtx_743, el_854, dataOut_849);
+                        
+                    }
+                    sCtx_743.sendToRemote(dataOut_849.toArray());
+                    return AFuture.of();
+                    
+                }
+                , sendAccessCheckResults: (results: AccessCheckResult[]): AFuture =>  {
+                    const dataOut_857 = new DataInOut();
+                    dataOut_857.writeByte(19);
+                    const argsNames_859: string[] = ["results"];
+                    const argsValues_860: any[] = [results];
+                    sCtx_743.invokeRemoteMethodAfter("sendAccessCheckResults", null, argsNames_859, argsValues_860);
+                    SerializerPackNumber.INSTANCE.put(dataOut_857, results.length);
+                    for (const el_861 of results)  {
+                        AccessCheckResult.META.serialize(sCtx_743, el_861, dataOut_857);
+                        
+                    }
+                    sCtx_743.sendToRemote(dataOut_857.toArray());
                     return AFuture.of();
                     
                 }
@@ -5604,6 +6021,14 @@ export abstract class ClientApiSafeLocal<RT extends ClientApiSafeRemote> impleme
     public abstract sendCloud(uid: UUID, cloud: Cloud): AFuture;
     public abstract sendClouds(clouds: UUIDAndCloud[]): AFuture;
     public abstract requestTelemetry(): AFuture;
+    public abstract sendAccessGroups(groups: AccessGroup[]): AFuture;
+    public abstract sendAccessGroupForClient(uid: UUID, groups: number[]): AFuture;
+    public abstract addItemsToAccessGroup(id: number, groups: UUID[]): AFuture;
+    public abstract removeItemsFromAccessGroup(id: number, groups: UUID[]): AFuture;
+    public abstract addAccessGroupsToClient(uid: UUID, groups: number[]): AFuture;
+    public abstract removeAccessGroupsFromClient(uid: UUID, groups: number[]): AFuture;
+    public abstract sendAllAccessedClients(uid: UUID, accessedClients: UUID[]): AFuture;
+    public abstract sendAccessCheckResults(results: AccessCheckResult[]): AFuture;
     
 }
 // --- Generated API Interface: AuthorizedApi ---
@@ -5624,6 +6049,15 @@ export interface AuthorizedApi  {
     getAllAccessedClients(uid: UUID): ARFuture<UUID[]>;
     checkAccessForSendMessage2(uid1: UUID, uid2: UUID): ARFuture<boolean>;
     sendTelemetry(telemetry: Telemetry): AFuture;
+    requestAccessGroupsForClients(uids: UUID[]): AFuture;
+    requestAccessGroupsItems(ids: number[]): AFuture;
+    sendAccessGroupForClient(uid: UUID, groups: number[]): AFuture;
+    addItemsToAccessGroup(id: number, groups: UUID[]): AFuture;
+    removeItemsFromAccessGroup(id: number, groups: UUID[]): AFuture;
+    addAccessGroupsToClient(uid: UUID, groups: number[]): AFuture;
+    removeAccessGroupsFromClient(uid: UUID, groups: number[]): AFuture;
+    requestAllAccessedClients(uids: UUID[]): AFuture;
+    requestAccessCheck(requests: AccessCheckPair[]): AFuture;
     
 }
 export namespace AuthorizedApi  {
@@ -5647,92 +6081,92 @@ export namespace AuthorizedApi  {
                         
                     }
                     case 3:  {
-                        let id_711: number;
-                        id_711 = dataIn.readByte();
-                        const argsNames_713: string[] = ["id"];
-                        const argsValues_714: any[] = [id_711];
-                        ctx.invokeLocalMethodBefore("backId", argsNames_713, argsValues_714);
-                        localApi.backId(id_711);
-                        ctx.invokeLocalMethodAfter("backId", null, argsNames_713, argsValues_714);
+                        let id_864: number;
+                        id_864 = dataIn.readByte();
+                        const argsNames_866: string[] = ["id"];
+                        const argsValues_867: any[] = [id_864];
+                        ctx.invokeLocalMethodBefore("backId", argsNames_866, argsValues_867);
+                        localApi.backId(id_864);
+                        ctx.invokeLocalMethodAfter("backId", null, argsNames_866, argsValues_867);
                         break;
                         
                     }
                     case 4:  {
-                        let nextConnectMsDuration_716: number;
-                        nextConnectMsDuration_716 = dataIn.readLong();
-                        const argsNames_718: string[] = ["nextConnectMsDuration"];
-                        const argsValues_719: any[] = [nextConnectMsDuration_716];
-                        ctx.invokeLocalMethodBefore("ping", argsNames_718, argsValues_719);
-                        localApi.ping(nextConnectMsDuration_716);
-                        ctx.invokeLocalMethodAfter("ping", null, argsNames_718, argsValues_719);
+                        let nextConnectMsDuration_869: number;
+                        nextConnectMsDuration_869 = dataIn.readLong();
+                        const argsNames_871: string[] = ["nextConnectMsDuration"];
+                        const argsValues_872: any[] = [nextConnectMsDuration_869];
+                        ctx.invokeLocalMethodBefore("ping", argsNames_871, argsValues_872);
+                        localApi.ping(nextConnectMsDuration_869);
+                        ctx.invokeLocalMethodAfter("ping", null, argsNames_871, argsValues_872);
                         break;
                         
                     }
                     case 5:  {
-                        let uid_721: UUID;
-                        let stream_722: ClientApiStream;
-                        uid_721 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        stream_722 = ClientApiStream.META.deserialize(ctx, dataIn);
-                        const argsNames_725: string[] = ["uid", "stream"];
-                        const argsValues_726: any[] = [uid_721, stream_722];
-                        ctx.invokeLocalMethodBefore("client", argsNames_725, argsValues_726);
-                        localApi.client(uid_721, stream_722);
-                        ctx.invokeLocalMethodAfter("client", null, argsNames_725, argsValues_726);
+                        let uid_874: UUID;
+                        let stream_875: ClientApiStream;
+                        uid_874 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        stream_875 = ClientApiStream.META.deserialize(ctx, dataIn);
+                        const argsNames_878: string[] = ["uid", "stream"];
+                        const argsValues_879: any[] = [uid_874, stream_875];
+                        ctx.invokeLocalMethodBefore("client", argsNames_878, argsValues_879);
+                        localApi.client(uid_874, stream_875);
+                        ctx.invokeLocalMethodAfter("client", null, argsNames_878, argsValues_879);
                         break;
                         
                     }
                     case 6:  {
-                        let msg_728: Message;
-                        msg_728 = Message.META.deserialize(ctx, dataIn);
-                        const argsNames_730: string[] = ["msg"];
-                        const argsValues_731: any[] = [msg_728];
-                        ctx.invokeLocalMethodBefore("sendMessage", argsNames_730, argsValues_731);
-                        localApi.sendMessage(msg_728);
-                        ctx.invokeLocalMethodAfter("sendMessage", null, argsNames_730, argsValues_731);
+                        let msg_881: Message;
+                        msg_881 = Message.META.deserialize(ctx, dataIn);
+                        const argsNames_883: string[] = ["msg"];
+                        const argsValues_884: any[] = [msg_881];
+                        ctx.invokeLocalMethodBefore("sendMessage", argsNames_883, argsValues_884);
+                        localApi.sendMessage(msg_881);
+                        ctx.invokeLocalMethodAfter("sendMessage", null, argsNames_883, argsValues_884);
                         break;
                         
                     }
                     case 7:  {
-                        let msg_733: Message[];
-                        const len_735 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
-                        msg_733 = new Array<Message>(len_735);
-                        for (let idx_734 = 0;
-                        idx_734 < len_735;
-                        idx_734++)  {
-                            msg_733[idx_734] = Message.META.deserialize(ctx, dataIn);
+                        let msg_886: Message[];
+                        const len_888 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        msg_886 = new Array<Message>(len_888);
+                        for (let idx_887 = 0;
+                        idx_887 < len_888;
+                        idx_887++)  {
+                            msg_886[idx_887] = Message.META.deserialize(ctx, dataIn);
                             
                         }
-                        const argsNames_737: string[] = ["msg"];
-                        const argsValues_738: any[] = [msg_733];
-                        ctx.invokeLocalMethodBefore("sendMessages", argsNames_737, argsValues_738);
-                        localApi.sendMessages(msg_733);
-                        ctx.invokeLocalMethodAfter("sendMessages", null, argsNames_737, argsValues_738);
+                        const argsNames_890: string[] = ["msg"];
+                        const argsValues_891: any[] = [msg_886];
+                        ctx.invokeLocalMethodBefore("sendMessages", argsNames_890, argsValues_891);
+                        localApi.sendMessages(msg_886);
+                        ctx.invokeLocalMethodAfter("sendMessages", null, argsNames_890, argsValues_891);
                         break;
                         
                     }
                     case 8:  {
-                        const reqId_739 = dataIn.readInt();
-                        let owner_740: UUID;
-                        let uids_741: UUID[];
-                        owner_740 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const len_744 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
-                        uids_741 = new Array<UUID>(len_744);
-                        for (let idx_743 = 0;
-                        idx_743 < len_744;
-                        idx_743++)  {
-                            uids_741[idx_743] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const reqId_892 = dataIn.readInt();
+                        let owner_893: UUID;
+                        let uids_894: UUID[];
+                        owner_893 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const len_897 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        uids_894 = new Array<UUID>(len_897);
+                        for (let idx_896 = 0;
+                        idx_896 < len_897;
+                        idx_896++)  {
+                            uids_894[idx_896] = FastMeta.META_UUID.deserialize(ctx, dataIn);
                             
                         }
-                        const argsNames_746: string[] = ["owner", "uids"];
-                        const argsValues_747: any[] = [owner_740, uids_741];
-                        ctx.invokeLocalMethodBefore("createAccessGroup", argsNames_746, argsValues_747);
+                        const argsNames_899: string[] = ["owner", "uids"];
+                        const argsValues_900: any[] = [owner_893, uids_894];
+                        ctx.invokeLocalMethodBefore("createAccessGroup", argsNames_899, argsValues_900);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.createAccessGroup(owner_740, uids_741);
-                        ctx.invokeLocalMethodAfter("createAccessGroup", resultFuture, argsNames_746, argsValues_747);
-                        resultFuture.to((v_749: number) =>  {
-                            const data_748 = new DataInOut();
-                            data_748.writeLong(v_749);
-                            ctx.sendResultToRemote(reqId_739, data_748.toArray());
+                        const resultFuture = localApi.createAccessGroup(owner_893, uids_894);
+                        ctx.invokeLocalMethodAfter("createAccessGroup", resultFuture, argsNames_899, argsValues_900);
+                        resultFuture.to((v_902: number) =>  {
+                            const data_901 = new DataInOut();
+                            data_901.writeLong(v_902);
+                            ctx.sendResultToRemote(reqId_892, data_901.toArray());
                             
                         }
                         );
@@ -5740,21 +6174,21 @@ export namespace AuthorizedApi  {
                         
                     }
                     case 9:  {
-                        const reqId_751 = dataIn.readInt();
-                        let groupId_752: number;
-                        let uid_753: UUID;
-                        groupId_752 = dataIn.readLong();
-                        uid_753 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const argsNames_756: string[] = ["groupId", "uid"];
-                        const argsValues_757: any[] = [groupId_752, uid_753];
-                        ctx.invokeLocalMethodBefore("addToAccessGroup", argsNames_756, argsValues_757);
+                        const reqId_904 = dataIn.readInt();
+                        let groupId_905: number;
+                        let uid_906: UUID;
+                        groupId_905 = dataIn.readLong();
+                        uid_906 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const argsNames_909: string[] = ["groupId", "uid"];
+                        const argsValues_910: any[] = [groupId_905, uid_906];
+                        ctx.invokeLocalMethodBefore("addToAccessGroup", argsNames_909, argsValues_910);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.addToAccessGroup(groupId_752, uid_753);
-                        ctx.invokeLocalMethodAfter("addToAccessGroup", resultFuture, argsNames_756, argsValues_757);
-                        resultFuture.to((v_759: boolean) =>  {
-                            const data_758 = new DataInOut();
-                            data_758.writeBoolean(v_759);
-                            ctx.sendResultToRemote(reqId_751, data_758.toArray());
+                        const resultFuture = localApi.addToAccessGroup(groupId_905, uid_906);
+                        ctx.invokeLocalMethodAfter("addToAccessGroup", resultFuture, argsNames_909, argsValues_910);
+                        resultFuture.to((v_912: boolean) =>  {
+                            const data_911 = new DataInOut();
+                            data_911.writeBoolean(v_912);
+                            ctx.sendResultToRemote(reqId_904, data_911.toArray());
                             
                         }
                         );
@@ -5762,21 +6196,21 @@ export namespace AuthorizedApi  {
                         
                     }
                     case 10:  {
-                        const reqId_761 = dataIn.readInt();
-                        let groupId_762: number;
-                        let uid_763: UUID;
-                        groupId_762 = dataIn.readLong();
-                        uid_763 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const argsNames_766: string[] = ["groupId", "uid"];
-                        const argsValues_767: any[] = [groupId_762, uid_763];
-                        ctx.invokeLocalMethodBefore("removeFromAccessGroup", argsNames_766, argsValues_767);
+                        const reqId_914 = dataIn.readInt();
+                        let groupId_915: number;
+                        let uid_916: UUID;
+                        groupId_915 = dataIn.readLong();
+                        uid_916 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const argsNames_919: string[] = ["groupId", "uid"];
+                        const argsValues_920: any[] = [groupId_915, uid_916];
+                        ctx.invokeLocalMethodBefore("removeFromAccessGroup", argsNames_919, argsValues_920);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.removeFromAccessGroup(groupId_762, uid_763);
-                        ctx.invokeLocalMethodAfter("removeFromAccessGroup", resultFuture, argsNames_766, argsValues_767);
-                        resultFuture.to((v_769: boolean) =>  {
-                            const data_768 = new DataInOut();
-                            data_768.writeBoolean(v_769);
-                            ctx.sendResultToRemote(reqId_761, data_768.toArray());
+                        const resultFuture = localApi.removeFromAccessGroup(groupId_915, uid_916);
+                        ctx.invokeLocalMethodAfter("removeFromAccessGroup", resultFuture, argsNames_919, argsValues_920);
+                        resultFuture.to((v_922: boolean) =>  {
+                            const data_921 = new DataInOut();
+                            data_921.writeBoolean(v_922);
+                            ctx.sendResultToRemote(reqId_914, data_921.toArray());
                             
                         }
                         );
@@ -5784,70 +6218,70 @@ export namespace AuthorizedApi  {
                         
                     }
                     case 11:  {
-                        let uid_772: UUID;
-                        uid_772 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const argsNames_774: string[] = ["uid"];
-                        const argsValues_775: any[] = [uid_772];
-                        ctx.invokeLocalMethodBefore("checkAccessForSendMessage", argsNames_774, argsValues_775);
-                        localApi.checkAccessForSendMessage(uid_772);
-                        ctx.invokeLocalMethodAfter("checkAccessForSendMessage", null, argsNames_774, argsValues_775);
+                        let uid_925: UUID;
+                        uid_925 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const argsNames_927: string[] = ["uid"];
+                        const argsValues_928: any[] = [uid_925];
+                        ctx.invokeLocalMethodBefore("checkAccessForSendMessage", argsNames_927, argsValues_928);
+                        localApi.checkAccessForSendMessage(uid_925);
+                        ctx.invokeLocalMethodAfter("checkAccessForSendMessage", null, argsNames_927, argsValues_928);
                         break;
                         
                     }
                     case 12:  {
-                        let sid_777: number[];
-                        const len_779 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
-                        sid_777 = new Array<number>(len_779);
-                        for (let idx_778 = 0;
-                        idx_778 < len_779;
-                        idx_778++)  {
-                            sid_777[idx_778] = dataIn.readShort();
+                        let sid_930: number[];
+                        const len_932 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        sid_930 = new Array<number>(len_932);
+                        for (let idx_931 = 0;
+                        idx_931 < len_932;
+                        idx_931++)  {
+                            sid_930[idx_931] = dataIn.readShort();
                             
                         }
-                        const argsNames_781: string[] = ["sid"];
-                        const argsValues_782: any[] = [sid_777];
-                        ctx.invokeLocalMethodBefore("resolverServers", argsNames_781, argsValues_782);
-                        localApi.resolverServers(sid_777);
-                        ctx.invokeLocalMethodAfter("resolverServers", null, argsNames_781, argsValues_782);
+                        const argsNames_934: string[] = ["sid"];
+                        const argsValues_935: any[] = [sid_930];
+                        ctx.invokeLocalMethodBefore("resolverServers", argsNames_934, argsValues_935);
+                        localApi.resolverServers(sid_930);
+                        ctx.invokeLocalMethodAfter("resolverServers", null, argsNames_934, argsValues_935);
                         break;
                         
                     }
                     case 13:  {
-                        let uids_784: UUID[];
-                        const len_786 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
-                        uids_784 = new Array<UUID>(len_786);
-                        for (let idx_785 = 0;
-                        idx_785 < len_786;
-                        idx_785++)  {
-                            uids_784[idx_785] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        let uids_937: UUID[];
+                        const len_939 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        uids_937 = new Array<UUID>(len_939);
+                        for (let idx_938 = 0;
+                        idx_938 < len_939;
+                        idx_938++)  {
+                            uids_937[idx_938] = FastMeta.META_UUID.deserialize(ctx, dataIn);
                             
                         }
-                        const argsNames_788: string[] = ["uids"];
-                        const argsValues_789: any[] = [uids_784];
-                        ctx.invokeLocalMethodBefore("resolverClouds", argsNames_788, argsValues_789);
-                        localApi.resolverClouds(uids_784);
-                        ctx.invokeLocalMethodAfter("resolverClouds", null, argsNames_788, argsValues_789);
+                        const argsNames_941: string[] = ["uids"];
+                        const argsValues_942: any[] = [uids_937];
+                        ctx.invokeLocalMethodBefore("resolverClouds", argsNames_941, argsValues_942);
+                        localApi.resolverClouds(uids_937);
+                        ctx.invokeLocalMethodAfter("resolverClouds", null, argsNames_941, argsValues_942);
                         break;
                         
                     }
                     case 14:  {
-                        const reqId_790 = dataIn.readInt();
-                        let uid_791: UUID;
-                        uid_791 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const argsNames_793: string[] = ["uid"];
-                        const argsValues_794: any[] = [uid_791];
-                        ctx.invokeLocalMethodBefore("getAccessGroups", argsNames_793, argsValues_794);
+                        const reqId_943 = dataIn.readInt();
+                        let uid_944: UUID;
+                        uid_944 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const argsNames_946: string[] = ["uid"];
+                        const argsValues_947: any[] = [uid_944];
+                        ctx.invokeLocalMethodBefore("getAccessGroups", argsNames_946, argsValues_947);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.getAccessGroups(uid_791);
-                        ctx.invokeLocalMethodAfter("getAccessGroups", resultFuture, argsNames_793, argsValues_794);
-                        resultFuture.to((v_796: number[]) =>  {
-                            const data_795 = new DataInOut();
-                            SerializerPackNumber.INSTANCE.put(data_795, v_796.length);
-                            for (const el_797 of v_796)  {
-                                data_795.writeLong(el_797);
+                        const resultFuture = localApi.getAccessGroups(uid_944);
+                        ctx.invokeLocalMethodAfter("getAccessGroups", resultFuture, argsNames_946, argsValues_947);
+                        resultFuture.to((v_949: number[]) =>  {
+                            const data_948 = new DataInOut();
+                            SerializerPackNumber.INSTANCE.put(data_948, v_949.length);
+                            for (const el_950 of v_949)  {
+                                data_948.writeLong(el_950);
                                 
                             }
-                            ctx.sendResultToRemote(reqId_790, data_795.toArray());
+                            ctx.sendResultToRemote(reqId_943, data_948.toArray());
                             
                         }
                         );
@@ -5855,19 +6289,19 @@ export namespace AuthorizedApi  {
                         
                     }
                     case 15:  {
-                        const reqId_799 = dataIn.readInt();
-                        let groupId_800: number;
-                        groupId_800 = dataIn.readLong();
-                        const argsNames_802: string[] = ["groupId"];
-                        const argsValues_803: any[] = [groupId_800];
-                        ctx.invokeLocalMethodBefore("getAccessGroup", argsNames_802, argsValues_803);
+                        const reqId_952 = dataIn.readInt();
+                        let groupId_953: number;
+                        groupId_953 = dataIn.readLong();
+                        const argsNames_955: string[] = ["groupId"];
+                        const argsValues_956: any[] = [groupId_953];
+                        ctx.invokeLocalMethodBefore("getAccessGroup", argsNames_955, argsValues_956);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.getAccessGroup(groupId_800);
-                        ctx.invokeLocalMethodAfter("getAccessGroup", resultFuture, argsNames_802, argsValues_803);
-                        resultFuture.to((v_805: AccessGroup) =>  {
-                            const data_804 = new DataInOut();
-                            AccessGroup.META.serialize(ctx, v_805, data_804);
-                            ctx.sendResultToRemote(reqId_799, data_804.toArray());
+                        const resultFuture = localApi.getAccessGroup(groupId_953);
+                        ctx.invokeLocalMethodAfter("getAccessGroup", resultFuture, argsNames_955, argsValues_956);
+                        resultFuture.to((v_958: AccessGroup) =>  {
+                            const data_957 = new DataInOut();
+                            AccessGroup.META.serialize(ctx, v_958, data_957);
+                            ctx.sendResultToRemote(reqId_952, data_957.toArray());
                             
                         }
                         );
@@ -5875,23 +6309,23 @@ export namespace AuthorizedApi  {
                         
                     }
                     case 16:  {
-                        const reqId_807 = dataIn.readInt();
-                        let uid_808: UUID;
-                        uid_808 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const argsNames_810: string[] = ["uid"];
-                        const argsValues_811: any[] = [uid_808];
-                        ctx.invokeLocalMethodBefore("getAllAccessedClients", argsNames_810, argsValues_811);
+                        const reqId_960 = dataIn.readInt();
+                        let uid_961: UUID;
+                        uid_961 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const argsNames_963: string[] = ["uid"];
+                        const argsValues_964: any[] = [uid_961];
+                        ctx.invokeLocalMethodBefore("getAllAccessedClients", argsNames_963, argsValues_964);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.getAllAccessedClients(uid_808);
-                        ctx.invokeLocalMethodAfter("getAllAccessedClients", resultFuture, argsNames_810, argsValues_811);
-                        resultFuture.to((v_813: UUID[]) =>  {
-                            const data_812 = new DataInOut();
-                            SerializerPackNumber.INSTANCE.put(data_812, v_813.length);
-                            for (const el_814 of v_813)  {
-                                FastMeta.META_UUID.serialize(ctx, el_814, data_812);
+                        const resultFuture = localApi.getAllAccessedClients(uid_961);
+                        ctx.invokeLocalMethodAfter("getAllAccessedClients", resultFuture, argsNames_963, argsValues_964);
+                        resultFuture.to((v_966: UUID[]) =>  {
+                            const data_965 = new DataInOut();
+                            SerializerPackNumber.INSTANCE.put(data_965, v_966.length);
+                            for (const el_967 of v_966)  {
+                                FastMeta.META_UUID.serialize(ctx, el_967, data_965);
                                 
                             }
-                            ctx.sendResultToRemote(reqId_807, data_812.toArray());
+                            ctx.sendResultToRemote(reqId_960, data_965.toArray());
                             
                         }
                         );
@@ -5899,21 +6333,21 @@ export namespace AuthorizedApi  {
                         
                     }
                     case 17:  {
-                        const reqId_816 = dataIn.readInt();
-                        let uid1_817: UUID;
-                        let uid2_818: UUID;
-                        uid1_817 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        uid2_818 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const argsNames_821: string[] = ["uid1", "uid2"];
-                        const argsValues_822: any[] = [uid1_817, uid2_818];
-                        ctx.invokeLocalMethodBefore("checkAccessForSendMessage2", argsNames_821, argsValues_822);
+                        const reqId_969 = dataIn.readInt();
+                        let uid1_970: UUID;
+                        let uid2_971: UUID;
+                        uid1_970 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        uid2_971 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const argsNames_974: string[] = ["uid1", "uid2"];
+                        const argsValues_975: any[] = [uid1_970, uid2_971];
+                        ctx.invokeLocalMethodBefore("checkAccessForSendMessage2", argsNames_974, argsValues_975);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.checkAccessForSendMessage2(uid1_817, uid2_818);
-                        ctx.invokeLocalMethodAfter("checkAccessForSendMessage2", resultFuture, argsNames_821, argsValues_822);
-                        resultFuture.to((v_824: boolean) =>  {
-                            const data_823 = new DataInOut();
-                            data_823.writeBoolean(v_824);
-                            ctx.sendResultToRemote(reqId_816, data_823.toArray());
+                        const resultFuture = localApi.checkAccessForSendMessage2(uid1_970, uid2_971);
+                        ctx.invokeLocalMethodAfter("checkAccessForSendMessage2", resultFuture, argsNames_974, argsValues_975);
+                        resultFuture.to((v_977: boolean) =>  {
+                            const data_976 = new DataInOut();
+                            data_976.writeBoolean(v_977);
+                            ctx.sendResultToRemote(reqId_969, data_976.toArray());
                             
                         }
                         );
@@ -5921,13 +6355,185 @@ export namespace AuthorizedApi  {
                         
                     }
                     case 18:  {
-                        let telemetry_827: Telemetry;
-                        telemetry_827 = Telemetry.META.deserialize(ctx, dataIn);
-                        const argsNames_829: string[] = ["telemetry"];
-                        const argsValues_830: any[] = [telemetry_827];
-                        ctx.invokeLocalMethodBefore("sendTelemetry", argsNames_829, argsValues_830);
-                        localApi.sendTelemetry(telemetry_827);
-                        ctx.invokeLocalMethodAfter("sendTelemetry", null, argsNames_829, argsValues_830);
+                        let telemetry_980: Telemetry;
+                        telemetry_980 = Telemetry.META.deserialize(ctx, dataIn);
+                        const argsNames_982: string[] = ["telemetry"];
+                        const argsValues_983: any[] = [telemetry_980];
+                        ctx.invokeLocalMethodBefore("sendTelemetry", argsNames_982, argsValues_983);
+                        localApi.sendTelemetry(telemetry_980);
+                        ctx.invokeLocalMethodAfter("sendTelemetry", null, argsNames_982, argsValues_983);
+                        break;
+                        
+                    }
+                    case 19:  {
+                        let uids_985: UUID[];
+                        const len_987 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        uids_985 = new Array<UUID>(len_987);
+                        for (let idx_986 = 0;
+                        idx_986 < len_987;
+                        idx_986++)  {
+                            uids_985[idx_986] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                            
+                        }
+                        const argsNames_989: string[] = ["uids"];
+                        const argsValues_990: any[] = [uids_985];
+                        ctx.invokeLocalMethodBefore("requestAccessGroupsForClients", argsNames_989, argsValues_990);
+                        localApi.requestAccessGroupsForClients(uids_985);
+                        ctx.invokeLocalMethodAfter("requestAccessGroupsForClients", null, argsNames_989, argsValues_990);
+                        break;
+                        
+                    }
+                    case 20:  {
+                        let ids_992: number[];
+                        const len_994 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        ids_992 = new Array<number>(len_994);
+                        for (let idx_993 = 0;
+                        idx_993 < len_994;
+                        idx_993++)  {
+                            ids_992[idx_993] = dataIn.readLong();
+                            
+                        }
+                        const argsNames_996: string[] = ["ids"];
+                        const argsValues_997: any[] = [ids_992];
+                        ctx.invokeLocalMethodBefore("requestAccessGroupsItems", argsNames_996, argsValues_997);
+                        localApi.requestAccessGroupsItems(ids_992);
+                        ctx.invokeLocalMethodAfter("requestAccessGroupsItems", null, argsNames_996, argsValues_997);
+                        break;
+                        
+                    }
+                    case 22:  {
+                        let uid_999: UUID;
+                        let groups_1000: number[];
+                        uid_999 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const len_1003 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        groups_1000 = new Array<number>(len_1003);
+                        for (let idx_1002 = 0;
+                        idx_1002 < len_1003;
+                        idx_1002++)  {
+                            groups_1000[idx_1002] = dataIn.readLong();
+                            
+                        }
+                        const argsNames_1005: string[] = ["uid", "groups"];
+                        const argsValues_1006: any[] = [uid_999, groups_1000];
+                        ctx.invokeLocalMethodBefore("sendAccessGroupForClient", argsNames_1005, argsValues_1006);
+                        localApi.sendAccessGroupForClient(uid_999, groups_1000);
+                        ctx.invokeLocalMethodAfter("sendAccessGroupForClient", null, argsNames_1005, argsValues_1006);
+                        break;
+                        
+                    }
+                    case 23:  {
+                        let id_1008: number;
+                        let groups_1009: UUID[];
+                        id_1008 = dataIn.readLong();
+                        const len_1012 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        groups_1009 = new Array<UUID>(len_1012);
+                        for (let idx_1011 = 0;
+                        idx_1011 < len_1012;
+                        idx_1011++)  {
+                            groups_1009[idx_1011] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                            
+                        }
+                        const argsNames_1014: string[] = ["id", "groups"];
+                        const argsValues_1015: any[] = [id_1008, groups_1009];
+                        ctx.invokeLocalMethodBefore("addItemsToAccessGroup", argsNames_1014, argsValues_1015);
+                        localApi.addItemsToAccessGroup(id_1008, groups_1009);
+                        ctx.invokeLocalMethodAfter("addItemsToAccessGroup", null, argsNames_1014, argsValues_1015);
+                        break;
+                        
+                    }
+                    case 24:  {
+                        let id_1017: number;
+                        let groups_1018: UUID[];
+                        id_1017 = dataIn.readLong();
+                        const len_1021 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        groups_1018 = new Array<UUID>(len_1021);
+                        for (let idx_1020 = 0;
+                        idx_1020 < len_1021;
+                        idx_1020++)  {
+                            groups_1018[idx_1020] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                            
+                        }
+                        const argsNames_1023: string[] = ["id", "groups"];
+                        const argsValues_1024: any[] = [id_1017, groups_1018];
+                        ctx.invokeLocalMethodBefore("removeItemsFromAccessGroup", argsNames_1023, argsValues_1024);
+                        localApi.removeItemsFromAccessGroup(id_1017, groups_1018);
+                        ctx.invokeLocalMethodAfter("removeItemsFromAccessGroup", null, argsNames_1023, argsValues_1024);
+                        break;
+                        
+                    }
+                    case 25:  {
+                        let uid_1026: UUID;
+                        let groups_1027: number[];
+                        uid_1026 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const len_1030 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        groups_1027 = new Array<number>(len_1030);
+                        for (let idx_1029 = 0;
+                        idx_1029 < len_1030;
+                        idx_1029++)  {
+                            groups_1027[idx_1029] = dataIn.readLong();
+                            
+                        }
+                        const argsNames_1032: string[] = ["uid", "groups"];
+                        const argsValues_1033: any[] = [uid_1026, groups_1027];
+                        ctx.invokeLocalMethodBefore("addAccessGroupsToClient", argsNames_1032, argsValues_1033);
+                        localApi.addAccessGroupsToClient(uid_1026, groups_1027);
+                        ctx.invokeLocalMethodAfter("addAccessGroupsToClient", null, argsNames_1032, argsValues_1033);
+                        break;
+                        
+                    }
+                    case 26:  {
+                        let uid_1035: UUID;
+                        let groups_1036: number[];
+                        uid_1035 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const len_1039 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        groups_1036 = new Array<number>(len_1039);
+                        for (let idx_1038 = 0;
+                        idx_1038 < len_1039;
+                        idx_1038++)  {
+                            groups_1036[idx_1038] = dataIn.readLong();
+                            
+                        }
+                        const argsNames_1041: string[] = ["uid", "groups"];
+                        const argsValues_1042: any[] = [uid_1035, groups_1036];
+                        ctx.invokeLocalMethodBefore("removeAccessGroupsFromClient", argsNames_1041, argsValues_1042);
+                        localApi.removeAccessGroupsFromClient(uid_1035, groups_1036);
+                        ctx.invokeLocalMethodAfter("removeAccessGroupsFromClient", null, argsNames_1041, argsValues_1042);
+                        break;
+                        
+                    }
+                    case 27:  {
+                        let uids_1044: UUID[];
+                        const len_1046 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        uids_1044 = new Array<UUID>(len_1046);
+                        for (let idx_1045 = 0;
+                        idx_1045 < len_1046;
+                        idx_1045++)  {
+                            uids_1044[idx_1045] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                            
+                        }
+                        const argsNames_1048: string[] = ["uids"];
+                        const argsValues_1049: any[] = [uids_1044];
+                        ctx.invokeLocalMethodBefore("requestAllAccessedClients", argsNames_1048, argsValues_1049);
+                        localApi.requestAllAccessedClients(uids_1044);
+                        ctx.invokeLocalMethodAfter("requestAllAccessedClients", null, argsNames_1048, argsValues_1049);
+                        break;
+                        
+                    }
+                    case 28:  {
+                        let requests_1051: AccessCheckPair[];
+                        const len_1053 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        requests_1051 = new Array<AccessCheckPair>(len_1053);
+                        for (let idx_1052 = 0;
+                        idx_1052 < len_1053;
+                        idx_1052++)  {
+                            requests_1051[idx_1052] = AccessCheckPair.META.deserialize(ctx, dataIn);
+                            
+                        }
+                        const argsNames_1055: string[] = ["requests"];
+                        const argsValues_1056: any[] = [requests_1051];
+                        ctx.invokeLocalMethodBefore("requestAccessCheck", argsNames_1055, argsValues_1056);
+                        localApi.requestAccessCheck(requests_1051);
+                        ctx.invokeLocalMethodAfter("requestAccessCheck", null, argsNames_1055, argsValues_1056);
                         break;
                         
                     }
@@ -5948,304 +6554,444 @@ export namespace AuthorizedApi  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_831: FastFutureContext): AuthorizedApiRemote  {
+        makeRemote(sCtx_1057: FastFutureContext): AuthorizedApiRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_831.flush(sendFuture || AFuture.make());
+                    sCtx_1057.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_831, backId: (id: number): AFuture =>  {
-                    const dataOut_833 = new DataInOut();
-                    dataOut_833.writeByte(3);
-                    const argsNames_835: string[] = ["id"];
-                    const argsValues_836: any[] = [id];
-                    sCtx_831.invokeRemoteMethodAfter("backId", null, argsNames_835, argsValues_836);
-                    dataOut_833.writeByte(id);
-                    sCtx_831.sendToRemote(dataOut_833.toArray());
+                , getFastMetaContext: () => sCtx_1057, backId: (id: number): AFuture =>  {
+                    const dataOut_1059 = new DataInOut();
+                    dataOut_1059.writeByte(3);
+                    const argsNames_1061: string[] = ["id"];
+                    const argsValues_1062: any[] = [id];
+                    sCtx_1057.invokeRemoteMethodAfter("backId", null, argsNames_1061, argsValues_1062);
+                    dataOut_1059.writeByte(id);
+                    sCtx_1057.sendToRemote(dataOut_1059.toArray());
                     return AFuture.of();
                     
                 }
                 , ping: (nextConnectMsDuration: number): AFuture =>  {
-                    const dataOut_839 = new DataInOut();
-                    dataOut_839.writeByte(4);
-                    const argsNames_841: string[] = ["nextConnectMsDuration"];
-                    const argsValues_842: any[] = [nextConnectMsDuration];
-                    sCtx_831.invokeRemoteMethodAfter("ping", null, argsNames_841, argsValues_842);
-                    dataOut_839.writeLong(nextConnectMsDuration);
-                    sCtx_831.sendToRemote(dataOut_839.toArray());
+                    const dataOut_1065 = new DataInOut();
+                    dataOut_1065.writeByte(4);
+                    const argsNames_1067: string[] = ["nextConnectMsDuration"];
+                    const argsValues_1068: any[] = [nextConnectMsDuration];
+                    sCtx_1057.invokeRemoteMethodAfter("ping", null, argsNames_1067, argsValues_1068);
+                    dataOut_1065.writeLong(nextConnectMsDuration);
+                    sCtx_1057.sendToRemote(dataOut_1065.toArray());
                     return AFuture.of();
                     
                 }
                 , client: (uid: UUID, stream: ClientApiStream): AFuture =>  {
-                    const dataOut_845 = new DataInOut();
-                    dataOut_845.writeByte(5);
-                    const argsNames_847: string[] = ["uid", "stream"];
-                    const argsValues_848: any[] = [uid, stream];
-                    sCtx_831.invokeRemoteMethodAfter("client", null, argsNames_847, argsValues_848);
-                    FastMeta.META_UUID.serialize(sCtx_831, uid, dataOut_845);
-                    ClientApiStream.META.serialize(sCtx_831, stream, dataOut_845);
-                    sCtx_831.sendToRemote(dataOut_845.toArray());
+                    const dataOut_1071 = new DataInOut();
+                    dataOut_1071.writeByte(5);
+                    const argsNames_1073: string[] = ["uid", "stream"];
+                    const argsValues_1074: any[] = [uid, stream];
+                    sCtx_1057.invokeRemoteMethodAfter("client", null, argsNames_1073, argsValues_1074);
+                    FastMeta.META_UUID.serialize(sCtx_1057, uid, dataOut_1071);
+                    ClientApiStream.META.serialize(sCtx_1057, stream, dataOut_1071);
+                    sCtx_1057.sendToRemote(dataOut_1071.toArray());
                     return AFuture.of();
                     
                 }
                 , sendMessage: (msg: Message): AFuture =>  {
-                    const dataOut_852 = new DataInOut();
-                    dataOut_852.writeByte(6);
-                    const argsNames_854: string[] = ["msg"];
-                    const argsValues_855: any[] = [msg];
-                    sCtx_831.invokeRemoteMethodAfter("sendMessage", null, argsNames_854, argsValues_855);
-                    Message.META.serialize(sCtx_831, msg, dataOut_852);
-                    sCtx_831.sendToRemote(dataOut_852.toArray());
+                    const dataOut_1078 = new DataInOut();
+                    dataOut_1078.writeByte(6);
+                    const argsNames_1080: string[] = ["msg"];
+                    const argsValues_1081: any[] = [msg];
+                    sCtx_1057.invokeRemoteMethodAfter("sendMessage", null, argsNames_1080, argsValues_1081);
+                    Message.META.serialize(sCtx_1057, msg, dataOut_1078);
+                    sCtx_1057.sendToRemote(dataOut_1078.toArray());
                     return AFuture.of();
                     
                 }
                 , sendMessages: (msg: Message[]): AFuture =>  {
-                    const dataOut_858 = new DataInOut();
-                    dataOut_858.writeByte(7);
-                    const argsNames_860: string[] = ["msg"];
-                    const argsValues_861: any[] = [msg];
-                    sCtx_831.invokeRemoteMethodAfter("sendMessages", null, argsNames_860, argsValues_861);
-                    SerializerPackNumber.INSTANCE.put(dataOut_858, msg.length);
-                    for (const el_862 of msg)  {
-                        Message.META.serialize(sCtx_831, el_862, dataOut_858);
+                    const dataOut_1084 = new DataInOut();
+                    dataOut_1084.writeByte(7);
+                    const argsNames_1086: string[] = ["msg"];
+                    const argsValues_1087: any[] = [msg];
+                    sCtx_1057.invokeRemoteMethodAfter("sendMessages", null, argsNames_1086, argsValues_1087);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1084, msg.length);
+                    for (const el_1088 of msg)  {
+                        Message.META.serialize(sCtx_1057, el_1088, dataOut_1084);
                         
                     }
-                    sCtx_831.sendToRemote(dataOut_858.toArray());
+                    sCtx_1057.sendToRemote(dataOut_1084.toArray());
                     return AFuture.of();
                     
                 }
                 , createAccessGroup: (owner: UUID, uids: UUID[]): ARFuture<number> =>  {
-                    const dataOut_865 = new DataInOut();
-                    dataOut_865.writeByte(8);
-                    const argsNames_867: string[] = ["owner", "uids"];
-                    const argsValues_868: any[] = [owner, uids];
-                    const result_866 = ARFuture.of<number>();
-                    sCtx_831.invokeRemoteMethodAfter("createAccessGroup", result_866, argsNames_867, argsValues_868);
-                    const reqId_864 = sCtx_831.regFuture( {
+                    const dataOut_1091 = new DataInOut();
+                    dataOut_1091.writeByte(8);
+                    const argsNames_1093: string[] = ["owner", "uids"];
+                    const argsValues_1094: any[] = [owner, uids];
+                    const result_1092 = ARFuture.of<number>();
+                    sCtx_1057.invokeRemoteMethodAfter("createAccessGroup", result_1092, argsNames_1093, argsValues_1094);
+                    const reqId_1090 = sCtx_1057.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_866 as ARFuture<number>).tryDone(FastMeta.META_LONG.deserialize(sCtx_831, in_));
+                            (result_1092 as ARFuture<number>).tryDone(FastMeta.META_LONG.deserialize(sCtx_1057, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_866.error(new Error("Remote call failed without a typed exception"));
+                            result_1092.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_865.writeInt(reqId_864);
-                    FastMeta.META_UUID.serialize(sCtx_831, owner, dataOut_865);
-                    SerializerPackNumber.INSTANCE.put(dataOut_865, uids.length);
-                    for (const el_870 of uids)  {
-                        FastMeta.META_UUID.serialize(sCtx_831, el_870, dataOut_865);
+                    dataOut_1091.writeInt(reqId_1090);
+                    FastMeta.META_UUID.serialize(sCtx_1057, owner, dataOut_1091);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1091, uids.length);
+                    for (const el_1096 of uids)  {
+                        FastMeta.META_UUID.serialize(sCtx_1057, el_1096, dataOut_1091);
                         
                     }
-                    sCtx_831.sendToRemote(dataOut_865.toArray());
-                    return result_866;
+                    sCtx_1057.sendToRemote(dataOut_1091.toArray());
+                    return result_1092;
                     
                 }
                 , addToAccessGroup: (groupId: number, uid: UUID): ARFuture<boolean> =>  {
-                    const dataOut_873 = new DataInOut();
-                    dataOut_873.writeByte(9);
-                    const argsNames_875: string[] = ["groupId", "uid"];
-                    const argsValues_876: any[] = [groupId, uid];
-                    const result_874 = ARFuture.of<boolean>();
-                    sCtx_831.invokeRemoteMethodAfter("addToAccessGroup", result_874, argsNames_875, argsValues_876);
-                    const reqId_872 = sCtx_831.regFuture( {
+                    const dataOut_1099 = new DataInOut();
+                    dataOut_1099.writeByte(9);
+                    const argsNames_1101: string[] = ["groupId", "uid"];
+                    const argsValues_1102: any[] = [groupId, uid];
+                    const result_1100 = ARFuture.of<boolean>();
+                    sCtx_1057.invokeRemoteMethodAfter("addToAccessGroup", result_1100, argsNames_1101, argsValues_1102);
+                    const reqId_1098 = sCtx_1057.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_874 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_831, in_));
+                            (result_1100 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1057, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_874.error(new Error("Remote call failed without a typed exception"));
+                            result_1100.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_873.writeInt(reqId_872);
-                    dataOut_873.writeLong(groupId);
-                    FastMeta.META_UUID.serialize(sCtx_831, uid, dataOut_873);
-                    sCtx_831.sendToRemote(dataOut_873.toArray());
-                    return result_874;
+                    dataOut_1099.writeInt(reqId_1098);
+                    dataOut_1099.writeLong(groupId);
+                    FastMeta.META_UUID.serialize(sCtx_1057, uid, dataOut_1099);
+                    sCtx_1057.sendToRemote(dataOut_1099.toArray());
+                    return result_1100;
                     
                 }
                 , removeFromAccessGroup: (groupId: number, uid: UUID): ARFuture<boolean> =>  {
-                    const dataOut_880 = new DataInOut();
-                    dataOut_880.writeByte(10);
-                    const argsNames_882: string[] = ["groupId", "uid"];
-                    const argsValues_883: any[] = [groupId, uid];
-                    const result_881 = ARFuture.of<boolean>();
-                    sCtx_831.invokeRemoteMethodAfter("removeFromAccessGroup", result_881, argsNames_882, argsValues_883);
-                    const reqId_879 = sCtx_831.regFuture( {
+                    const dataOut_1106 = new DataInOut();
+                    dataOut_1106.writeByte(10);
+                    const argsNames_1108: string[] = ["groupId", "uid"];
+                    const argsValues_1109: any[] = [groupId, uid];
+                    const result_1107 = ARFuture.of<boolean>();
+                    sCtx_1057.invokeRemoteMethodAfter("removeFromAccessGroup", result_1107, argsNames_1108, argsValues_1109);
+                    const reqId_1105 = sCtx_1057.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_881 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_831, in_));
+                            (result_1107 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1057, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_881.error(new Error("Remote call failed without a typed exception"));
+                            result_1107.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_880.writeInt(reqId_879);
-                    dataOut_880.writeLong(groupId);
-                    FastMeta.META_UUID.serialize(sCtx_831, uid, dataOut_880);
-                    sCtx_831.sendToRemote(dataOut_880.toArray());
-                    return result_881;
+                    dataOut_1106.writeInt(reqId_1105);
+                    dataOut_1106.writeLong(groupId);
+                    FastMeta.META_UUID.serialize(sCtx_1057, uid, dataOut_1106);
+                    sCtx_1057.sendToRemote(dataOut_1106.toArray());
+                    return result_1107;
                     
                 }
                 , checkAccessForSendMessage: (uid: UUID): AFuture =>  {
-                    const dataOut_887 = new DataInOut();
-                    dataOut_887.writeByte(11);
-                    const argsNames_889: string[] = ["uid"];
-                    const argsValues_890: any[] = [uid];
-                    sCtx_831.invokeRemoteMethodAfter("checkAccessForSendMessage", null, argsNames_889, argsValues_890);
-                    FastMeta.META_UUID.serialize(sCtx_831, uid, dataOut_887);
-                    sCtx_831.sendToRemote(dataOut_887.toArray());
+                    const dataOut_1113 = new DataInOut();
+                    dataOut_1113.writeByte(11);
+                    const argsNames_1115: string[] = ["uid"];
+                    const argsValues_1116: any[] = [uid];
+                    sCtx_1057.invokeRemoteMethodAfter("checkAccessForSendMessage", null, argsNames_1115, argsValues_1116);
+                    FastMeta.META_UUID.serialize(sCtx_1057, uid, dataOut_1113);
+                    sCtx_1057.sendToRemote(dataOut_1113.toArray());
                     return AFuture.of();
                     
                 }
                 , resolverServers: (sid: number[]): AFuture =>  {
-                    const dataOut_893 = new DataInOut();
-                    dataOut_893.writeByte(12);
-                    const argsNames_895: string[] = ["sid"];
-                    const argsValues_896: any[] = [sid];
-                    sCtx_831.invokeRemoteMethodAfter("resolverServers", null, argsNames_895, argsValues_896);
-                    SerializerPackNumber.INSTANCE.put(dataOut_893, sid.length);
-                    for (const el_897 of sid)  {
-                        dataOut_893.writeShort(el_897);
+                    const dataOut_1119 = new DataInOut();
+                    dataOut_1119.writeByte(12);
+                    const argsNames_1121: string[] = ["sid"];
+                    const argsValues_1122: any[] = [sid];
+                    sCtx_1057.invokeRemoteMethodAfter("resolverServers", null, argsNames_1121, argsValues_1122);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1119, sid.length);
+                    for (const el_1123 of sid)  {
+                        dataOut_1119.writeShort(el_1123);
                         
                     }
-                    sCtx_831.sendToRemote(dataOut_893.toArray());
+                    sCtx_1057.sendToRemote(dataOut_1119.toArray());
                     return AFuture.of();
                     
                 }
                 , resolverClouds: (uids: UUID[]): AFuture =>  {
-                    const dataOut_900 = new DataInOut();
-                    dataOut_900.writeByte(13);
-                    const argsNames_902: string[] = ["uids"];
-                    const argsValues_903: any[] = [uids];
-                    sCtx_831.invokeRemoteMethodAfter("resolverClouds", null, argsNames_902, argsValues_903);
-                    SerializerPackNumber.INSTANCE.put(dataOut_900, uids.length);
-                    for (const el_904 of uids)  {
-                        FastMeta.META_UUID.serialize(sCtx_831, el_904, dataOut_900);
+                    const dataOut_1126 = new DataInOut();
+                    dataOut_1126.writeByte(13);
+                    const argsNames_1128: string[] = ["uids"];
+                    const argsValues_1129: any[] = [uids];
+                    sCtx_1057.invokeRemoteMethodAfter("resolverClouds", null, argsNames_1128, argsValues_1129);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1126, uids.length);
+                    for (const el_1130 of uids)  {
+                        FastMeta.META_UUID.serialize(sCtx_1057, el_1130, dataOut_1126);
                         
                     }
-                    sCtx_831.sendToRemote(dataOut_900.toArray());
+                    sCtx_1057.sendToRemote(dataOut_1126.toArray());
                     return AFuture.of();
                     
                 }
                 , getAccessGroups: (uid: UUID): ARFuture<number[]> =>  {
-                    const dataOut_907 = new DataInOut();
-                    dataOut_907.writeByte(14);
-                    const argsNames_909: string[] = ["uid"];
-                    const argsValues_910: any[] = [uid];
-                    const result_908 = ARFuture.of<number[]>();
-                    sCtx_831.invokeRemoteMethodAfter("getAccessGroups", result_908, argsNames_909, argsValues_910);
-                    const reqId_906 = sCtx_831.regFuture( {
+                    const dataOut_1133 = new DataInOut();
+                    dataOut_1133.writeByte(14);
+                    const argsNames_1135: string[] = ["uid"];
+                    const argsValues_1136: any[] = [uid];
+                    const result_1134 = ARFuture.of<number[]>();
+                    sCtx_1057.invokeRemoteMethodAfter("getAccessGroups", result_1134, argsNames_1135, argsValues_1136);
+                    const reqId_1132 = sCtx_1057.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_908 as ARFuture<number[]>).tryDone(AllCustomMeta.META_ARRAY_long.deserialize(sCtx_831, in_));
+                            (result_1134 as ARFuture<number[]>).tryDone(AllCustomMeta.META_ARRAY_long.deserialize(sCtx_1057, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_908.error(new Error("Remote call failed without a typed exception"));
+                            result_1134.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_907.writeInt(reqId_906);
-                    FastMeta.META_UUID.serialize(sCtx_831, uid, dataOut_907);
-                    sCtx_831.sendToRemote(dataOut_907.toArray());
-                    return result_908;
+                    dataOut_1133.writeInt(reqId_1132);
+                    FastMeta.META_UUID.serialize(sCtx_1057, uid, dataOut_1133);
+                    sCtx_1057.sendToRemote(dataOut_1133.toArray());
+                    return result_1134;
                     
                 }
                 , getAccessGroup: (groupId: number): ARFuture<AccessGroup> =>  {
-                    const dataOut_913 = new DataInOut();
-                    dataOut_913.writeByte(15);
-                    const argsNames_915: string[] = ["groupId"];
-                    const argsValues_916: any[] = [groupId];
-                    const result_914 = ARFuture.of<AccessGroup>();
-                    sCtx_831.invokeRemoteMethodAfter("getAccessGroup", result_914, argsNames_915, argsValues_916);
-                    const reqId_912 = sCtx_831.regFuture( {
+                    const dataOut_1139 = new DataInOut();
+                    dataOut_1139.writeByte(15);
+                    const argsNames_1141: string[] = ["groupId"];
+                    const argsValues_1142: any[] = [groupId];
+                    const result_1140 = ARFuture.of<AccessGroup>();
+                    sCtx_1057.invokeRemoteMethodAfter("getAccessGroup", result_1140, argsNames_1141, argsValues_1142);
+                    const reqId_1138 = sCtx_1057.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_914 as ARFuture<AccessGroup>).tryDone(AccessGroup.META.deserialize(sCtx_831, in_));
+                            (result_1140 as ARFuture<AccessGroup>).tryDone(AccessGroup.META.deserialize(sCtx_1057, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_914.error(new Error("Remote call failed without a typed exception"));
+                            result_1140.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_913.writeInt(reqId_912);
-                    dataOut_913.writeLong(groupId);
-                    sCtx_831.sendToRemote(dataOut_913.toArray());
-                    return result_914;
+                    dataOut_1139.writeInt(reqId_1138);
+                    dataOut_1139.writeLong(groupId);
+                    sCtx_1057.sendToRemote(dataOut_1139.toArray());
+                    return result_1140;
                     
                 }
                 , getAllAccessedClients: (uid: UUID): ARFuture<UUID[]> =>  {
-                    const dataOut_919 = new DataInOut();
-                    dataOut_919.writeByte(16);
-                    const argsNames_921: string[] = ["uid"];
-                    const argsValues_922: any[] = [uid];
-                    const result_920 = ARFuture.of<UUID[]>();
-                    sCtx_831.invokeRemoteMethodAfter("getAllAccessedClients", result_920, argsNames_921, argsValues_922);
-                    const reqId_918 = sCtx_831.regFuture( {
+                    const dataOut_1145 = new DataInOut();
+                    dataOut_1145.writeByte(16);
+                    const argsNames_1147: string[] = ["uid"];
+                    const argsValues_1148: any[] = [uid];
+                    const result_1146 = ARFuture.of<UUID[]>();
+                    sCtx_1057.invokeRemoteMethodAfter("getAllAccessedClients", result_1146, argsNames_1147, argsValues_1148);
+                    const reqId_1144 = sCtx_1057.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_920 as ARFuture<UUID[]>).tryDone(AllCustomMeta.META_ARRAY_UUID.deserialize(sCtx_831, in_));
+                            (result_1146 as ARFuture<UUID[]>).tryDone(AllCustomMeta.META_ARRAY_UUID.deserialize(sCtx_1057, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_920.error(new Error("Remote call failed without a typed exception"));
+                            result_1146.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_919.writeInt(reqId_918);
-                    FastMeta.META_UUID.serialize(sCtx_831, uid, dataOut_919);
-                    sCtx_831.sendToRemote(dataOut_919.toArray());
-                    return result_920;
+                    dataOut_1145.writeInt(reqId_1144);
+                    FastMeta.META_UUID.serialize(sCtx_1057, uid, dataOut_1145);
+                    sCtx_1057.sendToRemote(dataOut_1145.toArray());
+                    return result_1146;
                     
                 }
                 , checkAccessForSendMessage2: (uid1: UUID, uid2: UUID): ARFuture<boolean> =>  {
-                    const dataOut_925 = new DataInOut();
-                    dataOut_925.writeByte(17);
-                    const argsNames_927: string[] = ["uid1", "uid2"];
-                    const argsValues_928: any[] = [uid1, uid2];
-                    const result_926 = ARFuture.of<boolean>();
-                    sCtx_831.invokeRemoteMethodAfter("checkAccessForSendMessage2", result_926, argsNames_927, argsValues_928);
-                    const reqId_924 = sCtx_831.regFuture( {
+                    const dataOut_1151 = new DataInOut();
+                    dataOut_1151.writeByte(17);
+                    const argsNames_1153: string[] = ["uid1", "uid2"];
+                    const argsValues_1154: any[] = [uid1, uid2];
+                    const result_1152 = ARFuture.of<boolean>();
+                    sCtx_1057.invokeRemoteMethodAfter("checkAccessForSendMessage2", result_1152, argsNames_1153, argsValues_1154);
+                    const reqId_1150 = sCtx_1057.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_926 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_831, in_));
+                            (result_1152 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1057, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_926.error(new Error("Remote call failed without a typed exception"));
+                            result_1152.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_925.writeInt(reqId_924);
-                    FastMeta.META_UUID.serialize(sCtx_831, uid1, dataOut_925);
-                    FastMeta.META_UUID.serialize(sCtx_831, uid2, dataOut_925);
-                    sCtx_831.sendToRemote(dataOut_925.toArray());
-                    return result_926;
+                    dataOut_1151.writeInt(reqId_1150);
+                    FastMeta.META_UUID.serialize(sCtx_1057, uid1, dataOut_1151);
+                    FastMeta.META_UUID.serialize(sCtx_1057, uid2, dataOut_1151);
+                    sCtx_1057.sendToRemote(dataOut_1151.toArray());
+                    return result_1152;
                     
                 }
                 , sendTelemetry: (telemetry: Telemetry): AFuture =>  {
-                    const dataOut_932 = new DataInOut();
-                    dataOut_932.writeByte(18);
-                    const argsNames_934: string[] = ["telemetry"];
-                    const argsValues_935: any[] = [telemetry];
-                    sCtx_831.invokeRemoteMethodAfter("sendTelemetry", null, argsNames_934, argsValues_935);
-                    Telemetry.META.serialize(sCtx_831, telemetry, dataOut_932);
-                    sCtx_831.sendToRemote(dataOut_932.toArray());
+                    const dataOut_1158 = new DataInOut();
+                    dataOut_1158.writeByte(18);
+                    const argsNames_1160: string[] = ["telemetry"];
+                    const argsValues_1161: any[] = [telemetry];
+                    sCtx_1057.invokeRemoteMethodAfter("sendTelemetry", null, argsNames_1160, argsValues_1161);
+                    Telemetry.META.serialize(sCtx_1057, telemetry, dataOut_1158);
+                    sCtx_1057.sendToRemote(dataOut_1158.toArray());
+                    return AFuture.of();
+                    
+                }
+                , requestAccessGroupsForClients: (uids: UUID[]): AFuture =>  {
+                    const dataOut_1164 = new DataInOut();
+                    dataOut_1164.writeByte(19);
+                    const argsNames_1166: string[] = ["uids"];
+                    const argsValues_1167: any[] = [uids];
+                    sCtx_1057.invokeRemoteMethodAfter("requestAccessGroupsForClients", null, argsNames_1166, argsValues_1167);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1164, uids.length);
+                    for (const el_1168 of uids)  {
+                        FastMeta.META_UUID.serialize(sCtx_1057, el_1168, dataOut_1164);
+                        
+                    }
+                    sCtx_1057.sendToRemote(dataOut_1164.toArray());
+                    return AFuture.of();
+                    
+                }
+                , requestAccessGroupsItems: (ids: number[]): AFuture =>  {
+                    const dataOut_1171 = new DataInOut();
+                    dataOut_1171.writeByte(20);
+                    const argsNames_1173: string[] = ["ids"];
+                    const argsValues_1174: any[] = [ids];
+                    sCtx_1057.invokeRemoteMethodAfter("requestAccessGroupsItems", null, argsNames_1173, argsValues_1174);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1171, ids.length);
+                    for (const el_1175 of ids)  {
+                        dataOut_1171.writeLong(el_1175);
+                        
+                    }
+                    sCtx_1057.sendToRemote(dataOut_1171.toArray());
+                    return AFuture.of();
+                    
+                }
+                , sendAccessGroupForClient: (uid: UUID, groups: number[]): AFuture =>  {
+                    const dataOut_1178 = new DataInOut();
+                    dataOut_1178.writeByte(22);
+                    const argsNames_1180: string[] = ["uid", "groups"];
+                    const argsValues_1181: any[] = [uid, groups];
+                    sCtx_1057.invokeRemoteMethodAfter("sendAccessGroupForClient", null, argsNames_1180, argsValues_1181);
+                    FastMeta.META_UUID.serialize(sCtx_1057, uid, dataOut_1178);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1178, groups.length);
+                    for (const el_1183 of groups)  {
+                        dataOut_1178.writeLong(el_1183);
+                        
+                    }
+                    sCtx_1057.sendToRemote(dataOut_1178.toArray());
+                    return AFuture.of();
+                    
+                }
+                , addItemsToAccessGroup: (id: number, groups: UUID[]): AFuture =>  {
+                    const dataOut_1186 = new DataInOut();
+                    dataOut_1186.writeByte(23);
+                    const argsNames_1188: string[] = ["id", "groups"];
+                    const argsValues_1189: any[] = [id, groups];
+                    sCtx_1057.invokeRemoteMethodAfter("addItemsToAccessGroup", null, argsNames_1188, argsValues_1189);
+                    dataOut_1186.writeLong(id);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1186, groups.length);
+                    for (const el_1191 of groups)  {
+                        FastMeta.META_UUID.serialize(sCtx_1057, el_1191, dataOut_1186);
+                        
+                    }
+                    sCtx_1057.sendToRemote(dataOut_1186.toArray());
+                    return AFuture.of();
+                    
+                }
+                , removeItemsFromAccessGroup: (id: number, groups: UUID[]): AFuture =>  {
+                    const dataOut_1194 = new DataInOut();
+                    dataOut_1194.writeByte(24);
+                    const argsNames_1196: string[] = ["id", "groups"];
+                    const argsValues_1197: any[] = [id, groups];
+                    sCtx_1057.invokeRemoteMethodAfter("removeItemsFromAccessGroup", null, argsNames_1196, argsValues_1197);
+                    dataOut_1194.writeLong(id);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1194, groups.length);
+                    for (const el_1199 of groups)  {
+                        FastMeta.META_UUID.serialize(sCtx_1057, el_1199, dataOut_1194);
+                        
+                    }
+                    sCtx_1057.sendToRemote(dataOut_1194.toArray());
+                    return AFuture.of();
+                    
+                }
+                , addAccessGroupsToClient: (uid: UUID, groups: number[]): AFuture =>  {
+                    const dataOut_1202 = new DataInOut();
+                    dataOut_1202.writeByte(25);
+                    const argsNames_1204: string[] = ["uid", "groups"];
+                    const argsValues_1205: any[] = [uid, groups];
+                    sCtx_1057.invokeRemoteMethodAfter("addAccessGroupsToClient", null, argsNames_1204, argsValues_1205);
+                    FastMeta.META_UUID.serialize(sCtx_1057, uid, dataOut_1202);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1202, groups.length);
+                    for (const el_1207 of groups)  {
+                        dataOut_1202.writeLong(el_1207);
+                        
+                    }
+                    sCtx_1057.sendToRemote(dataOut_1202.toArray());
+                    return AFuture.of();
+                    
+                }
+                , removeAccessGroupsFromClient: (uid: UUID, groups: number[]): AFuture =>  {
+                    const dataOut_1210 = new DataInOut();
+                    dataOut_1210.writeByte(26);
+                    const argsNames_1212: string[] = ["uid", "groups"];
+                    const argsValues_1213: any[] = [uid, groups];
+                    sCtx_1057.invokeRemoteMethodAfter("removeAccessGroupsFromClient", null, argsNames_1212, argsValues_1213);
+                    FastMeta.META_UUID.serialize(sCtx_1057, uid, dataOut_1210);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1210, groups.length);
+                    for (const el_1215 of groups)  {
+                        dataOut_1210.writeLong(el_1215);
+                        
+                    }
+                    sCtx_1057.sendToRemote(dataOut_1210.toArray());
+                    return AFuture.of();
+                    
+                }
+                , requestAllAccessedClients: (uids: UUID[]): AFuture =>  {
+                    const dataOut_1218 = new DataInOut();
+                    dataOut_1218.writeByte(27);
+                    const argsNames_1220: string[] = ["uids"];
+                    const argsValues_1221: any[] = [uids];
+                    sCtx_1057.invokeRemoteMethodAfter("requestAllAccessedClients", null, argsNames_1220, argsValues_1221);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1218, uids.length);
+                    for (const el_1222 of uids)  {
+                        FastMeta.META_UUID.serialize(sCtx_1057, el_1222, dataOut_1218);
+                        
+                    }
+                    sCtx_1057.sendToRemote(dataOut_1218.toArray());
+                    return AFuture.of();
+                    
+                }
+                , requestAccessCheck: (requests: AccessCheckPair[]): AFuture =>  {
+                    const dataOut_1225 = new DataInOut();
+                    dataOut_1225.writeByte(28);
+                    const argsNames_1227: string[] = ["requests"];
+                    const argsValues_1228: any[] = [requests];
+                    sCtx_1057.invokeRemoteMethodAfter("requestAccessCheck", null, argsNames_1227, argsValues_1228);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1225, requests.length);
+                    for (const el_1229 of requests)  {
+                        AccessCheckPair.META.serialize(sCtx_1057, el_1229, dataOut_1225);
+                        
+                    }
+                    sCtx_1057.sendToRemote(dataOut_1225.toArray());
                     return AFuture.of();
                     
                 }
@@ -6290,6 +7036,15 @@ export abstract class AuthorizedApiLocal<RT extends AuthorizedApiRemote> impleme
     public abstract getAllAccessedClients(uid: UUID): ARFuture<UUID[]>;
     public abstract checkAccessForSendMessage2(uid1: UUID, uid2: UUID): ARFuture<boolean>;
     public abstract sendTelemetry(telemetry: Telemetry): AFuture;
+    public abstract requestAccessGroupsForClients(uids: UUID[]): AFuture;
+    public abstract requestAccessGroupsItems(ids: number[]): AFuture;
+    public abstract sendAccessGroupForClient(uid: UUID, groups: number[]): AFuture;
+    public abstract addItemsToAccessGroup(id: number, groups: UUID[]): AFuture;
+    public abstract removeItemsFromAccessGroup(id: number, groups: UUID[]): AFuture;
+    public abstract addAccessGroupsToClient(uid: UUID, groups: number[]): AFuture;
+    public abstract removeAccessGroupsFromClient(uid: UUID, groups: number[]): AFuture;
+    public abstract requestAllAccessedClients(uids: UUID[]): AFuture;
+    public abstract requestAccessCheck(requests: AccessCheckPair[]): AFuture;
     
 }
 // --- Generated API Interface: LoginApi ---
@@ -6320,17 +7075,17 @@ export namespace LoginApi  {
                         
                     }
                     case 3:  {
-                        const reqId_937 = dataIn.readInt();
-                        const argsNames_938: string[] = [];
-                        const argsValues_939: any[] = [];
-                        ctx.invokeLocalMethodBefore("getTimeUTC", argsNames_938, argsValues_939);
+                        const reqId_1231 = dataIn.readInt();
+                        const argsNames_1232: string[] = [];
+                        const argsValues_1233: any[] = [];
+                        ctx.invokeLocalMethodBefore("getTimeUTC", argsNames_1232, argsValues_1233);
                         ctx.regLocalFuture();
                         const resultFuture = localApi.getTimeUTC();
-                        ctx.invokeLocalMethodAfter("getTimeUTC", resultFuture, argsNames_938, argsValues_939);
-                        resultFuture.to((v_941: number) =>  {
-                            const data_940 = new DataInOut();
-                            data_940.writeLong(v_941);
-                            ctx.sendResultToRemote(reqId_937, data_940.toArray());
+                        ctx.invokeLocalMethodAfter("getTimeUTC", resultFuture, argsNames_1232, argsValues_1233);
+                        resultFuture.to((v_1235: number) =>  {
+                            const data_1234 = new DataInOut();
+                            data_1234.writeLong(v_1235);
+                            ctx.sendResultToRemote(reqId_1231, data_1234.toArray());
                             
                         }
                         );
@@ -6338,28 +7093,28 @@ export namespace LoginApi  {
                         
                     }
                     case 4:  {
-                        let uid_944: UUID;
-                        let data_945: LoginStream;
-                        uid_944 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        data_945 = LoginStream.META.deserialize(ctx, dataIn);
-                        const argsNames_948: string[] = ["uid", "data"];
-                        const argsValues_949: any[] = [uid_944, data_945];
-                        ctx.invokeLocalMethodBefore("loginByUID", argsNames_948, argsValues_949);
-                        localApi.loginByUID(uid_944, data_945);
-                        ctx.invokeLocalMethodAfter("loginByUID", null, argsNames_948, argsValues_949);
+                        let uid_1238: UUID;
+                        let data_1239: LoginStream;
+                        uid_1238 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        data_1239 = LoginStream.META.deserialize(ctx, dataIn);
+                        const argsNames_1242: string[] = ["uid", "data"];
+                        const argsValues_1243: any[] = [uid_1238, data_1239];
+                        ctx.invokeLocalMethodBefore("loginByUID", argsNames_1242, argsValues_1243);
+                        localApi.loginByUID(uid_1238, data_1239);
+                        ctx.invokeLocalMethodAfter("loginByUID", null, argsNames_1242, argsValues_1243);
                         break;
                         
                     }
                     case 5:  {
-                        let alias_951: UUID;
-                        let data_952: LoginStream;
-                        alias_951 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        data_952 = LoginStream.META.deserialize(ctx, dataIn);
-                        const argsNames_955: string[] = ["alias", "data"];
-                        const argsValues_956: any[] = [alias_951, data_952];
-                        ctx.invokeLocalMethodBefore("loginByAlias", argsNames_955, argsValues_956);
-                        localApi.loginByAlias(alias_951, data_952);
-                        ctx.invokeLocalMethodAfter("loginByAlias", null, argsNames_955, argsValues_956);
+                        let alias_1245: UUID;
+                        let data_1246: LoginStream;
+                        alias_1245 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        data_1246 = LoginStream.META.deserialize(ctx, dataIn);
+                        const argsNames_1249: string[] = ["alias", "data"];
+                        const argsValues_1250: any[] = [alias_1245, data_1246];
+                        ctx.invokeLocalMethodBefore("loginByAlias", argsNames_1249, argsValues_1250);
+                        localApi.loginByAlias(alias_1245, data_1246);
+                        ctx.invokeLocalMethodAfter("loginByAlias", null, argsNames_1249, argsValues_1250);
                         break;
                         
                     }
@@ -6380,57 +7135,57 @@ export namespace LoginApi  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_957: FastFutureContext): LoginApiRemote  {
+        makeRemote(sCtx_1251: FastFutureContext): LoginApiRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_957.flush(sendFuture || AFuture.make());
+                    sCtx_1251.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_957, getTimeUTC: (): ARFuture<number> =>  {
-                    const dataOut_959 = new DataInOut();
-                    dataOut_959.writeByte(3);
-                    const argsNames_961: string[] = [];
-                    const argsValues_962: any[] = [];
-                    const result_960 = ARFuture.of<number>();
-                    sCtx_957.invokeRemoteMethodAfter("getTimeUTC", result_960, argsNames_961, argsValues_962);
-                    const reqId_958 = sCtx_957.regFuture( {
+                , getFastMetaContext: () => sCtx_1251, getTimeUTC: (): ARFuture<number> =>  {
+                    const dataOut_1253 = new DataInOut();
+                    dataOut_1253.writeByte(3);
+                    const argsNames_1255: string[] = [];
+                    const argsValues_1256: any[] = [];
+                    const result_1254 = ARFuture.of<number>();
+                    sCtx_1251.invokeRemoteMethodAfter("getTimeUTC", result_1254, argsNames_1255, argsValues_1256);
+                    const reqId_1252 = sCtx_1251.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_960 as ARFuture<number>).tryDone(FastMeta.META_LONG.deserialize(sCtx_957, in_));
+                            (result_1254 as ARFuture<number>).tryDone(FastMeta.META_LONG.deserialize(sCtx_1251, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_960.error(new Error("Remote call failed without a typed exception"));
+                            result_1254.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_959.writeInt(reqId_958);
-                    sCtx_957.sendToRemote(dataOut_959.toArray());
-                    return result_960;
+                    dataOut_1253.writeInt(reqId_1252);
+                    sCtx_1251.sendToRemote(dataOut_1253.toArray());
+                    return result_1254;
                     
                 }
                 , loginByUID: (uid: UUID, data: LoginStream): AFuture =>  {
-                    const dataOut_964 = new DataInOut();
-                    dataOut_964.writeByte(4);
-                    const argsNames_966: string[] = ["uid", "data"];
-                    const argsValues_967: any[] = [uid, data];
-                    sCtx_957.invokeRemoteMethodAfter("loginByUID", null, argsNames_966, argsValues_967);
-                    FastMeta.META_UUID.serialize(sCtx_957, uid, dataOut_964);
-                    LoginStream.META.serialize(sCtx_957, data, dataOut_964);
-                    sCtx_957.sendToRemote(dataOut_964.toArray());
+                    const dataOut_1258 = new DataInOut();
+                    dataOut_1258.writeByte(4);
+                    const argsNames_1260: string[] = ["uid", "data"];
+                    const argsValues_1261: any[] = [uid, data];
+                    sCtx_1251.invokeRemoteMethodAfter("loginByUID", null, argsNames_1260, argsValues_1261);
+                    FastMeta.META_UUID.serialize(sCtx_1251, uid, dataOut_1258);
+                    LoginStream.META.serialize(sCtx_1251, data, dataOut_1258);
+                    sCtx_1251.sendToRemote(dataOut_1258.toArray());
                     return AFuture.of();
                     
                 }
                 , loginByAlias: (alias: UUID, data: LoginStream): AFuture =>  {
-                    const dataOut_971 = new DataInOut();
-                    dataOut_971.writeByte(5);
-                    const argsNames_973: string[] = ["alias", "data"];
-                    const argsValues_974: any[] = [alias, data];
-                    sCtx_957.invokeRemoteMethodAfter("loginByAlias", null, argsNames_973, argsValues_974);
-                    FastMeta.META_UUID.serialize(sCtx_957, alias, dataOut_971);
-                    LoginStream.META.serialize(sCtx_957, data, dataOut_971);
-                    sCtx_957.sendToRemote(dataOut_971.toArray());
+                    const dataOut_1265 = new DataInOut();
+                    dataOut_1265.writeByte(5);
+                    const argsNames_1267: string[] = ["alias", "data"];
+                    const argsValues_1268: any[] = [alias, data];
+                    sCtx_1251.invokeRemoteMethodAfter("loginByAlias", null, argsNames_1267, argsValues_1268);
+                    FastMeta.META_UUID.serialize(sCtx_1251, alias, dataOut_1265);
+                    LoginStream.META.serialize(sCtx_1251, data, dataOut_1265);
+                    sCtx_1251.sendToRemote(dataOut_1265.toArray());
                     return AFuture.of();
                     
                 }
@@ -6505,13 +7260,13 @@ export namespace ServerApiByUidClient  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_977: FastFutureContext): ServerApiByUidClientRemote  {
+        makeRemote(sCtx_1271: FastFutureContext): ServerApiByUidClientRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_977.flush(sendFuture || AFuture.make());
+                    sCtx_1271.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_977, 
+                , getFastMetaContext: () => sCtx_1271, 
             };
             return remoteApiImpl as ServerApiByUidClientRemote;
             
@@ -6576,17 +7331,17 @@ export namespace ServerApiByUid  {
                         
                     }
                     case 3:  {
-                        const reqId_978 = dataIn.readInt();
-                        const argsNames_979: string[] = [];
-                        const argsValues_980: any[] = [];
-                        ctx.invokeLocalMethodBefore("getBalance", argsNames_979, argsValues_980);
+                        const reqId_1272 = dataIn.readInt();
+                        const argsNames_1273: string[] = [];
+                        const argsValues_1274: any[] = [];
+                        ctx.invokeLocalMethodBefore("getBalance", argsNames_1273, argsValues_1274);
                         ctx.regLocalFuture();
                         const resultFuture = localApi.getBalance();
-                        ctx.invokeLocalMethodAfter("getBalance", resultFuture, argsNames_979, argsValues_980);
-                        resultFuture.to((v_982: number) =>  {
-                            const data_981 = new DataInOut();
-                            data_981.writeLong(v_982);
-                            ctx.sendResultToRemote(reqId_978, data_981.toArray());
+                        ctx.invokeLocalMethodAfter("getBalance", resultFuture, argsNames_1273, argsValues_1274);
+                        resultFuture.to((v_1276: number) =>  {
+                            const data_1275 = new DataInOut();
+                            data_1275.writeLong(v_1276);
+                            ctx.sendResultToRemote(reqId_1272, data_1275.toArray());
                             
                         }
                         );
@@ -6594,37 +7349,37 @@ export namespace ServerApiByUid  {
                         
                     }
                     case 4:  {
-                        let uid_985: UUID;
-                        uid_985 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const argsNames_987: string[] = ["uid"];
-                        const argsValues_988: any[] = [uid_985];
-                        ctx.invokeLocalMethodBefore("setParent", argsNames_987, argsValues_988);
-                        localApi.setParent(uid_985);
-                        ctx.invokeLocalMethodAfter("setParent", null, argsNames_987, argsValues_988);
+                        let uid_1279: UUID;
+                        uid_1279 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const argsNames_1281: string[] = ["uid"];
+                        const argsValues_1282: any[] = [uid_1279];
+                        ctx.invokeLocalMethodBefore("setParent", argsNames_1281, argsValues_1282);
+                        localApi.setParent(uid_1279);
+                        ctx.invokeLocalMethodAfter("setParent", null, argsNames_1281, argsValues_1282);
                         break;
                         
                     }
                     case 5:  {
-                        const argsNames_990: string[] = [];
-                        const argsValues_991: any[] = [];
-                        ctx.invokeLocalMethodBefore("block", argsNames_990, argsValues_991);
+                        const argsNames_1284: string[] = [];
+                        const argsValues_1285: any[] = [];
+                        ctx.invokeLocalMethodBefore("block", argsNames_1284, argsValues_1285);
                         localApi.block();
-                        ctx.invokeLocalMethodAfter("block", null, argsNames_990, argsValues_991);
+                        ctx.invokeLocalMethodAfter("block", null, argsNames_1284, argsValues_1285);
                         break;
                         
                     }
                     case 6:  {
-                        const reqId_992 = dataIn.readInt();
-                        const argsNames_993: string[] = [];
-                        const argsValues_994: any[] = [];
-                        ctx.invokeLocalMethodBefore("getPosition", argsNames_993, argsValues_994);
+                        const reqId_1286 = dataIn.readInt();
+                        const argsNames_1287: string[] = [];
+                        const argsValues_1288: any[] = [];
+                        ctx.invokeLocalMethodBefore("getPosition", argsNames_1287, argsValues_1288);
                         ctx.regLocalFuture();
                         const resultFuture = localApi.getPosition();
-                        ctx.invokeLocalMethodAfter("getPosition", resultFuture, argsNames_993, argsValues_994);
-                        resultFuture.to((v_996: Cloud) =>  {
-                            const data_995 = new DataInOut();
-                            Cloud.META.serialize(ctx, v_996, data_995);
-                            ctx.sendResultToRemote(reqId_992, data_995.toArray());
+                        ctx.invokeLocalMethodAfter("getPosition", resultFuture, argsNames_1287, argsValues_1288);
+                        resultFuture.to((v_1290: Cloud) =>  {
+                            const data_1289 = new DataInOut();
+                            Cloud.META.serialize(ctx, v_1290, data_1289);
+                            ctx.sendResultToRemote(reqId_1286, data_1289.toArray());
                             
                         }
                         );
@@ -6632,17 +7387,17 @@ export namespace ServerApiByUid  {
                         
                     }
                     case 7:  {
-                        const reqId_998 = dataIn.readInt();
-                        const argsNames_999: string[] = [];
-                        const argsValues_1000: any[] = [];
-                        ctx.invokeLocalMethodBefore("getParent", argsNames_999, argsValues_1000);
+                        const reqId_1292 = dataIn.readInt();
+                        const argsNames_1293: string[] = [];
+                        const argsValues_1294: any[] = [];
+                        ctx.invokeLocalMethodBefore("getParent", argsNames_1293, argsValues_1294);
                         ctx.regLocalFuture();
                         const resultFuture = localApi.getParent();
-                        ctx.invokeLocalMethodAfter("getParent", resultFuture, argsNames_999, argsValues_1000);
-                        resultFuture.to((v_1002: UUID) =>  {
-                            const data_1001 = new DataInOut();
-                            FastMeta.META_UUID.serialize(ctx, v_1002, data_1001);
-                            ctx.sendResultToRemote(reqId_998, data_1001.toArray());
+                        ctx.invokeLocalMethodAfter("getParent", resultFuture, argsNames_1293, argsValues_1294);
+                        resultFuture.to((v_1296: UUID) =>  {
+                            const data_1295 = new DataInOut();
+                            FastMeta.META_UUID.serialize(ctx, v_1296, data_1295);
+                            ctx.sendResultToRemote(reqId_1292, data_1295.toArray());
                             
                         }
                         );
@@ -6650,17 +7405,17 @@ export namespace ServerApiByUid  {
                         
                     }
                     case 8:  {
-                        const reqId_1004 = dataIn.readInt();
-                        const argsNames_1005: string[] = [];
-                        const argsValues_1006: any[] = [];
-                        ctx.invokeLocalMethodBefore("getBeneficiary", argsNames_1005, argsValues_1006);
+                        const reqId_1298 = dataIn.readInt();
+                        const argsNames_1299: string[] = [];
+                        const argsValues_1300: any[] = [];
+                        ctx.invokeLocalMethodBefore("getBeneficiary", argsNames_1299, argsValues_1300);
                         ctx.regLocalFuture();
                         const resultFuture = localApi.getBeneficiary();
-                        ctx.invokeLocalMethodAfter("getBeneficiary", resultFuture, argsNames_1005, argsValues_1006);
-                        resultFuture.to((v_1008: UUID) =>  {
-                            const data_1007 = new DataInOut();
-                            FastMeta.META_UUID.serialize(ctx, v_1008, data_1007);
-                            ctx.sendResultToRemote(reqId_1004, data_1007.toArray());
+                        ctx.invokeLocalMethodAfter("getBeneficiary", resultFuture, argsNames_1299, argsValues_1300);
+                        resultFuture.to((v_1302: UUID) =>  {
+                            const data_1301 = new DataInOut();
+                            FastMeta.META_UUID.serialize(ctx, v_1302, data_1301);
+                            ctx.sendResultToRemote(reqId_1298, data_1301.toArray());
                             
                         }
                         );
@@ -6668,28 +7423,28 @@ export namespace ServerApiByUid  {
                         
                     }
                     case 9:  {
-                        let uid_1011: UUID;
-                        uid_1011 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        const argsNames_1013: string[] = ["uid"];
-                        const argsValues_1014: any[] = [uid_1011];
-                        ctx.invokeLocalMethodBefore("setBeneficiary", argsNames_1013, argsValues_1014);
-                        localApi.setBeneficiary(uid_1011);
-                        ctx.invokeLocalMethodAfter("setBeneficiary", null, argsNames_1013, argsValues_1014);
+                        let uid_1305: UUID;
+                        uid_1305 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        const argsNames_1307: string[] = ["uid"];
+                        const argsValues_1308: any[] = [uid_1305];
+                        ctx.invokeLocalMethodBefore("setBeneficiary", argsNames_1307, argsValues_1308);
+                        localApi.setBeneficiary(uid_1305);
+                        ctx.invokeLocalMethodAfter("setBeneficiary", null, argsNames_1307, argsValues_1308);
                         break;
                         
                     }
                     case 10:  {
-                        const reqId_1015 = dataIn.readInt();
-                        const argsNames_1016: string[] = [];
-                        const argsValues_1017: any[] = [];
-                        ctx.invokeLocalMethodBefore("getBlockTime", argsNames_1016, argsValues_1017);
+                        const reqId_1309 = dataIn.readInt();
+                        const argsNames_1310: string[] = [];
+                        const argsValues_1311: any[] = [];
+                        ctx.invokeLocalMethodBefore("getBlockTime", argsNames_1310, argsValues_1311);
                         ctx.regLocalFuture();
                         const resultFuture = localApi.getBlockTime();
-                        ctx.invokeLocalMethodAfter("getBlockTime", resultFuture, argsNames_1016, argsValues_1017);
-                        resultFuture.to((v_1019: Date) =>  {
-                            const data_1018 = new DataInOut();
-                            data_1018.writeLong(v_1019.getTime());
-                            ctx.sendResultToRemote(reqId_1015, data_1018.toArray());
+                        ctx.invokeLocalMethodAfter("getBlockTime", resultFuture, argsNames_1310, argsValues_1311);
+                        resultFuture.to((v_1313: Date) =>  {
+                            const data_1312 = new DataInOut();
+                            data_1312.writeLong(v_1313.getTime());
+                            ctx.sendResultToRemote(reqId_1309, data_1312.toArray());
                             
                         }
                         );
@@ -6697,26 +7452,26 @@ export namespace ServerApiByUid  {
                         
                     }
                     case 11:  {
-                        const argsNames_1022: string[] = [];
-                        const argsValues_1023: any[] = [];
-                        ctx.invokeLocalMethodBefore("unblock", argsNames_1022, argsValues_1023);
+                        const argsNames_1316: string[] = [];
+                        const argsValues_1317: any[] = [];
+                        ctx.invokeLocalMethodBefore("unblock", argsNames_1316, argsValues_1317);
                         localApi.unblock();
-                        ctx.invokeLocalMethodAfter("unblock", null, argsNames_1022, argsValues_1023);
+                        ctx.invokeLocalMethodAfter("unblock", null, argsNames_1316, argsValues_1317);
                         break;
                         
                     }
                     case 12:  {
-                        const reqId_1024 = dataIn.readInt();
-                        const argsNames_1025: string[] = [];
-                        const argsValues_1026: any[] = [];
-                        ctx.invokeLocalMethodBefore("createTime", argsNames_1025, argsValues_1026);
+                        const reqId_1318 = dataIn.readInt();
+                        const argsNames_1319: string[] = [];
+                        const argsValues_1320: any[] = [];
+                        ctx.invokeLocalMethodBefore("createTime", argsNames_1319, argsValues_1320);
                         ctx.regLocalFuture();
                         const resultFuture = localApi.createTime();
-                        ctx.invokeLocalMethodAfter("createTime", resultFuture, argsNames_1025, argsValues_1026);
-                        resultFuture.to((v_1028: Date) =>  {
-                            const data_1027 = new DataInOut();
-                            data_1027.writeLong(v_1028.getTime());
-                            ctx.sendResultToRemote(reqId_1024, data_1027.toArray());
+                        ctx.invokeLocalMethodAfter("createTime", resultFuture, argsNames_1319, argsValues_1320);
+                        resultFuture.to((v_1322: Date) =>  {
+                            const data_1321 = new DataInOut();
+                            data_1321.writeLong(v_1322.getTime());
+                            ctx.sendResultToRemote(reqId_1318, data_1321.toArray());
                             
                         }
                         );
@@ -6724,17 +7479,17 @@ export namespace ServerApiByUid  {
                         
                     }
                     case 13:  {
-                        const reqId_1030 = dataIn.readInt();
-                        const argsNames_1031: string[] = [];
-                        const argsValues_1032: any[] = [];
-                        ctx.invokeLocalMethodBefore("onlineTime", argsNames_1031, argsValues_1032);
+                        const reqId_1324 = dataIn.readInt();
+                        const argsNames_1325: string[] = [];
+                        const argsValues_1326: any[] = [];
+                        ctx.invokeLocalMethodBefore("onlineTime", argsNames_1325, argsValues_1326);
                         ctx.regLocalFuture();
                         const resultFuture = localApi.onlineTime();
-                        ctx.invokeLocalMethodAfter("onlineTime", resultFuture, argsNames_1031, argsValues_1032);
-                        resultFuture.to((v_1034: Date) =>  {
-                            const data_1033 = new DataInOut();
-                            data_1033.writeLong(v_1034.getTime());
-                            ctx.sendResultToRemote(reqId_1030, data_1033.toArray());
+                        ctx.invokeLocalMethodAfter("onlineTime", resultFuture, argsNames_1325, argsValues_1326);
+                        resultFuture.to((v_1328: Date) =>  {
+                            const data_1327 = new DataInOut();
+                            data_1327.writeLong(v_1328.getTime());
+                            ctx.sendResultToRemote(reqId_1324, data_1327.toArray());
                             
                         }
                         );
@@ -6742,19 +7497,19 @@ export namespace ServerApiByUid  {
                         
                     }
                     case 14:  {
-                        const reqId_1036 = dataIn.readInt();
-                        let groupId_1037: number;
-                        groupId_1037 = dataIn.readLong();
-                        const argsNames_1039: string[] = ["groupId"];
-                        const argsValues_1040: any[] = [groupId_1037];
-                        ctx.invokeLocalMethodBefore("addAccessGroup", argsNames_1039, argsValues_1040);
+                        const reqId_1330 = dataIn.readInt();
+                        let groupId_1331: number;
+                        groupId_1331 = dataIn.readLong();
+                        const argsNames_1333: string[] = ["groupId"];
+                        const argsValues_1334: any[] = [groupId_1331];
+                        ctx.invokeLocalMethodBefore("addAccessGroup", argsNames_1333, argsValues_1334);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.addAccessGroup(groupId_1037);
-                        ctx.invokeLocalMethodAfter("addAccessGroup", resultFuture, argsNames_1039, argsValues_1040);
-                        resultFuture.to((v_1042: boolean) =>  {
-                            const data_1041 = new DataInOut();
-                            data_1041.writeBoolean(v_1042);
-                            ctx.sendResultToRemote(reqId_1036, data_1041.toArray());
+                        const resultFuture = localApi.addAccessGroup(groupId_1331);
+                        ctx.invokeLocalMethodAfter("addAccessGroup", resultFuture, argsNames_1333, argsValues_1334);
+                        resultFuture.to((v_1336: boolean) =>  {
+                            const data_1335 = new DataInOut();
+                            data_1335.writeBoolean(v_1336);
+                            ctx.sendResultToRemote(reqId_1330, data_1335.toArray());
                             
                         }
                         );
@@ -6762,19 +7517,19 @@ export namespace ServerApiByUid  {
                         
                     }
                     case 15:  {
-                        const reqId_1044 = dataIn.readInt();
-                        let groupId_1045: number;
-                        groupId_1045 = dataIn.readLong();
-                        const argsNames_1047: string[] = ["groupId"];
-                        const argsValues_1048: any[] = [groupId_1045];
-                        ctx.invokeLocalMethodBefore("removeAccessGroup", argsNames_1047, argsValues_1048);
+                        const reqId_1338 = dataIn.readInt();
+                        let groupId_1339: number;
+                        groupId_1339 = dataIn.readLong();
+                        const argsNames_1341: string[] = ["groupId"];
+                        const argsValues_1342: any[] = [groupId_1339];
+                        ctx.invokeLocalMethodBefore("removeAccessGroup", argsNames_1341, argsValues_1342);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.removeAccessGroup(groupId_1045);
-                        ctx.invokeLocalMethodAfter("removeAccessGroup", resultFuture, argsNames_1047, argsValues_1048);
-                        resultFuture.to((v_1050: boolean) =>  {
-                            const data_1049 = new DataInOut();
-                            data_1049.writeBoolean(v_1050);
-                            ctx.sendResultToRemote(reqId_1044, data_1049.toArray());
+                        const resultFuture = localApi.removeAccessGroup(groupId_1339);
+                        ctx.invokeLocalMethodAfter("removeAccessGroup", resultFuture, argsNames_1341, argsValues_1342);
+                        resultFuture.to((v_1344: boolean) =>  {
+                            const data_1343 = new DataInOut();
+                            data_1343.writeBoolean(v_1344);
+                            ctx.sendResultToRemote(reqId_1338, data_1343.toArray());
                             
                         }
                         );
@@ -6798,270 +7553,270 @@ export namespace ServerApiByUid  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_1052: FastFutureContext): ServerApiByUidRemote  {
+        makeRemote(sCtx_1346: FastFutureContext): ServerApiByUidRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_1052.flush(sendFuture || AFuture.make());
+                    sCtx_1346.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_1052, getBalance: (): ARFuture<number> =>  {
-                    const dataOut_1054 = new DataInOut();
-                    dataOut_1054.writeByte(3);
-                    const argsNames_1056: string[] = [];
-                    const argsValues_1057: any[] = [];
-                    const result_1055 = ARFuture.of<number>();
-                    sCtx_1052.invokeRemoteMethodAfter("getBalance", result_1055, argsNames_1056, argsValues_1057);
-                    const reqId_1053 = sCtx_1052.regFuture( {
+                , getFastMetaContext: () => sCtx_1346, getBalance: (): ARFuture<number> =>  {
+                    const dataOut_1348 = new DataInOut();
+                    dataOut_1348.writeByte(3);
+                    const argsNames_1350: string[] = [];
+                    const argsValues_1351: any[] = [];
+                    const result_1349 = ARFuture.of<number>();
+                    sCtx_1346.invokeRemoteMethodAfter("getBalance", result_1349, argsNames_1350, argsValues_1351);
+                    const reqId_1347 = sCtx_1346.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1055 as ARFuture<number>).tryDone(FastMeta.META_LONG.deserialize(sCtx_1052, in_));
+                            (result_1349 as ARFuture<number>).tryDone(FastMeta.META_LONG.deserialize(sCtx_1346, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1055.error(new Error("Remote call failed without a typed exception"));
+                            result_1349.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1054.writeInt(reqId_1053);
-                    sCtx_1052.sendToRemote(dataOut_1054.toArray());
-                    return result_1055;
+                    dataOut_1348.writeInt(reqId_1347);
+                    sCtx_1346.sendToRemote(dataOut_1348.toArray());
+                    return result_1349;
                     
                 }
                 , setParent: (uid: UUID): AFuture =>  {
-                    const dataOut_1059 = new DataInOut();
-                    dataOut_1059.writeByte(4);
-                    const argsNames_1061: string[] = ["uid"];
-                    const argsValues_1062: any[] = [uid];
-                    sCtx_1052.invokeRemoteMethodAfter("setParent", null, argsNames_1061, argsValues_1062);
-                    FastMeta.META_UUID.serialize(sCtx_1052, uid, dataOut_1059);
-                    sCtx_1052.sendToRemote(dataOut_1059.toArray());
+                    const dataOut_1353 = new DataInOut();
+                    dataOut_1353.writeByte(4);
+                    const argsNames_1355: string[] = ["uid"];
+                    const argsValues_1356: any[] = [uid];
+                    sCtx_1346.invokeRemoteMethodAfter("setParent", null, argsNames_1355, argsValues_1356);
+                    FastMeta.META_UUID.serialize(sCtx_1346, uid, dataOut_1353);
+                    sCtx_1346.sendToRemote(dataOut_1353.toArray());
                     return AFuture.of();
                     
                 }
                 , block: (): AFuture =>  {
-                    const dataOut_1065 = new DataInOut();
-                    dataOut_1065.writeByte(5);
-                    const argsNames_1067: string[] = [];
-                    const argsValues_1068: any[] = [];
-                    sCtx_1052.invokeRemoteMethodAfter("block", null, argsNames_1067, argsValues_1068);
-                    sCtx_1052.sendToRemote(dataOut_1065.toArray());
+                    const dataOut_1359 = new DataInOut();
+                    dataOut_1359.writeByte(5);
+                    const argsNames_1361: string[] = [];
+                    const argsValues_1362: any[] = [];
+                    sCtx_1346.invokeRemoteMethodAfter("block", null, argsNames_1361, argsValues_1362);
+                    sCtx_1346.sendToRemote(dataOut_1359.toArray());
                     return AFuture.of();
                     
                 }
                 , getPosition: (): ARFuture<Cloud> =>  {
-                    const dataOut_1070 = new DataInOut();
-                    dataOut_1070.writeByte(6);
-                    const argsNames_1072: string[] = [];
-                    const argsValues_1073: any[] = [];
-                    const result_1071 = ARFuture.of<Cloud>();
-                    sCtx_1052.invokeRemoteMethodAfter("getPosition", result_1071, argsNames_1072, argsValues_1073);
-                    const reqId_1069 = sCtx_1052.regFuture( {
+                    const dataOut_1364 = new DataInOut();
+                    dataOut_1364.writeByte(6);
+                    const argsNames_1366: string[] = [];
+                    const argsValues_1367: any[] = [];
+                    const result_1365 = ARFuture.of<Cloud>();
+                    sCtx_1346.invokeRemoteMethodAfter("getPosition", result_1365, argsNames_1366, argsValues_1367);
+                    const reqId_1363 = sCtx_1346.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1071 as ARFuture<Cloud>).tryDone(Cloud.META.deserialize(sCtx_1052, in_));
+                            (result_1365 as ARFuture<Cloud>).tryDone(Cloud.META.deserialize(sCtx_1346, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1071.error(new Error("Remote call failed without a typed exception"));
+                            result_1365.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1070.writeInt(reqId_1069);
-                    sCtx_1052.sendToRemote(dataOut_1070.toArray());
-                    return result_1071;
+                    dataOut_1364.writeInt(reqId_1363);
+                    sCtx_1346.sendToRemote(dataOut_1364.toArray());
+                    return result_1365;
                     
                 }
                 , getParent: (): ARFuture<UUID> =>  {
-                    const dataOut_1075 = new DataInOut();
-                    dataOut_1075.writeByte(7);
-                    const argsNames_1077: string[] = [];
-                    const argsValues_1078: any[] = [];
-                    const result_1076 = ARFuture.of<UUID>();
-                    sCtx_1052.invokeRemoteMethodAfter("getParent", result_1076, argsNames_1077, argsValues_1078);
-                    const reqId_1074 = sCtx_1052.regFuture( {
+                    const dataOut_1369 = new DataInOut();
+                    dataOut_1369.writeByte(7);
+                    const argsNames_1371: string[] = [];
+                    const argsValues_1372: any[] = [];
+                    const result_1370 = ARFuture.of<UUID>();
+                    sCtx_1346.invokeRemoteMethodAfter("getParent", result_1370, argsNames_1371, argsValues_1372);
+                    const reqId_1368 = sCtx_1346.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1076 as ARFuture<UUID>).tryDone(FastMeta.META_UUID.deserialize(sCtx_1052, in_));
+                            (result_1370 as ARFuture<UUID>).tryDone(FastMeta.META_UUID.deserialize(sCtx_1346, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1076.error(new Error("Remote call failed without a typed exception"));
+                            result_1370.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1075.writeInt(reqId_1074);
-                    sCtx_1052.sendToRemote(dataOut_1075.toArray());
-                    return result_1076;
+                    dataOut_1369.writeInt(reqId_1368);
+                    sCtx_1346.sendToRemote(dataOut_1369.toArray());
+                    return result_1370;
                     
                 }
                 , getBeneficiary: (): ARFuture<UUID> =>  {
-                    const dataOut_1080 = new DataInOut();
-                    dataOut_1080.writeByte(8);
-                    const argsNames_1082: string[] = [];
-                    const argsValues_1083: any[] = [];
-                    const result_1081 = ARFuture.of<UUID>();
-                    sCtx_1052.invokeRemoteMethodAfter("getBeneficiary", result_1081, argsNames_1082, argsValues_1083);
-                    const reqId_1079 = sCtx_1052.regFuture( {
+                    const dataOut_1374 = new DataInOut();
+                    dataOut_1374.writeByte(8);
+                    const argsNames_1376: string[] = [];
+                    const argsValues_1377: any[] = [];
+                    const result_1375 = ARFuture.of<UUID>();
+                    sCtx_1346.invokeRemoteMethodAfter("getBeneficiary", result_1375, argsNames_1376, argsValues_1377);
+                    const reqId_1373 = sCtx_1346.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1081 as ARFuture<UUID>).tryDone(FastMeta.META_UUID.deserialize(sCtx_1052, in_));
+                            (result_1375 as ARFuture<UUID>).tryDone(FastMeta.META_UUID.deserialize(sCtx_1346, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1081.error(new Error("Remote call failed without a typed exception"));
+                            result_1375.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1080.writeInt(reqId_1079);
-                    sCtx_1052.sendToRemote(dataOut_1080.toArray());
-                    return result_1081;
+                    dataOut_1374.writeInt(reqId_1373);
+                    sCtx_1346.sendToRemote(dataOut_1374.toArray());
+                    return result_1375;
                     
                 }
                 , setBeneficiary: (uid: UUID): AFuture =>  {
-                    const dataOut_1085 = new DataInOut();
-                    dataOut_1085.writeByte(9);
-                    const argsNames_1087: string[] = ["uid"];
-                    const argsValues_1088: any[] = [uid];
-                    sCtx_1052.invokeRemoteMethodAfter("setBeneficiary", null, argsNames_1087, argsValues_1088);
-                    FastMeta.META_UUID.serialize(sCtx_1052, uid, dataOut_1085);
-                    sCtx_1052.sendToRemote(dataOut_1085.toArray());
+                    const dataOut_1379 = new DataInOut();
+                    dataOut_1379.writeByte(9);
+                    const argsNames_1381: string[] = ["uid"];
+                    const argsValues_1382: any[] = [uid];
+                    sCtx_1346.invokeRemoteMethodAfter("setBeneficiary", null, argsNames_1381, argsValues_1382);
+                    FastMeta.META_UUID.serialize(sCtx_1346, uid, dataOut_1379);
+                    sCtx_1346.sendToRemote(dataOut_1379.toArray());
                     return AFuture.of();
                     
                 }
                 , getBlockTime: (): ARFuture<Date> =>  {
-                    const dataOut_1091 = new DataInOut();
-                    dataOut_1091.writeByte(10);
-                    const argsNames_1093: string[] = [];
-                    const argsValues_1094: any[] = [];
-                    const result_1092 = ARFuture.of<Date>();
-                    sCtx_1052.invokeRemoteMethodAfter("getBlockTime", result_1092, argsNames_1093, argsValues_1094);
-                    const reqId_1090 = sCtx_1052.regFuture( {
+                    const dataOut_1385 = new DataInOut();
+                    dataOut_1385.writeByte(10);
+                    const argsNames_1387: string[] = [];
+                    const argsValues_1388: any[] = [];
+                    const result_1386 = ARFuture.of<Date>();
+                    sCtx_1346.invokeRemoteMethodAfter("getBlockTime", result_1386, argsNames_1387, argsValues_1388);
+                    const reqId_1384 = sCtx_1346.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1092 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1052, in_));
+                            (result_1386 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1346, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1092.error(new Error("Remote call failed without a typed exception"));
+                            result_1386.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1091.writeInt(reqId_1090);
-                    sCtx_1052.sendToRemote(dataOut_1091.toArray());
-                    return result_1092;
+                    dataOut_1385.writeInt(reqId_1384);
+                    sCtx_1346.sendToRemote(dataOut_1385.toArray());
+                    return result_1386;
                     
                 }
                 , unblock: (): AFuture =>  {
-                    const dataOut_1096 = new DataInOut();
-                    dataOut_1096.writeByte(11);
-                    const argsNames_1098: string[] = [];
-                    const argsValues_1099: any[] = [];
-                    sCtx_1052.invokeRemoteMethodAfter("unblock", null, argsNames_1098, argsValues_1099);
-                    sCtx_1052.sendToRemote(dataOut_1096.toArray());
+                    const dataOut_1390 = new DataInOut();
+                    dataOut_1390.writeByte(11);
+                    const argsNames_1392: string[] = [];
+                    const argsValues_1393: any[] = [];
+                    sCtx_1346.invokeRemoteMethodAfter("unblock", null, argsNames_1392, argsValues_1393);
+                    sCtx_1346.sendToRemote(dataOut_1390.toArray());
                     return AFuture.of();
                     
                 }
                 , createTime: (): ARFuture<Date> =>  {
-                    const dataOut_1101 = new DataInOut();
-                    dataOut_1101.writeByte(12);
-                    const argsNames_1103: string[] = [];
-                    const argsValues_1104: any[] = [];
-                    const result_1102 = ARFuture.of<Date>();
-                    sCtx_1052.invokeRemoteMethodAfter("createTime", result_1102, argsNames_1103, argsValues_1104);
-                    const reqId_1100 = sCtx_1052.regFuture( {
+                    const dataOut_1395 = new DataInOut();
+                    dataOut_1395.writeByte(12);
+                    const argsNames_1397: string[] = [];
+                    const argsValues_1398: any[] = [];
+                    const result_1396 = ARFuture.of<Date>();
+                    sCtx_1346.invokeRemoteMethodAfter("createTime", result_1396, argsNames_1397, argsValues_1398);
+                    const reqId_1394 = sCtx_1346.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1102 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1052, in_));
+                            (result_1396 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1346, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1102.error(new Error("Remote call failed without a typed exception"));
+                            result_1396.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1101.writeInt(reqId_1100);
-                    sCtx_1052.sendToRemote(dataOut_1101.toArray());
-                    return result_1102;
+                    dataOut_1395.writeInt(reqId_1394);
+                    sCtx_1346.sendToRemote(dataOut_1395.toArray());
+                    return result_1396;
                     
                 }
                 , onlineTime: (): ARFuture<Date> =>  {
-                    const dataOut_1106 = new DataInOut();
-                    dataOut_1106.writeByte(13);
-                    const argsNames_1108: string[] = [];
-                    const argsValues_1109: any[] = [];
-                    const result_1107 = ARFuture.of<Date>();
-                    sCtx_1052.invokeRemoteMethodAfter("onlineTime", result_1107, argsNames_1108, argsValues_1109);
-                    const reqId_1105 = sCtx_1052.regFuture( {
+                    const dataOut_1400 = new DataInOut();
+                    dataOut_1400.writeByte(13);
+                    const argsNames_1402: string[] = [];
+                    const argsValues_1403: any[] = [];
+                    const result_1401 = ARFuture.of<Date>();
+                    sCtx_1346.invokeRemoteMethodAfter("onlineTime", result_1401, argsNames_1402, argsValues_1403);
+                    const reqId_1399 = sCtx_1346.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1107 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1052, in_));
+                            (result_1401 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1346, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1107.error(new Error("Remote call failed without a typed exception"));
+                            result_1401.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1106.writeInt(reqId_1105);
-                    sCtx_1052.sendToRemote(dataOut_1106.toArray());
-                    return result_1107;
+                    dataOut_1400.writeInt(reqId_1399);
+                    sCtx_1346.sendToRemote(dataOut_1400.toArray());
+                    return result_1401;
                     
                 }
                 , addAccessGroup: (groupId: number): ARFuture<boolean> =>  {
-                    const dataOut_1111 = new DataInOut();
-                    dataOut_1111.writeByte(14);
-                    const argsNames_1113: string[] = ["groupId"];
-                    const argsValues_1114: any[] = [groupId];
-                    const result_1112 = ARFuture.of<boolean>();
-                    sCtx_1052.invokeRemoteMethodAfter("addAccessGroup", result_1112, argsNames_1113, argsValues_1114);
-                    const reqId_1110 = sCtx_1052.regFuture( {
+                    const dataOut_1405 = new DataInOut();
+                    dataOut_1405.writeByte(14);
+                    const argsNames_1407: string[] = ["groupId"];
+                    const argsValues_1408: any[] = [groupId];
+                    const result_1406 = ARFuture.of<boolean>();
+                    sCtx_1346.invokeRemoteMethodAfter("addAccessGroup", result_1406, argsNames_1407, argsValues_1408);
+                    const reqId_1404 = sCtx_1346.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1112 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1052, in_));
+                            (result_1406 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1346, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1112.error(new Error("Remote call failed without a typed exception"));
+                            result_1406.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1111.writeInt(reqId_1110);
-                    dataOut_1111.writeLong(groupId);
-                    sCtx_1052.sendToRemote(dataOut_1111.toArray());
-                    return result_1112;
+                    dataOut_1405.writeInt(reqId_1404);
+                    dataOut_1405.writeLong(groupId);
+                    sCtx_1346.sendToRemote(dataOut_1405.toArray());
+                    return result_1406;
                     
                 }
                 , removeAccessGroup: (groupId: number): ARFuture<boolean> =>  {
-                    const dataOut_1117 = new DataInOut();
-                    dataOut_1117.writeByte(15);
-                    const argsNames_1119: string[] = ["groupId"];
-                    const argsValues_1120: any[] = [groupId];
-                    const result_1118 = ARFuture.of<boolean>();
-                    sCtx_1052.invokeRemoteMethodAfter("removeAccessGroup", result_1118, argsNames_1119, argsValues_1120);
-                    const reqId_1116 = sCtx_1052.regFuture( {
+                    const dataOut_1411 = new DataInOut();
+                    dataOut_1411.writeByte(15);
+                    const argsNames_1413: string[] = ["groupId"];
+                    const argsValues_1414: any[] = [groupId];
+                    const result_1412 = ARFuture.of<boolean>();
+                    sCtx_1346.invokeRemoteMethodAfter("removeAccessGroup", result_1412, argsNames_1413, argsValues_1414);
+                    const reqId_1410 = sCtx_1346.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1118 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1052, in_));
+                            (result_1412 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1346, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1118.error(new Error("Remote call failed without a typed exception"));
+                            result_1412.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1117.writeInt(reqId_1116);
-                    dataOut_1117.writeLong(groupId);
-                    sCtx_1052.sendToRemote(dataOut_1117.toArray());
-                    return result_1118;
+                    dataOut_1411.writeInt(reqId_1410);
+                    dataOut_1411.writeLong(groupId);
+                    sCtx_1346.sendToRemote(dataOut_1411.toArray());
+                    return result_1412;
                     
                 }
                 , 
@@ -7145,13 +7900,13 @@ export namespace ClientApiRegSafe  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_1122: FastFutureContext): ClientApiRegSafeRemote  {
+        makeRemote(sCtx_1416: FastFutureContext): ClientApiRegSafeRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_1122.flush(sendFuture || AFuture.make());
+                    sCtx_1416.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_1122, 
+                , getFastMetaContext: () => sCtx_1416, 
             };
             return remoteApiImpl as ClientApiRegSafeRemote;
             
@@ -7219,13 +7974,13 @@ export namespace GlobalRegClientApi  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_1123: FastFutureContext): GlobalRegClientApiRemote  {
+        makeRemote(sCtx_1417: FastFutureContext): GlobalRegClientApiRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_1123.flush(sendFuture || AFuture.make());
+                    sCtx_1417.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_1123, 
+                , getFastMetaContext: () => sCtx_1417, 
             };
             return remoteApiImpl as GlobalRegClientApiRemote;
             
@@ -7279,24 +8034,24 @@ export namespace ClientApiRegUnsafe  {
                         
                     }
                     case 3:  {
-                        let stream_1125: ClientApiRegSafeStream;
-                        stream_1125 = ClientApiRegSafeStream.META.deserialize(ctx, dataIn);
-                        const argsNames_1127: string[] = ["stream"];
-                        const argsValues_1128: any[] = [stream_1125];
-                        ctx.invokeLocalMethodBefore("enter", argsNames_1127, argsValues_1128);
-                        localApi.enter(stream_1125);
-                        ctx.invokeLocalMethodAfter("enter", null, argsNames_1127, argsValues_1128);
+                        let stream_1419: ClientApiRegSafeStream;
+                        stream_1419 = ClientApiRegSafeStream.META.deserialize(ctx, dataIn);
+                        const argsNames_1421: string[] = ["stream"];
+                        const argsValues_1422: any[] = [stream_1419];
+                        ctx.invokeLocalMethodBefore("enter", argsNames_1421, argsValues_1422);
+                        localApi.enter(stream_1419);
+                        ctx.invokeLocalMethodAfter("enter", null, argsNames_1421, argsValues_1422);
                         break;
                         
                     }
                     case 4:  {
-                        let stream_1130: GlobalRegClientApiStream;
-                        stream_1130 = GlobalRegClientApiStream.META.deserialize(ctx, dataIn);
-                        const argsNames_1132: string[] = ["stream"];
-                        const argsValues_1133: any[] = [stream_1130];
-                        ctx.invokeLocalMethodBefore("enterGlobal", argsNames_1132, argsValues_1133);
-                        localApi.enterGlobal(stream_1130);
-                        ctx.invokeLocalMethodAfter("enterGlobal", null, argsNames_1132, argsValues_1133);
+                        let stream_1424: GlobalRegClientApiStream;
+                        stream_1424 = GlobalRegClientApiStream.META.deserialize(ctx, dataIn);
+                        const argsNames_1426: string[] = ["stream"];
+                        const argsValues_1427: any[] = [stream_1424];
+                        ctx.invokeLocalMethodBefore("enterGlobal", argsNames_1426, argsValues_1427);
+                        localApi.enterGlobal(stream_1424);
+                        ctx.invokeLocalMethodAfter("enterGlobal", null, argsNames_1426, argsValues_1427);
                         break;
                         
                     }
@@ -7317,31 +8072,31 @@ export namespace ClientApiRegUnsafe  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_1134: FastFutureContext): ClientApiRegUnsafeRemote  {
+        makeRemote(sCtx_1428: FastFutureContext): ClientApiRegUnsafeRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_1134.flush(sendFuture || AFuture.make());
+                    sCtx_1428.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_1134, enter: (stream: ClientApiRegSafeStream): AFuture =>  {
-                    const dataOut_1136 = new DataInOut();
-                    dataOut_1136.writeByte(3);
-                    const argsNames_1138: string[] = ["stream"];
-                    const argsValues_1139: any[] = [stream];
-                    sCtx_1134.invokeRemoteMethodAfter("enter", null, argsNames_1138, argsValues_1139);
-                    ClientApiRegSafeStream.META.serialize(sCtx_1134, stream, dataOut_1136);
-                    sCtx_1134.sendToRemote(dataOut_1136.toArray());
+                , getFastMetaContext: () => sCtx_1428, enter: (stream: ClientApiRegSafeStream): AFuture =>  {
+                    const dataOut_1430 = new DataInOut();
+                    dataOut_1430.writeByte(3);
+                    const argsNames_1432: string[] = ["stream"];
+                    const argsValues_1433: any[] = [stream];
+                    sCtx_1428.invokeRemoteMethodAfter("enter", null, argsNames_1432, argsValues_1433);
+                    ClientApiRegSafeStream.META.serialize(sCtx_1428, stream, dataOut_1430);
+                    sCtx_1428.sendToRemote(dataOut_1430.toArray());
                     return AFuture.of();
                     
                 }
                 , enterGlobal: (stream: GlobalRegClientApiStream): AFuture =>  {
-                    const dataOut_1142 = new DataInOut();
-                    dataOut_1142.writeByte(4);
-                    const argsNames_1144: string[] = ["stream"];
-                    const argsValues_1145: any[] = [stream];
-                    sCtx_1134.invokeRemoteMethodAfter("enterGlobal", null, argsNames_1144, argsValues_1145);
-                    GlobalRegClientApiStream.META.serialize(sCtx_1134, stream, dataOut_1142);
-                    sCtx_1134.sendToRemote(dataOut_1142.toArray());
+                    const dataOut_1436 = new DataInOut();
+                    dataOut_1436.writeByte(4);
+                    const argsNames_1438: string[] = ["stream"];
+                    const argsValues_1439: any[] = [stream];
+                    sCtx_1428.invokeRemoteMethodAfter("enterGlobal", null, argsNames_1438, argsValues_1439);
+                    GlobalRegClientApiStream.META.serialize(sCtx_1428, stream, dataOut_1436);
+                    sCtx_1428.sendToRemote(dataOut_1436.toArray());
                     return AFuture.of();
                     
                 }
@@ -7401,28 +8156,28 @@ export namespace GlobalRegServerApi  {
                         
                     }
                     case 3:  {
-                        let _key_1148: Key;
-                        _key_1148 = Key.META.deserialize(ctx, dataIn);
-                        const argsNames_1150: string[] = ["key"];
-                        const argsValues_1151: any[] = [_key_1148];
-                        ctx.invokeLocalMethodBefore("setMasterKey", argsNames_1150, argsValues_1151);
-                        localApi.setMasterKey(_key_1148);
-                        ctx.invokeLocalMethodAfter("setMasterKey", null, argsNames_1150, argsValues_1151);
+                        let _key_1442: Key;
+                        _key_1442 = Key.META.deserialize(ctx, dataIn);
+                        const argsNames_1444: string[] = ["key"];
+                        const argsValues_1445: any[] = [_key_1442];
+                        ctx.invokeLocalMethodBefore("setMasterKey", argsNames_1444, argsValues_1445);
+                        localApi.setMasterKey(_key_1442);
+                        ctx.invokeLocalMethodAfter("setMasterKey", null, argsNames_1444, argsValues_1445);
                         break;
                         
                     }
                     case 4:  {
-                        const reqId_1152 = dataIn.readInt();
-                        const argsNames_1153: string[] = [];
-                        const argsValues_1154: any[] = [];
-                        ctx.invokeLocalMethodBefore("finish", argsNames_1153, argsValues_1154);
+                        const reqId_1446 = dataIn.readInt();
+                        const argsNames_1447: string[] = [];
+                        const argsValues_1448: any[] = [];
+                        ctx.invokeLocalMethodBefore("finish", argsNames_1447, argsValues_1448);
                         ctx.regLocalFuture();
                         const resultFuture = localApi.finish();
-                        ctx.invokeLocalMethodAfter("finish", resultFuture, argsNames_1153, argsValues_1154);
-                        resultFuture.to((v_1156: FinishResultGlobalRegServerApi) =>  {
-                            const data_1155 = new DataInOut();
-                            FinishResultGlobalRegServerApi.META.serialize(ctx, v_1156, data_1155);
-                            ctx.sendResultToRemote(reqId_1152, data_1155.toArray());
+                        ctx.invokeLocalMethodAfter("finish", resultFuture, argsNames_1447, argsValues_1448);
+                        resultFuture.to((v_1450: FinishResultGlobalRegServerApi) =>  {
+                            const data_1449 = new DataInOut();
+                            FinishResultGlobalRegServerApi.META.serialize(ctx, v_1450, data_1449);
+                            ctx.sendResultToRemote(reqId_1446, data_1449.toArray());
                             
                         }
                         );
@@ -7446,45 +8201,45 @@ export namespace GlobalRegServerApi  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_1158: FastFutureContext): GlobalRegServerApiRemote  {
+        makeRemote(sCtx_1452: FastFutureContext): GlobalRegServerApiRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_1158.flush(sendFuture || AFuture.make());
+                    sCtx_1452.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_1158, setMasterKey: (key: Key): AFuture =>  {
-                    const dataOut_1160 = new DataInOut();
-                    dataOut_1160.writeByte(3);
-                    const argsNames_1162: string[] = ["key"];
-                    const argsValues_1163: any[] = [key];
-                    sCtx_1158.invokeRemoteMethodAfter("setMasterKey", null, argsNames_1162, argsValues_1163);
-                    Key.META.serialize(sCtx_1158, key, dataOut_1160);
-                    sCtx_1158.sendToRemote(dataOut_1160.toArray());
+                , getFastMetaContext: () => sCtx_1452, setMasterKey: (key: Key): AFuture =>  {
+                    const dataOut_1454 = new DataInOut();
+                    dataOut_1454.writeByte(3);
+                    const argsNames_1456: string[] = ["key"];
+                    const argsValues_1457: any[] = [key];
+                    sCtx_1452.invokeRemoteMethodAfter("setMasterKey", null, argsNames_1456, argsValues_1457);
+                    Key.META.serialize(sCtx_1452, key, dataOut_1454);
+                    sCtx_1452.sendToRemote(dataOut_1454.toArray());
                     return AFuture.of();
                     
                 }
                 , finish: (): ARFuture<FinishResultGlobalRegServerApi> =>  {
-                    const dataOut_1166 = new DataInOut();
-                    dataOut_1166.writeByte(4);
-                    const argsNames_1168: string[] = [];
-                    const argsValues_1169: any[] = [];
-                    const result_1167 = ARFuture.of<FinishResultGlobalRegServerApi>();
-                    sCtx_1158.invokeRemoteMethodAfter("finish", result_1167, argsNames_1168, argsValues_1169);
-                    const reqId_1165 = sCtx_1158.regFuture( {
+                    const dataOut_1460 = new DataInOut();
+                    dataOut_1460.writeByte(4);
+                    const argsNames_1462: string[] = [];
+                    const argsValues_1463: any[] = [];
+                    const result_1461 = ARFuture.of<FinishResultGlobalRegServerApi>();
+                    sCtx_1452.invokeRemoteMethodAfter("finish", result_1461, argsNames_1462, argsValues_1463);
+                    const reqId_1459 = sCtx_1452.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1167 as ARFuture<FinishResultGlobalRegServerApi>).tryDone(FinishResultGlobalRegServerApi.META.deserialize(sCtx_1158, in_));
+                            (result_1461 as ARFuture<FinishResultGlobalRegServerApi>).tryDone(FinishResultGlobalRegServerApi.META.deserialize(sCtx_1452, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1167.error(new Error("Remote call failed without a typed exception"));
+                            result_1461.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1166.writeInt(reqId_1165);
-                    sCtx_1158.sendToRemote(dataOut_1166.toArray());
-                    return result_1167;
+                    dataOut_1460.writeInt(reqId_1459);
+                    sCtx_1452.sendToRemote(dataOut_1460.toArray());
+                    return result_1461;
                     
                 }
                 , 
@@ -7544,59 +8299,59 @@ export namespace ServerRegistrationApi  {
                         
                     }
                     case 3:  {
-                        let salt_1171: string;
-                        let suffix_1172: string;
-                        let passwords_1173: number[];
-                        let parent_1174: UUID;
-                        let returnKey_1175: Key;
-                        let globalApi_1176: GlobalApiRegistrationServerRegistrationApi;
-                        let stringBytes_1178: Uint8Array;
-                        const len_1180 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
-                        const bytes_1181 = dataIn.readBytes(len_1180);
-                        stringBytes_1178 = bytes_1181;
-                        salt_1171 = new TextDecoder('utf-8').decode(stringBytes_1178);
-                        let stringBytes_1183: Uint8Array;
-                        const len_1185 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
-                        const bytes_1186 = dataIn.readBytes(len_1185);
-                        stringBytes_1183 = bytes_1186;
-                        suffix_1172 = new TextDecoder('utf-8').decode(stringBytes_1183);
-                        const len_1188 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
-                        passwords_1173 = new Array<number>(len_1188);
-                        for (let idx_1187 = 0;
-                        idx_1187 < len_1188;
-                        idx_1187++)  {
-                            passwords_1173[idx_1187] = dataIn.readInt();
+                        let salt_1465: string;
+                        let suffix_1466: string;
+                        let passwords_1467: number[];
+                        let parent_1468: UUID;
+                        let returnKey_1469: Key;
+                        let globalApi_1470: GlobalApiRegistrationServerRegistrationApi;
+                        let stringBytes_1472: Uint8Array;
+                        const len_1474 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        const bytes_1475 = dataIn.readBytes(len_1474);
+                        stringBytes_1472 = bytes_1475;
+                        salt_1465 = new TextDecoder('utf-8').decode(stringBytes_1472);
+                        let stringBytes_1477: Uint8Array;
+                        const len_1479 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        const bytes_1480 = dataIn.readBytes(len_1479);
+                        stringBytes_1477 = bytes_1480;
+                        suffix_1466 = new TextDecoder('utf-8').decode(stringBytes_1477);
+                        const len_1482 = DeserializerPackNumber.INSTANCE.put(dataIn).valueOf();
+                        passwords_1467 = new Array<number>(len_1482);
+                        for (let idx_1481 = 0;
+                        idx_1481 < len_1482;
+                        idx_1481++)  {
+                            passwords_1467[idx_1481] = dataIn.readInt();
                             
                         }
-                        parent_1174 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        returnKey_1175 = Key.META.deserialize(ctx, dataIn);
-                        globalApi_1176 = GlobalApiRegistrationServerRegistrationApi.META.deserialize(ctx, dataIn);
-                        const argsNames_1193: string[] = ["salt", "suffix", "passwords", "parent", "returnKey", "globalApi"];
-                        const argsValues_1194: any[] = [salt_1171, suffix_1172, passwords_1173, parent_1174, returnKey_1175, globalApi_1176];
-                        ctx.invokeLocalMethodBefore("registration", argsNames_1193, argsValues_1194);
-                        localApi.registration(salt_1171, suffix_1172, passwords_1173, parent_1174, returnKey_1175, globalApi_1176);
-                        ctx.invokeLocalMethodAfter("registration", null, argsNames_1193, argsValues_1194);
+                        parent_1468 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        returnKey_1469 = Key.META.deserialize(ctx, dataIn);
+                        globalApi_1470 = GlobalApiRegistrationServerRegistrationApi.META.deserialize(ctx, dataIn);
+                        const argsNames_1487: string[] = ["salt", "suffix", "passwords", "parent", "returnKey", "globalApi"];
+                        const argsValues_1488: any[] = [salt_1465, suffix_1466, passwords_1467, parent_1468, returnKey_1469, globalApi_1470];
+                        ctx.invokeLocalMethodBefore("registration", argsNames_1487, argsValues_1488);
+                        localApi.registration(salt_1465, suffix_1466, passwords_1467, parent_1468, returnKey_1469, globalApi_1470);
+                        ctx.invokeLocalMethodAfter("registration", null, argsNames_1487, argsValues_1488);
                         break;
                         
                     }
                     case 4:  {
-                        const reqId_1195 = dataIn.readInt();
-                        let parent_1196: UUID;
-                        let powMethods_1197: PowMethod;
-                        let returnKey_1198: Key;
-                        parent_1196 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                        powMethods_1197 = PowMethod.META.deserialize(ctx, dataIn);
-                        returnKey_1198 = Key.META.deserialize(ctx, dataIn);
-                        const argsNames_1202: string[] = ["parent", "powMethods", "returnKey"];
-                        const argsValues_1203: any[] = [parent_1196, powMethods_1197, returnKey_1198];
-                        ctx.invokeLocalMethodBefore("requestWorkProofData", argsNames_1202, argsValues_1203);
+                        const reqId_1489 = dataIn.readInt();
+                        let parent_1490: UUID;
+                        let powMethods_1491: PowMethod;
+                        let returnKey_1492: Key;
+                        parent_1490 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        powMethods_1491 = PowMethod.META.deserialize(ctx, dataIn);
+                        returnKey_1492 = Key.META.deserialize(ctx, dataIn);
+                        const argsNames_1496: string[] = ["parent", "powMethods", "returnKey"];
+                        const argsValues_1497: any[] = [parent_1490, powMethods_1491, returnKey_1492];
+                        ctx.invokeLocalMethodBefore("requestWorkProofData", argsNames_1496, argsValues_1497);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.requestWorkProofData(parent_1196, powMethods_1197, returnKey_1198);
-                        ctx.invokeLocalMethodAfter("requestWorkProofData", resultFuture, argsNames_1202, argsValues_1203);
-                        resultFuture.to((v_1205: WorkProofDTO) =>  {
-                            const data_1204 = new DataInOut();
-                            WorkProofDTO.META.serialize(ctx, v_1205, data_1204);
-                            ctx.sendResultToRemote(reqId_1195, data_1204.toArray());
+                        const resultFuture = localApi.requestWorkProofData(parent_1490, powMethods_1491, returnKey_1492);
+                        ctx.invokeLocalMethodAfter("requestWorkProofData", resultFuture, argsNames_1496, argsValues_1497);
+                        resultFuture.to((v_1499: WorkProofDTO) =>  {
+                            const data_1498 = new DataInOut();
+                            WorkProofDTO.META.serialize(ctx, v_1499, data_1498);
+                            ctx.sendResultToRemote(reqId_1489, data_1498.toArray());
                             
                         }
                         );
@@ -7604,23 +8359,23 @@ export namespace ServerRegistrationApi  {
                         
                     }
                     case 5:  {
-                        const reqId_1207 = dataIn.readInt();
-                        let serverIds_1208: Cloud;
-                        serverIds_1208 = Cloud.META.deserialize(ctx, dataIn);
-                        const argsNames_1210: string[] = ["serverIds"];
-                        const argsValues_1211: any[] = [serverIds_1208];
-                        ctx.invokeLocalMethodBefore("resolveServers", argsNames_1210, argsValues_1211);
+                        const reqId_1501 = dataIn.readInt();
+                        let serverIds_1502: Cloud;
+                        serverIds_1502 = Cloud.META.deserialize(ctx, dataIn);
+                        const argsNames_1504: string[] = ["serverIds"];
+                        const argsValues_1505: any[] = [serverIds_1502];
+                        ctx.invokeLocalMethodBefore("resolveServers", argsNames_1504, argsValues_1505);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.resolveServers(serverIds_1208);
-                        ctx.invokeLocalMethodAfter("resolveServers", resultFuture, argsNames_1210, argsValues_1211);
-                        resultFuture.to((v_1213: ServerDescriptor[]) =>  {
-                            const data_1212 = new DataInOut();
-                            SerializerPackNumber.INSTANCE.put(data_1212, v_1213.length);
-                            for (const el_1214 of v_1213)  {
-                                ServerDescriptor.META.serialize(ctx, el_1214, data_1212);
+                        const resultFuture = localApi.resolveServers(serverIds_1502);
+                        ctx.invokeLocalMethodAfter("resolveServers", resultFuture, argsNames_1504, argsValues_1505);
+                        resultFuture.to((v_1507: ServerDescriptor[]) =>  {
+                            const data_1506 = new DataInOut();
+                            SerializerPackNumber.INSTANCE.put(data_1506, v_1507.length);
+                            for (const el_1508 of v_1507)  {
+                                ServerDescriptor.META.serialize(ctx, el_1508, data_1506);
                                 
                             }
-                            ctx.sendResultToRemote(reqId_1207, data_1212.toArray());
+                            ctx.sendResultToRemote(reqId_1501, data_1506.toArray());
                             
                         }
                         );
@@ -7644,86 +8399,86 @@ export namespace ServerRegistrationApi  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_1216: FastFutureContext): ServerRegistrationApiRemote  {
+        makeRemote(sCtx_1510: FastFutureContext): ServerRegistrationApiRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_1216.flush(sendFuture || AFuture.make());
+                    sCtx_1510.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_1216, registration: (salt: string, suffix: string, passwords: number[], parent: UUID, returnKey: Key, globalApi: GlobalApiRegistrationServerRegistrationApi): AFuture =>  {
-                    const dataOut_1218 = new DataInOut();
-                    dataOut_1218.writeByte(3);
-                    const argsNames_1220: string[] = ["salt", "suffix", "passwords", "parent", "returnKey", "globalApi"];
-                    const argsValues_1221: any[] = [salt, suffix, passwords, parent, returnKey, globalApi];
-                    sCtx_1216.invokeRemoteMethodAfter("registration", null, argsNames_1220, argsValues_1221);
-                    const stringBytes_1223 = new TextEncoder().encode(salt);
-                    SerializerPackNumber.INSTANCE.put(dataOut_1218, stringBytes_1223.length);
-                    dataOut_1218.write(stringBytes_1223);
-                    const stringBytes_1226 = new TextEncoder().encode(suffix);
-                    SerializerPackNumber.INSTANCE.put(dataOut_1218, stringBytes_1226.length);
-                    dataOut_1218.write(stringBytes_1226);
-                    SerializerPackNumber.INSTANCE.put(dataOut_1218, passwords.length);
-                    for (const el_1228 of passwords)  {
-                        dataOut_1218.writeInt(el_1228);
+                , getFastMetaContext: () => sCtx_1510, registration: (salt: string, suffix: string, passwords: number[], parent: UUID, returnKey: Key, globalApi: GlobalApiRegistrationServerRegistrationApi): AFuture =>  {
+                    const dataOut_1512 = new DataInOut();
+                    dataOut_1512.writeByte(3);
+                    const argsNames_1514: string[] = ["salt", "suffix", "passwords", "parent", "returnKey", "globalApi"];
+                    const argsValues_1515: any[] = [salt, suffix, passwords, parent, returnKey, globalApi];
+                    sCtx_1510.invokeRemoteMethodAfter("registration", null, argsNames_1514, argsValues_1515);
+                    const stringBytes_1517 = new TextEncoder().encode(salt);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1512, stringBytes_1517.length);
+                    dataOut_1512.write(stringBytes_1517);
+                    const stringBytes_1520 = new TextEncoder().encode(suffix);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1512, stringBytes_1520.length);
+                    dataOut_1512.write(stringBytes_1520);
+                    SerializerPackNumber.INSTANCE.put(dataOut_1512, passwords.length);
+                    for (const el_1522 of passwords)  {
+                        dataOut_1512.writeInt(el_1522);
                         
                     }
-                    FastMeta.META_UUID.serialize(sCtx_1216, parent, dataOut_1218);
-                    Key.META.serialize(sCtx_1216, returnKey, dataOut_1218);
-                    GlobalApiRegistrationServerRegistrationApi.META.serialize(sCtx_1216, globalApi, dataOut_1218);
-                    sCtx_1216.sendToRemote(dataOut_1218.toArray());
+                    FastMeta.META_UUID.serialize(sCtx_1510, parent, dataOut_1512);
+                    Key.META.serialize(sCtx_1510, returnKey, dataOut_1512);
+                    GlobalApiRegistrationServerRegistrationApi.META.serialize(sCtx_1510, globalApi, dataOut_1512);
+                    sCtx_1510.sendToRemote(dataOut_1512.toArray());
                     return AFuture.of();
                     
                 }
                 , requestWorkProofData: (parent: UUID, powMethods: PowMethod, returnKey: Key): ARFuture<WorkProofDTO> =>  {
-                    const dataOut_1234 = new DataInOut();
-                    dataOut_1234.writeByte(4);
-                    const argsNames_1236: string[] = ["parent", "powMethods", "returnKey"];
-                    const argsValues_1237: any[] = [parent, powMethods, returnKey];
-                    const result_1235 = ARFuture.of<WorkProofDTO>();
-                    sCtx_1216.invokeRemoteMethodAfter("requestWorkProofData", result_1235, argsNames_1236, argsValues_1237);
-                    const reqId_1233 = sCtx_1216.regFuture( {
+                    const dataOut_1528 = new DataInOut();
+                    dataOut_1528.writeByte(4);
+                    const argsNames_1530: string[] = ["parent", "powMethods", "returnKey"];
+                    const argsValues_1531: any[] = [parent, powMethods, returnKey];
+                    const result_1529 = ARFuture.of<WorkProofDTO>();
+                    sCtx_1510.invokeRemoteMethodAfter("requestWorkProofData", result_1529, argsNames_1530, argsValues_1531);
+                    const reqId_1527 = sCtx_1510.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1235 as ARFuture<WorkProofDTO>).tryDone(WorkProofDTO.META.deserialize(sCtx_1216, in_));
+                            (result_1529 as ARFuture<WorkProofDTO>).tryDone(WorkProofDTO.META.deserialize(sCtx_1510, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1235.error(new Error("Remote call failed without a typed exception"));
+                            result_1529.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1234.writeInt(reqId_1233);
-                    FastMeta.META_UUID.serialize(sCtx_1216, parent, dataOut_1234);
-                    PowMethod.META.serialize(sCtx_1216, powMethods, dataOut_1234);
-                    Key.META.serialize(sCtx_1216, returnKey, dataOut_1234);
-                    sCtx_1216.sendToRemote(dataOut_1234.toArray());
-                    return result_1235;
+                    dataOut_1528.writeInt(reqId_1527);
+                    FastMeta.META_UUID.serialize(sCtx_1510, parent, dataOut_1528);
+                    PowMethod.META.serialize(sCtx_1510, powMethods, dataOut_1528);
+                    Key.META.serialize(sCtx_1510, returnKey, dataOut_1528);
+                    sCtx_1510.sendToRemote(dataOut_1528.toArray());
+                    return result_1529;
                     
                 }
                 , resolveServers: (serverIds: Cloud): ARFuture<ServerDescriptor[]> =>  {
-                    const dataOut_1242 = new DataInOut();
-                    dataOut_1242.writeByte(5);
-                    const argsNames_1244: string[] = ["serverIds"];
-                    const argsValues_1245: any[] = [serverIds];
-                    const result_1243 = ARFuture.of<ServerDescriptor[]>();
-                    sCtx_1216.invokeRemoteMethodAfter("resolveServers", result_1243, argsNames_1244, argsValues_1245);
-                    const reqId_1241 = sCtx_1216.regFuture( {
+                    const dataOut_1536 = new DataInOut();
+                    dataOut_1536.writeByte(5);
+                    const argsNames_1538: string[] = ["serverIds"];
+                    const argsValues_1539: any[] = [serverIds];
+                    const result_1537 = ARFuture.of<ServerDescriptor[]>();
+                    sCtx_1510.invokeRemoteMethodAfter("resolveServers", result_1537, argsNames_1538, argsValues_1539);
+                    const reqId_1535 = sCtx_1510.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1243 as ARFuture<ServerDescriptor[]>).tryDone(AllCustomMeta.META_ARRAY_ServerDescriptor.deserialize(sCtx_1216, in_));
+                            (result_1537 as ARFuture<ServerDescriptor[]>).tryDone(AllCustomMeta.META_ARRAY_ServerDescriptor.deserialize(sCtx_1510, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1243.error(new Error("Remote call failed without a typed exception"));
+                            result_1537.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1242.writeInt(reqId_1241);
-                    Cloud.META.serialize(sCtx_1216, serverIds, dataOut_1242);
-                    sCtx_1216.sendToRemote(dataOut_1242.toArray());
-                    return result_1243;
+                    dataOut_1536.writeInt(reqId_1535);
+                    Cloud.META.serialize(sCtx_1510, serverIds, dataOut_1536);
+                    sCtx_1510.sendToRemote(dataOut_1536.toArray());
+                    return result_1537;
                     
                 }
                 , 
@@ -7783,19 +8538,19 @@ export namespace RegistrationRootApi  {
                         
                     }
                     case 3:  {
-                        const reqId_1247 = dataIn.readInt();
-                        let cryptoLib_1248: CryptoLib;
-                        cryptoLib_1248 = CryptoLib.META.deserialize(ctx, dataIn);
-                        const argsNames_1250: string[] = ["cryptoLib"];
-                        const argsValues_1251: any[] = [cryptoLib_1248];
-                        ctx.invokeLocalMethodBefore("getAsymmetricPublicKey", argsNames_1250, argsValues_1251);
+                        const reqId_1541 = dataIn.readInt();
+                        let cryptoLib_1542: CryptoLib;
+                        cryptoLib_1542 = CryptoLib.META.deserialize(ctx, dataIn);
+                        const argsNames_1544: string[] = ["cryptoLib"];
+                        const argsValues_1545: any[] = [cryptoLib_1542];
+                        ctx.invokeLocalMethodBefore("getAsymmetricPublicKey", argsNames_1544, argsValues_1545);
                         ctx.regLocalFuture();
-                        const resultFuture = localApi.getAsymmetricPublicKey(cryptoLib_1248);
-                        ctx.invokeLocalMethodAfter("getAsymmetricPublicKey", resultFuture, argsNames_1250, argsValues_1251);
-                        resultFuture.to((v_1253: SignedKey) =>  {
-                            const data_1252 = new DataInOut();
-                            SignedKey.META.serialize(ctx, v_1253, data_1252);
-                            ctx.sendResultToRemote(reqId_1247, data_1252.toArray());
+                        const resultFuture = localApi.getAsymmetricPublicKey(cryptoLib_1542);
+                        ctx.invokeLocalMethodAfter("getAsymmetricPublicKey", resultFuture, argsNames_1544, argsValues_1545);
+                        resultFuture.to((v_1547: SignedKey) =>  {
+                            const data_1546 = new DataInOut();
+                            SignedKey.META.serialize(ctx, v_1547, data_1546);
+                            ctx.sendResultToRemote(reqId_1541, data_1546.toArray());
                             
                         }
                         );
@@ -7803,15 +8558,15 @@ export namespace RegistrationRootApi  {
                         
                     }
                     case 4:  {
-                        let cryptoLib_1256: CryptoLib;
-                        let stream_1257: ServerRegistrationApiStream;
-                        cryptoLib_1256 = CryptoLib.META.deserialize(ctx, dataIn);
-                        stream_1257 = ServerRegistrationApiStream.META.deserialize(ctx, dataIn);
-                        const argsNames_1260: string[] = ["cryptoLib", "stream"];
-                        const argsValues_1261: any[] = [cryptoLib_1256, stream_1257];
-                        ctx.invokeLocalMethodBefore("enter", argsNames_1260, argsValues_1261);
-                        localApi.enter(cryptoLib_1256, stream_1257);
-                        ctx.invokeLocalMethodAfter("enter", null, argsNames_1260, argsValues_1261);
+                        let cryptoLib_1550: CryptoLib;
+                        let stream_1551: ServerRegistrationApiStream;
+                        cryptoLib_1550 = CryptoLib.META.deserialize(ctx, dataIn);
+                        stream_1551 = ServerRegistrationApiStream.META.deserialize(ctx, dataIn);
+                        const argsNames_1554: string[] = ["cryptoLib", "stream"];
+                        const argsValues_1555: any[] = [cryptoLib_1550, stream_1551];
+                        ctx.invokeLocalMethodBefore("enter", argsNames_1554, argsValues_1555);
+                        localApi.enter(cryptoLib_1550, stream_1551);
+                        ctx.invokeLocalMethodAfter("enter", null, argsNames_1554, argsValues_1555);
                         break;
                         
                     }
@@ -7832,46 +8587,46 @@ export namespace RegistrationRootApi  {
             this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
             
         }
-        makeRemote(sCtx_1262: FastFutureContext): RegistrationRootApiRemote  {
+        makeRemote(sCtx_1556: FastFutureContext): RegistrationRootApiRemote  {
             const remoteApiImpl =  {
                 flush: (sendFuture?: AFuture) =>  {
-                    sCtx_1262.flush(sendFuture || AFuture.make());
+                    sCtx_1556.flush(sendFuture || AFuture.make());
                     
                 }
-                , getFastMetaContext: () => sCtx_1262, getAsymmetricPublicKey: (cryptoLib: CryptoLib): ARFuture<SignedKey> =>  {
-                    const dataOut_1264 = new DataInOut();
-                    dataOut_1264.writeByte(3);
-                    const argsNames_1266: string[] = ["cryptoLib"];
-                    const argsValues_1267: any[] = [cryptoLib];
-                    const result_1265 = ARFuture.of<SignedKey>();
-                    sCtx_1262.invokeRemoteMethodAfter("getAsymmetricPublicKey", result_1265, argsNames_1266, argsValues_1267);
-                    const reqId_1263 = sCtx_1262.regFuture( {
+                , getFastMetaContext: () => sCtx_1556, getAsymmetricPublicKey: (cryptoLib: CryptoLib): ARFuture<SignedKey> =>  {
+                    const dataOut_1558 = new DataInOut();
+                    dataOut_1558.writeByte(3);
+                    const argsNames_1560: string[] = ["cryptoLib"];
+                    const argsValues_1561: any[] = [cryptoLib];
+                    const result_1559 = ARFuture.of<SignedKey>();
+                    sCtx_1556.invokeRemoteMethodAfter("getAsymmetricPublicKey", result_1559, argsNames_1560, argsValues_1561);
+                    const reqId_1557 = sCtx_1556.regFuture( {
                         onDone: (in_: DataIn) =>  {
-                            (result_1265 as ARFuture<SignedKey>).tryDone(SignedKey.META.deserialize(sCtx_1262, in_));
+                            (result_1559 as ARFuture<SignedKey>).tryDone(SignedKey.META.deserialize(sCtx_1556, in_));
                             
                         }
                         , onError: (_in_: DataIn) =>  {
-                            result_1265.error(new Error("Remote call failed without a typed exception"));
+                            result_1559.error(new Error("Remote call failed without a typed exception"));
                             
                         }
                         
                     }
                     );
-                    dataOut_1264.writeInt(reqId_1263);
-                    CryptoLib.META.serialize(sCtx_1262, cryptoLib, dataOut_1264);
-                    sCtx_1262.sendToRemote(dataOut_1264.toArray());
-                    return result_1265;
+                    dataOut_1558.writeInt(reqId_1557);
+                    CryptoLib.META.serialize(sCtx_1556, cryptoLib, dataOut_1558);
+                    sCtx_1556.sendToRemote(dataOut_1558.toArray());
+                    return result_1559;
                     
                 }
                 , enter: (cryptoLib: CryptoLib, stream: ServerRegistrationApiStream): AFuture =>  {
-                    const dataOut_1270 = new DataInOut();
-                    dataOut_1270.writeByte(4);
-                    const argsNames_1272: string[] = ["cryptoLib", "stream"];
-                    const argsValues_1273: any[] = [cryptoLib, stream];
-                    sCtx_1262.invokeRemoteMethodAfter("enter", null, argsNames_1272, argsValues_1273);
-                    CryptoLib.META.serialize(sCtx_1262, cryptoLib, dataOut_1270);
-                    ServerRegistrationApiStream.META.serialize(sCtx_1262, stream, dataOut_1270);
-                    sCtx_1262.sendToRemote(dataOut_1270.toArray());
+                    const dataOut_1564 = new DataInOut();
+                    dataOut_1564.writeByte(4);
+                    const argsNames_1566: string[] = ["cryptoLib", "stream"];
+                    const argsValues_1567: any[] = [cryptoLib, stream];
+                    sCtx_1556.invokeRemoteMethodAfter("enter", null, argsNames_1566, argsValues_1567);
+                    CryptoLib.META.serialize(sCtx_1556, cryptoLib, dataOut_1564);
+                    ServerRegistrationApiStream.META.serialize(sCtx_1556, stream, dataOut_1564);
+                    sCtx_1556.sendToRemote(dataOut_1564.toArray());
                     return AFuture.of();
                     
                 }

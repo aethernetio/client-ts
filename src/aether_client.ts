@@ -1,39 +1,10 @@
-// PURPOSE: Contains the main AetherCloudClient core implementation.
-// (Исправлены ошибки импорта TS2305, TS2724, TS2345)
-// (Исправлена ОШИБКА ГОНКИ СОСТОЯНИЙ v1: startFuture, getMessageNode, getServer, getCloud)
-// (Исправлена ОШИБКА ГОНКИ СОСТОЯНИЙ v2: makeFirstConnection некорректно обрабатывал AFuture.to())
 
 import {
-    UUID,
-    URI,
-    Destroyable,
-    AFuture,
-    ARFuture,
-    ClientState,
-    Log, // Imported for logging
-    Destroyer,
-    EventBiConsumer,
-    EventConsumer,
-    BMap,
-    ServerDescriptor,
-    Cloud,
-    ClientStartException,
-    StandardUUIDsImpl,
-    CryptoProviderFactory,
-    CryptoEngine,
-    KeyType,
-    RU,
-    PairSymKeys,
-    RCol,
-    ClientApiException,
-    // --- Типы для CryptoUtils ---
     AKey,
-    SignChecker,
-    DtoKey,
-    FinishResult_C as DtoFinishResult
-} from './aether_client_types';
-
-import {
+    CryptoEngine,
+    CryptoProviderFactory,
+    KeyType,
+    PairSymKeys,
     Sign,
     SignedKey,
 } from './aether_crypto';
@@ -52,12 +23,19 @@ import {
     MessageEventListenerDefault
 } from './aether_client_message';
 import {
+    ClientState,
     ClientStateInMemory
 } from './aether_client_state';
 import {
-    LNode
+    LNode,
+    Log
 } from './aether_logging';
-import { CryptoUtils } from './aether_crypto_utils';
+import { ClientApiException, ClientStartException, Destroyable, URI, UUID } from './aether_types';
+import { Destroyer, RU, StandardUUIDs } from './aether_utils';
+import { AFuture, ARFuture, EventBiConsumer, EventConsumer } from './aether_future';
+import { Cloud, FinishResultGlobalRegServerApi, Key, ServerDescriptor } from './aether_api';
+import { BMap, RCol } from './aether_rcollection';
+export enum RegStatus { NO, BEGIN, CONFIRM }
 
 /**
 * @class AetherCloudClient
@@ -79,8 +57,7 @@ export class AetherCloudClient implements Destroyable {
     public readonly onNewChild = new EventConsumer<UUID>();
     public readonly onClientStreamCreated = new EventConsumer<MessageNode>();
     public readonly servers: BMap<number, ServerDescriptor>;
-    public readonly clouds: BMap<UUID, Cloud
-    >;
+    public readonly clouds: BMap<UUID, Cloud>;
     /**
     * @constructor
     * @param {ClientState} state The client state implementation.
@@ -142,13 +119,11 @@ export class AetherCloudClient implements Destroyable {
         }
 
         if (!this.state.getMasterKey()) {
-             Log.debug("initRegistration: MasterKey not found, generating new one.");
-             const cryptoLib = this.state.getCryptoLib();
-             const provider = CryptoProviderFactory.getProvider(cryptoLib);
-             const newMasterKey = provider.createSymmetricKey();
-             this.state.setMasterKey(
-                CryptoUtils.aKeyToDtoKey(newMasterKey)
-             );
+            Log.debug("initRegistration: MasterKey not found, generating new one.");
+            const cryptoLib = this.state.getCryptoLib();
+            const provider = CryptoProviderFactory.getProvider(cryptoLib);
+            const newMasterKey = provider.createSymmetricKey();
+            this.state.setMasterKey(newMasterKey);
         }
 
         const regUri = this.registrationUrl[0];
@@ -171,15 +146,15 @@ export class AetherCloudClient implements Destroyable {
         // Добавляем обработчик на случай, если *первичное* подключение (getRootApiFuture)
         // провалится, чтобы `startFuture` не висел вечно.
         regConn.getRootApiFuture().onError((e) => {
-             if (!this.startFuture.isFinalStatus()) {
+            if (!this.startFuture.isFinalStatus()) {
                 Log.error("initRegistration: Failed to establish initial registration connection.", e);
                 this.startFuture.tryError(e); // Провалить старт клиента
-             }
+            }
         });
     }
 
     // --- НОВЫЙ МЕТОД: Подтверждение регистрации (вызывается из ConnectionRegistration) ---
-    public confirmRegistration(regResp: DtoFinishResult): void {
+    public confirmRegistration(regResp: FinishResultGlobalRegServerApi): void {
         Log.info("confirmRegistration: Registration confirmed by server.", { uid: regResp.getUid().toString() });
 
         // Устанавливаем UID, только если его еще нет
@@ -200,7 +175,7 @@ export class AetherCloudClient implements Destroyable {
             // когда соединение с WorkServer будет установлено и готово.
             // this.startFuture.tryDone(); // <--- ЭТА СТРОКА УДАЛЕНА
         } else {
-             Log.warn("confirmRegistration: Received confirmation, but client UID was already set.", { uid: this.state.getUid()?.toString() });
+            Log.warn("confirmRegistration: Received confirmation, but client UID was already set.", { uid: this.state.getUid()?.toString() });
         }
     }
 
@@ -230,34 +205,31 @@ export class AetherCloudClient implements Destroyable {
             Log.error(err.message);
             throw err;
         }
-        // --- ИЗМЕНЕНО: Используем CryptoUtils.dtoKeyToAKey ---
-        const keyImpl = CryptoUtils.dtoKeyToAKey(key);
+        const keyImpl = key;
         if (keyImpl.getKeyType() !== KeyType.SYMMETRIC) {
-             const err = new ClientStartException("Master key in state is not symmetric.");
-             Log.error(err.message);
-             throw err;
+            const err = new ClientStartException("Master key in state is not symmetric.");
+            Log.error(err.message);
+            throw err;
         }
         return keyImpl.asSymmetric();
     }
 
-    // --- НОВЫЙ МЕТОД: Хелпер для получения DtoKey (как в Java) ---
-    public getMasterKeyDto(): DtoKey {
-         const key = this.state.getMasterKey();
-         if (!key) {
-             const err = new ClientStartException("Master key is missing in state.");
-             Log.error(err.message);
-             throw err;
-         }
-         return key;
+    public getMasterKeyDto(): AKey {
+        const key = this.state.getMasterKey();
+        if (!key) {
+            const err = new ClientStartException("Master key is missing in state.");
+            Log.error(err.message);
+            throw err;
+        }
+        return key;
     }
 
-    // --- НОВЫЙ МЕТОД: Хелпер для получения Parent UID (как в Java) ---
     public getParent(): UUID {
         const parent = this.state.getParentUid();
         if (!parent) {
-             // Этого не должно случиться, если state инициализирован
-             Log.warn("Client state getParentUid() returned null, falling back to TEST_UID");
-             return StandardUUIDsImpl.TEST_UID;
+            // Этого не должно случиться, если state инициализирован
+            Log.warn("Client state getParentUid() returned null, falling back to TEST_UID");
+            return StandardUUIDs.TEST_UID;
         }
         return parent;
     }
@@ -270,7 +242,7 @@ export class AetherCloudClient implements Destroyable {
     * @throws {Error} If the master key is missing or invalid.
     */
     public getCryptoEngineForServer(serverId: number): CryptoEngine {
-        Log.trace("getCryptoEngineForServer: Requesting crypto engine.", {sid:serverId});
+        Log.trace("getCryptoEngineForServer: Requesting crypto engine.", { sid: serverId });
 
         const keyImpl = this.getMasterKeyAKey();
 
@@ -339,7 +311,7 @@ export class AetherCloudClient implements Destroyable {
             return this.clouds.get(uid)! as ARFuture<Cloud | null>;
         }
 
-        Log.trace(`getCloud: Cache miss for uid: $uid. Fetching.`,{uid:uid});
+        Log.trace(`getCloud: Cache miss for uid: $uid. Fetching.`, { uid: uid });
         const future = this.clouds.getFuture(uid);
 
         // --- [ИСПРАВЛЕНИЕ v1: ГОНКА СОСТОЯНИЙ] ---
@@ -374,18 +346,6 @@ export class AetherCloudClient implements Destroyable {
             const newNode = new MessageNode(this, consumerUid, strategy);
             this.messageNodeMap.set(key, newNode);
             this.onClientStreamCreated.fire(newNode);
-
-            // --- [ИСПРАВЛЕНИЕ v1: ГОНКА СОСТОЯНИЙ] ---
-            // Этот блок ошибочно вызывал makeFirstConnection() повторно,
-            // если node создавался до того, как `workConnections` был заполнен.
-            /*
-            if (this.workConnections.size === 0) {
-                Log.debug("getMessageNode: No work connections, triggering makeFirstConnection.");
-                this.makeFirstConnection();
-            }
-            */
-            // --- БЛОК УДАЛЕН ---
-
             return newNode;
         }
         Log.trace(`getMessageNode: Reusing existing MessageNode for: ${key}`);
@@ -393,14 +353,13 @@ export class AetherCloudClient implements Destroyable {
     }
 
     /**
-    * @description Sends a raw byte array message to a specified
-    client.
+    * @description Sends a raw byte array message to a specified client.
     * @param {UUID} consumerUid The target client UUID.
     * @param {Uint8Array} data The raw message content.
     * @returns {AFuture} An AFuture that completes when the message is accepted for sending.
     */
     public sendMessage(consumerUid: UUID, data: Uint8Array): AFuture {
-        Log.trace(`sendMessage: Sending $dlen bytes to $consumerUid`, {dlen:data.length, consumerUid: consumerUid.toString(), size: data.length });
+        Log.trace(`sendMessage: Sending $dlen bytes to $consumerUid`, { dlen: data.length, consumerUid: consumerUid.toString(), size: data.length });
         const future = AFuture.make();
         const node = this.getMessageNode(consumerUid);
         node.send(data, future);
@@ -442,11 +401,11 @@ export class AetherCloudClient implements Destroyable {
         this.servers.putResolved(serverDescriptor.id, serverDescriptor);
         let conn = this.workConnections.get(serverDescriptor.id);
         if (conn) {
-            Log.trace(`getConnection: Reusing existing ConnectionWork for serverId: $sid`,{sid:serverDescriptor.id});
+            Log.trace(`getConnection: Reusing existing ConnectionWork for serverId: $sid`, { sid: serverDescriptor.id });
             return conn;
         }
 
-        Log.debug(`getConnection: Creating new ConnectionWork for serverId: $sid`,{sid:serverDescriptor.id});
+        Log.debug(`getConnection: Creating new ConnectionWork for serverId: $sid`, { sid: serverDescriptor.id });
         conn = new ConnectionWork(this, serverDescriptor);
         this.workConnections.set(serverDescriptor.id, conn);
         this.destroyer.add(conn);
@@ -469,8 +428,8 @@ export class AetherCloudClient implements Destroyable {
             Log.warn("makeFirstConnection called but client UID is null.");
             // --- ИЗМЕНЕНИЕ: Если UID нет, значит регистрация еще не завершена ---
             if (!this.startFuture.isFinalStatus()) {
-                 Log.debug("makeFirstConnection: UID is null, likely awaiting registration. Aborting connection attempt.");
-                 // Не вызываем ошибку, просто ждем
+                Log.debug("makeFirstConnection: UID is null, likely awaiting registration. Aborting connection attempt.");
+                // Не вызываем ошибку, просто ждем
             }
             return;
         }
@@ -478,11 +437,10 @@ export class AetherCloudClient implements Destroyable {
         const cloud = this.state.getCloud(uid);
         if (!cloud || !cloud.data || cloud.data.length === 0) {
             Log.warn("makeFirstConnection: Client cloud data is empty. Cannot connect to work servers.", { uid: uid.toString() });
-            // --- ИЗМЕНЕНИЕ: Если мы уже зарегистрированы, но cloud пуст - это ошибка ---
-            if (this.startFuture.isDone()) { // Если startFuture уже был (старый клиент), но cloud пропал
-                 Log.error("makeFirstConnection: Client is started but cloud data is missing.");
-            } else { // Если это первый запуск
-                 this.startFuture.tryError(new ClientStartException("Client cloud data is empty after registration."));
+            if (this.startFuture.isDone()) {
+                Log.error("makeFirstConnection: Client is started but cloud data is missing.");
+            } else {
+                this.startFuture.tryError(new ClientStartException("Client cloud data is empty after registration."));
             }
             return;
         }
@@ -493,24 +451,13 @@ export class AetherCloudClient implements Destroyable {
         for (const serverId of cloud.data) {
             if (serverId <= 0) continue;
 
-            // --- [ИСПРАВЛЕНИЕ v2: ГОНКА СОСТОЯНИЙ] ---
-            // Мы должны дождаться не просто ARFuture<ConnectionWork>,
-            // а ARFuture<ConnectionWork.ready>.
-            // .mapRFuture() ожидает ARFuture, поэтому мы вручную
-            // пробрасываем результат conn.ready (AFuture) в новый ARFuture.
-
-            const connReadyFuture: AFuture = this.getConnectionBySid(serverId) // ARFuture<ConnectionWork>
-                .mapRFuture((conn: ConnectionWork | null) => { // Теперь это ARFuture<void>
+            const connReadyFuture: AFuture = this.getConnectionBySid(serverId)
+                .mapRFuture((conn: ConnectionWork | null) => {
                     if (!conn) {
                         throw new ClientApiException(`getConnectionBySid returned null for ${serverId}`);
                     }
-
-                    // Создаем новый ARFuture, который будет "ждать"
                     const readyPromise = new ARFuture<void>();
 
-                    // Пробрасываем результат из conn.ready (AFuture) в readyPromise (ARFuture)
-                    // Это правильное использование .to() .onError() .onCancel()
-                    // согласно aether_future.ts
                     conn.ready
                         .to(() => readyPromise.tryDone(undefined))
                         .onError((err) => readyPromise.tryError(err))

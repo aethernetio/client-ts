@@ -1,20 +1,13 @@
-// =============================================================================================
-// FILE: aether_client_connection_work.ts
-// PURPOSE: Contains ConnectionWork and MyClientApiSafe implementation.
-// DEPENDENCIES: aether_client_types.ts, aether_client_connection_base.ts, aether_client_core.ts (for AetherCloudClient)
-// (ИСПРАВЛЕНА ОШИБКА DEADLOCK: Удалена проверка !this.hasPendingMessages() из apiSafeCtx.flush)
-// =============================================================================================
-// Import necessary types from aether_client_types.ts (assuming it's in the same directory)
-import {
-    UUID, AtomicLong, AtomicReference, ARFutureWithFlag, ClientApiSafe, ClientApiUnsafe, ServerDescriptor,
-    LoginApiRemote, FastApiContext, CryptoEngine, LoginStream, ClientApiException, AFuture, Message,
-    AuthorizedApiRemote, AuthorizedApi, LoginApi, AetherCodec, Cloud, UUIDAndCloud, Log, RU,
-    RemoteApiFuture, LoginClientStream, ClientStartException
-} from './aether_client_types';
-// Import types from other split files
 import { Connection, getUriFromServerDescriptor } from './aether_client_connection_base';
 import { AetherCloudClient } from './aether_client';
 import { AString } from './aether_astring';
+import { AccessGroup, AccessCheckResult, AetherCodec, AuthorizedApi, AuthorizedApiRemote, ClientApiSafe, ClientApiUnsafe, Cloud, LoginApi, LoginApiRemote, LoginClientStream, LoginStream, Message, ServerDescriptor, UUIDAndCloud } from './aether_api';
+import { AtomicLong, AtomicReference, ClientApiException, ClientStartException, UUID } from './aether_types';
+import { AFuture } from './aether_future';
+import { Log } from './aether_logging';
+import { FastApiContext, RemoteApiFuture } from './aether_fastmeta';
+import { CryptoEngine } from './aether_crypto';
+import { RU } from './aether_utils';
 
 
 /**
@@ -25,6 +18,30 @@ class MyClientApiSafe implements ClientApiSafe {
 
     constructor(client: AetherCloudClient) {
         this.client = client;
+    }
+    sendAccessCheckResults(results: AccessCheckResult[]): AFuture {
+        throw new Error('Method not implemented.');
+    }
+    sendAllAccessedClients(uid: UUID, accessedClients: UUID[]): AFuture {
+        throw new Error('Method not implemented.');
+    }
+    removeAccessGroupsFromClient(uid: UUID, groups: number[]): AFuture {
+        throw new Error('Method not implemented.');
+    }
+    addAccessGroupsToClient(uid: UUID, groups: number[]): AFuture {
+        throw new Error('Method not implemented.');
+    }
+    removeItemsFromAccessGroup(id: number, groups: UUID[]): AFuture {
+        throw new Error('Method not implemented.');
+    }
+    addItemsToAccessGroup(id: number, groups: UUID[]): AFuture {
+        throw new Error('Method not implemented.');
+    }
+    sendAccessGroupForClient(uid: UUID, groups: number[]): AFuture {
+        throw new Error('Method not implemented.');
+    }
+    sendAccessGroups(groups: AccessGroup[]): AFuture {
+        throw new Error('Method not implemented.');
     }
 
     changeParent(_uid: UUID): AFuture {
@@ -92,11 +109,10 @@ class MyClientApiSafe implements ClientApiSafe {
 }
 
 
-// --- ConnectionWork Implementation ---
 /**
  * Represents a working connection to an Aether server after successful login/authentication.
  */
-export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> implements ClientApiUnsafe { // <-- EXPORTED
+export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> implements ClientApiUnsafe {
     public readonly lastBackPing = new AtomicLong(Number.MAX_SAFE_INTEGER);
     public readonly ready = AFuture.make();
     readonly apiSafe: ClientApiSafe;
@@ -142,12 +158,6 @@ private hasPendingMessages(): boolean {
 
         this.apiSafeCtx.flush = (sendFuture: AFuture): void => {
             Log.trace("apiSafeCtx.flush initiated", { component: "ConnectionWorkFlush", uri: this.uri });
-
-            // --- [ИСПРАВЛЕНИЕ: DEADLOCK] ---
-            // Удалена проверка !this.hasPendingMessages()
-            // Java-версия не имеет этой проверки, и она вызывает deadlock,
-            // т.к. hasPendingMessages() = false, пока getCloud() не завершится,
-            // а getCloud() не завершится, пока flush() не отправит запрос.
             if (this.remoteApiFutureAuth.isEmpty() &&
                 !client.clouds.isRequestsFor(this as unknown as object) &&
                 !client.servers.isRequestsFor(this as unknown as object)
@@ -157,7 +167,6 @@ private hasPendingMessages(): boolean {
                 sendFuture.tryDone();
                 return;
             }
-            // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
             if (!this.connectFuture.isDone()) {
 //                 Log.warn("apiSafeCtx.flush: Root connection not established yet. Skipping flush.");

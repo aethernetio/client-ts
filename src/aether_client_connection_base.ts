@@ -4,13 +4,13 @@
 // DEPENDENCIES: aether_client_types.ts, aether_client_core.ts (for AetherCloudClient)
 // =============================================================================================
 // Import necessary types from aether_client_types.ts (assuming it's in the same directory)
-import {ClientStartException} from './aether_types'
-import {
-    URI, Destroyable, AFuture, ARFuture, Log, FastMetaClient, FastMetaApi,
-    FastApiContextLocal, ServerDescriptor, AetherCodec, IPAddress, IPAddressV4, IPAddressV6, RemoteApi
-} from './aether_client_types'; // Re-exporting from aether_client_types
+import {ClientStartException, Destroyable, URI} from './aether_types'
 import { AetherCloudClient } from './aether_client'; // Assuming AetherCloudClient is available
-import { FastMetaClientWebSocket } from './aether_client_types'; // Re-exporting from aether_client_types
+import { AetherCodec, IPAddress, IPAddressV4, IPAddressV6, ServerDescriptor } from './aether_api';
+import { Log } from './aether_logging';
+import { FastApiContextLocal, FastMetaApi, FastMetaClient, RemoteApi } from './aether_fastmeta';
+import { AFuture, ARFuture } from './aether_future';
+import { FastMetaClientWebSocket } from './aether_fastmeta_websocket';
 
 
 /**
@@ -106,7 +106,7 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
 /**
  * Base class for client connections (Registration and Work).
  */
-export class Connection<LT, RT extends RemoteApi> implements Destroyable { // <-- REMOVED abstract
+export class Connection<LT, RT extends RemoteApi> implements Destroyable {
     protected readonly client: AetherCloudClient;
     /** The URI of the connected server. */
     public readonly uri: URI;

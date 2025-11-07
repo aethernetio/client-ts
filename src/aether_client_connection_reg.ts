@@ -1,38 +1,21 @@
-// =============================================================================================
-// FILE: aether_client_connection_reg.ts
-// PURPOSE: Port of ConnectionRegistration.java. Handles the multi-step registration protocol.
-// (ПЕРЕПИСАНО с использованием .to() / .onError() и добавлены вызовы flush())
-// =============================================================================================
-import {
-    URI,
-    AFuture,
-    ClientApiRegUnsafe,
-    RegistrationRootApiRemote,
-    ClientApiRegSafe,
-    GlobalRegClientApi,
-    FastApiContext,
-    CryptoEngine,
-    AKey,
-    CryptoProviderFactory,
-    ServerDescriptor as DtoServerDescriptor,
-    WorkProofDTO as DtoWorkProofDTO,
-    Log,
-} from './aether_client_types';
-import * as api from './aether_api';
-import {
-    Connection
-} from './aether_client_connection_base';
 import {
     AetherCloudClient,
 } from './aether_client';
 import { WorkProofUtil } from './aether_work_proof';
 import { CryptoUtils } from './aether_crypto_utils';
 import { AString } from './aether_astring';
+import { AKey, CryptoEngine, CryptoProviderFactory } from './aether_crypto';
+import { FastApiContext } from './aether_fastmeta';
+import { URI } from './aether_types';
+import { AFuture } from './aether_future';
+import { Log } from './aether_logging';
+import { ClientApiRegSafe, ClientApiRegSafeStream, ClientApiRegUnsafe, FinishResultGlobalRegServerApi, GlobalApiRegistrationServerRegistrationApi, GlobalRegClientApi, GlobalRegClientApiStream, GlobalRegServerApiRemote, Key, PowMethod, RegistrationRootApi, RegistrationRootApiRemote, ServerDescriptor, ServerRegistrationApiRemote, ServerRegistrationApiStream, SignedKey, WorkProofDTO } from './aether_api';
+import { Connection } from './aether_client_connection_base';
 
 export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, RegistrationRootApiRemote> implements ClientApiRegUnsafe {
 
     private readonly tempKey: AKey.Symmetric;
-    private readonly tempKeyNative: api.Key;
+    private readonly tempKeyNative: Key;
     private readonly tempKeyCp: CryptoEngine;
     private readonly ctxSafe: FastApiContext;
     private readonly globalCtx: FastApiContext;
@@ -42,7 +25,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
         // 1. ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЕ META:
         //    LT (Local)  = ClientApiRegUnsafe.META
         //    RT (Remote) = RegistrationRootApi.META
-        super(client, uri, api.ClientApiRegUnsafe.META, api.RegistrationRootApi.META);
+        super(client, uri, ClientApiRegUnsafe.META, RegistrationRootApi.META);
 
         // 2. Инициализируем крипто-поля (как в Java)
         const cryptoLib = client.state.getCryptoLib();
@@ -81,7 +64,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
 
                 // 1. Начинаем запрос ключа
                 api.getAsymmetricPublicKey(this.client.state.getCryptoLib()) //
-                    .to((signedKey: api.SignedKey) => { //
+                    .to((signedKey: SignedKey) => { //
                         // 2. При успехе -> переходим к шагу 1 (обработка ключа)
                         this.regProcessStep1_HandleKey(api, signedKey);
                     })
@@ -105,7 +88,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
      * @private
      * @description Шаг 1: Обработка ключа и запрос PoW
      */
-    private regProcessStep1_HandleKey(remoteApi: RegistrationRootApiRemote, signedKey: api.SignedKey): void {
+    private regProcessStep1_HandleKey(remoteApi: RegistrationRootApiRemote, signedKey: SignedKey): void {
         try { // Обертка для синхронного кода
             Log.info("RegConn: Asym public key was received.");
 
@@ -118,14 +101,13 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
 
             // Шаг 3: Вызываем 'enter' для запроса PoW
             remoteApi.enter(this.client.state.getCryptoLib(),
-                api.ServerRegistrationApiStream.fromRemoteConsumer(
+                ServerRegistrationApiStream.fromRemoteConsumer(
                     this.ctxSafe,
                     asymCE.encrypt.bind(asymCE),
-                    (apiInner: api.ServerRegistrationApiRemote) => {
+                    (apiInner: ServerRegistrationApiRemote) => {
 
-                        apiInner.requestWorkProofData(this.client.getParent(), api.PowMethod.AE_BCRYPT_CRC32, this.tempKeyNative)
-                            .to((wpd: DtoWorkProofDTO) => { //
-                                // Переходим к шагу 2 (обработка PoW)
+                        apiInner.requestWorkProofData(this.client.getParent(), PowMethod.AE_BCRYPT_CRC32, this.tempKeyNative)
+                            .to((wpd: WorkProofDTO) => { //
                                 this.regProcessStep2_HandlePoW(remoteApi, asymCE, wpd);
                             })
                             .onError((e: Error) => {
@@ -149,9 +131,8 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
      * @private
      * @description Шаг 2: Расчет PoW и отправка регистрации
      */
-    private regProcessStep2_HandlePoW(remoteApi: RegistrationRootApiRemote, asymCE: CryptoEngine, workProofDTO: DtoWorkProofDTO): void {
-        try { // Обертка для синхронного кода
-            // Шаг 4: Считаем PoW (Sync)
+    private regProcessStep2_HandlePoW(remoteApi: RegistrationRootApiRemote, asymCE: CryptoEngine, workProofDTO: WorkProofDTO): void {
+        try {
             Log.info("RegConn: WorkProofData has been received. Starting PoW calculation.");
             const passwords = WorkProofUtil.generateProofOfWorkPool( //
                 workProofDTO.getSalt(),
@@ -173,22 +154,21 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
 
             // Шаг 5: Вызываем 'enter' -> 'registration' -> 'finish'
             remoteApi.enter(this.client.state.getCryptoLib(),
-                api.ServerRegistrationApiStream.fromRemoteConsumer(
+                ServerRegistrationApiStream.fromRemoteConsumer(
                     this.ctxSafe,
                     asymCE.encrypt.bind(asymCE),
-                    (a2: api.ServerRegistrationApiRemote) => {
+                    (a2: ServerRegistrationApiRemote) => {
 
                         a2.registration(workProofDTO.getSalt(), workProofDTO.getSuffix(), passwords, this.client.getParent(), this.tempKeyNative,
 
-                            api.GlobalApiRegistrationServerRegistrationApi.fromRemoteConsumer(
+                            GlobalApiRegistrationServerRegistrationApi.fromRemoteConsumer(
                                 this.globalCtx,
                                 this.gcp.encrypt.bind(this.gcp),
-                                (gapi: api.GlobalRegServerApiRemote) => {
+                                (gapi: GlobalRegServerApiRemote) => {
 
-                                    gapi.setMasterKey(this.client.getMasterKeyDto());
+                                    gapi.setMasterKey(CryptoUtils.aKeyToDtoKey(this.client.getMasterKeyAKey()));
                                     gapi.finish()
-                                        .to((finishResult: api.FinishResultGlobalRegServerApi) => {
-                                            // Переходим к шагу 3 (финализация)
+                                        .to((finishResult: FinishResultGlobalRegServerApi) => {
                                             this.regProcessStep3_Finalize(remoteApi, asymCE, finishResult);
                                         })
                                         .onError((e: Error) => {
@@ -201,11 +181,9 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
                     }
                 )
             );
-            // !!! ВАЖНО: Отправляем 'enter' (для registration) !!!
             remoteApi.flush();
 
         } catch (e) {
-            // Ловим синхронные ошибки (напр. PoW)
             Log.error("RegConn: Registration step 2 (PoW) failed.", e as Error, { uri: this.uri });
             this.client.startFuture.tryError(e as Error);
         }
@@ -215,23 +193,21 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
      * @private
      * @description Шаг 3: Финализация и фоновый запрос серверов
      */
-    private regProcessStep3_Finalize(remoteApi: RegistrationRootApiRemote, asymCE: CryptoEngine, finishResult: api.FinishResultGlobalRegServerApi): void {
-        try { // Обертка для синхронного кода
-            // Шаг 6: РЕГИСТРАЦИЯ ЗАВЕРШЕНА
+    private regProcessStep3_Finalize(remoteApi: RegistrationRootApiRemote, asymCE: CryptoEngine, finishResult: FinishResultGlobalRegServerApi): void {
+        try {
             Log.trace("RegConn: registration step finish.");
             this.client.confirmRegistration(finishResult); // Это разблокирует client.startFuture
             Log.info("RegConn: Registration confirmed.");
 
-            // Шаг 7: Фоновый запрос серверов (не ждем)
             remoteApi.enter(this.client.state.getCryptoLib(),
-                api.ServerRegistrationApiStream.fromRemoteConsumer(
+                ServerRegistrationApiStream.fromRemoteConsumer(
                     this.ctxSafe,
                     asymCE.encrypt.bind(asymCE),
-                    (a3: api.ServerRegistrationApiRemote) => {
+                    (a3: ServerRegistrationApiRemote) => {
                         Log.trace("RegConn: registration step resolve servers:", { cloud: finishResult.getCloud() });
 
                         a3.resolveServers(finishResult.getCloud()) //
-                            .to((ss: DtoServerDescriptor[]) => {
+                            .to((ss: ServerDescriptor[]) => {
                                 for (const s of ss) {
                                     this.client.servers.putResolved(s.id, s);
                                 }
@@ -254,33 +230,30 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
         }
     }
 
-
-    // --- РЕАЛИЗАЦИЯ ClientApiRegUnsafe (LT) ---
-
     /**
      * @description Вызывается сервером для входа в GlobalApiStream
      */
-    public enterGlobal(stream: api.GlobalRegClientApiStream): AFuture { //
+    public enterGlobal(stream: GlobalRegClientApiStream): AFuture {
         if (!this.gcp) {
-            const err = new Error("enterGlobal called before gcp engine was initialized."); // IllegalStateException
+            const err = new Error("enterGlobal called before gcp engine was initialized.");
             Log.error(err.message);
-            return AFuture.ofThrow(err); //
+            return AFuture.ofThrow(err);
         }
         try {
-            stream.accept(this.globalCtx, this.gcp.decrypt.bind(this.gcp), {} as GlobalRegClientApi); //
+            stream.accept(this.globalCtx, this.gcp.decrypt.bind(this.gcp), {} as GlobalRegClientApi);
         } catch (e) {
              Log.error("Failed to accept enterGlobal stream", e as Error);
              return AFuture.ofThrow(e as Error);
         }
-        return AFuture.of(); //
+        return AFuture.of();
     }
 
     /**
      * @description Вызывается сервером для входа в ClientApiRegSafeStream
      */
-    public enter(stream: api.ClientApiRegSafeStream): AFuture { //
+    public enter(stream: ClientApiRegSafeStream): AFuture {
          try {
-            stream.accept(this.ctxSafe, this.tempKeyCp.decrypt.bind(this.tempKeyCp), {} as ClientApiRegSafe); //
+            stream.accept(this.ctxSafe, this.tempKeyCp.decrypt.bind(this.tempKeyCp), {} as ClientApiRegSafe);
          } catch (e) {
              Log.error("Failed to accept enter stream", e as Error, {data:stream.data, tempKey_cp:this.tempKeyCp});
              return AFuture.ofThrow(e as Error);

@@ -181,7 +181,7 @@ export const RU = {
 // Standard UUIDs
 // =============================================================================================
 
-export const StandardUUIDsImpl: { ROOT_UID: UUID; TEST_UID: UUID; ANONYMOUS_UID: UUID; } = {
+export const StandardUUIDs: { ROOT_UID: UUID; TEST_UID: UUID; ANONYMOUS_UID: UUID; } = {
     ROOT_UID: UUID.fromString("ed307ca7-8369-4342-91ee-60c8fc6f9b6b"),
     TEST_UID: UUID.fromString("3ac93165-3d37-4970-87a6-fa4ee27744e4"),
     ANONYMOUS_UID: UUID.fromString("237e2dc0-21a4-4e83-8184-c43052f93b79"),
@@ -263,3 +263,185 @@ export const DataUtils = {
         }
     }
 };
+
+/**
+ * Интерфейс, определяющий методы очереди, как в java.util.Queue.
+ */
+interface IQueue<T> {
+  /**
+   * Добавляет элемент в конец очереди.
+   * Возвращает true, если элемент был успешно добавлен.
+   * Выбрасывает ошибку, если очередь ограничена по размеру и заполнена.
+   */
+  add(element: T): boolean;
+
+  /**
+   * Добавляет элемент в конец очереди.
+   * Возвращает true, если элемент был успешно добавлен.
+   * В случае с очередью с ограничением размера, вернет false, если очередь заполнена.
+   */
+  offer(element: T): boolean;
+
+  /**
+   * Извлекает и удаляет элемент из начала очереди.
+   * Выбрасывает ошибку, если очередь пуста.
+   */
+  remove(): T;
+
+  /**
+   * Извлекает и удаляет элемент из начала очереди.
+   * Возвращает null, если очередь пуста.
+   */
+  poll(): T | null;
+
+  /**
+   * Извлекает, но не удаляет, элемент из начала очереди.
+   * Выбрасывает ошибку, если очередь пуста.
+   */
+  element(): T;
+
+  /**
+   * Извлекает, но не удаляет, элемент из начала очереди.
+   * Возвращает null, если очередь пуста.
+   */
+  peek(): T | null;
+
+  /**
+   * Возвращает количество элементов в очереди.
+   */
+  size(): number;
+
+  /**
+   * Проверяет, пуста ли очередь.
+   */
+  isEmpty(): boolean;
+
+  /**
+   * Очищает очередь.
+   */
+  clear(): void;
+}
+
+/**
+ * Реализация очереди (FIFO) на TypeScript, имитирующая API java.util.Queue.
+ * Эта реализация является безразмерной (unbounded).
+ */
+export class Queue<T> implements IQueue<T> {
+  // Мы используем приватный массив для хранения элементов.
+  // Добавление (enqueue) будет в конец массива (push).
+  // Удаление (dequeue) будет из начала массива (shift).
+  private storage: T[] = [];
+
+  /**
+   * Создает новую очередь.
+   * @param initialData Опциональный массив для инициализации очереди.
+   */
+  constructor(initialData: T[] = []) {
+    this.storage = [...initialData];
+  }
+
+  // --- МЕТОДЫ ДОБАВЛЕНИЯ ---
+
+  /**
+   * Вставляет элемент в конец очереди.
+   * Поскольку это безразмерная очередь, она всегда вернет true.
+   * Соответствует контракту Java: выбрасывает исключение, если не удалось добавить.
+   * @param element Элемент для добавления.
+   * @returns true
+   */
+  add(element: T): boolean {
+    const success = this.offer(element);
+    if (!success) {
+      // Этого не произойдет в данной реализации, но соответствует контракту Java
+      throw new Error("Queue full");
+    }
+    return true;
+  }
+
+  /**
+   * Вставляет элемент в конец очереди.
+   * Поскольку это безразмерная очередь, она всегда вернет true.
+   * @param element Элемент для добавления.
+   * @returns true
+   */
+  offer(element: T): boolean {
+    this.storage.push(element);
+    return true;
+  }
+
+  // --- МЕТОДЫ УДАЛЕНИЯ ---
+
+  /**
+   * Извлекает и удаляет элемент из начала очереди.
+   * Выбрасывает ошибку "NoSuchElementException", если очередь пуста.
+   * @returns Элемент из начала очереди.
+   */
+  remove(): T {
+    const item = this.storage.shift();
+    if (item === undefined) {
+      throw new Error("NoSuchElementException: Queue is empty");
+    }
+    return item;
+  }
+
+  /**
+   * Извлекает и удаляет элемент из начала очереди.
+   * Возвращает null, если очередь пуста.
+   * @returns Элемент из начала очереди или null.
+   */
+  poll(): T | null {
+    const item = this.storage.shift();
+    // Используем '??' для обработки случая, когда item 'undefined'
+    return item ?? null;
+  }
+
+  // --- МЕТОДЫ ПРОВЕРКИ ---
+
+  /**
+   * Извлекает, но не удаляет, элемент из начала очереди.
+   * Выбрасывает ошибку "NoSuchElementException", если очередь пуста.
+   * @returns Элемент из начала очереди.
+   */
+  element(): T {
+    const item = this.storage[0];
+    if (item === undefined) {
+      throw new Error("NoSuchElementException: Queue is empty");
+    }
+    return item;
+  }
+
+  /**
+   * Извлекает, но не удаляет, элемент из начала очереди.
+   * Возвращает null, если очередь пуста.
+   * @returns Элемент из начала очереди или null.
+   */
+  peek(): T | null {
+    const item = this.storage[0];
+    return item ?? null;
+  }
+
+  // --- ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ---
+
+  /**
+   * Возвращает текущий размер очереди.
+   * @returns number
+   */
+  size(): number {
+    return this.storage.length;
+  }
+
+  /**
+   * Проверяет, пуста ли очередь.
+   * @returns true, если очередь пуста, иначе false.
+   */
+  isEmpty(): boolean {
+    return this.storage.length === 0;
+  }
+
+  /**
+   * Удаляет все элементы из очереди.
+   */
+  clear(): void {
+    this.storage = [];
+  }
+}
