@@ -67,7 +67,7 @@ import * as Impl from './aether_api_impl';
 
         return `import { AFuture, ARFuture } from './aether_future';
 import { DataIn, DataOut, DataInOut, DataInOutStatic } from './aether_datainout';
-import { FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, RemoteApiFuture } from './aether_fastmeta';
+import { FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, RemoteApiFuture, FastFutureContextStub } from './aether_fastmeta';
 import { UUID, URI, Uint8Array, AConsumer } from './aether_types';
 import { ToString, AString } from './aether_astring';
 import {
@@ -108,12 +108,13 @@ import {
         this.generateSortedTypes(sortedTypeNames, enums, abstracts, concretes, streams);
         this.generateApiCode(apisCode);
 
-        // Это должно вызываться *после* генерации типов, чтобы найти кастомные meta-массивы
-        const metaNamespacesCode = this.generateAllMetaNamespaces(this.generatorLogic);
+        // --- [УДАЛЕНО] ---
+        // const metaNamespacesCode = this.generateAllMetaNamespaces(this.generatorLogic);
+        // --- [КОНЕЦ УДАЛЕНИЯ] ---
 
         // --- Сборка aether_api.ts ---
         this.generatedCode = this.assembleGeneratedFile(
-            enums, abstracts, concretes, streams, apisCode, metaNamespacesCode
+            enums, abstracts, concretes, streams, apisCode
         );
 
         // --- Сборка aether_api_impl.ts ---
@@ -121,6 +122,7 @@ import {
         const allApiNames = Array.from(this.generatedApis);
 
         // Preamble для impl должен включать все сгенерированные типы
+        // --- [ИЗМЕНЕНИЕ] Добавлен FastFutureContextStub в импорт
         const implPreamble = this.getPreambleImportsImpl(allTypeNames, allApiNames);
         const implBody = this.generatorLogic.allImplCode.join('\n\n');
 
@@ -213,10 +215,9 @@ import {
      * @param concretes - An array of concrete class code strings.
      * @param streams - An array of stream class code strings.
      * @param apisCode - An array of API code strings.
-     * @param metaNamespacesCode - The code for custom meta, or null.
      * @returns The complete formatted file content.
      */
-    private assembleGeneratedFile(enums: string[], abstracts: string[], concretes: string[], streams: string[], apisCode: string[], metaNamespacesCode: string | null): string {
+    private assembleGeneratedFile(enums: string[], abstracts: string[], concretes: string[], streams: string[], apisCode: string[]): string {
         let code = this.getPreambleImports();
         code += enums.join('\n\n') + (enums.length ? '\n\n' : '');
         code += abstracts.join('\n\n') + (abstracts.length ? '\n\n' : '');
@@ -224,9 +225,9 @@ import {
         code += streams.join('\n\n') + (streams.length ? '\n\n' : '');
         code += apisCode.join('\n\n');
 
-        if (metaNamespacesCode) {
-            code += '\n\n' + metaNamespacesCode;
-        }
+        // --- [УДАЛЕНО] ---
+        // if (metaNamespacesCode) { ... }
+        // --- [КОНЕЦ УДАЛЕНИЯ] ---
 
         return code;
     }
@@ -303,24 +304,9 @@ import {
         });
     }
 
-    /**
-     * Generates the `AllCustomMeta` namespace for custom array meta implementations.
-     * @param logicInstance - The GeneratorLogic instance containing the meta code.
-     * @returns The generated namespace code as a string, or null.
-     */
-    private generateAllMetaNamespaces(logicInstance: GeneratorLogic): string | null {
-        if (logicInstance.allMetaCode.length === 0) return null;
-
-        const namespaceName = "AllCustomMeta";
-        const uniqueMetaCode = [...new Set(logicInstance.allMetaCode)];
-        // Indentation is removed from regMeta0, so we just join.
-        const formattedCode = uniqueMetaCode.join('\n');
-
-        return `
-export namespace ${namespaceName} {
-${formattedCode}
-}`;
-    }
+    // --- [УДАЛЕН] ---
+    // private generateAllMetaNamespaces(logicInstance: GeneratorLogic): string | null { ... }
+    // --- [КОНЕЦ УДАЛЕНИЯ] ---
 }
 
 /**

@@ -1,8 +1,6 @@
 // @ts-nocheck
 // =============================================================================================
-// FILE: aether.fastmeta.ts
-// PURPOSE: Contains Fast Meta API interfaces and implementation (FastFutureContext, FastMeta, PackNumber).
-// DEPENDENCIES: aether.types.ts, aether.datainout.ts, aether.future.ts, aether.logging.ts, aether.fastmeta_helpers.ts
+// FILE: aether.fastmeta.ts (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // =============================================================================================
 
 import {
@@ -14,297 +12,112 @@ import {
 import { AFuture, ARFuture } from './aether_future';
 import { DataIn, DataInOut, DataInOutStatic, DataOut } from './aether_datainout';
 import { Log, LNode, LogData } from './aether_logging';
-import { hashCodeEqualsHelpers } from './aether_fastmeta_helpers';
+import { AString } from './aether_astring';
 
 // --- Java equivalents for text processing ---
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER_UTF8 = new TextDecoder('utf-8');
 
 // =============================================================================================
-// SECTION 7.1: PACKED NUMBER SERIALIZATION (Port of SerializerPackNumber.java)
+// SECTION 7.1: PACKED NUMBER SERIALIZATION (ИСПРАВЛЕНО)
 // =============================================================================================
 
 export class SerializerPackNumber {
     public static readonly INSTANCE = new SerializerPackNumber();
-    private static readonly u8 = 251;
-    private static readonly pow8_shift = 8;
-    private static readonly pow8_mask = 0xff;
-    private static readonly u16 = 1515;
-    private static readonly pow16_shift = 16;
-    private static readonly pow16_mask = 0xFFFF;
-    private static readonly u32 = 1049835;
-    private static readonly pow32 = 4294967296;
-    private static readonly u64 = 1099511630835;
-    private static readonly pow32_mask = 0xFFFFFFFF;
+    // --- Константы, как в Java ---
+    private static readonly u8: bigint = 251n;
+    private static readonly pow8_mask: bigint = 0xffn;
+    private static readonly pow8_shift: bigint = 8n;
+    private static readonly k8ReservedFor16: bigint = 16n;
+    private static readonly k16ReservedFor32: bigint = 256n;
+    private static readonly pow32: bigint = 4294967296n; // 4L * 1024 * 1024 * 1024;
+    private static readonly u16: bigint = 5n * 256n + SerializerPackNumber.u8 - SerializerPackNumber.k8ReservedFor16;  // 1515
+    private static readonly u32: bigint = 1024n * 1024n + SerializerPackNumber.u16 - SerializerPackNumber.k16ReservedFor32;  // 1 049 835
+    private static readonly u64: bigint = SerializerPackNumber.u32 + SerializerPackNumber.pow32 * SerializerPackNumber.k16ReservedFor32;
+    private static readonly pow16_mask: bigint = 0xFFFFn;
+    private static readonly pow16_shift: bigint = 16n;
+    private static readonly pow32_shift: bigint = 32n;
+    private static readonly pow32_mask: bigint = 0xFFFFFFFFn;
+    // ---
 
-    public put(out: DataOut, value: number): void {
-        const v = Math.trunc(value);
+    public put(out: DataOut, val: number | bigint): void {
+        const v = BigInt(val);
 
         if (v < SerializerPackNumber.u8) {
-            out.writeByte(v);
+            out.writeByte(Number(v));
         } else if (v < SerializerPackNumber.u16) {
-            const temp = v - SerializerPackNumber.u8;
-            out.writeByte((((temp >> SerializerPackNumber.pow8_shift) & 0xff) + SerializerPackNumber.u8));
-            out.writeByte(temp & SerializerPackNumber.pow8_mask);
+            out.writeByte(Number((((v - SerializerPackNumber.u8) >> SerializerPackNumber.pow8_shift) & 0xffn) + SerializerPackNumber.u8));
+            out.writeByte(Number((v - SerializerPackNumber.u8) & SerializerPackNumber.pow8_mask));
         } else if (v < SerializerPackNumber.u32) {
             out.writeByte(255);
-            const temp = v - SerializerPackNumber.u16;
-            out.writeByte(((temp >> SerializerPackNumber.pow16_shift) - SerializerPackNumber.u8 + SerializerPackNumber.u16));
-            out.writeShort(temp & SerializerPackNumber.pow16_mask);
+            out.writeByte(Number(((v - SerializerPackNumber.u16) >> SerializerPackNumber.pow16_shift) - SerializerPackNumber.u8 + SerializerPackNumber.u16));
+            out.writeShort(Number((v - SerializerPackNumber.u16) & SerializerPackNumber.pow16_mask));
         } else if (v < SerializerPackNumber.u64) {
             out.writeByte(255);
             out.writeByte(255);
-            const temp = v - SerializerPackNumber.u32;
-
-            const high = Math.floor(temp / SerializerPackNumber.pow32);
-            const low = temp & SerializerPackNumber.pow32_mask;
-
-            const shortVal = high - SerializerPackNumber.u16 + SerializerPackNumber.u32;
-            out.writeShort(shortVal);
-            out.writeInt(low);
+            out.writeShort(Number(((v - SerializerPackNumber.u32) >> SerializerPackNumber.pow32_shift) - SerializerPackNumber.u16 + SerializerPackNumber.u32));
+            out.writeInt(Number((v - SerializerPackNumber.u32) & SerializerPackNumber.pow32_mask));
         } else {
-            throw new Error("IllegalStateException: Value exceeds u64 limit.");
+             throw new Error("Value too large for SerializerPackNumber: " + v);
         }
     }
 }
-
-
-// =============================================================================================
-// SECTION 7.2: PACKED NUMBER DESERIALIZATION (Port of DeserializerPackNumber.java)
-// =============================================================================================
 
 export class DeserializerPackNumber {
     public static readonly INSTANCE = new DeserializerPackNumber();
-    private static readonly u8 = 251;
-    private static readonly pow8_shift = 8;
-    private static readonly u16 = 1515;
-    private static readonly pow16_shift = 16;
-    private static readonly u32 = 1049835;
-    private static readonly pow32_shift = 32;
-    private static readonly u64 = 1099511630835;
+    // --- Константы, как в Java ---
+    private static readonly u8: bigint = 251n;
+    private static readonly pow8_shift: bigint = 8n;
+    private static readonly k8ReservedFor16: bigint = 16n;
+    private static readonly k16ReservedFor32: bigint = 256n;
+    private static readonly pow32: bigint = 4294967296n;
+    private static readonly u16: bigint = 5n * 256n + DeserializerPackNumber.u8 - DeserializerPackNumber.k8ReservedFor16;  // 1515
+    private static readonly u32: bigint = 1024n * 1024n + DeserializerPackNumber.u16 - DeserializerPackNumber.k16ReservedFor32;  // 1 049 835
+    private static readonly u64: bigint = DeserializerPackNumber.u32 + DeserializerPackNumber.pow32 * DeserializerPackNumber.k16ReservedFor32;
+    private static readonly pow16_shift: bigint = 16n;
+    private static readonly pow32_shift: bigint = 32n;
+    // ---
 
-    public put(dataIn: DataIn): number {
-        let val = dataIn.readUByte();
-
+    public put(in_: DataIn): bigint {
+        let val = BigInt(in_.readUByte());
         if (val < DeserializerPackNumber.u8) {
             return val;
         }
-
-        const v8 = dataIn.readUByte();
-        val = ((val - DeserializerPackNumber.u8) << DeserializerPackNumber.pow8_shift) + DeserializerPackNumber.u8 + v8;
-
+        let v = BigInt(in_.readUByte());
+        val = ((val - DeserializerPackNumber.u8) << DeserializerPackNumber.pow8_shift) + DeserializerPackNumber.u8 + v;
         if (val < DeserializerPackNumber.u16) {
             return val;
         }
-
-        const f16 = dataIn.readUShort();
-        val = ((val - DeserializerPackNumber.u16) << DeserializerPackNumber.pow16_shift) + DeserializerPackNumber.u16 + f16;
-
+        let f = BigInt(in_.readUShort());
+        val = ((val - DeserializerPackNumber.u16) << DeserializerPackNumber.pow16_shift) + DeserializerPackNumber.u16 + f;
         if (val < DeserializerPackNumber.u32) {
             return val;
         }
-
-        const f32 = dataIn.readUInt();
-        val = ((val - DeserializerPackNumber.u32) * Math.pow(2, DeserializerPackNumber.pow32_shift)) + DeserializerPackNumber.u32 + f32;
-
-
+        let f1 = BigInt(in_.readUInt()); // readUInt() должен возвращать number
+        val = ((val - DeserializerPackNumber.u32) << DeserializerPackNumber.pow32_shift) + DeserializerPackNumber.u32 + f1;
         if (val < DeserializerPackNumber.u64) {
             return val;
         }
-
-        throw new Error("IllegalStateException: Value exceeds u64 limit.");
+        throw new Error("Value too large for DeserializerPackNumber (marker > u64)");
     }
 }
 
 
 // =============================================================================================
-// SECTION 7.3: FASTMETA TYPES (Port of FastMetaType.java & FastMeta.java)
+// SECTION 7.2: CORE INTERFACES (FastFutureContext, FastMetaType, etc.)
 // =============================================================================================
 
-/** Port of FastMetaType.java (interface) */
-export interface FastMetaType<T> {
-    serialize(ctx: FastFutureContext, obj: T, out: DataOut): void;
-    deserialize(ctx: FastFutureContext, dataIn: DataIn): T;
-
-    // Default methods
-    serializeToBytes(obj: T): Uint8Array;
-    deserializeFromBytes(data: Uint8Array): T;
-    loadFromFile(file: string): T;
-}
-
-const FastMetaTypeImpl = {
-    serializeToBytes: function<T>(this: FastMetaType<T>, obj: T): Uint8Array {
-        const d = new DataInOut();
-        this.serialize(FastFutureContextStub, obj, d);
-        return d.toArray();
-    } as FastMetaType<any>['serializeToBytes'],
-    deserializeFromBytes: function<T>(this: FastMetaType<T>, data: Uint8Array): T {
-        const d = new DataInOutStatic(data);
-        return this.deserialize(FastFutureContextStub, d);
-    } as FastMetaType<any>['deserializeFromBytes'],
-    loadFromFile: function<T>(this: FastMetaType<T>, _file: string): T {
-        throw new Error("UnsupportedOperationException: loadFromFile requires Node.js/Filesystem access.");
-    } as FastMetaType<any>['loadFromFile'],
-};
-
-type FastMetaTypeWithDefaults<T> = FastMetaType<T> & typeof FastMetaTypeImpl;
-
-
-/** Port of FastMeta.java (interface/object) */
-export const FastMeta: { [key: string]: FastMetaTypeWithDefaults<any> | any } = { // 'any' added for hashCodeEqualsHelper
-    // --- hashCode/equals Helper ---
-    hashCodeEqualsHelper: hashCodeEqualsHelpers,
-
-    // --- Single Primitives ---
-    META_BOOLEAN: {
-        serialize: (_ctx, obj, out) => out.writeBoolean(obj),
-        deserialize: (_ctx, dataIn) => dataIn.readBoolean(),
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<boolean>,
-
-    META_BYTE: {
-        serialize: (_ctx, obj, out) => out.writeByte(obj),
-        deserialize: (_ctx, dataIn) => dataIn.readByte(),
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<number>,
-
-    META_SHORT: {
-        serialize: (_ctx, obj, out) => out.writeShort(obj),
-        deserialize: (_ctx, dataIn) => dataIn.readShort(),
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<number>,
-
-    META_INT: {
-        serialize: (_ctx, obj, out) => out.writeInt(obj),
-        deserialize: (_ctx, dataIn) => dataIn.readInt(),
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<number>,
-
-    META_LONG: {
-        serialize: (_ctx, obj, out) => out.writeLong(obj),
-        deserialize: (_ctx, dataIn) => dataIn.readLong(),
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<bigint>,
-
-    META_FLOAT: {
-        serialize: (_ctx, obj, out) => out.writeFloat(obj),
-        deserialize: (_ctx, dataIn) => dataIn.readFloat(),
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<number>,
-
-    META_DOUBLE: {
-        serialize: (_ctx, obj, out) => out.writeDouble(obj),
-        deserialize: (_ctx, dataIn) => dataIn.readDouble(),
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<number>,
-
-    META_DATE: {
-        serialize: (_ctx, obj, out) => out.writeLong(obj.getTime()),
-        deserialize: (_ctx, dataIn) => new Date(Number(dataIn.readLong())),
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<Date>,
-
-    // --- Packed Integer ---
-    META_PACK: {
-        serialize: (_ctx, obj, out) => SerializerPackNumber.INSTANCE.put(out, obj),
-        deserialize: (_ctx, dataIn) => DeserializerPackNumber.INSTANCE.put(dataIn),
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<number>,
-
-    // --- Common Object Types ---
-    META_STRING: {
-        serialize: (_ctx, obj, out) => {
-            const ar = TEXT_ENCODER.encode(obj);
-            SerializerPackNumber.INSTANCE.put(out, ar.length);
-            out.write(ar);
-        },
-        deserialize: (_ctx, dataIn) => {
-            const len = DeserializerPackNumber.INSTANCE.put(dataIn);
-            const ar = dataIn.readBytes(len);
-            return TEXT_DECODER_UTF8.decode(ar);
-        },
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<string>,
-
-    META_UUID: {
-        serialize: (_ctx, obj: UUID, out) => {
-            if (!obj || !obj.data || obj.data.length !== 16) throw new Error("Invalid UUID object for serialization");
-            out.write(obj.data);
-        },
-        deserialize: (_ctx, dataIn) => {
-            const data = dataIn.readBytes(16);
-            if (data.length !== 16) throw new Error("Could not read 16 bytes for UUID");
-            const uuid = new UUID();
-            uuid.data = data;
-            return uuid;
-        },
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<UUID>,
-
-    META_URI: {
-        serialize: (_ctx, obj, out) => {
-            const ar = TEXT_ENCODER.encode(obj);
-            SerializerPackNumber.INSTANCE.put(out, ar.length);
-            out.write(ar);
-        },
-        deserialize: (_ctx, dataIn) => {
-            const len = DeserializerPackNumber.INSTANCE.put(dataIn);
-            const ar = dataIn.readBytes(len);
-            const uriString = TEXT_DECODER_UTF8.decode(ar);
-            return uriString as URI;
-        },
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<URI>,
-
-    // --- Primitive Arrays (Only META_ARRAY_BYTE included for consistency) ---
-    META_ARRAY_BYTE: {
-        serialize: (_ctx, ar, out) => {
-            SerializerPackNumber.INSTANCE.put(out, ar.length);
-            out.write(ar);
-        },
-        deserialize: (_ctx, dataIn) => {
-            const len = DeserializerPackNumber.INSTANCE.put(dataIn);
-            return dataIn.readBytes(len);
-        },
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<Uint8Array>,
-
-    // --- Internal Types ---
-    META_REQUEST_ID: {
-        serialize: (_ctx, ar, out) => out.writeInt(ar),
-        deserialize: (_ctx, dataIn) => dataIn.readInt(),
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<number>,
-
-    META_COMMAND: {
-        serialize: (_ctx, ar, out) => out.writeByte(ar),
-        deserialize: (_ctx, dataIn) => dataIn.readUByte(),
-        ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<number>,
-};
-
-
-// =============================================================================================
-// SECTION 7.4: FAST META & REMOTE API INTERFACES AND IMPLEMENTATIONS
-// =============================================================================================
-
-/** Minimal definition required by FastMetaApi (Port of RemoteApi.java). */
-export interface RemoteApi {
-    flush(sendFuture: AFuture): void;
-    flush(): void;
-    getFastMetaContext(): FastFutureContext;
-}
-
-/** Type alias for Java's BytesConverter (Port of BytesConverter.java). */
-export type BytesConverter = (data: Uint8Array) => Uint8Array;
-
-/** Port of FutureRec.java - using dataIn instead of reserved word 'in'. */
+/**
+ * Определение интерфейса FutureRec.
+ */
 export interface FutureRec {
     onDone(dataIn: DataIn): void;
     onError(dataIn: DataIn): void;
 }
 
-/** * Port of FastFutureContext.java (interface). */
+/**
+ * Полное определение интерфейса FastFutureContext.
+ */
 export interface FastFutureContext extends Destroyable {
     sendToRemote(data: Uint8Array): void;
 
@@ -323,53 +136,650 @@ export interface FastFutureContext extends Destroyable {
     size(): number;
     close(): AFuture;
 
-    // --- ADDED: Logging Hooks (from FastFutureContext.java) ---
     invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void;
     invokeLocalMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void;
     invokeRemoteMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void;
 }
 
-// STUB implementation (based on FastFutureContext.STUB in Java)
-const FastFutureContextStub: FastFutureContext = {
-    sendToRemote: (_data: Uint8Array) => { /* no-op */ },
-    sendResultToRemote: (_requestId: number, _data: Uint8Array) => { /* no-op */ },
-    sendResultToRemoteNoData: (_requestId: number) => { /* no-op */ },
-    regFuture: (_worker: FutureRec) => 0,
+/**
+ * Заглушка для FastFutureContext для использования в синхронных операциях.
+ */
+export const FastFutureContextStub: FastFutureContext = {
+    sendToRemote: (data: Uint8Array) => { throw new Error("Context is a stub and cannot send data."); },
+    sendResultToRemote: (requestId: number, data: Uint8Array) => { throw new Error("Context is a stub and cannot send result."); },
+    sendResultToRemoteNoData: (requestId: number) => { throw new Error("Context is a stub and cannot send result."); },
+    regFuture: (worker: FutureRec) => 0,
     regLocalFuture: () => { /* no-op */ },
-    getFuture: (_requestId: number) => { throw new Error("UnsupportedOperationException"); },
-    flush: (_sendFuture: AFuture) => { throw new Error("UnsupportedOperationException"); },
-    remoteDataToArray: (_out: DataOut) => { /* no-op */ },
+    getFuture: (requestId: number) => { throw new Error("UnsupportedOperationException"); },
+    flush: (sendFuture: AFuture) => { throw new Error("UnsupportedOperationException"); },
+    remoteDataToArray: (out: DataOut) => { /* no-op */ },
     remoteDataToArrayAsArray: () => new Uint8Array(0),
     isEmpty: () => true,
     size: () => 0,
     close: () => AFuture.completed(),
     destroy: (_force: boolean) => AFuture.of(),
     [Symbol.dispose]: () => {},
-
-    // --- ADDED: STUB Logging Hooks ---
+    // --- Logging Hooks (stubs) ---
     invokeLocalMethodBefore: (_methodName, _argsNames, _argsValues) => { /* no-op */ },
     invokeLocalMethodAfter: (_methodName, _result, _argsNames, _argsValues) => { /* no-op */ },
     invokeRemoteMethodAfter: (_methodName, _result, _argsNames, _argsValues) => { /* no-op */ },
 };
 
-// --- FastMetaApi Interface (Port of FastMetaApi.java) ---
-// --- FIX: Renamed overloaded methods ---
+
+/**
+ * The main interface for all Aether protocol type metadata.
+ */
+export interface FastMetaType<T> {
+    serialize(ctx: FastFutureContext, obj: T, out: DataOut): void;
+    deserialize(ctx: FastFutureContext, dataIn: DataIn): T;
+
+    // Utility methods for byte array conversion
+    serializeToBytes(obj: T): Uint8Array;
+    deserializeFromBytes(data: Uint8Array): T;
+
+    // Utility method for file loading (environment-dependent)
+    loadFromFile(file: string): T;
+
+    // HashCode and Equals logic
+    metaHashCode(obj: T | null | undefined): number;
+    metaEquals(v1: T | null | undefined, v2: any | null | undefined): boolean;
+
+    // ToString logic
+    metaToString(obj: T | null | undefined, res: AString): void;
+}
+
+/**
+ * Полное определение интерфейса RemoteApi.
+ */
+export interface RemoteApi {
+    flush(sendFuture: AFuture): void;
+    flush(): void;
+    getFastMetaContext(): FastFutureContext;
+}
+
+/**
+ * Полное определение интерфейса FastMetaApi.
+ */
 export interface FastMetaApi<T, R extends RemoteApi> {
-    /** Creates a remote implementation of the API */
     makeRemote(localApi: FastFutureContext): R;
-
-    /** Creates a local handler from DataIn stream */
     makeLocal_fromDataIn(ctx: FastFutureContext, dataIn: DataIn, localApi: T): void;
-
-    /** Implements Java's default makeLocal(FastApiContextLocal, byte[]) */
     makeLocal_fromBytes_ctxLocal(ctx: FastApiContextLocal<T>, data: Uint8Array): void;
-
-    /** Implements Java's default makeLocal(FastFutureContext, byte[], T) */
     makeLocal_fromBytes_ctx(ctx: FastFutureContext, data: Uint8Array, localApi: T): void;
 }
 
+/**
+ * Полное определение типа BytesConverter.
+ */
+export type BytesConverter = (data: Uint8Array) => Uint8Array;
 
-// --- FastApiContext Implementation (Port of FastApiContext.java) ---
+
+// =============================================================================================
+// SECTION 7.3: UNIVERSAL ARRAY IMPLEMENTATION (Helper for FastMeta)
+// =============================================================================================
+
+/**
+ * Helper class for an Array of T, utilizing the element's FastMetaType.
+ * This is an internal implementation detail for FastMeta.getMetaArray.
+ */
+class UniversalMetaArrayImpl<T> implements FastMetaType<T[]> {
+    private readonly elementMeta: FastMetaType<T>;
+
+    constructor(elementMeta: FastMetaType<T>) {
+        this.elementMeta = elementMeta;
+    }
+
+    // --- Core Serialization ---
+
+    serialize(ctx: FastFutureContext, obj: T[], out: DataOut): void {
+        SerializerPackNumber.INSTANCE.put(out, obj.length);
+        for (const el of obj) {
+            this.elementMeta.serialize(ctx, el, out);
+        }
+    }
+
+    deserialize(ctx: FastFutureContext, dataIn: DataIn): T[] {
+        const len = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+
+        // Специальная обработка для массивов байтов (Uint8Array)
+        if (this.elementMeta === FastMeta.META_BYTE) {
+            return dataIn.readBytes(len) as T[];
+        }
+
+        const ar = new Array<T>(len);
+        for (let i = 0; i < len; i++) {
+            ar[i] = this.elementMeta.deserialize(ctx, dataIn);
+        }
+        return ar;
+    }
+
+    // --- Utility Serialization (Явная реализация) ---
+
+    serializeToBytes(obj: T[]): Uint8Array {
+        const d = new DataInOut();
+        this.serialize(FastFutureContextStub, obj, d);
+        return d.toArray();
+    }
+
+    deserializeFromBytes(data: Uint8Array): T[] {
+        const d = new DataInOutStatic(data);
+        return this.deserialize(FastFutureContextStub, d);
+    }
+
+    loadFromFile(_file: string): T[] {
+        throw new Error("UnsupportedOperationException: loadFromFile requires Node.js/Filesystem access.");
+    }
+
+    // --- HashCode / Equals / ToString (Использует META элемента) ---
+
+    metaHashCode(obj: T[] | null | undefined): number {
+        if (obj === null || obj === undefined) return 0;
+
+        if (this.elementMeta === FastMeta.META_BYTE) {
+            const arr = obj as unknown as Uint8Array;
+            let hash = 1;
+            for (let i = 0; i < arr.length; i++) {
+                hash = (31 * hash + arr[i]) | 0;
+            }
+            return hash;
+        }
+
+        let hash = 1;
+        for (const el of obj) {
+            hash = (31 * hash + this.elementMeta.metaHashCode(el)) | 0;
+        }
+        return hash;
+    }
+
+    metaEquals(v1: T[] | null | undefined, v2: any | null | undefined): boolean {
+        if (v1 === v2) return true;
+        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
+        if (v2 === null || v2 === undefined || !Array.isArray(v2)) return false;
+
+        if (this.elementMeta === FastMeta.META_BYTE) {
+             const arr1 = v1 as unknown as Uint8Array;
+             const arr2 = v2 as unknown as Uint8Array;
+             if (!(v2 instanceof Uint8Array)) return false;
+             if (arr1.length !== arr2.length) return false;
+             for (let i = 0; i < arr1.length; i++) {
+                 if (arr1[i] !== arr2[i]) return false;
+             }
+             return true;
+        }
+
+        if (v1.length !== v2.length) return false;
+
+        for (let i = 0; i < v1.length; i++) {
+            if (!this.elementMeta.metaEquals(v1[i], v2[i])) return false;
+        }
+        return true;
+    }
+
+    metaToString(obj: T[] | null | undefined, res: AString): void {
+        if (obj === null || obj === undefined) { res.add('null'); return; }
+
+        if (this.elementMeta === FastMeta.META_BYTE) {
+            res.add('byte[').add((obj as unknown as Uint8Array).length).add(']');
+            return;
+        }
+
+        res.add('[');
+        let first = true;
+        for (const el of obj) {
+            if (!first) res.add(', ');
+            this.elementMeta.metaToString(el, res);
+            first = false;
+        }
+        res.add(']');
+    }
+}
+
+
+// =============================================================================================
+// SECTION 7.4: FAST META CLASS (Refactored to class as requested)
+// =============================================================================================
+
+/**
+ * Центральный класс, содержащий FastMetaType для всех примитивных и стандартных типов.
+ */
+export class FastMeta {
+
+    public static readonly META_BOOLEAN: FastMetaType<boolean> = new class implements FastMetaType<boolean> {
+        serialize(_ctx: FastFutureContext, obj: boolean, out: DataOut): void { out.writeBoolean(obj); }
+        deserialize(_ctx: FastFutureContext, dataIn: DataIn): boolean { return dataIn.readBoolean(); }
+        metaHashCode(obj: boolean | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            return obj ? 1231 : 1237; // Java's Boolean.hashCode
+        }
+        metaEquals(v1: boolean | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: boolean | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: boolean): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): boolean {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_file: string): boolean { throw new Error("UnsupportedOperationException"); }
+    };
+
+    public static readonly META_BYTE: FastMetaType<number> = new class implements FastMetaType<number> {
+        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { out.writeByte(obj); }
+        deserialize(_ctx: FastFutureContext, in_: DataIn): number { return in_.readByte(); }
+        metaHashCode(obj: number | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            return (obj | 0); // Standard integer hash
+        }
+        metaEquals(v1: number | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: number): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): number {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_f: string): number { throw new Error("UnsupportedOperationException"); }
+    };
+
+    public static readonly META_SHORT: FastMetaType<number> = new class implements FastMetaType<number> {
+        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { out.writeShort(obj); }
+        deserialize(_ctx: FastFutureContext, in_: DataIn): number { return in_.readShort(); }
+        metaHashCode(obj: number | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            return (obj | 0); // Standard integer hash
+        }
+        metaEquals(v1: number | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: number): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): number {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_f: string): number { throw new Error("UnsupportedOperationException"); }
+    };
+
+    public static readonly META_INT: FastMetaType<number> = new class implements FastMetaType<number> {
+        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { out.writeInt(obj); }
+        deserialize(_ctx: FastFutureContext, in_: DataIn): number { return in_.readInt(); }
+        metaHashCode(obj: number | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            return (obj | 0); // Standard integer hash
+        }
+        metaEquals(v1: number | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: number): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): number {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_f: string): number { throw new Error("UnsupportedOperationException"); }
+    };
+
+    public static readonly META_LONG: FastMetaType<bigint> = new class implements FastMetaType<bigint> {
+        serialize(_ctx: FastFutureContext, obj: bigint, out: DataOut): void { out.writeLong(obj); }
+        deserialize(_ctx: FastFutureContext, in_: DataIn): bigint { return in_.readLong(); }
+        metaHashCode(obj: bigint | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            const hash = obj ^ (obj >> 32n); // Java's Long.hashCode
+            return Number(hash & 0xFFFFFFFFn) | 0;
+        }
+        metaEquals(v1: bigint | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: bigint | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: bigint): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): bigint {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_file: string): bigint { throw new Error("UnsupportedOperationException"); }
+    };
+
+    public static readonly META_FLOAT: FastMetaType<number> = new class implements FastMetaType<number> {
+        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { out.writeFloat(obj); }
+        deserialize(_ctx: FastFutureContext, in_: DataIn): number { return in_.readFloat(); }
+        metaHashCode(obj: number | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            const buf = new ArrayBuffer(4);
+            new Float32Array(buf)[0] = obj;
+            return new Int32Array(buf)[0]; // Java's Float.hashCode(floatToIntBits(f))
+        }
+        metaEquals(v1: number | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: number): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): number {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_file: string): number { throw new Error("UnsupportedOperationException"); }
+    };
+
+    public static readonly META_DOUBLE: FastMetaType<number> = new class implements FastMetaType<number> {
+        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { out.writeDouble(obj); }
+        deserialize(_ctx: FastFutureContext, in_: DataIn): number { return in_.readDouble(); }
+        metaHashCode(obj: number | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            const buf = new ArrayBuffer(8);
+            new Float64Array(buf)[0] = obj;
+            const longView = new BigInt64Array(buf)[0];
+            const hash = longView ^ (longView >> 32n); // Java's Double.hashCode
+            return Number(hash & 0xFFFFFFFFn) | 0;
+        }
+        metaEquals(v1: number | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: number): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): number {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_file: string): number { throw new Error("UnsupportedOperationException"); }
+    };
+
+    public static readonly META_DATE: FastMetaType<Date> = new class implements FastMetaType<Date> {
+        serialize(_ctx: FastFutureContext, obj: Date, out: DataOut): void { out.writeLong(obj.getTime()); }
+        deserialize(_ctx: FastFutureContext, in_: DataIn): Date { return new Date(Number(in_.readLong())); }
+        metaHashCode(obj: Date | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            const time = BigInt(obj.getTime());
+            const hash = time ^ (time >> 32n); // Java's Long.hashCode (same as Date.hashCode)
+            return Number(hash & 0xFFFFFFFFn) | 0;
+        }
+        metaEquals(v1: Date | null | undefined, v2: any | null | undefined): boolean {
+            if (v1 === v2) return true;
+            if (v1 === null || v1 === undefined || v2 === null || v2 === undefined) return false;
+            if (!(v2 instanceof Date)) return false;
+            return v1.getTime() === v2.getTime();
+        }
+        metaToString(obj: Date | null | undefined, res: AString): void { res.add(obj ? obj.toISOString() : "null"); }
+        serializeToBytes(obj: Date): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): Date {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_file: string): Date { throw new Error("UnsupportedOperationException"); }
+    };
+
+    public static readonly META_PACK: FastMetaType<number> = new class implements FastMetaType<number> {
+        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { SerializerPackNumber.INSTANCE.put(out, obj); }
+        deserialize(_ctx: FastFutureContext, dataIn: DataIn): number { return Number(DeserializerPackNumber.INSTANCE.put(dataIn)); }
+        metaHashCode(obj: number | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            return (obj | 0); // Standard integer hash
+        }
+        metaEquals(v1: number | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: number): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): number {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_file: string): number { throw new Error("UnsupportedOperationException"); }
+    };
+
+    public static readonly META_STRING: FastMetaType<string> = new class implements FastMetaType<string> {
+        serialize(_ctx: FastFutureContext, obj: string, out: DataOut): void {
+            const ar = TEXT_ENCODER.encode(obj);
+            SerializerPackNumber.INSTANCE.put(out, ar.length);
+            out.write(ar);
+        }
+        deserialize(_ctx: FastFutureContext, dataIn: DataIn): string {
+            const len = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+            const ar = dataIn.readBytes(len);
+            return TEXT_DECODER_UTF8.decode(ar);
+        }
+        metaHashCode(obj: string | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            let hash = 0;
+            for (let i = 0; i < obj.length; i++) {
+                hash = (31 * hash + obj.charCodeAt(i)) | 0; // Java's String.hashCode
+            }
+            return hash;
+        }
+        metaEquals(v1: string | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: string | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: string): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): string {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_file: string): string { throw new Error("UnsupportedOperationException"); }
+    };
+
+    // =================================================================
+    // ИСПРАВЛЕННЫЙ БЛОК META_UUID (Big Endian, побайтовая запись)
+    // =================================================================
+    public static readonly META_UUID: FastMetaType<UUID> = new class implements FastMetaType<UUID> {
+        serialize(_ctx: FastFutureContext, obj: UUID, out: DataOut): void {
+            // obj.data ДОЛЖЕН быть 16-байтным Big Endian представлением UUID
+            if (!obj || !obj.data || obj.data.length !== 16) {
+                // Пытаемся использовать MSB/LSB, если они есть
+                if (obj && typeof (obj as any).getMostSignificantBits === 'function') {
+                    const view = new DataView(new ArrayBuffer(16));
+                    view.setBigInt64(0, (obj as any).getMostSignificantBits(), false); // Big Endian
+                    view.setBigInt64(8, (obj as any).getLeastSignificantBits(), false); // Big Endian
+                    out.write(new Uint8Array(view.buffer));
+                    return;
+                }
+                throw new Error("Invalid UUID object for serialization. 'data' field missing or wrong length.");
+            }
+            // Прямая запись 16 байт
+            out.write(obj.data);
+        }
+
+        deserialize(_ctx: FastFutureContext, dataIn: DataIn): UUID {
+            // Прямое чтение 16 байт
+            const data = dataIn.readBytes(16);
+            if (data.length !== 16) throw new Error("Could not read 16 bytes for UUID");
+
+            // Создаем UUID и сохраняем Big Endian байты
+            const uuid = new UUID();
+            uuid.data = data;
+
+            // (Опционально) Заполняем поля MSB/LSB для совместимости
+            const view = new DataView(data.buffer, data.byteOffset, 16);
+            uuid.mostSignificantBits = view.getBigInt64(0, false);
+            uuid.leastSignificantBits = view.getBigInt64(8, false);
+
+            return uuid;
+        }
+
+        metaHashCode(obj: UUID | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+
+            let high: bigint;
+            let low: bigint;
+
+            if (obj.data && obj.data.length === 16) {
+                 const view = new DataView(obj.data.buffer, obj.data.byteOffset);
+                 high = view.getBigInt64(0, false); // Big Endian
+                 low = view.getBigInt64(8, false);  // Big Endian
+            } else if (typeof (obj as any).getMostSignificantBits === 'function') {
+                 high = (obj as any).getMostSignificantBits();
+                 low = (obj as any).getLeastSignificantBits();
+            } else {
+                return 0; // Невалидный UUID
+            }
+
+            // Java's UUID.hashCode()
+            const xor = high ^ low;
+            const hash = xor ^ (xor >> 32n);
+            return Number(hash & 0xFFFFFFFFn) | 0;
+        }
+
+        metaEquals(v1: UUID | null | undefined, v2: any | null | undefined): boolean {
+            if (v1 === v2) return true;
+            if (v1 === null || v1 === undefined || v2 === null || v2 === undefined) return false;
+
+            // Используем .data для сравнения, если он есть
+            if (v1.data && v2.data) {
+                 if (!(v2 instanceof UUID)) return false;
+                 const d1 = v1.data;
+                 const d2 = v2.data;
+
+                 if (d1 === d2) return true;
+                 if (d1.length !== 16 || d2.length !== 16) return false;
+
+                 for (let i = 0; i < 16; i++) {
+                     if (d1[i] !== d2[i]) return false;
+                 }
+                 return true;
+            }
+
+            // Откат к MSB/LSB, если .data нет
+             if (typeof (v1 as any).getMostSignificantBits === 'function' &&
+                 typeof (v2 as any).getMostSignificantBits === 'function')
+             {
+                return (v1 as any).getMostSignificantBits() === (v2 as any).getMostSignificantBits() &&
+                       (v1 as any).getLeastSignificantBits() === (v2 as any).getLeastSignificantBits();
+             }
+
+            return false;
+        }
+        metaToString(obj: UUID | null | undefined, res: AString): void { res.add(obj ? obj.toString() : "null"); }
+        serializeToBytes(obj: UUID): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): UUID {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_file: string): UUID { throw new Error("UnsupportedOperationException"); }
+    };
+    // =================================================================
+    // КОНЕЦ ИСПРАВЛЕННОГО БЛОКА
+    // =================================================================
+
+    public static readonly META_URI: FastMetaType<URI> = new class implements FastMetaType<URI> {
+        serialize(_ctx: FastFutureContext, obj: URI, out: DataOut): void {
+            const ar = TEXT_ENCODER.encode(obj);
+            SerializerPackNumber.INSTANCE.put(out, ar.length);
+            out.write(ar);
+        }
+        deserialize(_ctx: FastFutureContext, dataIn: DataIn): URI {
+            const len = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+            const ar = dataIn.readBytes(len);
+            const uriString = TEXT_DECODER_UTF8.decode(ar);
+            return uriString as URI;
+        }
+        metaHashCode(obj: URI | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            let hash = 0;
+            for (let i = 0; i < obj.length; i++) {
+                hash = (31 * hash + obj.charCodeAt(i)) | 0; // Java's String.hashCode
+            }
+            return hash;
+        }
+        metaEquals(v1: URI | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: URI | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: URI): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): URI {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_file: string): URI { throw new Error("UnsupportedOperationException"); }
+    };
+
+    // --- ВНУТРЕННИЕ КОНСТАНТЫ ---
+    public static readonly META_REQUEST_ID: FastMetaType<number> = new class implements FastMetaType<number> {
+        serialize(_ctx: FastFutureContext, ar: number, out: DataOut): void { out.writeInt(ar); }
+        deserialize(_ctx: FastFutureContext, dataIn: DataIn): number { return dataIn.readInt(); }
+        metaHashCode(obj: number | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            return (obj | 0); // Standard integer hash
+        }
+        metaEquals(v1: number | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: number): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): number {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_file: string): number { throw new Error("UnsupportedOperationException"); }
+    };
+
+    public static readonly META_COMMAND: FastMetaType<number> = new class implements FastMetaType<number> {
+        serialize(_ctx: FastFutureContext, ar: number, out: DataOut): void { out.writeByte(ar); }
+        deserialize(_ctx: FastFutureContext, dataIn: DataIn): number { return dataIn.readUByte(); }
+        metaHashCode(obj: number | null | undefined): number {
+            if (obj === null || obj === undefined) return 0;
+            return (obj | 0); // Standard integer hash
+        }
+        metaEquals(v1: number | null | undefined, v2: any | null | undefined): boolean {
+            return v1 === v2;
+        }
+        metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
+        serializeToBytes(obj: number): Uint8Array {
+             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+        }
+        deserializeFromBytes(data: Uint8Array): number {
+             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+        }
+        loadFromFile(_file: string): number { throw new Error("UnsupportedOperationException"); }
+    };
+
+    // --- Array Cache and Methods ---
+
+    private static readonly metaArrayCache = new Map<FastMetaType<any>, FastMetaType<any[]>>();
+
+    /**
+     * Возвращает или создает FastMetaType для массива T[] на основе FastMetaType<T> элемента.
+     * @param elementMeta - FastMetaType элемента массива.
+     * @returns FastMetaType<T[]>
+     */
+    public static getMetaArray<T>(elementMeta: FastMetaType<T>): FastMetaType<T[]> {
+        if (this.metaArrayCache.has(elementMeta)) {
+            return this.metaArrayCache.get(elementMeta) as FastMetaType<T[]>;
+        }
+
+        // Создаем новый универсальный MetaArray и сохраняем его в кеше
+        const newMeta = new UniversalMetaArrayImpl(elementMeta);
+        this.metaArrayCache.set(elementMeta, newMeta);
+        return newMeta;
+    }
+
+    /**
+     * Возвращает FastMetaType для массива байтов (Uint8Array). Делегирует getMetaArray.
+     */
+    public static get META_ARRAY_BYTE(): FastMetaType<Uint8Array> {
+        return this.getMetaArray(this.META_BYTE) as FastMetaType<Uint8Array>;
+    }
+}
+
+
+// =============================================================================================
+// SECTION 7.5: FAST API CONTEXT IMPLEMENTATIONS
+// =============================================================================================
+
+/**
+ * Определение FastApiContext (Восстановлено).
+ */
 export class FastApiContext implements FastFutureContext {
     private futures: Map<number, FutureRec> = new Map();
     private futuresCounter: AtomicInteger = new AtomicInteger(0);
@@ -377,7 +787,7 @@ export class FastApiContext implements FastFutureContext {
     private returnTasks: AtomicInteger = new AtomicInteger(0);
     private sizeBytes: AtomicInteger = new AtomicInteger(0);
 
-    // Implementation of Destroyable
+    // ... (Методы FastApiContext) ...
     public destroy(_force: boolean): AFuture { return this.close(); }
     public [Symbol.dispose](): void { this.close(); }
 
@@ -425,8 +835,6 @@ export class FastApiContext implements FastFutureContext {
         return out.toArray();
     }
 
-
-
     public remoteDataToArray(out: DataOut): void {
         let data: Uint8Array | undefined;
         while ((data = this.toRemote.poll()) !== undefined) {
@@ -457,9 +865,8 @@ export class FastApiContext implements FastFutureContext {
         return meta.makeRemote(this);
     }
 
-    // --- ADDED: Logging Hook Implementations (Ported from FastFutureContext.java defaults) ---
+    // --- Logging Hook Implementations ---
     public invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void {
-            // ИСПРАВЛЕНО: Создаем объект LogData
             const logData: LogData = {
                 "methodName": methodName
             };
@@ -470,7 +877,6 @@ export class FastApiContext implements FastFutureContext {
     }
 
     public invokeLocalMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
-            // ИСПРАВЛЕНО: Создаем объект LogData
             const logData: LogData = {
                 "methodName": methodName,
                 "result": result
@@ -482,24 +888,22 @@ export class FastApiContext implements FastFutureContext {
     }
 
     public invokeRemoteMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
-        // 1. Сразу создаем объект LogData
         const logData: LogData = {
             "methodName": methodName,
             "result": result
         };
 
-        // 2. Добавляем аргументы в этот же объект
         for (let i = 0; i < argsNames.length; i++) {
             logData[`arg_${argsNames[i]}`] = argsValues[i];
         }
 
-        // 3. Передаем готовый объект в Log.trace
         Log.trace(`cmd remote      : ${methodName}`, logData);
     }
 }
 
-
-// --- FastApiContextLocal Implementation (Port of FastApiContextLocal.java) ---
+/**
+ * Определение FastApiContextLocal (Восстановлено).
+ */
 export class FastApiContextLocal<LT> extends FastApiContext {
     public readonly localApi: LT;
 
@@ -513,12 +917,14 @@ export class FastApiContextLocal<LT> extends FastApiContext {
     }
 }
 
-// --- [DELETED] ---
-// --- FastMetaClient, FastMetaServer, ServerHandler, ServerConnection ---
-// --- [DELETED] ---
+// =============================================================================================
+// SECTION 7.6: REMOTE API FUTURE (Восстановлено из Git-версии)
+// =============================================================================================
 
-
-// --- RemoteApiFuture Implementation (Port of RemoteApiFuture.java) ---
+/**
+ * RemoteApiFuture Implementation (Port of RemoteApiFuture.java)
+ * (Восстановлено из Git-версии, так как было удалено)
+ */
 export class RemoteApiFuture<T extends RemoteApi> {
     private readonly queue: ConcurrentLinkedQueue_C<ABiConsumer<T, AFuture>> = new ConcurrentLinkedQueue_C();
     private readonly permanent: Set<ABiConsumer<T, AFuture>> = new Set();

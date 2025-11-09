@@ -27,9 +27,9 @@ import { MessageNode } from './aether_client_message';
 
 // Включаем логгирование в консоль
 Log.printConsoleColored((node: LNode) => {
-    // Фильтруем слишком частые сообщения 'TRACE'
-    const level = node.getLevel();
-    return level !== 'TRACE';
+//     const level = node.getLevel();
+//     return level !== 'TRACE';
+    return true;
 });
 
 
@@ -94,11 +94,6 @@ describe('PointToPointCommunication', () => {
 
         Log.info(`Clients registered: uid1: $uid1 uid2: $uid2`,{uid1:uid1,uid2:uid2});
 
-        // --- УДАЛЕНО ---
-        // setupP2PEnvironment(client1, uid2, 1);
-        // setupP2PEnvironment(client2, uid1, 2);
-        // Клиенты теперь сами найдут друг друга
-
         const checkReceiveMessage = AFuture.make();
         const message = new Uint8Array([1, 2, 3, 4]);
 
@@ -158,7 +153,6 @@ describe('PointToPointCommunication', () => {
         const message = new Uint8Array([1, 2, 3, 4]);
         const messageBack = new Uint8Array([1, 1, 1, 1]);
 
-        // Client 2: Слушаем создание стрима (эквивалент onClientStream в Java)
         client2.onClientStreamCreated.add((streamNode: MessageNode) => {
             // Нас интересует только стрим от client1
             if (streamNode.consumerUUID.equals(uid1)) {
@@ -172,11 +166,8 @@ describe('PointToPointCommunication', () => {
             }
         });
 
-        // Client 1: Слушаем создание стрима
         client1.onClientStreamCreated.add((streamNode: MessageNode) => {
-            // Нас интересует только стрим от client2
             if (streamNode.consumerUUID.equals(uid2)) {
-                // Слушаем входящие данные (ответ)
                 streamNode.bufferIn.add((msg: { data: Uint8Array }) => {
                     expect(msg.data).toEqual(messageBack);
                     checkReceiveMessageBack.tryDone();
@@ -187,17 +178,13 @@ describe('PointToPointCommunication', () => {
 
         Log.info("START two clients for p2p and back!");
 
-        // Client 1: Получаем MessageNode и отправляем
         const chToC2 = client1.getMessageNode(uid2);
         const sendFuture = chToC2.send(message, AFuture.make());
 
-        // Ждем ответа
         await checkReceiveMessageBack.toPromise(15000);
         await sendFuture.toPromise(5000);
 
         Log.info("TEST IS DONE!");
-
-        // Очистка в afterEach
     }, 45000);
 
 

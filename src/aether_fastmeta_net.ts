@@ -638,7 +638,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
                 const originalReadPos = this.receiveBuffer.getReadPos();
                 let payloadSize = 0;
                 try {
-                    payloadSize = DeserializerPackNumber.INSTANCE.put(this.receiveBuffer);
+                    payloadSize = Number(DeserializerPackNumber.INSTANCE.put(this.receiveBuffer));
                 } catch (e) {
                     this.receiveBuffer.setReadPos(originalReadPos);
                     Log.trace("Waiting for more data to read frame length.");

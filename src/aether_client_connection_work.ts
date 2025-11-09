@@ -1,13 +1,35 @@
+// --- НАЧАЛО ФАЙЛА aether_client_connection_work.ts ---
+
 import { Connection, getUriFromServerDescriptor } from './aether_client_connection_base';
-import { AetherCloudClient } from './aether_client';
+import { AetherCloudClient, ClientTask } from './aether_client'; // ClientTask теперь импортируется
 import { AString } from './aether_astring';
-import { AccessGroup, AccessCheckResult, AetherCodec, AuthorizedApi, AuthorizedApiRemote, ClientApiSafe, ClientApiUnsafe, Cloud, LoginApi, LoginApiRemote, LoginClientStream, LoginStream, Message, ServerDescriptor, UUIDAndCloud } from './aether_api';
+import {
+    AccessGroup,
+    AccessCheckResult,
+    AetherCodec,
+    AuthorizedApi,
+    AuthorizedApiRemote,
+    ClientApiSafe,
+    ClientApiUnsafe,
+    Cloud,
+    LoginApi,
+    LoginApiRemote,
+    LoginClientStream,
+    LoginStream,
+    Message,
+    ServerDescriptor,
+    UUIDAndCloud,
+    AccessCheckPair,
+    ClientApiStream,
+    ServerApiByUid,
+} from './aether_api';
 import { AtomicLong, AtomicReference, ClientApiException, ClientStartException, UUID } from './aether_types';
-import { AFuture } from './aether_future';
+import { AFuture, ARFuture } from './aether_future';
 import { Log } from './aether_logging';
 import { FastApiContext, RemoteApiFuture } from './aether_fastmeta';
 import { CryptoEngine } from './aether_crypto';
 import { RU } from './aether_utils';
+import { MessageNode } from './aether_client_message'; // <-- ДОБАВЛЕН ИМПОРТ
 
 
 /**
@@ -19,30 +41,136 @@ class MyClientApiSafe implements ClientApiSafe {
     constructor(client: AetherCloudClient) {
         this.client = client;
     }
-    sendAccessCheckResults(results: AccessCheckResult[]): AFuture {
-        throw new Error('Method not implemented.');
-    }
-    sendAllAccessedClients(uid: UUID, accessedClients: UUID[]): AFuture {
-        throw new Error('Method not implemented.');
-    }
-    removeAccessGroupsFromClient(uid: UUID, groups: bigint[]): AFuture {
-        throw new Error('Method not implemented.');
-    }
-    addAccessGroupsToClient(uid: UUID, groups: bigint[]): AFuture {
-        throw new Error('Method not implemented.');
-    }
-    removeItemsFromAccessGroup(id: bigint, groups: UUID[]): AFuture {
-        throw new Error('Method not implemented.');
-    }
-    addItemsToAccessGroup(id: bigint, groups: UUID[]): AFuture {
-        throw new Error('Method not implemented.');
-    }
-    sendAccessGroupForClient(uid: UUID, groups: bigint[]): AFuture {
-        throw new Error('Method not implemented.');
-    }
+
+    // --- Логика AccessGroup (портировано и ИСПРАВЛЕНО) ---
+
     sendAccessGroups(groups: AccessGroup[]): AFuture {
-        throw new Error('Method not implemented.');
+        Log.debug(`Received ${groups.length} AccessGroups`, { component: "MyClientApiSafe" });
+        for (const group of groups) {
+            if (group) {
+                this.client.accessGroups.putResolved(group.getId(), group);
+            }
+        }
+        return AFuture.of();
     }
+
+    sendAccessGroupForClient(uid: UUID, groups: bigint[]): AFuture {
+        Log.debug("Received AccessGroups for client", { component: "MyClientApiSafe", uid: uid.toString().toString() });
+        this.client.clientGroups.putResolved(uid, new Set(groups));
+        return AFuture.of();
+    }
+
+    addItemsToAccessGroup(id: bigint, groups: UUID[]): AFuture {
+        Log.debug("Server confirmed ADD items to group", { component: "MyClientApiSafe", gid: id, count: groups.length });
+        const futures = this.client.accessOperationsAdd.get(id);
+        if (futures) {
+            for (const uid of groups) {
+                const uidStr = uid.toString().toString();
+                const future = futures.get(uidStr);
+                if (future) {
+                    futures.delete(uidStr);
+                    future.tryDone(true);
+                }
+            }
+            if (futures.size === 0) {
+                this.client.accessOperationsAdd.delete(id);
+            }
+        }
+
+        // Обновляем BMap-кэш
+        // *** ИСПРАВЛЕНИЕ (TS7006) ***
+        this.client.accessGroups.getFuture(id).to((group: AccessGroup | null) => { //
+            if (group) {
+                const newUuids = new Set(group.getData());
+                groups.forEach(uid => newUuids.add(uid));
+                // *** ИСПРАВЛЕНИЕ (TS2345) ***
+                // Теперь `newUuids` имеет тип Set<UUID>, `Array.from` вернет UUID[]
+                const newGroup = new AccessGroup(group.getOwner(), group.getId(), Array.from(newUuids)); //
+                this.client.accessGroups.putResolved(id, newGroup);
+            }
+        });
+        return AFuture.of();
+    }
+
+    removeItemsFromAccessGroup(id: bigint, groups: UUID[]): AFuture {
+        Log.debug("Server confirmed REMOVE items from group", { component: "MyClientApiSafe", gid: id, count: groups.length });
+        const futures = this.client.accessOperationsRemove.get(id);
+        if (futures) {
+            for (const uid of groups) {
+                const uidStr = uid.toString().toString();
+                const future = futures.get(uidStr);
+                if (future) {
+                    futures.delete(uidStr);
+                    future.tryDone(true);
+                }
+            }
+            if (futures.size === 0) {
+                this.client.accessOperationsRemove.delete(id);
+            }
+        }
+
+        // Обновляем BMap-кэш
+        // *** ИСПРАВЛЕНИЕ (TS7006) ***
+        this.client.accessGroups.getFuture(id).to((group: AccessGroup | null) => { //
+            if (group) {
+                const groupsToRemoveSet = new Set(groups.map(u => u.toString().toString()));
+                // *** ИСПРАВЛЕНИЕ (TS7006) ***
+                const filteredUuids = group.getData().filter((u: UUID) => !groupsToRemoveSet.has(u.toString().toString())); //
+                const newGroup = new AccessGroup(group.getOwner(), group.getId(), filteredUuids);
+                this.client.accessGroups.putResolved(id, newGroup);
+            }
+        });
+        return AFuture.of();
+    }
+
+    addAccessGroupsToClient(uid: UUID, groups: bigint[]): AFuture {
+        Log.debug("Server pushed ADD groups to client", { component: "MyClientApiSafe", uid: uid.toString().toString() });
+        // *** ИСПРАВЛЕНИЕ (TS7006) ***
+        this.client.clientGroups.getFuture(uid).to((existingGroups: Set<bigint> | null) => { //
+            const newGroups = existingGroups ? new Set(existingGroups) : new Set<bigint>();
+            for (const g of groups) newGroups.add(g);
+            // *** ИСПРАВЛЕНИЕ (TS2345) ***
+            // `newGroups` теперь Set<bigint>, ошибка исчезнет
+            this.client.clientGroups.putResolved(uid, newGroups); //
+        });
+        return AFuture.of();
+    }
+
+    removeAccessGroupsFromClient(uid: UUID, groups: bigint[]): AFuture {
+        Log.debug("Server pushed REMOVE groups from client", { component: "MyClientApiSafe", uid: uid.toString().toString() });
+        // *** ИСПРАВЛЕНИЕ (TS7006) ***
+        this.client.clientGroups.getFuture(uid).to((existingGroups: Set<bigint> | null) => { //
+            if (existingGroups) {
+                const newGroups = new Set(existingGroups);
+                for (const g of groups) newGroups.delete(g);
+                // *** ИСПРАВЛЕНИЕ (TS2345) ***
+                // `newGroups` теперь Set<bigint>, ошибка исчезнет
+                this.client.clientGroups.putResolved(uid, newGroups); //
+            }
+        });
+        return AFuture.of();
+    }
+
+    sendAllAccessedClients(uid: UUID, accessedClients: UUID[]): AFuture {
+        Log.debug(`Received ${accessedClients.length} AccessedClients for ${uid.toString().toString()}`, { component: "MyClientApiSafe" });
+        this.client.allAccessedClients.putResolved(uid, new Set(accessedClients));
+        return AFuture.of();
+    }
+
+    sendAccessCheckResults(results: AccessCheckResult[]): AFuture {
+        Log.debug(`Received ${results.length} AccessCheckResults`, { component: "MyClientApiSafe" });
+        for (const result of results) {
+            if (result) {
+                this.client.accessCheckCache.putResolved(
+                    new AccessCheckPair(result.getSourceUid(), result.getTargetUid()),
+                    result.isHasAccess()
+                );
+            }
+        }
+        return AFuture.of();
+    }
+
+    // --- Старая логика ---
 
     changeParent(_uid: UUID): AFuture {
         Log.warn("MyClientApiSafe.changeParent not implemented");
@@ -55,49 +183,47 @@ class MyClientApiSafe implements ClientApiSafe {
     }
 
     newChild(uid: UUID): AFuture {
-        Log.trace("newChild received", {  component: "MyClientApiSafe", uid: uid.toString() });
+        Log.trace("newChild received", { component: "MyClientApiSafe", uid: uid.toString().toString() });
         this.client.onNewChild.fire(uid);
         return AFuture.of();
     }
 
 
     sendMessages(msg: Message[]): AFuture {
-        Log.trace("receive messages", {  component: "MyClientApiSafe", count: msg.length });
+        Log.trace("receive messages", { component: "MyClientApiSafe", count: msg.length });
         for (const m of msg) {
-            const targetUid = m.getUid(); // In DTO, this is the ORIGINAL SENDER from SERVER's perspective for received messages
-            const sourceUid = this.client.getUid(); // This client's UID
-            Log.trace("receive message", { targetUid: targetUid?.toString(), sourceUid: sourceUid?.toString(), dataLen: m.getData().length });
-            if (targetUid) {
-                // When receiving, fire the onMessage event using the SENDER's UID.
-                this.client.onMessage.fire(targetUid, m.getData());
+            const senderUid = m.getUid();
+            Log.trace("receive message", { targetUid: this.client.getUid()?.toString().toString(), sourceUid: senderUid?.toString().toString(), dataLen: m.getData().length });
+            if (senderUid) {
+                this.client.onMessage.fire(senderUid, m.getData());
             } else {
-                Log.warn("Received message with null target/sender UID");
+                Log.warn("Received message with null sender UID");
             }
         }
         return AFuture.of();
     }
 
     sendServerDescriptor(v: ServerDescriptor): AFuture {
-        Log.trace("sendServerDescriptor received", {  component: "MyClientApiSafe", serverId: v.id });
+        Log.trace("sendServerDescriptor received", { component: "MyClientApiSafe", serverId: v.id });
         this.client.servers.putResolved(v.id, v);
         return AFuture.of();
     }
 
     sendServerDescriptors(serverDescriptors: ServerDescriptor[]): AFuture {
-        Log.trace("sendServerDescriptors received", {  component: "MyClientApiSafe", count: serverDescriptors.length });
+        Log.trace("sendServerDescriptors received", { component: "MyClientApiSafe", count: serverDescriptors.length });
         serverDescriptors.forEach(c => this.sendServerDescriptor(c));
         return AFuture.of();
     }
 
 
     sendCloud(uid: UUID, cloud: Cloud): AFuture {
-        Log.trace("sendCloud received", {  component: "MyClientApiSafe", uid: uid.toString() });
+        Log.trace("sendCloud received", { component: "MyClientApiSafe", uid: uid.toString().toString() });
         this.client.setCloud(uid, cloud);
         return AFuture.of();
     }
 
     sendClouds(clouds: UUIDAndCloud[]): AFuture {
-        Log.trace("sendClouds received", {  component: "MyClientApiSafe", count: clouds.length });
+        Log.trace("sendClouds received", { component: "MyClientApiSafe", count: clouds.length });
         clouds.forEach(c => this.sendCloud(c.getUid(), c.getCloud()));
         return AFuture.of();
     }
@@ -124,18 +250,16 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
     basicStatus: boolean = false;
     lastWorkTime: number = 0;
     firstAuth: boolean = false;
-/**
- * Проверяет, есть ли ожидающие сообщения в MessageNodes,
- * связанных с этим соединением.
- */
-private hasPendingMessages(): boolean {
-    for (const m of this.client.messageNodeMap.values()) {
-        if (m.connectionsOut.has(this) && !m.bufferOut.isEmpty()) {
-            return true;
+
+    private hasPendingMessages(): boolean {
+        for (const m of this.client.messageNodeMap.values()) {
+            if (m.connectionsOut.has(this) && !m.bufferOut.isEmpty()) {
+                return true;
+            }
         }
+        return false;
     }
-    return false;
-}
+
     constructor(client: AetherCloudClient, s: ServerDescriptor) {
         const uri = getUriFromServerDescriptor(s, AetherCodec.WS);
         if (!uri) {
@@ -157,24 +281,33 @@ private hasPendingMessages(): boolean {
         this.apiSafeCtx = new FastApiContext();
 
         this.apiSafeCtx.flush = (sendFuture: AFuture): void => {
-            Log.trace("apiSafeCtx.flush initiated", { component: "ConnectionWorkFlush", uri: this.uri });
+//             Log.trace("apiSafeCtx.flush initiated", { component: "ConnectionWorkFlush", uri: this.uri });
+
+            const hasBMapRequests = this.client.clouds.isRequestsFor(this as unknown as object) ||
+                this.client.servers.isRequestsFor(this as unknown as object) ||
+                this.client.clientGroups.isRequestsFor(this as unknown as object) ||
+                this.client.accessGroups.isRequestsFor(this as unknown as object) ||
+                this.client.allAccessedClients.isRequestsFor(this as unknown as object) ||
+                this.client.accessCheckCache.isRequestsFor(this as unknown as object);
+
             if (this.remoteApiFutureAuth.isEmpty() &&
-                !client.clouds.isRequestsFor(this as unknown as object) &&
-                !client.servers.isRequestsFor(this as unknown as object)
-                /* && !this.hasPendingMessages() */ // <--- ЭТА ПРОВЕРКА ВЫЗЫВАЛА DEADLOCK
-            ){
-                Log.trace("apiSafeCtx.flush: Nothing to send.");
+                !hasBMapRequests &&
+                !this.hasPendingMessages() &&
+                this.client.accessOperationsAdd.size === 0 &&
+                this.client.accessOperationsRemove.size === 0 &&
+                this.client.authTasks.isEmpty() &&
+                this.client.clientTasks.isEmpty()
+            ) {
+//                 Log.trace("apiSafeCtx.flush: Nothing to send.");
                 sendFuture.tryDone();
                 return;
             }
 
             if (!this.connectFuture.isDone()) {
-//                 Log.warn("apiSafeCtx.flush: Root connection not established yet. Skipping flush.");
                 sendFuture.error(new ClientApiException("Cannot flush apiSafeCtx: Root connection not ready."));
                 return;
             }
             if (this.connectFuture.isError()) {
-//                 Log.warn("apiSafeCtx.flush: Root connection failed. Skipping flush.");
                 sendFuture.error(new ClientApiException("Cannot flush apiSafeCtx: Root connection failed.", this.connectFuture.getError() ?? undefined));
                 return;
             }
@@ -184,7 +317,7 @@ private hasPendingMessages(): boolean {
             if (!loginApi) {
                 const errMsg = "Root Login API is null even after connectFuture completed successfully during apiSafeCtx flush";
                 Log.error(errMsg);
-                sendFuture.error(new Error(errMsg)); // Should ideally not happen
+                sendFuture.error(new Error(errMsg));
                 return;
             }
 
@@ -192,7 +325,7 @@ private hasPendingMessages(): boolean {
             const dataToSend = this.apiSafeCtx.remoteDataToArrayAsArray();
 
             if (dataToSend.length === 0) {
-                Log.trace("apiSafeCtx.flush: No data generated by remoteApiFutureAuth.executeAll.");
+//                 Log.trace("apiSafeCtx.flush: No data generated by remoteApiFutureAuth.executeAll.");
                 if (!sendFuture.isFinalStatus()) sendFuture.tryDone();
                 return;
             }
@@ -213,48 +346,39 @@ private hasPendingMessages(): boolean {
 
             Log.trace("apiSafeCtx.flush: Calling loginByAlias");
             loginApi.loginByAlias(alias, loginStream);
-            loginApi.flush(sendFuture); // Pass the future along
+            loginApi.flush(sendFuture);
             Log.trace("apiSafeCtx.flush: Root API flushed");
         };
 
         this.connectFuture.to(
             () => { }
-        ).onError((err: Error) => { this.ready.error(err); }).onCancel(() => { this.ready.cancel(); }); // Propagate cancellation
+        ).onError((err: Error) => { this.ready.error(err); }).onCancel(() => { this.ready.cancel(); });
     }
 
-    /**
-     * @description Flushes Cloud resolution requests.
-     * @param a The authorized API remote.
-     */
     private flushCloudRequests(a: AuthorizedApiRemote): void {
         const requestCloud = this.client.clouds.getRequestsFor(this as unknown as object);
         if (requestCloud.length > 0) {
-            Log.trace("Flushing cloud requests", { component: "ConnectionWork", server: this.uri, count: requestCloud.length, uids: requestCloud.map((u: UUID) => u.toString()) });
+            Log.trace("Flushing cloud requests", { component: "ConnectionWork", server: this.uri, count: requestCloud.length, uids: requestCloud.map((u: UUID) => u.toString().toString()) });
             a.resolverClouds(requestCloud);
         }
     }
 
-    /**
-     * @description Flushes ServerDescriptor resolution requests.
-     * @param a The authorized API remote.
-     */
     private flushServerRequests(a: AuthorizedApiRemote): void {
         const requestServersObjects = this.client.servers.getRequestsFor(this as unknown as object);
         if (requestServersObjects.length > 0) {
-            Log.trace("Flushing server requests", { component: "ConnectionWork", server: this.uri, count: requestServersObjects.length, sids: requestServersObjects });
-            a.resolverServers(requestServersObjects);
+            const serverIds = requestServersObjects.map(id => Number(id));
+            Log.trace("Flushing server requests", { component: "ConnectionWork", server: this.uri, count: serverIds.length, sids: serverIds });
+            a.resolverServers(serverIds);
         }
     }
 
-    /**
-     * @description Flushes the outgoing message queue for all associated MessageNodes.
-     * @param a The authorized API remote.
-     * @param sendFuture The future associated with this flush operation.
-     */
     private flushMessageQueue(a: AuthorizedApiRemote, sendFuture: AFuture): boolean {
         let messagesToSend: Message[] | null = null;
         const futuresToComplete: AFuture[] = [];
-        const messagesToRequeue: Map<string, { data: Uint8Array, future: AFuture }[]> = new Map();
+
+        // *** ИСПРАВЛЕНИЕ (TS2304) ***
+        // `MessageNode` теперь импортирован, тип Map корректен
+        const messagesToRequeue: Map<MessageNode, { data: Uint8Array, future: AFuture }[]> = new Map(); //
 
         for (const m of this.client.messageNodeMap.values()) {
             if (m.connectionsOut.has(this)) {
@@ -266,11 +390,11 @@ private hasPendingMessages(): boolean {
                 }
 
                 if (messagesFromNode.length > 0) {
-                    const consumerUuidString = m.consumerUUID.toString(AString.of()).toString();
+                    const consumerUuidString = m.consumerUUID.toString().toString();
                     Log.debug("Preparing messages client to server", {
                         component: "ConnectionWork",
                         server: this.uri,
-                        uidFrom: this.client.getUid(),
+                        uidFrom: this.client.getUid()?.toString().toString(),
                         uidTo: consumerUuidString,
                         count: messagesFromNode.length
                     });
@@ -281,52 +405,41 @@ private hasPendingMessages(): boolean {
                         messagesToSend!.push(new Message(m.consumerUUID, val.data));
                         futuresToComplete.push(val.future);
                     });
-                    messagesToRequeue.set(consumerUuidString, messagesFromNode);
+                    messagesToRequeue.set(m, messagesFromNode);
                 }
             }
         }
 
         if (messagesToSend !== null && messagesToSend.length > 0) {
             Log.trace(`Flushing ${messagesToSend.length} messages`, { component: "ConnectionWork", server: this.uri });
-            a.sendMessages(messagesToSend);
 
-            messageSendFuture.to(
+            sendFuture.to(
                 () => {
-                    Log.trace("Message batch send successful", { component: "ConnectionWork", server: this.uri });
+                    Log.trace("Message batch send successful (sendFuture success)", { component: "ConnectionWork", server: this.uri });
                     futuresToComplete.forEach(f => f.tryDone());
-                    messagesToRequeue.clear();
                 }).onError(
                     (err: Error) => {
-                        Log.error("Failed to send message batch, requeuing", err, { component: "ConnectionWork", server: this.uri });
-                        messagesToRequeue.forEach((msgs, consumerUuidString) => {
-                            const node = this.client.messageNodeMap.get(consumerUuidString);
-                            if (node) {
-                                msgs.reverse().forEach(msg => node.bufferOut.add(msg));
-                            }
+                        Log.error("Failed to send message batch (sendFuture error), requeuing", err, { component: "ConnectionWork", server: this.uri });
+                        messagesToRequeue.forEach((msgs, node) => {
+                            msgs.reverse().forEach(msg => node.bufferOut.add(msg));
                             msgs.forEach(msg => msg.future.error(err));
                         });
-                        if (!sendFuture.isFinalStatus()) sendFuture.error(err);
                     }
                 ).onCancel(() => {
-                    Log.warn("Message batch sending cancelled, requeuing", { component: "ConnectionWork", server: this.uri });
-                    messagesToRequeue.forEach((msgs, consumerUuidString) => {
-                        const node = this.client.messageNodeMap.get(consumerUuidString);
-                        if (node) {
-                            msgs.reverse().forEach(msg => node.bufferOut.add(msg));
-                        }
+                    Log.warn("Message batch sending cancelled (sendFuture cancel), requeuing", { component: "ConnectionWork", server: this.uri });
+                    messagesToRequeue.forEach((msgs, node) => {
+                        msgs.reverse().forEach(msg => node.bufferOut.add(msg));
                         msgs.forEach(msg => msg.future.cancel());
                     });
-                    if (!sendFuture.isFinalStatus()) sendFuture.cancel();
                 });
+
+            a.sendMessages(messagesToSend);
+
             return true;
         }
         return false;
     }
 
-    /**
-     * @description Sends the initial ping if this is the first authentication.
-     * @param a The authorized API remote.
-     */
     private flushPing(a: AuthorizedApiRemote): void {
         if (!this.firstAuth) {
             Log.trace("Sending initial ping", { component: "ConnectionWork", server: this.uri });
@@ -338,7 +451,7 @@ private hasPendingMessages(): boolean {
                     if (!this.ready.isDone()) this.ready.tryDone();
                 }).onError(
                     (err: Error) => {
-                        Log.warn("Initial ping failed",  { component: "ConnectionWork", server: this.uri });
+                        Log.warn("Initial ping failed", { component: "ConnectionWork", server: this.uri, error: err.message });
                         if (!this.ready.isDone()) this.ready.tryError(err);
                         this.firstAuth = false;
                     }
@@ -346,21 +459,73 @@ private hasPendingMessages(): boolean {
         }
     }
 
-    /**
-     * @description Flushes background requests (cloud/server resolution, messages, ping) via the AuthorizedApi.
-     * @param a The authorized API remote.
-     * @param sendFuture The future associated with this flush operation.
-     */
     private flushBackgroundRequests(a: AuthorizedApiRemote, sendFuture: AFuture): void {
         try {
+            // === 1. BMap Resolution Requests ===
             this.flushCloudRequests(a);
             this.flushServerRequests(a);
+
+            const requestClientGroups = this.client.clientGroups.getRequestsFor(this as unknown as object);
+            if (requestClientGroups.length > 0) {
+                a.requestAccessGroupsForClients(requestClientGroups);
+            }
+
+            const requestAccessGroups = this.client.accessGroups.getRequestsFor(this as unknown as object);
+            if (requestAccessGroups.length > 0) {
+                a.requestAccessGroupsItems(requestAccessGroups);
+            }
+
+            const requestAllAccessed = this.client.allAccessedClients.getRequestsFor(this as unknown as object);
+            if (requestAllAccessed.length > 0) {
+                a.requestAllAccessedClients(requestAllAccessed);
+            }
+
+            const requestAccessCheck = this.client.accessCheckCache.getRequestsFor(this as unknown as object);
+            if (requestAccessCheck.length > 0) {
+                a.requestAccessCheck(requestAccessCheck);
+            }
+
+            // === 2. Mutation Requests (Access Group Add/Remove) ===
+            for (const [groupId, groupMap] of this.client.accessOperationsAdd.entries()) {
+                const uidsToAdd = Array.from(groupMap.keys()).map(s => UUID.fromString(s));
+                if (uidsToAdd.length > 0) {
+                    Log.debug("Flushing ADD request", { gid: groupId, uids: uidsToAdd.map(u => u.toString().toString()) });
+                    a.addItemsToAccessGroup(groupId, uidsToAdd);
+                }
+            }
+
+            for (const [groupId, groupMap] of this.client.accessOperationsRemove.entries()) {
+                const uidsToRemove = Array.from(groupMap.keys()).map(s => UUID.fromString(s));
+                if (uidsToRemove.length > 0) {
+                    Log.debug("Flushing REMOVE request", { gid: groupId, uids: uidsToRemove.map(u => u.toString().toString()) });
+                    a.removeItemsFromAccessGroup(groupId, uidsToRemove);
+                }
+            }
+
+            // === 3. Task Queues (Auth & Client) ===
+            let authTask;
+            while ((authTask = this.client.authTasks.poll())) {
+                authTask(a);
+            }
+
+            let clientTask: ClientTask | undefined;
+            while ((clientTask = this.client.clientTasks.poll())) {
+                const task = clientTask;
+                a.client(task.uid, ClientApiStream.fromRemoteConsumer(this.apiSafeCtx, (api) => {
+                    task.task(api as unknown as ServerApiByUid);
+                }));
+            }
+
+            // === 4. Message Stream Logic ===
             const messagesSent = this.flushMessageQueue(a, sendFuture);
+
+            // === 5. Ping Logic ===
             this.flushPing(a);
 
             if (!messagesSent && !sendFuture.isFinalStatus()) {
                 sendFuture.tryDone();
             }
+
         } catch (e) {
             Log.error("Error during flushBackgroundRequests", e as Error, { component: "ConnectionWork", server: this.uri });
             if (!sendFuture.isFinalStatus()) sendFuture.error(e as Error);
@@ -368,18 +533,12 @@ private hasPendingMessages(): boolean {
     }
 
 
-    /**
-     * Handles incoming `sendSafeApiDataMulti` calls (currently unsupported).
-     */
     sendSafeApiDataMulti(_backId: number, _data: LoginClientStream): AFuture {
         const err = new Error("UnsupportedOperationException: sendSafeApiDataMulti is not supported in TS client");
         Log.error("UnsupportedOperationException", err);
         return AFuture.ofThrow(err);
     }
 
-    /**
-     * Handles incoming `sendSafeApiData` calls, decrypts the stream, and processes commands.
-     */
     sendSafeApiData(data: LoginClientStream): AFuture {
         const future = AFuture.make();
         try {
@@ -394,38 +553,23 @@ private hasPendingMessages(): boolean {
         return future;
     }
 
-    /**
-     * Gets the ServerDescriptor associated with this connection.
-     */
     public getServerDescriptor(): ServerDescriptor {
         return this.serverDescriptor;
     }
 
-    /**
-     * Returns a string representation of the connection.
-     */
     override toString(): string {
         const uri = getUriFromServerDescriptor(this.serverDescriptor, AetherCodec.WS) ?? `serverID=${this.serverDescriptor.id}`;
         return `work(${uri})`;
     }
 
-    /**
-     * Sets the basic status flag (application-specific meaning).
-     */
     public setBasic(basic: boolean): void {
         this.basicStatus = basic;
     }
 
-    /**
-     * Calculates the time elapsed since the last successful ping response.
-     */
     public lifeTime(): number {
         return RU.time() - this.lastBackPing.get();
     }
-
-    /**
-     * Performs scheduled work, typically flushing the connection if needed and not already processing.
-     */
+    private logTime = 0;
     public scheduledWork(): void {
         const t = RU.time();
         const timeSinceLastPing = t - this.lastBackPing.get();
@@ -433,8 +577,10 @@ private hasPendingMessages(): boolean {
         if ((t - this.lastWorkTime < pingInterval && timeSinceLastPing < pingInterval * 3) || !this.inProcess.compareAndSet(false, true)) {
             return;
         }
-
-        Log.trace("Executing scheduledWork (flush)", { component: "ConnectionWork", server: this.uri });
+        if (RU.time() - this.logTime > 1000) {
+            this.logTime = RU.time();
+            Log.trace("Executing scheduledWork (flush)", { component: "ConnectionWork", server: this.uri });
+        }
         this.lastWorkTime = t;
         const f = AFuture.make();
         f.addListener(() => this.inProcess.set(false));
@@ -443,9 +589,6 @@ private hasPendingMessages(): boolean {
         this.apiSafeCtx.flush(f);
     }
 
-    /**
-     * Immediately attempts to flush the connection if not already processing.
-     */
     public flush(): void {
         if (!this.inProcess.compareAndSet(false, true)) {
             Log.trace("Flush skipped: Already in process", { component: "ConnectionWork" });
@@ -466,8 +609,10 @@ private hasPendingMessages(): boolean {
         this.lastWorkTime = RU.time();
         const f = AFuture.make();
         f.addListener(() => this.inProcess.set(false));
-        f.timeoutError(5, `explicit flush timeout on ${this.uri}`); // Shorter timeout
+        f.timeoutError(5, `explicit flush timeout on ${this.uri}`);
 
         this.apiSafeCtx.flush(f);
     }
 }
+
+// --- КОНЕЦ ФАЙЛА aether_client_connection_work.ts ---

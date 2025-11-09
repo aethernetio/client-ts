@@ -280,7 +280,7 @@ class SodiumSymmetricEngine implements CryptoEngine {
         const output = new Uint8Array(encryptedAndTag.length + SodiumSymmetricEngine.NONCE_LEN);
         output.set(encryptedAndTag, 0);
         output.set(nonceBuf, encryptedAndTag.length);
-
+        Log.trace("encrypt sym $data1 -> $data2",{data1:data,data2:output, key:this.key});
         return output;
     }
 
@@ -302,13 +302,15 @@ class SodiumSymmetricEngine implements CryptoEngine {
         const cipherTagBuf = data.slice(0, nonceStart);
 
         try {
-            return sodium.crypto_aead_chacha20poly1305_decrypt(
+            let res = sodium.crypto_aead_chacha20poly1305_decrypt(
                 null, // nsec (должен быть null)
                 cipherTagBuf,
                 new Uint8Array(0), // ad
                 nonceBuf,          // nonce (8 bytes)
                 this.key.getData() // key
             );
+            Log.trace("decrypt sym $data1 -> $data2",{data1:data,data2:res, key:this.key});
+            return res;
         } catch (e) {
             console.error("Symmetric decryption failed:", {
                 dataLength: data.length,
@@ -372,7 +374,9 @@ class SodiumAsymmetricEngine implements CryptoEngine {
         }
 
         try {
-            return sodium.crypto_box_seal(dataBytes, publicKeyData);
+            let result = sodium.crypto_box_seal(dataBytes, publicKeyData);
+            Log.trace("encrypt asym $data1 -> $data2",{data1:dataBytes,data2:result, skey:this.privateKey,pkey:this.publicKey});
+            return result;
         } catch (e) {
             console.error("Asymmetric encryption failed:", {
                 dataLength: dataBytes.length,
@@ -385,7 +389,6 @@ class SodiumAsymmetricEngine implements CryptoEngine {
     }
 
     decrypt(dataBytes: Uint8Array): Uint8Array {
-        // ДЛЯ ДЕШИФРОВАНИЯ НУЖЕН ПРИВАТНЫЙ КЛЮЧ
         if (this.privateKey === null) {
             throw new Error("This engine is not configured with a private key for decryption");
         }
@@ -408,7 +411,9 @@ class SodiumAsymmetricEngine implements CryptoEngine {
         }
 
         try {
-            return sodium.crypto_box_seal_open(dataBytes, publicKeyData, privateKeyData);
+            let result = sodium.crypto_box_seal_open(dataBytes, publicKeyData, privateKeyData);
+            Log.trace("decrypt asym $data1 -> $data2",{data1:dataBytes,data2:result, skey:this.privateKey,pkey:this.publicKey});
+            return result;
         } catch (e) {
             console.error("Asymmetric decryption failed:", {
                 dataLength: dataBytes.length,
@@ -487,7 +492,6 @@ export class SodiumCryptoProvider implements CryptoProvider {
 
     // [FIX] Определяем KDF_CONTEXT как строку и как байты
     private static readonly SODIUM_KDF_CONTEXT_STRING = "_aether_";
-    private static readonly SODIUM_KDF_CONTEXT_BYTES = new TextEncoder().encode(SodiumCryptoProvider.SODIUM_KDF_CONTEXT_STRING);
 
     public constructor() {
         // Конструктор оставляем пустым, инициализация через applySodium

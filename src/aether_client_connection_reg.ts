@@ -1,3 +1,7 @@
+// =============================================================================================
+// FILE: aether_client_connection_reg.ts (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+// =============================================================================================
+
 import {
     AetherCloudClient,
 } from './aether_client';
@@ -81,16 +85,14 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
         this.tempKeyCp = this.tempKey.toCryptoEngine();
 
         // 3. Initialize stub contexts
+        // =================================================================
+        // ИСПРАВЛЕНИЕ: (как в Java)
+        // Убраны заглушки .flush(). Эти контексты используются только
+        // как буферы для fromRemoteConsumer, который не вызывает .flush().
+        // =================================================================
         this.ctxSafe = new FastApiContext();
-        this.ctxSafe.flush = (sendFuture: AFuture) => {
-            Log.trace("ctxSafe flush stub called", { component: "ConnectionReg" });
-            sendFuture.tryDone();
-        };
         this.globalCtx = new FastApiContext();
-        this.globalCtx.flush = (sendFuture: AFuture) => {
-            Log.trace("globalCtx flush stub called", { component: "ConnectionReg" });
-            sendFuture.tryDone();
-        };
+
 
         // 4. NOTE: Connection is *not* started here.
         // The AetherCloudClient must call registration()

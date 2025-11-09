@@ -66,7 +66,7 @@ export abstract class IPAddress implements ToString  {
      */
     public static staticHashCode(obj: IPAddress | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -78,11 +78,7 @@ export abstract class IPAddress implements ToString  {
     public static staticEquals(v1: IPAddress | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof IPAddress)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -96,12 +92,7 @@ export abstract class IPAddress implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('IPAddress(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -123,7 +114,7 @@ export abstract class Key implements ToString  {
      */
     public static staticHashCode(obj: Key | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -135,11 +126,7 @@ export abstract class Key implements ToString  {
     public static staticEquals(v1: Key | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof Key)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -153,12 +140,7 @@ export abstract class Key implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('Key(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -184,7 +166,7 @@ export abstract class KeyAsymmetric extends Key implements ToString  {
      */
     public static staticHashCode(obj: KeyAsymmetric | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -196,11 +178,7 @@ export abstract class KeyAsymmetric extends Key implements ToString  {
     public static staticEquals(v1: KeyAsymmetric | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof KeyAsymmetric)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -214,12 +192,7 @@ export abstract class KeyAsymmetric extends Key implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('KeyAsymmetric(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -245,7 +218,7 @@ export abstract class KeyAsymmetricPrivate extends KeyAsymmetric implements ToSt
      */
     public static staticHashCode(obj: KeyAsymmetricPrivate | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -257,11 +230,7 @@ export abstract class KeyAsymmetricPrivate extends KeyAsymmetric implements ToSt
     public static staticEquals(v1: KeyAsymmetricPrivate | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof KeyAsymmetricPrivate)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -275,12 +244,7 @@ export abstract class KeyAsymmetricPrivate extends KeyAsymmetric implements ToSt
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('KeyAsymmetricPrivate(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -306,7 +270,7 @@ export abstract class KeyAsymmetricPublic extends KeyAsymmetric implements ToStr
      */
     public static staticHashCode(obj: KeyAsymmetricPublic | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -318,11 +282,7 @@ export abstract class KeyAsymmetricPublic extends KeyAsymmetric implements ToStr
     public static staticEquals(v1: KeyAsymmetricPublic | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof KeyAsymmetricPublic)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -336,12 +296,7 @@ export abstract class KeyAsymmetricPublic extends KeyAsymmetric implements ToStr
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('KeyAsymmetricPublic(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -367,7 +322,7 @@ export abstract class KeySign extends Key implements ToString  {
      */
     public static staticHashCode(obj: KeySign | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -379,11 +334,7 @@ export abstract class KeySign extends Key implements ToString  {
     public static staticEquals(v1: KeySign | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof KeySign)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -397,12 +348,7 @@ export abstract class KeySign extends Key implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('KeySign(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -428,7 +374,7 @@ export abstract class KeySignPrivate extends KeySign implements ToString  {
      */
     public static staticHashCode(obj: KeySignPrivate | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -440,11 +386,7 @@ export abstract class KeySignPrivate extends KeySign implements ToString  {
     public static staticEquals(v1: KeySignPrivate | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof KeySignPrivate)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -458,12 +400,7 @@ export abstract class KeySignPrivate extends KeySign implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('KeySignPrivate(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -489,7 +426,7 @@ export abstract class KeySignPublic extends KeySign implements ToString  {
      */
     public static staticHashCode(obj: KeySignPublic | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -501,11 +438,7 @@ export abstract class KeySignPublic extends KeySign implements ToString  {
     public static staticEquals(v1: KeySignPublic | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof KeySignPublic)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -519,12 +452,7 @@ export abstract class KeySignPublic extends KeySign implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('KeySignPublic(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -550,7 +478,7 @@ export abstract class KeySymmetric extends Key implements ToString  {
      */
     public static staticHashCode(obj: KeySymmetric | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -562,11 +490,7 @@ export abstract class KeySymmetric extends Key implements ToString  {
     public static staticEquals(v1: KeySymmetric | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof KeySymmetric)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -580,12 +504,7 @@ export abstract class KeySymmetric extends Key implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('KeySymmetric(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -607,7 +526,7 @@ export abstract class PairKeys implements ToString  {
      */
     public static staticHashCode(obj: PairKeys | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -619,11 +538,7 @@ export abstract class PairKeys implements ToString  {
     public static staticEquals(v1: PairKeys | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof PairKeys)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -637,12 +552,7 @@ export abstract class PairKeys implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('PairKeys(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -664,7 +574,7 @@ export abstract class Sign implements ToString  {
      */
     public static staticHashCode(obj: Sign | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -676,11 +586,7 @@ export abstract class Sign implements ToString  {
     public static staticEquals(v1: Sign | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof Sign)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -694,12 +600,7 @@ export abstract class Sign implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('Sign(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -721,7 +622,7 @@ export abstract class Telemetry implements ToString  {
      */
     public static staticHashCode(obj: Telemetry | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -733,11 +634,7 @@ export abstract class Telemetry implements ToString  {
     public static staticEquals(v1: Telemetry | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof Telemetry)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -751,12 +648,7 @@ export abstract class Telemetry implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('Telemetry(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -778,7 +670,7 @@ export abstract class WorkProofConfig implements ToString  {
      */
     public static staticHashCode(obj: WorkProofConfig | null | undefined): number  {
         if (obj === null || obj === undefined) return 0;
-        return obj.hashCode();
+        return (obj.constructor as any).META.metaHashCode(obj);
         
     }
     /**
@@ -790,11 +682,7 @@ export abstract class WorkProofConfig implements ToString  {
     public static staticEquals(v1: WorkProofConfig | null | undefined, v2: any | null | undefined): boolean  {
         if (v1 === v2) return true;
         if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof WorkProofConfig)) return false;
-        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;
-        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;
-        if (t1 === -1 || t1 !== t2) return false;
-        return (v1.constructor as any).staticEquals(v1, v2);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
         
     }
     /**
@@ -808,12 +696,7 @@ export abstract class WorkProofConfig implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public toString(result: AString): AString  {
-        result.add('WorkProofConfig(');
-        result.add(')');
-        return result;
-        
-    }
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -848,11 +731,7 @@ export class AccessCheckPair implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: AccessCheckPair | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.sourceUid);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.targetUid);
-        return hash | 0;
+        return AccessCheckPair.META.metaHashCode(obj);
         
     }
     /**
@@ -862,12 +741,7 @@ export class AccessCheckPair implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: AccessCheckPair | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof AccessCheckPair)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.sourceUid, v2.sourceUid)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.targetUid, v2.targetUid)) return false;
-        return true;
+        return AccessCheckPair.META.metaEquals(v1, v2);
         
     }
     /**
@@ -888,11 +762,7 @@ export class AccessCheckPair implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('AccessCheckPair(');
-        result.add('sourceUid:').add(this.sourceUid);
-        result.add(', ');
-        result.add('targetUid:').add(this.targetUid);
-        result.add(')');
+        AccessCheckPair.META.metaToString(this, result);
         return result;
         
     }
@@ -937,12 +807,7 @@ export class AccessCheckResult implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: AccessCheckResult | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.sourceUid);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.targetUid);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeBoolean.hashCode(obj.hasAccess);
-        return hash | 0;
+        return AccessCheckResult.META.metaHashCode(obj);
         
     }
     /**
@@ -952,13 +817,7 @@ export class AccessCheckResult implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: AccessCheckResult | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof AccessCheckResult)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.sourceUid, v2.sourceUid)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.targetUid, v2.targetUid)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeBoolean.equals(v1.hasAccess, v2.hasAccess)) return false;
-        return true;
+        return AccessCheckResult.META.metaEquals(v1, v2);
         
     }
     /**
@@ -979,13 +838,7 @@ export class AccessCheckResult implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('AccessCheckResult(');
-        result.add('sourceUid:').add(this.sourceUid);
-        result.add(', ');
-        result.add('targetUid:').add(this.targetUid);
-        result.add(', ');
-        result.add('hasAccess:').add(this.hasAccess);
-        result.add(')');
+        AccessCheckResult.META.metaToString(this, result);
         return result;
         
     }
@@ -1035,12 +888,7 @@ export class AccessGroup implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: AccessGroup | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.owner);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeBigInt.hashCode(obj.id);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayObject(FastMeta.hashCodeEqualsHelper.typeUUID.hashCode, FastMeta.hashCodeEqualsHelper.typeUUID.equals).hashCode(obj.data);
-        return hash | 0;
+        return AccessGroup.META.metaHashCode(obj);
         
     }
     /**
@@ -1050,13 +898,7 @@ export class AccessGroup implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: AccessGroup | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof AccessGroup)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.owner, v2.owner)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeBigInt.equals(v1.id, v2.id)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayObject(FastMeta.hashCodeEqualsHelper.typeUUID.hashCode, FastMeta.hashCodeEqualsHelper.typeUUID.equals).equals(v1.data, v2.data)) return false;
-        return true;
+        return AccessGroup.META.metaEquals(v1, v2);
         
     }
     /**
@@ -1077,13 +919,7 @@ export class AccessGroup implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('AccessGroup(');
-        result.add('owner:').add(this.owner);
-        result.add(', ');
-        result.add('id:').add(this.id);
-        result.add(', ');
-        result.add('data:').add(this.data);
-        result.add(')');
+        AccessGroup.META.metaToString(this, result);
         return result;
         
     }
@@ -1122,11 +958,7 @@ export class ClientInfo implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: ClientInfo | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.uid);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.cloud);
-        return hash | 0;
+        return ClientInfo.META.metaHashCode(obj);
         
     }
     /**
@@ -1136,12 +968,7 @@ export class ClientInfo implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: ClientInfo | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof ClientInfo)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.uid, v2.uid)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.cloud, v2.cloud)) return false;
-        return true;
+        return ClientInfo.META.metaEquals(v1, v2);
         
     }
     /**
@@ -1162,11 +989,7 @@ export class ClientInfo implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('ClientInfo(');
-        result.add('uid:').add(this.uid);
-        result.add(', ');
-        result.add('cloud:').add(this.cloud);
-        result.add(')');
+        ClientInfo.META.metaToString(this, result);
         return result;
         
     }
@@ -1296,21 +1119,7 @@ export class ClientStateForSave implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: ClientStateForSave | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayObject(FastMeta.hashCodeEqualsHelper.typeString.hashCode, FastMeta.hashCodeEqualsHelper.typeString.equals).hashCode(obj.registrationUri);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayObject(ServerDescriptor.staticHashCode, ServerDescriptor.staticEquals).hashCode(obj.servers);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayObject(ClientInfo.staticHashCode, ClientInfo.staticEquals).hashCode(obj.clients);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayObject(Key.staticHashCode, Key.staticEquals).hashCode(obj.rootSigners);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeString.hashCode(obj.cryptoLib);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeBigInt.hashCode(obj.pingDuration);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.parentUid);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeNumber.hashCode(obj.countServersForRegistration);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeBigInt.hashCode(obj.timeoutForConnectToRegistrationServer);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.uid);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.alias);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.masterKey);
-        return hash | 0;
+        return ClientStateForSave.META.metaHashCode(obj);
         
     }
     /**
@@ -1320,22 +1129,7 @@ export class ClientStateForSave implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: ClientStateForSave | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof ClientStateForSave)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayObject(FastMeta.hashCodeEqualsHelper.typeString.hashCode, FastMeta.hashCodeEqualsHelper.typeString.equals).equals(v1.registrationUri, v2.registrationUri)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayObject(ServerDescriptor.staticHashCode, ServerDescriptor.staticEquals).equals(v1.servers, v2.servers)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayObject(ClientInfo.staticHashCode, ClientInfo.staticEquals).equals(v1.clients, v2.clients)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayObject(Key.staticHashCode, Key.staticEquals).equals(v1.rootSigners, v2.rootSigners)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeString.equals(v1.cryptoLib, v2.cryptoLib)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeBigInt.equals(v1.pingDuration, v2.pingDuration)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.parentUid, v2.parentUid)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeNumber.equals(v1.countServersForRegistration, v2.countServersForRegistration)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeBigInt.equals(v1.timeoutForConnectToRegistrationServer, v2.timeoutForConnectToRegistrationServer)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.uid, v2.uid)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.alias, v2.alias)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.masterKey, v2.masterKey)) return false;
-        return true;
+        return ClientStateForSave.META.metaEquals(v1, v2);
         
     }
     /**
@@ -1356,31 +1150,7 @@ export class ClientStateForSave implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('ClientStateForSave(');
-        result.add('registrationUri:').add(this.registrationUri);
-        result.add(', ');
-        result.add('servers:').add(this.servers);
-        result.add(', ');
-        result.add('clients:').add(this.clients);
-        result.add(', ');
-        result.add('rootSigners:').add(this.rootSigners);
-        result.add(', ');
-        result.add('cryptoLib:').add(this.cryptoLib);
-        result.add(', ');
-        result.add('pingDuration:').add(this.pingDuration);
-        result.add(', ');
-        result.add('parentUid:').add(this.parentUid);
-        result.add(', ');
-        result.add('countServersForRegistration:').add(this.countServersForRegistration);
-        result.add(', ');
-        result.add('timeoutForConnectToRegistrationServer:').add(this.timeoutForConnectToRegistrationServer);
-        result.add(', ');
-        result.add('uid:').add(this.uid);
-        result.add(', ');
-        result.add('alias:').add(this.alias);
-        result.add(', ');
-        result.add('masterKey:').add(this.masterKey);
-        result.add(')');
+        ClientStateForSave.META.metaToString(this, result);
         return result;
         
     }
@@ -1416,10 +1186,7 @@ export class Cloud implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: Cloud | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayObject(FastMeta.hashCodeEqualsHelper.typeNumber.hashCode, FastMeta.hashCodeEqualsHelper.typeNumber.equals).hashCode(obj.data);
-        return hash | 0;
+        return Cloud.META.metaHashCode(obj);
         
     }
     /**
@@ -1429,11 +1196,7 @@ export class Cloud implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: Cloud | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof Cloud)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayObject(FastMeta.hashCodeEqualsHelper.typeNumber.hashCode, FastMeta.hashCodeEqualsHelper.typeNumber.equals).equals(v1.data, v2.data)) return false;
-        return true;
+        return Cloud.META.metaEquals(v1, v2);
         
     }
     /**
@@ -1454,9 +1217,7 @@ export class Cloud implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('Cloud(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        Cloud.META.metaToString(this, result);
         return result;
         
     }
@@ -1495,11 +1256,7 @@ export class CoderAndPort implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: CoderAndPort | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeString.hashCode(obj.codec);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeNumber.hashCode(obj.port);
-        return hash | 0;
+        return CoderAndPort.META.metaHashCode(obj);
         
     }
     /**
@@ -1509,12 +1266,7 @@ export class CoderAndPort implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: CoderAndPort | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof CoderAndPort)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeString.equals(v1.codec, v2.codec)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeNumber.equals(v1.port, v2.port)) return false;
-        return true;
+        return CoderAndPort.META.metaEquals(v1, v2);
         
     }
     /**
@@ -1535,11 +1287,7 @@ export class CoderAndPort implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('CoderAndPort(');
-        result.add('codec:').add(this.codec);
-        result.add(', ');
-        result.add('port:').add(this.port);
-        result.add(')');
+        CoderAndPort.META.metaToString(this, result);
         return result;
         
     }
@@ -1585,12 +1333,7 @@ export class FinishResultGlobalRegServerApi implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: FinishResultGlobalRegServerApi | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.alias);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.uid);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.cloud);
-        return hash | 0;
+        return FinishResultGlobalRegServerApi.META.metaHashCode(obj);
         
     }
     /**
@@ -1600,13 +1343,7 @@ export class FinishResultGlobalRegServerApi implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: FinishResultGlobalRegServerApi | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof FinishResultGlobalRegServerApi)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.alias, v2.alias)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.uid, v2.uid)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.cloud, v2.cloud)) return false;
-        return true;
+        return FinishResultGlobalRegServerApi.META.metaEquals(v1, v2);
         
     }
     /**
@@ -1627,13 +1364,7 @@ export class FinishResultGlobalRegServerApi implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('FinishResultGlobalRegServerApi(');
-        result.add('alias:').add(this.alias);
-        result.add(', ');
-        result.add('uid:').add(this.uid);
-        result.add(', ');
-        result.add('cloud:').add(this.cloud);
-        result.add(')');
+        FinishResultGlobalRegServerApi.META.metaToString(this, result);
         return result;
         
     }
@@ -1680,10 +1411,7 @@ export class HydrogenCurvePrivate extends KeyAsymmetricPrivate implements ToStri
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: HydrogenCurvePrivate | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return HydrogenCurvePrivate.META.metaHashCode(obj);
         
     }
     /**
@@ -1693,11 +1421,7 @@ export class HydrogenCurvePrivate extends KeyAsymmetricPrivate implements ToStri
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: HydrogenCurvePrivate | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof HydrogenCurvePrivate)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return HydrogenCurvePrivate.META.metaEquals(v1, v2);
         
     }
     /**
@@ -1718,9 +1442,7 @@ export class HydrogenCurvePrivate extends KeyAsymmetricPrivate implements ToStri
         
     }
     public toString(result: AString): AString  {
-        result.add('HydrogenCurvePrivate(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        HydrogenCurvePrivate.META.metaToString(this, result);
         return result;
         
     }
@@ -1767,10 +1489,7 @@ export class HydrogenCurvePublic extends KeyAsymmetricPublic implements ToString
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: HydrogenCurvePublic | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return HydrogenCurvePublic.META.metaHashCode(obj);
         
     }
     /**
@@ -1780,11 +1499,7 @@ export class HydrogenCurvePublic extends KeyAsymmetricPublic implements ToString
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: HydrogenCurvePublic | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof HydrogenCurvePublic)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return HydrogenCurvePublic.META.metaEquals(v1, v2);
         
     }
     /**
@@ -1805,9 +1520,7 @@ export class HydrogenCurvePublic extends KeyAsymmetricPublic implements ToString
         
     }
     public toString(result: AString): AString  {
-        result.add('HydrogenCurvePublic(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        HydrogenCurvePublic.META.metaToString(this, result);
         return result;
         
     }
@@ -1854,10 +1567,7 @@ export class HydrogenSecretBox extends KeySymmetric implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: HydrogenSecretBox | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return HydrogenSecretBox.META.metaHashCode(obj);
         
     }
     /**
@@ -1867,11 +1577,7 @@ export class HydrogenSecretBox extends KeySymmetric implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: HydrogenSecretBox | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof HydrogenSecretBox)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return HydrogenSecretBox.META.metaEquals(v1, v2);
         
     }
     /**
@@ -1892,9 +1598,7 @@ export class HydrogenSecretBox extends KeySymmetric implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('HydrogenSecretBox(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        HydrogenSecretBox.META.metaToString(this, result);
         return result;
         
     }
@@ -1941,10 +1645,7 @@ export class HydrogenSignPrivate extends KeySignPrivate implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: HydrogenSignPrivate | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return HydrogenSignPrivate.META.metaHashCode(obj);
         
     }
     /**
@@ -1954,11 +1655,7 @@ export class HydrogenSignPrivate extends KeySignPrivate implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: HydrogenSignPrivate | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof HydrogenSignPrivate)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return HydrogenSignPrivate.META.metaEquals(v1, v2);
         
     }
     /**
@@ -1979,9 +1676,7 @@ export class HydrogenSignPrivate extends KeySignPrivate implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('HydrogenSignPrivate(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        HydrogenSignPrivate.META.metaToString(this, result);
         return result;
         
     }
@@ -2028,10 +1723,7 @@ export class HydrogenSignPublic extends KeySignPublic implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: HydrogenSignPublic | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return HydrogenSignPublic.META.metaHashCode(obj);
         
     }
     /**
@@ -2041,11 +1733,7 @@ export class HydrogenSignPublic extends KeySignPublic implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: HydrogenSignPublic | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof HydrogenSignPublic)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return HydrogenSignPublic.META.metaEquals(v1, v2);
         
     }
     /**
@@ -2066,9 +1754,7 @@ export class HydrogenSignPublic extends KeySignPublic implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('HydrogenSignPublic(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        HydrogenSignPublic.META.metaToString(this, result);
         return result;
         
     }
@@ -2112,11 +1798,7 @@ export class IPAddressAndPorts implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: IPAddressAndPorts | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.address);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayObject(CoderAndPort.staticHashCode, CoderAndPort.staticEquals).hashCode(obj.coderAndPorts);
-        return hash | 0;
+        return IPAddressAndPorts.META.metaHashCode(obj);
         
     }
     /**
@@ -2126,12 +1808,7 @@ export class IPAddressAndPorts implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: IPAddressAndPorts | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof IPAddressAndPorts)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.address, v2.address)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayObject(CoderAndPort.staticHashCode, CoderAndPort.staticEquals).equals(v1.coderAndPorts, v2.coderAndPorts)) return false;
-        return true;
+        return IPAddressAndPorts.META.metaEquals(v1, v2);
         
     }
     /**
@@ -2152,11 +1829,7 @@ export class IPAddressAndPorts implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('IPAddressAndPorts(');
-        result.add('address:').add(this.address);
-        result.add(', ');
-        result.add('coderAndPorts:').add(this.coderAndPorts);
-        result.add(')');
+        IPAddressAndPorts.META.metaToString(this, result);
         return result;
         
     }
@@ -2192,10 +1865,7 @@ export class IPAddressAndPortsList implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: IPAddressAndPortsList | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayObject(IPAddressAndPorts.staticHashCode, IPAddressAndPorts.staticEquals).hashCode(obj.addresses);
-        return hash | 0;
+        return IPAddressAndPortsList.META.metaHashCode(obj);
         
     }
     /**
@@ -2205,11 +1875,7 @@ export class IPAddressAndPortsList implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: IPAddressAndPortsList | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof IPAddressAndPortsList)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayObject(IPAddressAndPorts.staticHashCode, IPAddressAndPorts.staticEquals).equals(v1.addresses, v2.addresses)) return false;
-        return true;
+        return IPAddressAndPortsList.META.metaEquals(v1, v2);
         
     }
     /**
@@ -2230,9 +1896,7 @@ export class IPAddressAndPortsList implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('IPAddressAndPortsList(');
-        result.add('addresses:').add(this.addresses);
-        result.add(')');
+        IPAddressAndPortsList.META.metaToString(this, result);
         return result;
         
     }
@@ -2279,10 +1943,7 @@ export class IPAddressV4 extends IPAddress implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: IPAddressV4 | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return IPAddressV4.META.metaHashCode(obj);
         
     }
     /**
@@ -2292,11 +1953,7 @@ export class IPAddressV4 extends IPAddress implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: IPAddressV4 | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof IPAddressV4)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return IPAddressV4.META.metaEquals(v1, v2);
         
     }
     /**
@@ -2317,9 +1974,7 @@ export class IPAddressV4 extends IPAddress implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('IPAddressV4(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        IPAddressV4.META.metaToString(this, result);
         return result;
         
     }
@@ -2366,10 +2021,7 @@ export class IPAddressV6 extends IPAddress implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: IPAddressV6 | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return IPAddressV6.META.metaHashCode(obj);
         
     }
     /**
@@ -2379,11 +2031,7 @@ export class IPAddressV6 extends IPAddress implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: IPAddressV6 | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof IPAddressV6)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return IPAddressV6.META.metaEquals(v1, v2);
         
     }
     /**
@@ -2404,9 +2052,7 @@ export class IPAddressV6 extends IPAddress implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('IPAddressV6(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        IPAddressV6.META.metaToString(this, result);
         return result;
         
     }
@@ -2449,11 +2095,7 @@ export class Message implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: Message | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.uid);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return Message.META.metaHashCode(obj);
         
     }
     /**
@@ -2463,12 +2105,7 @@ export class Message implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: Message | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof Message)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.uid, v2.uid)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return Message.META.metaEquals(v1, v2);
         
     }
     /**
@@ -2489,11 +2126,7 @@ export class Message implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('Message(');
-        result.add('uid:').add(this.uid);
-        result.add(', ');
-        result.add('data:').add(this.data);
-        result.add(')');
+        Message.META.metaToString(this, result);
         return result;
         
     }
@@ -2567,16 +2200,7 @@ export class MoneyOperation implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: MoneyOperation | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeBigInt.hashCode(obj.id);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.from);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.to);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeBigInt.hashCode(obj.amount);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeBigInt.hashCode(obj.time);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeBoolean.hashCode(obj.credit);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeString.hashCode(obj.status);
-        return hash | 0;
+        return MoneyOperation.META.metaHashCode(obj);
         
     }
     /**
@@ -2586,17 +2210,7 @@ export class MoneyOperation implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: MoneyOperation | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof MoneyOperation)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeBigInt.equals(v1.id, v2.id)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.from, v2.from)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.to, v2.to)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeBigInt.equals(v1.amount, v2.amount)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeBigInt.equals(v1.time, v2.time)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeBoolean.equals(v1.credit, v2.credit)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeString.equals(v1.status, v2.status)) return false;
-        return true;
+        return MoneyOperation.META.metaEquals(v1, v2);
         
     }
     /**
@@ -2617,21 +2231,7 @@ export class MoneyOperation implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('MoneyOperation(');
-        result.add('id:').add(this.id);
-        result.add(', ');
-        result.add('from:').add(this.from);
-        result.add(', ');
-        result.add('to:').add(this.to);
-        result.add(', ');
-        result.add('amount:').add(this.amount);
-        result.add(', ');
-        result.add('time:').add(this.time);
-        result.add(', ');
-        result.add('credit:').add(this.credit);
-        result.add(', ');
-        result.add('status:').add(this.status);
-        result.add(')');
+        MoneyOperation.META.metaToString(this, result);
         return result;
         
     }
@@ -2678,11 +2278,7 @@ export class PairKeysAsym extends PairKeys implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: PairKeysAsym | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.privateKey);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.publicKey);
-        return hash | 0;
+        return PairKeysAsym.META.metaHashCode(obj);
         
     }
     /**
@@ -2692,12 +2288,7 @@ export class PairKeysAsym extends PairKeys implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: PairKeysAsym | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof PairKeysAsym)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.privateKey, v2.privateKey)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.publicKey, v2.publicKey)) return false;
-        return true;
+        return PairKeysAsym.META.metaEquals(v1, v2);
         
     }
     /**
@@ -2718,11 +2309,7 @@ export class PairKeysAsym extends PairKeys implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('PairKeysAsym(');
-        result.add('privateKey:').add(this.privateKey);
-        result.add(', ');
-        result.add('publicKey:').add(this.publicKey);
-        result.add(')');
+        PairKeysAsym.META.metaToString(this, result);
         return result;
         
     }
@@ -2769,11 +2356,7 @@ export class PairKeysAsymSigned extends PairKeys implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: PairKeysAsymSigned | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.privateKey);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.publicKey);
-        return hash | 0;
+        return PairKeysAsymSigned.META.metaHashCode(obj);
         
     }
     /**
@@ -2783,12 +2366,7 @@ export class PairKeysAsymSigned extends PairKeys implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: PairKeysAsymSigned | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof PairKeysAsymSigned)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.privateKey, v2.privateKey)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.publicKey, v2.publicKey)) return false;
-        return true;
+        return PairKeysAsymSigned.META.metaEquals(v1, v2);
         
     }
     /**
@@ -2809,11 +2387,7 @@ export class PairKeysAsymSigned extends PairKeys implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('PairKeysAsymSigned(');
-        result.add('privateKey:').add(this.privateKey);
-        result.add(', ');
-        result.add('publicKey:').add(this.publicKey);
-        result.add(')');
+        PairKeysAsymSigned.META.metaToString(this, result);
         return result;
         
     }
@@ -2860,11 +2434,7 @@ export class PairKeysSign extends PairKeys implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: PairKeysSign | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.privateKey);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.publicKey);
-        return hash | 0;
+        return PairKeysSign.META.metaHashCode(obj);
         
     }
     /**
@@ -2874,12 +2444,7 @@ export class PairKeysSign extends PairKeys implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: PairKeysSign | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof PairKeysSign)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.privateKey, v2.privateKey)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.publicKey, v2.publicKey)) return false;
-        return true;
+        return PairKeysSign.META.metaEquals(v1, v2);
         
     }
     /**
@@ -2900,11 +2465,7 @@ export class PairKeysSign extends PairKeys implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('PairKeysSign(');
-        result.add('privateKey:').add(this.privateKey);
-        result.add(', ');
-        result.add('publicKey:').add(this.publicKey);
-        result.add(')');
+        PairKeysSign.META.metaToString(this, result);
         return result;
         
     }
@@ -2943,11 +2504,7 @@ export class ServerDescriptor implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: ServerDescriptor | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeNumber.hashCode(obj.id);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.ipAddress);
-        return hash | 0;
+        return ServerDescriptor.META.metaHashCode(obj);
         
     }
     /**
@@ -2957,12 +2514,7 @@ export class ServerDescriptor implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: ServerDescriptor | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof ServerDescriptor)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeNumber.equals(v1.id, v2.id)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.ipAddress, v2.ipAddress)) return false;
-        return true;
+        return ServerDescriptor.META.metaEquals(v1, v2);
         
     }
     /**
@@ -2983,11 +2535,7 @@ export class ServerDescriptor implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('ServerDescriptor(');
-        result.add('id:').add(this.id);
-        result.add(', ');
-        result.add('ipAddress:').add(this.ipAddress);
-        result.add(')');
+        ServerDescriptor.META.metaToString(this, result);
         return result;
         
     }
@@ -3034,10 +2582,7 @@ export class SignAE_ED25519 extends Sign implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: SignAE_ED25519 | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return SignAE_ED25519.META.metaHashCode(obj);
         
     }
     /**
@@ -3047,11 +2592,7 @@ export class SignAE_ED25519 extends Sign implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: SignAE_ED25519 | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof SignAE_ED25519)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return SignAE_ED25519.META.metaEquals(v1, v2);
         
     }
     /**
@@ -3072,9 +2613,7 @@ export class SignAE_ED25519 extends Sign implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('SignAE_ED25519(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        SignAE_ED25519.META.metaToString(this, result);
         return result;
         
     }
@@ -3114,11 +2653,7 @@ export class SignedKey implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: SignedKey | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.key);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.sign);
-        return hash | 0;
+        return SignedKey.META.metaHashCode(obj);
         
     }
     /**
@@ -3128,12 +2663,7 @@ export class SignedKey implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: SignedKey | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof SignedKey)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.key, v2.key)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.sign, v2.sign)) return false;
-        return true;
+        return SignedKey.META.metaEquals(v1, v2);
         
     }
     /**
@@ -3154,11 +2684,7 @@ export class SignedKey implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('SignedKey(');
-        result.add('key:').add(this.key);
-        result.add(', ');
-        result.add('sign:').add(this.sign);
-        result.add(')');
+        SignedKey.META.metaToString(this, result);
         return result;
         
     }
@@ -3205,10 +2731,7 @@ export class SignHYDROGEN extends Sign implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: SignHYDROGEN | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return SignHYDROGEN.META.metaHashCode(obj);
         
     }
     /**
@@ -3218,11 +2741,7 @@ export class SignHYDROGEN extends Sign implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: SignHYDROGEN | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof SignHYDROGEN)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return SignHYDROGEN.META.metaEquals(v1, v2);
         
     }
     /**
@@ -3243,9 +2762,7 @@ export class SignHYDROGEN extends Sign implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('SignHYDROGEN(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        SignHYDROGEN.META.metaToString(this, result);
         return result;
         
     }
@@ -3292,10 +2809,7 @@ export class SodiumChacha20Poly1305 extends KeySymmetric implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: SodiumChacha20Poly1305 | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return SodiumChacha20Poly1305.META.metaHashCode(obj);
         
     }
     /**
@@ -3305,11 +2819,7 @@ export class SodiumChacha20Poly1305 extends KeySymmetric implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: SodiumChacha20Poly1305 | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof SodiumChacha20Poly1305)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return SodiumChacha20Poly1305.META.metaEquals(v1, v2);
         
     }
     /**
@@ -3330,9 +2840,7 @@ export class SodiumChacha20Poly1305 extends KeySymmetric implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('SodiumChacha20Poly1305(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        SodiumChacha20Poly1305.META.metaToString(this, result);
         return result;
         
     }
@@ -3379,10 +2887,7 @@ export class SodiumCurvePrivate extends KeyAsymmetricPrivate implements ToString
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: SodiumCurvePrivate | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return SodiumCurvePrivate.META.metaHashCode(obj);
         
     }
     /**
@@ -3392,11 +2897,7 @@ export class SodiumCurvePrivate extends KeyAsymmetricPrivate implements ToString
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: SodiumCurvePrivate | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof SodiumCurvePrivate)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return SodiumCurvePrivate.META.metaEquals(v1, v2);
         
     }
     /**
@@ -3417,9 +2918,7 @@ export class SodiumCurvePrivate extends KeyAsymmetricPrivate implements ToString
         
     }
     public toString(result: AString): AString  {
-        result.add('SodiumCurvePrivate(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        SodiumCurvePrivate.META.metaToString(this, result);
         return result;
         
     }
@@ -3466,10 +2965,7 @@ export class SodiumCurvePublic extends KeyAsymmetricPublic implements ToString  
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: SodiumCurvePublic | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return SodiumCurvePublic.META.metaHashCode(obj);
         
     }
     /**
@@ -3479,11 +2975,7 @@ export class SodiumCurvePublic extends KeyAsymmetricPublic implements ToString  
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: SodiumCurvePublic | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof SodiumCurvePublic)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return SodiumCurvePublic.META.metaEquals(v1, v2);
         
     }
     /**
@@ -3504,9 +2996,7 @@ export class SodiumCurvePublic extends KeyAsymmetricPublic implements ToString  
         
     }
     public toString(result: AString): AString  {
-        result.add('SodiumCurvePublic(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        SodiumCurvePublic.META.metaToString(this, result);
         return result;
         
     }
@@ -3553,10 +3043,7 @@ export class SodiumSignPrivate extends KeySignPrivate implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: SodiumSignPrivate | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return SodiumSignPrivate.META.metaHashCode(obj);
         
     }
     /**
@@ -3566,11 +3053,7 @@ export class SodiumSignPrivate extends KeySignPrivate implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: SodiumSignPrivate | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof SodiumSignPrivate)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return SodiumSignPrivate.META.metaEquals(v1, v2);
         
     }
     /**
@@ -3591,9 +3074,7 @@ export class SodiumSignPrivate extends KeySignPrivate implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('SodiumSignPrivate(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        SodiumSignPrivate.META.metaToString(this, result);
         return result;
         
     }
@@ -3640,10 +3121,7 @@ export class SodiumSignPublic extends KeySignPublic implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: SodiumSignPublic | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.data);
-        return hash | 0;
+        return SodiumSignPublic.META.metaHashCode(obj);
         
     }
     /**
@@ -3653,11 +3131,7 @@ export class SodiumSignPublic extends KeySignPublic implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: SodiumSignPublic | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof SodiumSignPublic)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.data, v2.data)) return false;
-        return true;
+        return SodiumSignPublic.META.metaEquals(v1, v2);
         
     }
     /**
@@ -3678,9 +3152,7 @@ export class SodiumSignPublic extends KeySignPublic implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('SodiumSignPublic(');
-        result.add('data:').add(this.data);
-        result.add(')');
+        SodiumSignPublic.META.metaToString(this, result);
         return result;
         
     }
@@ -3754,14 +3226,7 @@ export class TelemetryCPP extends Telemetry implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: TelemetryCPP | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeNumber.hashCode(obj.utm_id);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeArrayByte.hashCode(obj.blob);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeString.hashCode(obj.lib_version);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeString.hashCode(obj.os);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeString.hashCode(obj.compiler);
-        return hash | 0;
+        return TelemetryCPP.META.metaHashCode(obj);
         
     }
     /**
@@ -3771,15 +3236,7 @@ export class TelemetryCPP extends Telemetry implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: TelemetryCPP | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof TelemetryCPP)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeNumber.equals(v1.utm_id, v2.utm_id)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeArrayByte.equals(v1.blob, v2.blob)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeString.equals(v1.lib_version, v2.lib_version)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeString.equals(v1.os, v2.os)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeString.equals(v1.compiler, v2.compiler)) return false;
-        return true;
+        return TelemetryCPP.META.metaEquals(v1, v2);
         
     }
     /**
@@ -3800,17 +3257,7 @@ export class TelemetryCPP extends Telemetry implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('TelemetryCPP(');
-        result.add('utm_id:').add(this.utm_id);
-        result.add(', ');
-        result.add('blob:').add(this.blob);
-        result.add(', ');
-        result.add('lib_version:').add(this.lib_version);
-        result.add(', ');
-        result.add('os:').add(this.os);
-        result.add(', ');
-        result.add('compiler:').add(this.compiler);
-        result.add(')');
+        TelemetryCPP.META.metaToString(this, result);
         return result;
         
     }
@@ -3849,11 +3296,7 @@ export class UUIDAndCloud implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: UUIDAndCloud | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeUUID.hashCode(obj.uid);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.cloud);
-        return hash | 0;
+        return UUIDAndCloud.META.metaHashCode(obj);
         
     }
     /**
@@ -3863,12 +3306,7 @@ export class UUIDAndCloud implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: UUIDAndCloud | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof UUIDAndCloud)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeUUID.equals(v1.uid, v2.uid)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.cloud, v2.cloud)) return false;
-        return true;
+        return UUIDAndCloud.META.metaEquals(v1, v2);
         
     }
     /**
@@ -3889,11 +3327,7 @@ export class UUIDAndCloud implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('UUIDAndCloud(');
-        result.add('uid:').add(this.uid);
-        result.add(', ');
-        result.add('cloud:').add(this.cloud);
-        result.add(')');
+        UUIDAndCloud.META.metaToString(this, result);
         return result;
         
     }
@@ -3945,12 +3379,7 @@ export class WorkProofBCrypt extends WorkProofConfig implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: WorkProofBCrypt | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeNumber.hashCode(obj.costBCrypt);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeNumber.hashCode(obj.poolSize);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeNumber.hashCode(obj.maxHashVal);
-        return hash | 0;
+        return WorkProofBCrypt.META.metaHashCode(obj);
         
     }
     /**
@@ -3960,13 +3389,7 @@ export class WorkProofBCrypt extends WorkProofConfig implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: WorkProofBCrypt | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof WorkProofBCrypt)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeNumber.equals(v1.costBCrypt, v2.costBCrypt)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeNumber.equals(v1.poolSize, v2.poolSize)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeNumber.equals(v1.maxHashVal, v2.maxHashVal)) return false;
-        return true;
+        return WorkProofBCrypt.META.metaEquals(v1, v2);
         
     }
     /**
@@ -3987,13 +3410,7 @@ export class WorkProofBCrypt extends WorkProofConfig implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('WorkProofBCrypt(');
-        result.add('costBCrypt:').add(this.costBCrypt);
-        result.add(', ');
-        result.add('poolSize:').add(this.poolSize);
-        result.add(', ');
-        result.add('maxHashVal:').add(this.maxHashVal);
-        result.add(')');
+        WorkProofBCrypt.META.metaToString(this, result);
         return result;
         
     }
@@ -4055,14 +3472,7 @@ export class WorkProofDTO implements ToString  {
      * @returns {number} The hash code.
      */
     public static staticHashCode(obj: WorkProofDTO | null | undefined): number  {
-        if (obj === null || obj === undefined) return 0;
-        let hash = 17;
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeString.hashCode(obj.salt);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeString.hashCode(obj.suffix);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeNumber.hashCode(obj.poolSize);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeNumber.hashCode(obj.maxHashVal);
-        hash = 37 * hash + FastMeta.hashCodeEqualsHelper.typeObject.hashCode(obj.globalKey);
-        return hash | 0;
+        return WorkProofDTO.META.metaHashCode(obj);
         
     }
     /**
@@ -4072,15 +3482,7 @@ export class WorkProofDTO implements ToString  {
      * @returns {boolean} True if the objects are equal.
      */
     public static staticEquals(v1: WorkProofDTO | null | undefined, v2: any | null | undefined): boolean  {
-        if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !(v2 instanceof WorkProofDTO)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeString.equals(v1.salt, v2.salt)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeString.equals(v1.suffix, v2.suffix)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeNumber.equals(v1.poolSize, v2.poolSize)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeNumber.equals(v1.maxHashVal, v2.maxHashVal)) return false;
-        if (!FastMeta.hashCodeEqualsHelper.typeObject.equals(v1.globalKey, v2.globalKey)) return false;
-        return true;
+        return WorkProofDTO.META.metaEquals(v1, v2);
         
     }
     /**
@@ -4101,17 +3503,7 @@ export class WorkProofDTO implements ToString  {
         
     }
     public toString(result: AString): AString  {
-        result.add('WorkProofDTO(');
-        result.add('salt:').add(this.salt);
-        result.add(', ');
-        result.add('suffix:').add(this.suffix);
-        result.add(', ');
-        result.add('poolSize:').add(this.poolSize);
-        result.add(', ');
-        result.add('maxHashVal:').add(this.maxHashVal);
-        result.add(', ');
-        result.add('globalKey:').add(this.globalKey);
-        result.add(')');
+        WorkProofDTO.META.metaToString(this, result);
         return result;
         
     }
@@ -4129,7 +3521,7 @@ export class ClientApiRegSafeStream implements ToString  {
     }
     public static readonly META: FastMetaType<ClientApiRegSafeStream> = new Impl.ClientApiRegSafeStreamMetaImpl();
     public toString(result: AString): AString  {
-        result.add('ClientApiRegSafeStream(').add('data:').add(this.data).add(')');
+        ClientApiRegSafeStream.META.metaToString(this, result);
         return result;
         
     }
@@ -4172,7 +3564,7 @@ export class ClientApiStream implements ToString  {
     }
     public static readonly META: FastMetaType<ClientApiStream> = new Impl.ClientApiStreamMetaImpl();
     public toString(result: AString): AString  {
-        result.add('ClientApiStream(').add('data:').add(this.data).add(')');
+        ClientApiStream.META.metaToString(this, result);
         return result;
         
     }
@@ -4207,7 +3599,7 @@ export class ClientInteractionClientStream implements ToString  {
     }
     public static readonly META: FastMetaType<ClientInteractionClientStream> = new Impl.ClientInteractionClientStreamMetaImpl();
     public toString(result: AString): AString  {
-        result.add('ClientInteractionClientStream(').add('data:').add(this.data).add(')');
+        ClientInteractionClientStream.META.metaToString(this, result);
         return result;
         
     }
@@ -4242,7 +3634,7 @@ export class GlobalApiRegistrationServerRegistrationApi implements ToString  {
     }
     public static readonly META: FastMetaType<GlobalApiRegistrationServerRegistrationApi> = new Impl.GlobalApiRegistrationServerRegistrationApiMetaImpl();
     public toString(result: AString): AString  {
-        result.add('GlobalApiRegistrationServerRegistrationApi(').add('data:').add(this.data).add(')');
+        GlobalApiRegistrationServerRegistrationApi.META.metaToString(this, result);
         return result;
         
     }
@@ -4285,7 +3677,7 @@ export class GlobalRegClientApiStream implements ToString  {
     }
     public static readonly META: FastMetaType<GlobalRegClientApiStream> = new Impl.GlobalRegClientApiStreamMetaImpl();
     public toString(result: AString): AString  {
-        result.add('GlobalRegClientApiStream(').add('data:').add(this.data).add(')');
+        GlobalRegClientApiStream.META.metaToString(this, result);
         return result;
         
     }
@@ -4328,7 +3720,7 @@ export class LoginClientStream implements ToString  {
     }
     public static readonly META: FastMetaType<LoginClientStream> = new Impl.LoginClientStreamMetaImpl();
     public toString(result: AString): AString  {
-        result.add('LoginClientStream(').add('data:').add(this.data).add(')');
+        LoginClientStream.META.metaToString(this, result);
         return result;
         
     }
@@ -4371,7 +3763,7 @@ export class LoginStream implements ToString  {
     }
     public static readonly META: FastMetaType<LoginStream> = new Impl.LoginStreamMetaImpl();
     public toString(result: AString): AString  {
-        result.add('LoginStream(').add('data:').add(this.data).add(')');
+        LoginStream.META.metaToString(this, result);
         return result;
         
     }
@@ -4414,7 +3806,7 @@ export class ServerRegistrationApiStream implements ToString  {
     }
     public static readonly META: FastMetaType<ServerRegistrationApiStream> = new Impl.ServerRegistrationApiStreamMetaImpl();
     public toString(result: AString): AString  {
-        result.add('ServerRegistrationApiStream(').add('data:').add(this.data).add(')');
+        ServerRegistrationApiStream.META.metaToString(this, result);
         return result;
         
     }
@@ -5627,11 +5019,5 @@ export abstract class RegistrationRootApiLocal<RT extends RegistrationRootApiRem
      * @aetherMethodId 4
      */
     public abstract enter(cryptoLib: CryptoLib, stream: ServerRegistrationApiStream): void;
-    
-}
-export namespace AllCustomMeta  {
-    export const META_ARRAY_long: FastMetaType<bigint[]> = Impl.MetaArraylongImpl.INSTANCE;
-    export const META_ARRAY_UUID: FastMetaType<UUID[]> = Impl.MetaArrayUUIDImpl.INSTANCE;
-    export const META_ARRAY_ServerDescriptor: FastMetaType<ServerDescriptor[]> = Impl.MetaArrayServerDescriptorImpl.INSTANCE;
     
 }

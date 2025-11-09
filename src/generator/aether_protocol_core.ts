@@ -15,7 +15,7 @@ export type AetherDslMetaMap = { [baseName: string]: AetherDslMeta };
 export type IncludeResolver = (includeName: string) => Promise<AetherDslMeta>;
 export type TypeDefinition = {
     [key: string]: any;
-    doc?: string; // --- [ИЗМЕНЕНИЕ] Добавлено поле doc ---
+    doc?: string;
     fields?: { [key: string]: any };
     constants?: { [key: string]: string | number | boolean };
     stream?: { api?: string, crypto?: boolean, name?: string };
@@ -282,12 +282,7 @@ export class TypeInfo {
  */
 export class GeneratorLogic {
     private varCounter: number = 0;
-    private generatedMeta: Map<string, string> = new Map();
     private metaAccessors: Map<string, string> = new Map();
-    /**
-     * Stores generated code for constants in the AllCustomMeta namespace (in aether_api.ts).
-     */
-    public allMetaCode: string[] = [];
     /**
      * Stores generated implementation classes (for aether_api_impl.ts).
      */
@@ -519,7 +514,18 @@ export class GeneratorLogic {
         if (res) return res;
 
         if (t.isArray) {
-            res = (t.javaType === 'byte') ? "FastMeta.META_ARRAY_BYTE" : this.regMeta(t);
+            // --- [ИЗМЕНЕНИЕ] ---
+            // Используем FastMeta.getMetaArray для всех массивов, кроме byte[]
+            if (t.javaType === 'byte') {
+                res = "FastMeta.META_ARRAY_BYTE";
+            } else {
+                // Рекурсивно получаем META для базового типа
+                const elementType = t.getElementType();
+                const elementMetaAccessor = this.generateAccessMeta(elementType);
+                // Используем универсальный метод из FastMeta
+                res = `FastMeta.getMetaArray(${elementMetaAccessor})`;
+            }
+            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
         } else {
             const className = t.getClassName();
             const isKnownNonGenerated = ['UUID', 'URI', 'Date'].includes(className);
@@ -540,110 +546,13 @@ export class GeneratorLogic {
         return res;
     }
 
-    /**
-     * Registers and generates the code for a custom array FastMetaType.
-     * @param t - The TypeInfo for the array type (e.g., "string[]").
-     * @returns The name of the generated meta accessor (e.g., "AllCustomMeta.META_ARRAY_string").
-     */
-    private regMeta(t: TypeInfo): string {
-        if (!t.isArray || t.javaType === 'byte') return "FastMeta.META_ARRAY_BYTE";
+    // --- [УДАЛЕНЫ] ---
+    // private regMeta(t: TypeInfo): string { ... }
+    // private generateArraySerializerString(...) { ... }
+    // private generateArrayDeserializerString(...) { ... }
+    // private regMeta0(...) { ... }
+    // --- [КОНЕЦ УДАЛЕНИЯ] ---
 
-        const namespaceName = "AllCustomMeta";
-        const elementType = t.getElementType();
-        const elementTypeNameClean = elementType.javaTypeBoxed.replace(/\./g, '_');
-
-        const name = `META_ARRAY_${elementTypeNameClean}`;
-        const implName = `MetaArray${elementTypeNameClean}Impl`;
-        const ma = `${namespaceName}.${name}`;
-        // Это правильный аксессор для использования *внутри* aether_api_impl.ts
-        const implAccessor = `${implName}.INSTANCE`;
-
-        if (this.generatedMeta.has(name)) return implAccessor;
-
-        this.generatedMeta.set(name, ma);
-
-        const sCtx = '_sCtx';
-        const objVar = 'obj';
-        const outVar = 'out';
-        const inVar = 'in_';
-
-        const serializer = this.generateArraySerializerString(t, elementType, objVar, outVar, sCtx);
-        const deserializer = this.generateArrayDeserializerString(t, elementType, inVar, sCtx);
-
-        this.regMeta0(t, name, implName, serializer, deserializer);
-        return implAccessor;
-    }
-
-    /**
-     * Generates the serializer code string for a custom array meta.
-     * @param t - The TypeInfo for the array.
-     * @param elementType - The TypeInfo for the array's elements.
-     * @param objVar - The name of the variable holding the array.
-     * @param outVar - The name of the DataOut variable.
-     * @param sCtx - The name of the FastFutureContext variable.
-     * @returns The serializer code string.
-     */
-    private generateArraySerializerString(t: TypeInfo, elementType: TypeInfo, objVar: string, outVar: string, sCtx: string): string {
-        const lengthPrefix = t.arrayStaticSize === 0
-            ? `SerializerPackNumber.INSTANCE.put(${outVar}, ${objVar}.length);`
-            : `/* Static length ${t.arrayStaticSize} */`;
-
-        return `
-            ${lengthPrefix}
-            for (const el of ${objVar}) { ${this.generateAccessMeta(elementType)}.serialize(${sCtx}, el, ${outVar}); }`;
-    }
-
-    /**
-     * Generates the deserializer code string for a custom array meta.
-     * @param t - The TypeInfo for the array.
-     * @param elementType - The TypeInfo for the array's elements.
-     * @param inVar - The name of the DataIn variable.
-     * @param sCtx - The name of the FastFutureContext variable.
-     * @returns The deserializer code string.
-     */
-    private generateArrayDeserializerString(t: TypeInfo, elementType: TypeInfo, inVar: string, sCtx: string): string {
-        const lengthRead = t.arrayStaticSize === 0
-            ? `DeserializerPackNumber.INSTANCE.put(${inVar}).valueOf()`
-            : `${t.arrayStaticSize}`;
-
-        return `
-            const len = ${lengthRead};
-            const ar = new Array<${elementType.getArgumentType()}>(len);
-            for (let i = 0; i < len; i++) { ar[i] = ${this.generateAccessMeta(elementType)}.deserialize(${sCtx}, ${inVar}); }
-            return ar;`;
-    }
-
-    /**
-     * Helper to add the final meta implementation code to the generator's state.
-     * @param t - The TypeInfo for the type.
-     * @param constName - The name of the meta constant (e.g., "META_ARRAY_string").
-     * @param implName - The name of the implementation class (e.g., "MetaArrayStringImpl").
-     * @param serializerCode - The code for the serialize method body.
-     * @param deserializerCode - The code for the deserialize method body.
-     */
-    private regMeta0(t: TypeInfo, constName: string, implName: string, serializerCode: string, deserializerCode: string) {
-        const sCtx = '_sCtx', obj = 'obj', out = 'out', in_ = 'in_';
-
-        // Add implementation class to allImplCode (for aether_api_impl.ts)
-        this.allImplCode.push(`
-export class ${implName} implements FastMetaType<${t.getArgumentType()}> {
-    /**
-     * @public
-     * @static
-     * @readonly
-     * @type {${implName}}
-     * @description Static instance for singleton access.
-     */
-    public static readonly INSTANCE = new ${implName}();
-
-    serialize(${sCtx}: FastFutureContext, ${obj}: ${t.getArgumentType()}, ${out}: DataOut): void { ${serializerCode.trim()} }
-    deserialize(${sCtx}: FastFutureContext, ${in_}: DataIn): ${t.getArgumentType()} { ${deserializerCode.trim()} }
-    ${FAST_META_TYPE_IMPL_STUB_METHODS}
-}`);
-
-        // Add constant declaration to allMetaCode (for AllCustomMeta namespace in aether_api.ts)
-        this.allMetaCode.push(`    export const ${constName}: FastMetaType<${t.getArgumentType()}> = Impl.${implName}.INSTANCE;`);
-    }
 
     /**
      * Generates serialization code for a given type.
@@ -743,7 +652,7 @@ export class ${implName} implements FastMetaType<${t.getArgumentType()}> {
      * @param sb - The string array to append code lines to.
      * @param serializeContextVar - The name of the FastFutureContext variable.
      * @param inVar - The name of the DataIn variable.
-     * @param outVar - The name of the variable to assign the deserialized value to.
+     *g     * @param outVar - The name of the variable to assign the deserialized value to.
      * @param type - The TypeInfo of the array.
      */
     private generateArrayDeserializer(sb: string[], serializeContextVar: string, inVar: string, outVar: string, type: TypeInfo): void {
@@ -752,7 +661,7 @@ export class ${implName} implements FastMetaType<${t.getArgumentType()}> {
         const vs = this.getUniqueVarName("len");
 
         if (type.arrayStaticSize === 0) {
-            sb.push(`const ${vs} = DeserializerPackNumber.INSTANCE.put(${inVar}).valueOf();`);
+            sb.push(`const ${vs} = Number(DeserializerPackNumber.INSTANCE.put(${inVar}).valueOf());`);
         } else {
             sb.push(`const ${vs} = ${type.arrayStaticSize};`);
         }
@@ -959,13 +868,32 @@ export class ${implName} implements FastMetaType<${t.getArgumentType()}> {
         }
         return generatedName;
     }
+
+    // --- [УДАЛЕН: getHelperAccess] ---
+
 }
 
 
 /**
  * Stub methods for the FastMetaType implementation.
  */
+// --- [ИЗМЕНЕНИЕ: Реализация заглушек] ---
 export const FAST_META_TYPE_IMPL_STUB_METHODS = `
-    serializeToBytes(_obj: any): Uint8Array { throw new Error('Not implemented'); }
-    deserializeFromBytes(_data: Uint8Array): any { throw new Error('Not implemented'); }
-    loadFromFile(_file: string): any { throw new Error('Not implemented'); }`;
+    public serializeToBytes(obj: any): Uint8Array {
+        const d = new DataInOut();
+        // FastFutureContextStub импортируется в aether_api_impl.ts
+        this.serialize(FastFutureContextStub, obj, d);
+        return d.toArray();
+    }
+
+    public deserializeFromBytes(data: Uint8Array): any {
+        const d = new DataInOutStatic(data);
+        // FastFutureContextStub импортируется в aether_api_impl.ts
+        return this.deserialize(FastFutureContextStub, d);
+    }
+
+    public loadFromFile(file: string): any {
+        throw new Error("UnsupportedOperationException: loadFromFile requires Node.js/Filesystem access.");
+    }
+    `;
+// --- [КОНЕЦ ИЗМЕНЕНИЯ] ---

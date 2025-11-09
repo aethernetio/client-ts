@@ -1,6 +1,7 @@
-// FILE: aether_client.ts
-// PURPOSE: Contains the main AetherCloudClient class.
 // =============================================================================================
+// FILE: aether_client.ts (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+// =============================================================================================
+
 // --- [НАЧАЛО] ДОБАВЛЕНЫ НОВЫЕ ИМПОРТЫ ---
 import {
     AKey,
@@ -95,7 +96,7 @@ class AccessGroupImpl implements AccessGroupI {
             this.client.accessOperationsAdd.set(this.id, groupMap);
         }
 
-        const uuidStr = uuid.toString();
+        const uuidStr = uuid.toString().toString();
         let future = groupMap.get(uuidStr);
         if (!future) {
             future = ARFuture.make();
@@ -109,7 +110,7 @@ class AccessGroupImpl implements AccessGroupI {
 
     remove(uuid: UUID): ARFuture<boolean> {
         if (!this.data.has(uuid)) {
-             Log.trace("AccessGroupImpl.remove: UUID not in local cache.", { uuid: uuid.toString(), group: this.id });
+            Log.trace("AccessGroupImpl.remove: UUID not in local cache.", { uuid: uuid.toString(), group: this.id });
             return ARFuture.of(false);
         }
 
@@ -119,7 +120,7 @@ class AccessGroupImpl implements AccessGroupI {
             this.client.accessOperationsRemove.set(this.id, groupMap);
         }
 
-        const uuidStr = uuid.toString();
+        const uuidStr = uuid.toString().toString();
         let future = groupMap.get(uuidStr);
         if (!future) {
             future = ARFuture.make<boolean>();
@@ -137,7 +138,7 @@ class AccessGroupImpl implements AccessGroupI {
  * @description Internal class to hold tasks for getClientApi.
  * (Based on static class AetherCloudClient.ClientTask)
  */
-class ClientTask {
+export class ClientTask {
     public readonly uid: UUID;
     public readonly task: AConsumer<ServerApiByUid>;
 
@@ -267,10 +268,7 @@ export class AetherCloudClient implements Destroyable {
         // Логика сохранения в state при обновлении кэшей (как в Java)
         this.clouds.forValueUpdate().add(uu => state.setCloud(uu.key, uu.newValue as Cloud));
         this.servers.forValueUpdate().add(s => {
-            // В TS нет прямого аналога store.getServerInfo(id).setDescriptor(desc)
-            // Вместо этого мы просто сохраняем весь дескриптор.
-            // ClientState должен реализовать эту логику сохранения.
-            state.setServerDescriptor(s.key, s.newValue as ServerDescriptor);
+            state.setServerDescriptor(s.newValue as ServerDescriptor);
         });
 
         // TODO: Добавить логику сохранения/загрузки для новых BMap (clientGroups, accessGroups)
@@ -356,7 +354,13 @@ export class AetherCloudClient implements Destroyable {
 
         if (this.state.getUid() && existingMasterKey) { // <--- Check against the safe-fetched key
             Log.info("Client is already registered. Attempting to login directly...");
+            // =================================================================
+            // ИСПРАВЛЕНИЕ ЛОГИКИ ЗАПУСКА (как в Java)
+            // 1. Сначала завершаем startFuture
+            this.startFuture.tryDone();
+            // 2. Затем инициируем подключение
             this.makeFirstConnection();
+            // =================================================================
             return;
         }
 
@@ -412,14 +416,15 @@ export class AetherCloudClient implements Destroyable {
             this.setCloud(regResp.getUid(), regResp.getCloud());
             Log.debug("confirmRegistration: Client UID, Alias, and Cloud set in state.");
 
-            // Сразу же подключаемся к рабочему серверу
-            this.makeFirstConnection();
+            // =================================================================
+            // ИСПРАВЛЕНИЕ v2: ЛОГИКА ЗАПУСКА (как в Java)
+            // 1. Завершаем startFuture НЕМЕДЛЕННО.
+            this.startFuture.tryDone();
 
-            // --- [ИСПРАВЛЕНИЕ v1: ГОНКА СОСТОЯНИЙ] ---
-            // Мы НЕ завершаем startFuture здесь.
-            // Он должен завершиться ТОЛЬКО в makeFirstConnection,
-            // когда соединение с WorkServer будет установлено и готово.
-            // this.startFuture.tryDone(); // <--- ЭТА СТРОКА УДАЛЕНА
+            // 2. Инициируем подключение к рабочему серверу (fire and forget).
+            this.makeFirstConnection();
+            // =================================================================
+
         } else {
             Log.warn("confirmRegistration: Received confirmation, but client UID was already set.", { uid: this.state.getUid()?.toString() });
         }
@@ -549,9 +554,13 @@ export class AetherCloudClient implements Destroyable {
     * @returns {ARFuture<Cloud |
     null>} An ARFuture that resolves to the Cloud object or null.
     */
-    public getCloud(uid: UUID): ARFuture<Cloud |
-        null> {
-        // (Логика не изменилась, BMap сам обработает запрос)
+    public getCloud(uid: UUID): ARFuture<Cloud> {
+        // =================================================================
+        // ИСПРАВЛЕНИЕ: (как в Java) Сначала проверяем state, потом BMap
+        const r = this.state.getCloud(uid);
+        if (r != null) return ARFuture.of(r);
+        // =================================================================
+
         if (this.clouds.has(uid)) {
             Log.trace(`getCloud: Cache hit for uid: ${uid}`);
             return this.clouds.get(uid)! as ARFuture<Cloud | null>;
@@ -594,7 +603,7 @@ export class AetherCloudClient implements Destroyable {
      * @returns {ARFuture<Set<UUID>>} A future containing the set of accessed client UUIDs.
      */
     public getAllAccessedClients(uid: UUID): ARFuture<Set<UUID> | null> {
-         Log.trace("getAllAccessedClients: Requesting all accessed clients for.", { uid: uid.toString() });
+        Log.trace("getAllAccessedClients: Requesting all accessed clients for.", { uid: uid.toString() });
         // Запрос теперь идет через BMap
         return this.allAccessedClients.getFuture(uid);
     }
@@ -606,7 +615,7 @@ export class AetherCloudClient implements Destroyable {
      * @returns {ARFuture<boolean>} A future containing true if access is granted, false otherwise.
      */
     public checkAccess(uid1: UUID, uid2: UUID): ARFuture<boolean | null> {
-         Log.trace("checkAccess: Requesting access check.", { from: uid1.toString(), to: uid2.toString() });
+        Log.trace("checkAccess: Requesting access check.", { from: uid1.toString(), to: uid2.toString() });
         // Используем DTO в качестве ключа для BMap
         return this.accessCheckCache.getFuture(new AccessCheckPair(uid1, uid2));
     }
@@ -617,7 +626,7 @@ export class AetherCloudClient implements Destroyable {
      * @returns {ARFuture<AccessGroup>} A future containing the AccessGroup.
      */
     public getGroup(groupId: bigint): ARFuture<AccessGroup | null> {
-         Log.trace("getGroup: Requesting access group details.", { gid: groupId });
+        Log.trace("getGroup: Requesting access group details.", { gid: groupId });
         // Запрос теперь идет через BMap
         return this.accessGroups.getFuture(groupId);
     }
@@ -726,81 +735,66 @@ export class AetherCloudClient implements Destroyable {
             return;
         }
 
-        const cloud = this.state.getCloud(uid);
-        if (!cloud || !cloud.data || cloud.data.length === 0) {
-            Log.warn("makeFirstConnection: Client cloud data is empty. Cannot connect to work servers.", { uid: uid.toString() });
+        // =================================================================
+        // ИСПРАВЛЕНИЕ: (как в Java) Используем BMap-кэш (getCloud), а не this.state.getCloud
+        const cloudFuture = this.getCloud(uid); //
+        // =================================================================
 
-            // --- [НАЧАЛО] ЛОГИКА ВОССТАНОВЛЕНИЯ ИЗ JAVA ---
-            // (В Java это 'triggerRecovery()', здесь мы просто инициируем запрос)
-            Log.warn("makeFirstConnection: Cloud is missing or empty. Triggering fetch (recovery).");
-            this.getCloud(uid).to(
-                c => {
-                    if (!c || !c.data || c.data.length === 0) {
-                        Log.error("makeFirstConnection: Recovery fetch returned empty cloud.");
-                        if (!this.startFuture.isFinalStatus()) this.startFuture.tryError(new ClientStartException("Client cloud data is empty after registration."));
-                    } else {
-                        Log.info("makeFirstConnection: Recovery fetch successful, re-running connection attempt.");
-                        this.makeFirstConnection(); // Повторный вызов
-                    }
-                },
-                e => {
-                     Log.error("makeFirstConnection: Recovery fetch failed.", e);
-                     if (!this.startFuture.isFinalStatus()) this.startFuture.tryError(e);
+        cloudFuture.to(
+            (cloud: Cloud) => {
+                if (!cloud || !cloud.data || cloud.data.length === 0) {
+                    Log.warn("makeFirstConnection: Client cloud data is empty. Cannot connect to work servers.", { uid: uid.toString() });
+                    // TODO: Добавить логику triggerRecovery, как в Java
+                    return;
                 }
-            );
-            // --- [КОНЕЦ] ЛОГИКА ВОССТАНОВЛЕНИЯ ИЗ JAVA ---
-            return;
-        }
 
-        Log.trace("makeFirstConnection: Found cloud, attempting to connect.", { serverIds: cloud.data });
+                Log.trace("makeFirstConnection: Found cloud, attempting to connect.", { serverIds: cloud.data });
 
-        const readyFutures: AFuture[] = [];
-        for (const serverId of cloud.data) {
-            if (serverId <= 0) continue;
+                const connectFutures: AFuture[] = [];
+                for (const serverId of cloud.data) {
+                    if (serverId <= 0) continue;
 
-            const connReadyFuture: AFuture = this.getConnectionBySid(serverId)
-                .mapRFuture((conn: ConnectionWork | null) => {
-                    if (!conn) {
-                        throw new ClientApiException(`getConnectionBySid returned null for ${serverId}`);
-                    }
-                    const readyPromise = new ARFuture<void>();
+                    // =================================================================
+                    // ИСПРАВЛЕНИЕ v1: DEADLOCK
+                    // Ждем `conn.connectFuture` (сокет подключен), а НЕ `conn.ready` (пинг успешен).
+                    //,
+                    // =================================================================
+                    const connConnectFuture: AFuture = this.getConnectionBySid(serverId)
+                        .mapRFuture((conn: ConnectionWork | null) => {
+                            if (!conn) {
+                                throw new ClientApiException(`getConnectionBySid returned null for ${serverId}`);
+                            }
+                            // Мы просто ждем 'connectFuture' (подключение сокета)
+                            return conn.connectFuture;
+                        })
+                        .toFuture(); // Превращаем ARFuture<RT> в AFuture
 
-                    conn.ready
-                        .to(() => readyPromise.tryDone(undefined))
-                        .onError((err) => readyPromise.tryError(err))
-                        .onCancel(() => readyPromise.cancel());
+                    connectFutures.push(connConnectFuture);
+                }
 
-                    // mapRFuture будет ждать этот new ARFuture<void>
-                    return readyPromise;
-                })
-                .toFuture(); // Превращаем ARFuture<void> в AFuture
+                Log.debug(`makeFirstConnection: Attempting connections to ${connectFutures.length} servers.`);
 
-            readyFutures.push(connReadyFuture);
-        }
-
-        Log.debug(`makeFirstConnection: Attempting connections to ${readyFutures.length} servers.`);
-
-        if (readyFutures.length > 0) {
-            AFuture.any(...readyFutures)
-                .to(
-                    () => {
-                        Log.info("makeFirstConnection: At least one work connection is ready.");
-                        // --- [ИСПРАВЛЕНИЕ v1: ГОНКА СОСТОЯНИЙ] ---
-                        // Это правильное место для завершения startFuture.
-                        this.startFuture.tryDone(); // <- Разблокирует тест
-                    }
-                ).onError((err: Error) => {
-                    Log.error("makeFirstConnection: All connection attempts failed.", err);
-                    this.startFuture.error(err);
-                })
-                .onCancel(() => {
-                    Log.warn("makeFirstConnection: Connection attempts were cancelled.");
-                    this.startFuture.cancel();
-                });
-        } else {
-            Log.warn("makeFirstConnection: No valid server IDs in cloud.");
-            this.startFuture.error(new ClientStartException("Client cloud data contains no valid server IDs."));
-        }
+                if (connectFutures.length > 0) {
+                    // Мы больше не управляем startFuture отсюда.
+                    // Мы просто следим, чтобы соединения установились.
+                    AFuture.any(...connectFutures)
+                        .to(
+                            () => {
+                                Log.info("makeFirstConnection: At least one work connection is established (socket ready).");
+                                // startFuture УЖЕ ДОЛЖЕН БЫТЬ ВЫПОЛНЕН в confirmRegistration
+                            }
+                        ).onError((err: Error) => {
+                            Log.error("makeFirstConnection: All connection attempts failed.", err);
+                        });
+                } else {
+                    Log.warn("makeFirstConnection: No valid server IDs in cloud.");
+                }
+            }
+        ).onError(
+            e => {
+                Log.error("makeFirstConnection: Recovery fetch failed.", e);
+            }
+        );
     }
 
 
@@ -898,7 +892,7 @@ export class AetherCloudClient implements Destroyable {
     public createAccessGroup(...uids: UUID[]): ARFuture<AccessGroupI> {
         const owner = this.getUid();
         if (!owner) {
-            return ARFuture.ofError(new ClientApiException("Client UID is null, cannot create access group."));
+            return ARFuture.ofThrow(new ClientApiException("Client UID is null, cannot create access group."));
         }
         return this.createAccessGroupWithOwner(owner, ...uids);
     }
@@ -929,13 +923,16 @@ export class AetherCloudClient implements Destroyable {
 
     // --- [КОНЕЦ] НОВЫЕ МЕТОДЫ ДЛЯ МУТАЦИЙ (ПОРТ ИЗ JAVA) ---
 
-
+    private logTime = 0;
     /**
     * @private
     * @description Periodic task executor.
     */
     private scheduledWork(): void {
-        Log.trace("scheduledWork: Executing periodic work.");
+        if (RU.time() - this.logTime > 1000) {
+            this.logTime = RU.time();
+            Log.trace("scheduledWork: Executing periodic work.");
+        }
         this.workConnections.forEach(conn => conn.scheduledWork());
     }
 

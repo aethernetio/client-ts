@@ -165,7 +165,9 @@ export class ClientStateInMemory implements ClientState {
             this.parentUid = StandardUUIDs.ANONYMOUS_UID;
         }
     }
-
+    setServerDescriptor(serverDescriptor: ServerDescriptor): void {
+        this.getServerInfo(serverDescriptor.getId()).setDescriptor(serverDescriptor);
+    }
     /**
      * @private
      * @description Adds default root signers if they are not already present.
@@ -229,14 +231,13 @@ export class ClientStateInMemory implements ClientState {
 
     /** @inheritDoc */
     getMasterKey(): AKey | null {
-        if(this.masterKey===null)return null;
+        if (this.masterKey === null) return null;
         return CryptoUtils.dtoKeyToAKey(this.masterKey);
     }
 
     /** @inheritDoc */
     getServerInfo(sid: number): ClientState.ServerInfo {
-        if
-            (!this.servers.has(sid)) {
+        if (!this.servers.has(sid)) {
             this.servers.set(sid, new ClientState.ServerInfoImpl(sid));
         }
         return this.servers.get(sid)!;
@@ -515,6 +516,7 @@ export interface ClientState {
      * @returns {ServerDescriptor | null} The descriptor, or null if not found.
      */
     getServerDescriptor(serverId: number): ServerDescriptor | null;
+    setServerDescriptor(serverDescriptor: ServerDescriptor): void;
 
     /**
      * @description Gets or creates cached information for a specific client (peer).
@@ -735,5 +737,9 @@ export namespace ClientState {
 
         /** @inheritDoc */
         setCloud(cloud: Cloud): void { this.cloud = cloud; }
+    }
+
+    export function setServerDescriptor(key: number, arg1: ServerDescriptor) {
+        throw new Error('Function not implemented.');
     }
 }

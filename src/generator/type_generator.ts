@@ -31,7 +31,6 @@ export class TypeGenerator {
      */
     generateType(name: string, defn: TypeDefinition): string {
         if (defn?.stream) return this.generateStreamClass(name, defn);
-        // --- [ИЗМЕНЕНИЕ] Передаем 'defn' вместо 'defn.enum' ---
         if (defn?.enum) return this.generateEnum(name, defn);
         return this.generateStructure(name, defn || {});
     }
@@ -178,13 +177,12 @@ export class TypeGenerator {
         const extendsClause = parent ? ` extends ${parent}` : '';
         const superFields = Array.from(allFields.keys()).filter(fn => !currentFields.has(fn));
 
-        // --- [ИЗМЕНЕНИЕ] Получаем typeId *до* JSDoc ---
         const typeId = g.getTypeIdInHierarchy(name);
         const rootForChildren = g.getRootTypeFor(name) || name;
         const children = g.getConcreteTypesInHierarchy(rootForChildren);
         const needsTypeIdMethod = parent || g.isInTypeHierarchy(name) || (children.length > 0 && name !== "Message");
 
-        // --- [ИЗМЕНЕНИЕ] Генерация JSDoc для класса ---
+        // --- JSDoc для класса ---
         const doc = (cfg as any).doc;
         const docLines: string[] = [];
         if (doc) {
@@ -201,7 +199,7 @@ export class TypeGenerator {
         sb.push(`/**`);
         docLines.forEach(line => sb.push(line));
         sb.push(` */`);
-        // --- [ИЗМЕНЕНИЕ] Конец JSDoc ---
+        // --- Конец JSDoc ---
 
         sb.push(`export ${isAbstract ? 'abstract class' : 'class'} ${name}${extendsClause} implements ToString {`);
 
@@ -258,7 +256,9 @@ export class TypeGenerator {
         this.generateHashCodeAndEquals(sb, name, allFields, isAbstract);
         // --- End hashCode and equals Generation ---
 
-        this.generateStructureToString(sb, name, allFields, this.getAllConstants(cfg));
+        // --- [ИЗМЕНЕНИЕ] ---
+        this.generateStructureToString(sb, name, allFields, this.getAllConstants(cfg), isAbstract);
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
         sb.push(`}\n`);
         return sb.join('\n');
@@ -276,14 +276,14 @@ export class TypeGenerator {
     private generateStructureConstructor(sb: string[], name: string, allFields: Map<string, TypeInfo>, currentFields: Map<string, TypeInfo>, superFields: string[], parent: string | undefined): void {
         const constructorParams = Array.from(allFields.entries()).map(([fn, ti]) => `${fn}: ${ti.getArgumentType()}`).join(', ');
 
-        // --- [ИЗМЕНЕНИЕ] Генерация JSDoc для конструктора ---
+        // --- JSDoc для конструктора ---
         sb.push(`\n    /**`);
         sb.push(`     * Creates an instance of ${name}.`);
         allFields.forEach((ti, fn) => {
             sb.push(`     * @param ${fn} - ${ti.getArgumentType()}`);
         });
         sb.push(`     */`);
-        // --- [ИЗМЕНЕНИЕ] Конец JSDoc ---
+        // --- Конец JSDoc ---
 
         sb.push(`    constructor(${constructorParams}) {`);
         if (superFields.length > 0) sb.push(`        super(${superFields.join(', ')});`);
@@ -304,35 +304,26 @@ export class TypeGenerator {
         sb.push(`    }\n`);
     }
 
+    // --- [ИЗМЕНЕНИЕ] ---
     /**
      * Generates the `toString()` method for a structure.
      * @param sb - The string array to append code lines to.
      * @param name - The name of the structure.
      * @param allFields - A Map of all fields (including parent's).
      * @param allConstants - A Map of all constants (including parent's).
+     * @param isAbstract - True if the structure is abstract.
      */
-    private generateStructureToString(sb: string[], name: string, allFields: Map<string, TypeInfo>, allConstants: Map<string, ConstantInfo>): void {
-        sb.push(`    public toString(result: AString): AString {`);
-        const simpleClassName = name.replace(/.*\./, '');
-        sb.push(`        result.add('${simpleClassName}(');`);
-
-        let isFirstField = true;
-        allFields.forEach((_, fieldName) => {
-            if (!isFirstField) sb.push(`        result.add(', ');`);
-            sb.push(`        result.add('${fieldName}:').add(this.${fieldName});`);
-            isFirstField = false;
-        });
-
-        allConstants.forEach((constInfo, constName) => {
-            if (!isFirstField) sb.push(`        result.add(', ');`);
-            sb.push(`        result.add('${constName}:').add(this.${constInfo.getGetterName()}());`);
-            isFirstField = false;
-        });
-
-        sb.push(`        result.add(')');`);
-        sb.push(`        return result;`);
-        sb.push(`    }`);
+    private generateStructureToString(sb: string[], name: string, allFields: Map<string, TypeInfo>, allConstants: Map<string, ConstantInfo>, isAbstract: boolean): void {
+        if (isAbstract) {
+            sb.push(`    public abstract toString(result: AString): AString;`);
+        } else {
+            sb.push(`    public toString(result: AString): AString {`);
+            sb.push(`        ${name}.META.metaToString(this, result);`);
+            sb.push(`        return result;`);
+            sb.push(`    }`);
+        }
     }
+    // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
     /**
      * Generates the implementation class for a META field and adds it to the generator logic.
@@ -356,6 +347,7 @@ export class TypeGenerator {
 
         sbImpl.push(`export class ${implName} implements FastMetaType<${name}> {`);
 
+        // --- serialize ---
         sbImpl.push(`    serialize(${sCtx}: FastFutureContext, ${objVar}: ${name}, ${outVar}: DataOut): void {`);
         if (isMetaBody) {
             const serializeLines: string[] = [];
@@ -393,6 +385,7 @@ export class TypeGenerator {
         }
         sbImpl.push(`    }`);
 
+        // --- deserialize ---
         sbImpl.push(`    deserialize(${sCtxDeser}: FastFutureContext, ${inVar}: DataIn): ${name} {`);
         if (isMetaBody) {
             const deserializeLines: string[] = [];
@@ -434,7 +427,163 @@ export class TypeGenerator {
             }
         }
         sbImpl.push(`    }`);
-        sbImpl.push(FAST_META_TYPE_IMPL_STUB_METHODS);
+
+        // --- metaHashCode & metaEquals ---
+        if (isMetaBody) {
+            // Это META_BODY, генерируем реальную логику
+            sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number {`);
+            sbImpl.push(`        if (obj === null || obj === undefined) return 0;`);
+            sbImpl.push(`        let hash = 17;`);
+            fields.forEach((typeInfo, fieldName) => {
+                // ИСПОЛЬЗУЕМ generateAccessMeta для получения полного META-объекта поля
+                const fieldMetaAccessor = g.generateAccessMeta(typeInfo);
+                sbImpl.push(`        hash = 37 * hash + ${fieldMetaAccessor}.metaHashCode(obj.${fieldName});`);
+            });
+            sbImpl.push(`        return hash | 0;`);
+            sbImpl.push(`    }`);
+
+            sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean {`);
+            sbImpl.push(`        if (v1 === v2) return true;`);
+            sbImpl.push(`        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);`);
+            // Проверка instanceof для DTO всегда нужна
+            sbImpl.push(`        if (v2 === null || v2 === undefined || !(v2 instanceof ${name})) return false;`);
+            fields.forEach((typeInfo, fieldName) => {
+                // ИСПОЛЬЗУЕМ generateAccessMeta для получения полного META-объекта поля
+                const fieldMetaAccessor = g.generateAccessMeta(typeInfo);
+                sbImpl.push(`        if (!${fieldMetaAccessor}.metaEquals(v1.${fieldName}, v2.${fieldName})) return false;`);
+            });
+            sbImpl.push(`        return true;`);
+            sbImpl.push(`    }`);
+
+            // --- [ИЗМЕНЕНИЕ] ---
+            const cfg = g.findTypeDefinition(name);
+            const allConstants = cfg ? this.getAllConstants(cfg) : new Map<string, ConstantInfo>();
+
+            sbImpl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void {`);
+            sbImpl.push(`        if (obj === null || obj === undefined) { res.add('null'); return; }`);
+            const simpleClassName = name.replace(/.*\./, '');
+            sbImpl.push(`        res.add('${simpleClassName}(');`);
+
+            let isFirstField = true;
+            fields.forEach((_, fieldName) => {
+                if (!isFirstField) sbImpl.push(`        res.add(', ');`);
+                sbImpl.push(`        res.add('${fieldName}:').add(obj.${fieldName});`);
+                isFirstField = false;
+            });
+
+            allConstants.forEach((constInfo, constName) => {
+                if (!isFirstField) sbImpl.push(`        res.add(', ');`);
+                sbImpl.push(`        res.add('${constName}:').add(obj.${constInfo.getGetterName()}());`);
+                isFirstField = false;
+            });
+
+            sbImpl.push(`        res.add(')');`);
+            sbImpl.push(`    }`);
+            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
+
+        } else {
+            // Это META (диспетчер), генерируем логику диспатчинга
+            const rootType = g.getRootTypeFor(name);
+            const actualChildren = g.getConcreteTypesInHierarchy(rootType || name);
+            const needsDispatch = isAbstract || (g.isInTypeHierarchy(name) && actualChildren.length > 0 && name !== "Message");
+
+            if (needsDispatch) {
+                // --- metaHashCode (dispatcher) ---
+                sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number {`);
+                sbImpl.push(`        if (obj === null || obj === undefined) return 0;`);
+                sbImpl.push(`        const typeId = typeof (obj as any).getAetherTypeId === 'function' ? (obj as any).getAetherTypeId() : -1;`);
+                sbImpl.push(`        switch(typeId) {`);
+                if (!isAbstract) {
+                    const selfId = g.getTypeIdInHierarchy(name);
+                    if (selfId !== undefined && selfId >= 0) {
+                         sbImpl.push(`            case ${selfId}: return (${name} as any).META_BODY.metaHashCode(obj as any as ${name});`);
+                    }
+                }
+                actualChildren.forEach(childName => {
+                    const typeId = g.getTypeIdInHierarchy(childName);
+                    if (typeId !== undefined && (isAbstract || childName !== name)) {
+                        sbImpl.push(`            case ${typeId}: return (${childName} as any).META.metaHashCode(obj as any as ${childName});`);
+                    }
+                });
+                sbImpl.push(`            default: throw new Error(\`Cannot hashCode '${name}' with unknown type id \${typeId}\`);`);
+                sbImpl.push(`        }`);
+                sbImpl.push(`    }`);
+
+                // --- metaEquals (dispatcher) ---
+                sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean {`);
+                sbImpl.push(`        if (v1 === v2) return true;`);
+                sbImpl.push(`        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);`);
+                sbImpl.push(`        if (v2 === null || v2 === undefined) return false;`);
+
+                const v1TypeId = `(v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1`;
+                const v2TypeId = `(v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1`;
+                sbImpl.push(`        const typeId1 = ${v1TypeId};`);
+                sbImpl.push(`        const typeId2 = ${v2TypeId};`);
+                sbImpl.push(`        if (typeId1 === -1 || typeId1 !== typeId2) return false;`);
+                sbImpl.push(`        switch(typeId1) {`);
+                if (!isAbstract) {
+                    const selfId = g.getTypeIdInHierarchy(name);
+                    if (selfId !== undefined && selfId >= 0) {
+                        sbImpl.push(`            case ${selfId}: return (${name} as any).META_BODY.metaEquals(v1 as any as ${name}, v2);`);
+                    }
+                }
+                actualChildren.forEach(childName => {
+                    const typeId = g.getTypeIdInHierarchy(childName);
+                    if (typeId !== undefined && (isAbstract || childName !== name)) {
+                        sbImpl.push(`            case ${typeId}: return (${childName} as any).META.metaEquals(v1 as any as ${childName}, v2);`);
+                    }
+                });
+                sbImpl.push(`            default: throw new Error(\`Cannot equals '${name}' with unknown type id \${typeId1}\`);`);
+                sbImpl.push(`        }`);
+                sbImpl.push(`    }`);
+
+                // --- [ИЗМЕНЕНИЕ] ---
+                // --- metaToString (dispatcher) ---
+                sbImpl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void {`);
+                sbImpl.push(`        if (obj === null || obj === undefined) { res.add('null'); return ; }`);
+                sbImpl.push(`        const typeId = typeof (obj as any).getAetherTypeId === 'function' ? (obj as any).getAetherTypeId() : -1;`);
+                sbImpl.push(`        switch(typeId) {`);
+                if (!isAbstract) {
+                    const selfId = g.getTypeIdInHierarchy(name);
+                    if (selfId !== undefined && selfId >= 0) {
+                         sbImpl.push(`            case ${selfId}: (${name} as any).META_BODY.metaToString(obj as any as ${name}, res); break;`);
+                    }
+                }
+                actualChildren.forEach(childName => {
+                    const typeId = g.getTypeIdInHierarchy(childName);
+                    if (typeId !== undefined && (isAbstract || childName !== name)) {
+                        sbImpl.push(`            case ${typeId}: (${childName} as any).META.metaToString(obj as any as ${childName}, res);break;`);
+                    }
+                });
+                sbImpl.push(`            default: throw new Error(\`Cannot toString '${name}' with unknown type id \${typeId}\`);`);
+                sbImpl.push(`        }`);
+                sbImpl.push(`    }`);
+                // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
+
+            } else {
+                // Диспатч не нужен, просто делегируем META_BODY (если он есть)
+                if (!isAbstract) {
+                    sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return (${name} as any).META_BODY.metaHashCode(obj); }`);
+                    sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean { return (${name} as any).META_BODY.metaEquals(v1, v2); }`);
+                    // --- [ИЗМЕНЕНИЕ] ---
+                    sbImpl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void { (${name} as any).META_BODY.metaToString(obj, res); }`);
+                    // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
+                } else {
+                    // Абстрактный класс без иерархии? Заглушка.
+                    sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return (obj && typeof obj.hashCode === 'function') ? obj.hashCode() : 0; }`);
+                    sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean { return (v1 && typeof v1.equals === 'function') ? v1.equals(v2) : v1 === v2; }`);
+                    // --- [ИЗМЕНЕНИЕ] ---
+                    sbImpl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void { res.add(String(obj));  }`);
+                    // --- [КОНЕЦ ИМЕНЕНИЯ] ---
+                }
+            }
+        }
+
+        // --- [ИЗМЕНЕНИЕ] ---
+        // Заменяем `any` на конкретное имя типа
+        sbImpl.push(FAST_META_TYPE_IMPL_STUB_METHODS.replace(/: any/g, `: ${name}`).replace(/: any {/g, `: ${name} {`));
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
+
         sbImpl.push(`}`);
 
         g.allImplCode.push(sbImpl.join('\n'));
@@ -447,17 +596,15 @@ export class TypeGenerator {
      * @returns The generated TypeScript code as a string.
      */
     private generateEnum(name: string, defn: TypeDefinition): string {
-        const values = defn.enum as string[]; // --- [ИЗМЕНЕНИЕ] ---
+        const values = defn.enum as string[];
         const sb: string[] = [];
 
-        // --- [ИЗМЕНЕНИЕ] Генерация JSDoc для enum ---
         const doc = (defn as any).doc;
         if (doc) {
             sb.push(`/**`);
             (doc as string).split('\n').forEach(line => sb.push(` * ${line}`));
             sb.push(` */`);
         }
-        // --- [ИЗМЕНЕНИЕ] Конец JSDoc ---
 
         sb.push(`export enum ${name} { ${values.map(v => `${v} = '${v}'`).join(', ')} }\n`);
         sb.push(`export namespace ${name} {`);
@@ -475,12 +622,27 @@ export class TypeGenerator {
         sbImpl.push(`        if (ordinal < 0 || ordinal >= keys.length) throw new Error(\`Invalid ordinal \${ordinal} for enum ${name}\`);`);
         sbImpl.push(`        return ${name}[keys[ordinal] as keyof typeof ${name}] as ${name};`);
         sbImpl.push(`    }`);
-        sbImpl.push(FAST_META_TYPE_IMPL_STUB_METHODS);
+
+        // ИСПОЛЬЗУЕМ FastMeta.META_STRING
+        const stringMetaAccessor = this.generatorLogic.generateAccessMeta(new TypeInfo("string"));
+        sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return ${stringMetaAccessor}.metaHashCode(obj as string); }`);
+        sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean { return ${stringMetaAccessor}.metaEquals(v1 as string, v2); }`);
+
+        // --- [ИЗМЕНЕНИЕ] ---
+        sbImpl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void {`);
+        sbImpl.push(`        res.add(obj as string);`);
+        sbImpl.push(`    }`);
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
+
+        // --- [ИЗМЕНЕНИЕ] ---
+        // Заменяем `any` на конкретное имя типа
+        sbImpl.push(FAST_META_TYPE_IMPL_STUB_METHODS.replace(/: any/g, `: ${name}`).replace(/: any {/g, `: ${name} {`));
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
+
         sbImpl.push(`}`);
-        // Добавляем реализацию в allImplCode
+
         this.generatorLogic.allImplCode.push(sbImpl.join('\n'));
 
-        // Вставляем ссылку в aether_api.ts
         sb.push(`    export const META: FastMetaType<${name}> = new Impl.${metaImplName}();`);
         sb.push(`}\n`);
         return sb.join('\n');
@@ -499,24 +661,20 @@ export class TypeGenerator {
         const hasCrypto = !!cfg.stream?.crypto;
         const apiRemoteType = hasApi ? `${apiType}Remote` : 'unknown';
 
-        // --- [ИЗМЕНЕНИЕ] Генерация JSDoc для stream-класса ---
         const doc = (cfg as any).doc;
         if (doc) {
             sb.push(`/**`);
             (doc as string).split('\n').forEach(line => sb.push(` * ${line}`));
             sb.push(` */`);
         }
-        // --- [ИЗМЕНЕНИЕ] Конец JSDoc ---
 
         sb.push(`export class ${name} implements ToString {`);
         sb.push(`    public readonly data: Uint8Array;`);
 
-        // --- [ИЗМЕНЕНИЕ] JSDoc для конструктора stream ---
         sb.push(`    /**`);
         sb.push(`     * Creates an instance of ${name}.`);
         sb.push(`     * @param data - The raw byte data for this stream.`);
         sb.push(`     */`);
-        // --- [ИЗМЕНЕНИЕ] Конец JSDoc ---
         sb.push(`    constructor(data: Uint8Array) { this.data = data; }\n`);
 
         const metaImplName = `${name}MetaImpl`;
@@ -524,12 +682,36 @@ export class TypeGenerator {
         sbImpl.push(`export class ${metaImplName} implements FastMetaType<${name}> {`);
         sbImpl.push(`    serialize(ctx: FastFutureContext, obj: ${name}, out: DataOut): void { FastMeta.META_ARRAY_BYTE.serialize(ctx, obj.data, out); }`);
         sbImpl.push(`    deserialize(ctx: FastFutureContext, in_: DataIn): ${name} { return new ${name}(FastMeta.META_ARRAY_BYTE.deserialize(ctx, in_)); }`);
-        sbImpl.push(FAST_META_TYPE_IMPL_STUB_METHODS);
+
+        // ИСПОЛЬЗУЕМ FastMeta.META_ARRAY_BYTE
+        const byteArrayMetaAccessor = this.generatorLogic.generateAccessMeta(new TypeInfo("byte[]"));
+        sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return ${byteArrayMetaAccessor}.metaHashCode(obj?.data); }`);
+        // При сравнении stream.data с другим stream или просто массивом байтов
+        sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean { return ${byteArrayMetaAccessor}.metaEquals(v1?.data, (v2 instanceof ${name}) ? v2.data : v2); }`);
+
+        // --- [ИЗМЕНЕНИЕ] ---
+        sbImpl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void {`);
+        sbImpl.push(`        if (obj === null || obj === undefined) { res.add('null'); return; }`);
+        sbImpl.push(`        res.add('${name}(').add('data:').add(obj.data).add(')');`);
+        sbImpl.push(`    }`);
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
+
+        // --- [ИЗМЕНЕНИЕ] ---
+        // Заменяем `any` на конкретное имя типа
+        sbImpl.push(FAST_META_TYPE_IMPL_STUB_METHODS.replace(/: any/g, `: ${name}`).replace(/: any {/g, `: ${name} {`));
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
+
         sbImpl.push(`}`);
         this.generatorLogic.allImplCode.push(sbImpl.join('\n'));
 
         sb.push(`    public static readonly META: FastMetaType<${name}> = new Impl.${metaImplName}();\n`);
-        sb.push(`    public toString(result: AString): AString { result.add('${name}(').add('data:').add(this.data).add(')'); return result; }`);
+
+        // --- [ИЗМЕНЕНИЕ] ---
+        sb.push(`    public toString(result: AString): AString {`);
+        sb.push(`        ${name}.META.metaToString(this, result);`);
+        sb.push(`        return result;`);
+        sb.push(`    }`);
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
         if (hasApi && hasCrypto) {
             sb.push(`\n    public accept(context: FastFutureContext, provider: BytesConverter, localApi: ${apiType}): void {`);
@@ -633,7 +815,7 @@ export class TypeGenerator {
      */`);
             sb.push(`    public static staticHashCode(obj: ${name} | null | undefined): number {`);
             sb.push(`        if (obj === null || obj === undefined) return 0;`);
-            sb.push(`        return obj.hashCode();`);
+            sb.push(`        return (obj.constructor as any).META.metaHashCode(obj);`);
             sb.push(`    }`);
 
             // --- abstract static staticEquals ---
@@ -646,13 +828,8 @@ export class TypeGenerator {
             sb.push(`    public static staticEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean {`);
             sb.push(`        if (v1 === v2) return true;`);
             sb.push(`        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);`);
-            sb.push(`        if (v2 === null || v2 === undefined || !(v2 instanceof ${name})) return false;`);
-
-            sb.push(`        const t1 = (v1 as any).getAetherTypeId ? (v1 as any).getAetherTypeId() : -1;`);
-            sb.push(`        const t2 = (v2 as any).getAetherTypeId ? (v2 as any).getAetherTypeId() : -1;`);
-            sb.push(`        if (t1 === -1 || t1 !== t2) return false;`);
-
-            sb.push(`        return (v1.constructor as any).staticEquals(v1, v2);`);
+            // --- [ИСПРАВЛЕНИЕ] Добавлен sb.push() ---
+            sb.push(`        return (v1.constructor as any).META.metaEquals(v1, v2);`);
             sb.push(`    }`);
 
             // --- abstract instance hashCode ---
@@ -671,23 +848,17 @@ export class TypeGenerator {
             sb.push(`    public abstract equals(other: any): boolean;`);
 
         } else {
-            // --- concrete static staticHashCode ---
+            // --- concrete static staticHashCode (ДЕЛЕГИРУЕТ в META) ---
             sb.push(`\n    /**
      * Calculates a hash code for a static instance of ${name}.
      * @param {${name} | null | undefined} obj - The object to hash.
      * @returns {number} The hash code.
      */`);
             sb.push(`    public static staticHashCode(obj: ${name} | null | undefined): number {`);
-            sb.push(`        if (obj === null || obj === undefined) return 0;`);
-            sb.push(`        let hash = 17;`);
-            allFields.forEach((typeInfo, fieldName) => {
-                const helper = this.getHelperAccess(typeInfo);
-                sb.push(`        hash = 37 * hash + ${helper}.hashCode(obj.${fieldName});`);
-            });
-            sb.push(`        return hash | 0;`);
+            sb.push(`        return ${name}.META.metaHashCode(obj);`);
             sb.push(`    }`);
 
-            // --- concrete static staticEquals ---
+            // --- concrete static staticEquals (ДЕЛЕГИРУЕТ в META) ---
             sb.push(`\n    /**
      * Compares a static instance of ${name} with another object.
      * @param {${name} | null | undefined} v1 - The first object.
@@ -695,14 +866,7 @@ export class TypeGenerator {
      * @returns {boolean} True if the objects are equal.
      */`);
             sb.push(`    public static staticEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean {`);
-            sb.push(`        if (v1 === v2) return true;`);
-            sb.push(`        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);`);
-            sb.push(`        if (v2 === null || v2 === undefined || !(v2 instanceof ${name})) return false;`);
-            allFields.forEach((typeInfo, fieldName) => {
-                const helper = this.getHelperAccess(typeInfo);
-                sb.push(`        if (!${helper}.equals(v1.${fieldName}, v2.${fieldName})) return false;`);
-            });
-            sb.push(`        return true;`);
+            sb.push(`        return ${name}.META.metaEquals(v1, v2);`);
             sb.push(`    }`);
 
             // --- concrete instance hashCode ---
@@ -723,81 +887,6 @@ export class TypeGenerator {
             sb.push(`    public equals(other: any): boolean {`);
             sb.push(`        return ${name}.staticEquals(this, other);`);
             sb.push(`    }`);
-        }
-    }
-
-    /**
-     * Gets the runtime helper accessor string for hashCode and equals operations.
-     * @param {TypeInfo} typeInfo - The type information for the field.
-     * @returns {string} The accessor string (e.g., "FastMeta.hashCodeEqualsHelper.typeString").
-     */
-    private getHelperAccess(typeInfo: TypeInfo): string {
-        const base = "FastMeta.hashCodeEqualsHelper";
-
-        if (typeInfo.isArray) {
-            const elType = typeInfo.getElementType();
-            if (elType.javaType === 'byte') return `${base}.typeArrayByte`;
-
-            let elHelperBase: string;
-            let isStatic = false;
-
-            switch (elType.javaType) {
-                case 'string':
-                case 'URI':
-                    elHelperBase = `${base}.typeString`; break;
-                case 'byte':
-                case 'short':
-                case 'int':
-                case 'float':
-                case 'double':
-                    elHelperBase = `${base}.typeNumber`; break;
-                case 'long':
-                    elHelperBase = elType.isPack ? `${base}.typeNumber` : `${base}.typeBigInt`; break;
-                case 'boolean':
-                    elHelperBase = `${base}.typeBoolean`; break;
-                case 'UUID':
-                    elHelperBase = `${base}.typeUUID`; break;
-                case 'Date':
-                    elHelperBase = `${base}.typeDate`; break;
-                default:
-                    const typeDef = this.generatorLogic.allTypes.get(elType.javaType);
-                    if (typeDef?.enum) {
-                        elHelperBase = `${base}.typeString`;
-                    } else {
-                        elHelperBase = elType.javaTypeBoxed; // e.g., "MyClass" or "Key"
-                        isStatic = true;
-                    }
-                    break;
-            }
-
-            if (isStatic) {
-                return `${base}.typeArrayObject(${elHelperBase}.staticHashCode, ${elHelperBase}.staticEquals)`;
-            } else {
-                return `${base}.typeArrayObject(${elHelperBase}.hashCode, ${elHelperBase}.equals)`;
-            }
-        }
-
-        // --- Not an array ---
-        switch (typeInfo.javaType) {
-            case 'string': return `${base}.typeString`;
-            case 'byte':
-            case 'short':
-            case 'int':
-            case 'float':
-            case 'double':
-                return `${base}.typeNumber`;
-            case 'long':
-                return typeInfo.isPack ? `${base}.typeNumber` : `${base}.typeBigInt`;
-            case 'boolean': return `${base}.typeBoolean`;
-            case 'UUID': return `${base}.typeUUID`;
-            case 'URI': return `${base}.typeURI`;
-            case 'Date': return `${base}.typeDate`;
-            default:
-                const typeDef = this.generatorLogic.allTypes.get(typeInfo.javaType);
-                if (typeDef?.enum) {
-                    return `${base}.typeString`;
-                }
-                return `${base}.typeObject`;
         }
     }
 }
