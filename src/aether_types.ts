@@ -16,7 +16,7 @@ export type Uint8Array = globalThis.Uint8Array;
 // interface ToString { ... }
 // declare class AString { ... }
 
-export class UUID implements ToString {
+export class UUID implements ToString, JObj {
     static fromString(uuidString: string): UUID {
         const uuidRegex = /^([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})$/i;
         const match = uuidRegex.exec(uuidString);
@@ -56,7 +56,6 @@ export class UUID implements ToString {
         return s;
     }
 
-    // --- ДОБАВЛЕННЫЕ МЕТОДЫ ---
 
     /**
      * Проверяет, равен ли этот UUID другому объекту.
@@ -64,7 +63,7 @@ export class UUID implements ToString {
      * @param other Другой объект для сравнения.
      * @returns true, если объекты равны, иначе false.
      */
-    equals(other: unknown): boolean {
+    equals(other: any): boolean {
         if (this === other) {
             return true; // Тот же самый экземпляр
         }
@@ -314,4 +313,9 @@ export class ClientTimeoutException extends Error {
         super(message);
         this.name = 'ClientTimeoutException';
     }
+}
+
+export interface JObj {
+    hashCode(): number;
+    equals(obj:any): boolean;
 }

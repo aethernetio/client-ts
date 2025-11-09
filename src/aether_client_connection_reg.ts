@@ -150,7 +150,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
                 this.regProcess(asymCE);
             })
             .onError((e: Error) => {
-                this.client.startFuture.tryError(e);
+                this.connectFuture.tryError(e);
             });
 
         return this.connectFuture.toFuture();
@@ -168,7 +168,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
             .to((api: RegistrationRootApiRemote) => {
                 if (!api) {
                     Log.error("RegConn: Root API is null after successful connection.");
-                    this.client.startFuture.tryError(new Error("Root API is null"));
+                    this.connectFuture.tryError(new Error("Root API is null"));
                     return;
                 }
 
@@ -185,7 +185,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
                                 })
                                 .onError((e: Error) => {
                                     Log.error("RegConn: Failed to request work proof data.", e, { uri: this.uri });
-                                    this.client.startFuture.tryError(e);
+                                    this.connectFuture.error(e);
                                 });
                         }
                     )
@@ -193,7 +193,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
                 api.flush();
             })
             .onError((e: Error) => {
-                 this.client.startFuture.tryError(e);
+                 this.connectFuture.error(e);
             });
     }
 
@@ -240,7 +240,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
                                         })
                                         .onError((e: Error) => {
                                             Log.error("RegConn: Failed to finish registration.", e, { uri: this.uri });
-                                            this.client.startFuture.tryError(e);
+                                            this.connectFuture.error(e);
                                         });
                                 }
                             )
@@ -252,7 +252,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
 
         } catch (e) {
             Log.error("RegConn: Registration step 2 (PoW) failed.", e as Error, { uri: this.uri });
-            this.client.startFuture.tryError(e as Error);
+            this.connectFuture.error(e);
         }
     }
 
@@ -272,7 +272,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
 
         } catch (e) {
             Log.error("RegConn: Registration step 3 (Finalize) failed.", e as Error, { uri: this.uri });
-            this.client.startFuture.tryError(e as Error);
+            this.connectFuture.error(e);
         }
     }
 

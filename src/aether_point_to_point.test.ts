@@ -66,7 +66,7 @@ describe('PointToPointCommunication', () => {
     // Общие конфигурации для тестов
     // Убедитесь, что этот URI указывает на ваш запущенный Java-сервер (AetherMockServer или полный)
     const registrationUri: URI[] = ["ws://localhost:9011"];
-    const defaultPingDuration = 100; // 100ms
+    const defaultPingDuration = 10; // 100ms
 
     /**
      * @see PointToPointTest.java: p2p()
@@ -87,7 +87,7 @@ describe('PointToPointCommunication', () => {
         client2 = new AetherCloudClient(clientConfig2, "client2");
 
         // Ждем, пока ОБА клиента зарегистрируются
-        await AFuture.all(client1.startFuture, client2.startFuture).toPromise(25000);
+        await AFuture.all(client1.connect(), client2.connect()).toPromise(25000);
 
         const uid1 = client1.getUid()!;
         const uid2 = client2.getUid()!;
@@ -142,7 +142,7 @@ describe('PointToPointCommunication', () => {
         client1 = new AetherCloudClient(clientConfig1, "client1");
         client2 = new AetherCloudClient(clientConfig2, "client2");
 
-        await AFuture.all(client1.startFuture, client2.startFuture).toPromise(25000);
+        await AFuture.all(client1.connect(), client2.connect()).toPromise(25000);
 
         const uid1 = client1.getUid()!;
         const uid2 = client2.getUid()!;
@@ -207,7 +207,7 @@ describe('PointToPointCommunication', () => {
             client1 = new AetherCloudClient(clientConfig1_recon, "client1_iter1");
             client2 = new AetherCloudClient(clientConfig2_recon, "client2_iter1");
 
-            await AFuture.all(client1.startFuture, client2.startFuture).toPromise(25000);
+            await AFuture.all(client1.connect(), client2.connect()).toPromise(25000);
             const uid1 = client1.getUid()!;
             const uid2 = client2.getUid()!;
             Log.info(`Iter1 clients registered: uid1: $uid1 uid2: $uid2`,{uid1:uid1,uid2:uid2});
@@ -242,10 +242,10 @@ describe('PointToPointCommunication', () => {
             client2 = new AetherCloudClient(clientConfig2_recon, "client2_iter2");
 
             // Клиенты должны "войти" (login), а не "регистрироваться"
-            await AFuture.all(client1.startFuture, client2.startFuture).toPromise(25000);
+            await AFuture.all(client1.connect(), client2.connect()).toPromise(25000);
             const uid1 = client1.getUid()!;
             const uid2 = client2.getUid()!;
-            Log.info(`Iter2 clients logged in: uid1: ${uid1} uid2: ${uid2}`);
+            Log.info(`Iter2 clients logged in: uid1: $uid1 uid2: $uid2`,{uid1:uid1,uid2:uid2});
 
             // *** NO MOCKS ***
 
@@ -287,7 +287,7 @@ describe('PointToPointCommunication', () => {
         // 'service' будет очищен в afterEach
         service = new AetherCloudClient(serviceConfig, "service");
 
-        await service.startFuture.toPromise(25000);
+        await service.connect().toPromise(25000);
         const serviceUid = service.getUid()!;
         Log.info(`Service registered: $serviceUid`,{serviceUid:serviceUid});
 
@@ -299,7 +299,7 @@ describe('PointToPointCommunication', () => {
         client2 = new AetherCloudClient(clientConfig2, "client2");
 
         // Ждем регистрации всех (сервис уже готов, ждем клиентов)
-        await AFuture.all(client1.startFuture, client2.startFuture).toPromise(25000);
+        await AFuture.all(client1.connect(), client2.connect()).toPromise(25000);
 
         const uid1 = client1.getUid()!;
         const uid2 = client2.getUid()!;

@@ -2,7 +2,6 @@
 // FILE: aether_client.ts (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // =============================================================================================
 
-// --- [НАЧАЛО] ДОБАВЛЕНЫ НОВЫЕ ИМПОРТЫ ---
 import {
     AKey,
     CryptoEngine,
@@ -52,7 +51,6 @@ import { BMap, RCol } from './aether_rcollection';
 
 export enum RegStatus { NO, BEGIN, CONFIRM }
 
-// --- [НАЧАЛО] НОВЫЙ ИНТЕРФЕЙС И КЛАСС (ИЗ AetherCloudClient.java) ---
 
 /**
  * @interface AccessGroupI
@@ -147,7 +145,6 @@ export class ClientTask {
         this.task = task;
     }
 }
-// --- [КОНЕЦ] НОВЫЙ ИНТЕРФЕЙС И КЛАСС ---
 
 
 /**
@@ -160,20 +157,102 @@ export class AetherCloudClient implements Destroyable {
     public readonly state: ClientState;
     public readonly name: string;
     public readonly logClientContext: LNode;
-    // --- ИЗМЕНЕН ТИП ---
     private regConnection: ConnectionRegistration | null = null;
     private workConnections = new Map<number, ConnectionWork>();
     private readonly registrationUrl: URI[];
-    public readonly startFuture: AFuture;
+    private readonly startFuture = AFuture.make();
+    private readonly startFuture0 = AFuture.make();
     public readonly messageNodeMap = new Map<string, MessageNode>();
     public readonly onMessage = new EventBiConsumer<UUID, Uint8Array>();
     public readonly onNewChild = new EventConsumer<UUID>();
     public readonly onClientStreamCreated = new EventConsumer<MessageNode>();
 
-    // --- [НАЧАЛО] НОВЫЕ СВОЙСТВА (ПОРТ ИЗ JAVA) ---
     public readonly servers: BMap<number, ServerDescriptor>;
     public readonly clouds: BMap<UUID, Cloud>;
+    private beginConnect = false;
+    /**
+         * @private
+         * @description (Port from Java)
+         * Fetches the client's own Cloud and ServerDescriptors,
+         * ensures they are saved to state, and then completes.
+         * This is critical for preventing race conditions on restart.
+         */
+    private forceUpdateStateFromCache(): AFuture {
+        const resultFuture = AFuture.make();
+        const uid = this.getUid(); //
+        if (!uid) {
+            const err = new Error("Client UID is null. Cannot update state from cache.");
+            Log.error(err.message);
+            return AFuture.ofThrow(err); //
+        }
 
+        Log.debug("forceUpdateStateFromCache: Forcing fetch and save for own UID...", { uid: uid.toString() });
+
+        // 1. Получить Cloud (из state или сети)
+        this.getCloud(uid).to((cloud: Cloud | null) => { //
+            if (!cloud) {
+                const err = new Error("Fetched cloud was null for UID: " + uid);
+                Log.error(err.message);
+                return resultFuture.error(err);
+            }
+
+            // 2. Явно сохранить Cloud в state (на случай, если он пришел из BMap)
+            this.state.setCloud(uid, cloud); //
+            Log.trace("forceUpdateStateFromCache: Own cloud saved to state.", { uid: uid.toString() });
+
+            const sids = cloud.data;
+            if (!sids || sids.length === 0) {
+                Log.warn("forceUpdateStateFromCache: Client's own cloud is empty. State updated.");
+                return resultFuture.tryDone(); //
+            }
+
+            // 3. Собрать futures для ВСЕХ ServerDescriptors
+            const serverFutures = sids.map(sid => this.getServer(sid)); //
+
+            // 4. Дождаться, пока все дескрипторы разрешатся (попадут в BMap/state)
+            ARFuture.all(serverFutures).to(() => { //
+                Log.trace("forceUpdateStateFromCache: All server descriptors fetched. Saving to state...");
+
+                // 5. Явно сохранить все дескрипторы из BMap в state
+                for (const future of serverFutures) {
+                    const desc = future.getNow(); //
+                    if (desc) {
+                        this.state.setServerDescriptor(desc); //
+                    } else {
+                        Log.warn("forceUpdateStateFromCache: ServerDescriptor was null after ARFuture.all, this is unexpected.");
+                    }
+                }
+
+                Log.debug("forceUpdateStateFromCache: Force update for own UID complete.", { uid: uid.toString() });
+                resultFuture.tryDone(); //
+
+            }).onError(e => {
+                Log.error("forceUpdateStateFromCache: Failed to fetch server descriptors.", e, { uid: uid.toString() });
+                resultFuture.error(e);
+            });
+
+        }).onError(e => {
+            Log.error("forceUpdateStateFromCache: Failed to fetch own cloud.", e, { uid: uid.toString() });
+            resultFuture.error(e);
+        });
+
+        return resultFuture;
+    }
+    public connect(): AFuture {
+        if (this.beginConnect) return this.startFuture0;
+        this.beginConnect = true;
+        AFuture.ofPromise(() => this.initRegistration())
+            .onError(e => {
+                Log.error("Client failed to start during initRegistration.", e);
+                this.startFuture.tryError(e);
+            });
+        this.startFuture.to(() => {
+            this.forceUpdateStateFromCache().to(()=>{
+                this.startFuture0.done();
+            });
+        })
+        return this.startFuture0;
+    }
     /**
      * Batched cache for client access groups.
      * Key: Client UUID, Value: Set of Group IDs
@@ -195,7 +274,6 @@ export class AetherCloudClient implements Destroyable {
      */
     public readonly accessCheckCache: BMap<AccessCheckPair, boolean>;
 
-    // --- Очереди для мутаций (изменений) ---
     public readonly accessOperationsAdd = new Map<bigint, Map<string, ARFuture<boolean>>>();
     public readonly accessOperationsRemove = new Map<bigint, Map<string, ARFuture<boolean>>>();
 
@@ -211,9 +289,7 @@ export class AetherCloudClient implements Destroyable {
      */
     public readonly clientTasks = new Queue<ClientTask>();
 
-    // (Java) onNewChildApi: EventBiConsumer<UUID, ServerApiByUid>
     public readonly onNewChildApi = new EventBiConsumer<UUID, ServerApiByUid>();
-    // --- [КОНЕЦ] НОВЫЕ СВОЙСТВА (ПОРТ ИЗ JAVA) ---
 
 
     /**
@@ -232,9 +308,7 @@ export class AetherCloudClient implements Destroyable {
         Log.info("AetherCloudClient: Initializing...");
 
         this.registrationUrl = state.getRegistrationUri();
-        this.startFuture = AFuture.make();
 
-        // --- [НАЧАЛО] ИНИЦИАЛИЗАЦИЯ НОВЫХ BMAP ---
         const timeout = state.getTimeoutForConnectToRegistrationServer(); // Общий таймаут
         this.servers = RCol.bMap<number, ServerDescriptor>(
             timeout, `${name}-servers`
@@ -254,25 +328,16 @@ export class AetherCloudClient implements Destroyable {
         this.accessCheckCache = RCol.bMap<AccessCheckPair, boolean>(
             timeout, `${name}-accessCheckCache`
         );
-        // --- [КОНЕЦ] ИНИЦИАЛИЗАЦИЯ НОВЫХ BMAP ---
-
-        // Bind internal message handler
         this.onMessage.add((senderUid: UUID, msg: Uint8Array) => {
             this.getMessageNode(senderUid, MessageEventListenerDefault).sendMessageFromServerToClient(msg);
         });
 
-        // --- [НАЧАЛО] ЛОГИКА ИЗ JAVA-КОНСТРУКТОРА ---
-        // Заполняем кэши из state при старте
         this.populateCachesFromState();
 
-        // Логика сохранения в state при обновлении кэшей (как в Java)
         this.clouds.forValueUpdate().add(uu => state.setCloud(uu.key, uu.newValue as Cloud));
         this.servers.forValueUpdate().add(s => {
             state.setServerDescriptor(s.newValue as ServerDescriptor);
         });
-
-        // TODO: Добавить логику сохранения/загрузки для новых BMap (clientGroups, accessGroups)
-        // в ClientState, если требуется персистентность.
 
         this.onNewChild.add(u => {
             if (this.onNewChildApi.hasListener()) {
@@ -281,15 +346,6 @@ export class AetherCloudClient implements Destroyable {
                 });
             }
         });
-        // --- [КОНЕЦ] ЛОГИКА ИЗ JAVA-КОНСТРУКТОРА ---
-
-
-        // --- ИСПРАВЛЕНО: AFuture.ofPromise( () => ... ) ---
-        AFuture.ofPromise(() => this.initRegistration())
-            .onError(e => {
-                Log.error("Client failed to start during initRegistration.", e);
-                this.startFuture.tryError(e);
-            });
 
 
         const pingTime = this.getPingTime();
@@ -403,7 +459,6 @@ export class AetherCloudClient implements Destroyable {
         regConn.registration(); // <--- [FIX] ЭТА СТРОКА БЫЛА ЗАКОММЕНТИРОВАНА
     }
 
-    // --- НОВЫЙ МЕТОД: Подтверждение регистрации (вызывается из ConnectionRegistration) ---
     public confirmRegistration(regResp: FinishResultGlobalRegServerApi): void {
         Log.info("confirmRegistration: Registration confirmed by server.", { uid: regResp.getUid().toString() });
 
@@ -448,8 +503,6 @@ export class AetherCloudClient implements Destroyable {
         return this.state.getAlias();
     }
 
-    // --- НОВЫЙ МЕТОД: Хелпер для получения AKey (как в Java) ---
-    // --- [FIX] Added try...catch block to handle buggy getMasterKey()
     public getMasterKeyAKey(): AKey.Symmetric {
         let key: AKey | null = null;
         try {
@@ -530,13 +583,19 @@ export class AetherCloudClient implements Destroyable {
     }
 
     /**
-    * @description Requests the ServerDescriptor for a given server ID, querying the BMap cache.
-    * @param {number} serverId The ID of the server.
-    * @returns {ARFuture<ServerDescriptor |
-    null>} An ARFuture that resolves to the ServerDescriptor or null.
-    */
+        * @description Requests the ServerDescriptor for a given server ID, querying the BMap cache.
+        * @param {number} serverId The ID of the server.
+        * @returns {ARFuture<ServerDescriptor |
+        null>} An ARFuture that resolves to the ServerDescriptor or null.
+        */
     public getServer(serverId: number): ARFuture<ServerDescriptor |
         null> {
+
+        const r = this.state.getServerDescriptor ? this.state.getServerDescriptor(serverId) : null;
+        if (r != null) {
+            return ARFuture.of(r as ServerDescriptor | null);
+        }
+
         // (Логика не изменилась, BMap сам обработает запрос)
         if (this.servers.has(serverId)) {
             Log.trace(`getServer: Cache hit for serverId: ${serverId}`);
@@ -547,7 +606,6 @@ export class AetherCloudClient implements Destroyable {
 
         return future as ARFuture<ServerDescriptor | null>;
     }
-
     /**
     * @description Requests the Cloud location for a given UUID, querying the BMap cache.
     * @param {UUID} uid The target UUID.
@@ -583,8 +641,6 @@ export class AetherCloudClient implements Destroyable {
         this.clouds.putResolved(uid, cloud);
     }
 
-
-    // --- [НАЧАЛО] НОВЫЕ ПУБЛИЧНЫЕ МЕТОДЫ (ПОРТ ИЗ JAVA) ---
 
     /**
      * @description Retrieves the access groups for a given client UUID using batched requests.
@@ -630,8 +686,6 @@ export class AetherCloudClient implements Destroyable {
         // Запрос теперь идет через BMap
         return this.accessGroups.getFuture(groupId);
     }
-
-    // --- [КОНЕЦ] НОВЫЕ ПУБЛИЧНЫЕ МЕТОДЫ (ПОРТ ИЗ JAVA) ---
 
 
     /**
@@ -798,8 +852,6 @@ export class AetherCloudClient implements Destroyable {
     }
 
 
-    // --- [НАЧАЛО] НОВЫЕ МЕТОДЫ ДЛЯ МУТАЦИЙ (ПОРТ ИЗ JAVA) ---
-
     /**
      * @description Flushes pending requests and messages to the network connections.
      * (Port from Java)
@@ -921,7 +973,6 @@ export class AetherCloudClient implements Destroyable {
             });
     }
 
-    // --- [КОНЕЦ] НОВЫЕ МЕТОДЫ ДЛЯ МУТАЦИЙ (ПОРТ ИЗ JAVA) ---
 
     private logTime = 0;
     /**
@@ -933,7 +984,7 @@ export class AetherCloudClient implements Destroyable {
             this.logTime = RU.time();
             Log.trace("scheduledWork: Executing periodic work.");
         }
-        this.workConnections.forEach(conn => conn.scheduledWork());
+        this.workConnections.forEach(conn => conn.flush());
     }
 
     /**

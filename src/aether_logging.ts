@@ -698,7 +698,6 @@ class LogInternal {
                         case LogLevel.ERROR: s.styleForeground(null, 255, 0, 0); break;
                     }
                 }
-                // Вызываем super.printNode() для фактической печати колонок
                 super.printNode(s, n);
                 s.styleClear();
                 return s;
@@ -707,8 +706,8 @@ class LogInternal {
 
         LogInternal.addListener(filter, (node) => {
             const sb = AString.of();
-            printer.printNode(sb, node); // printer.printNode() форматирует узел в sb
-            console.log(sb.toString()); // Выводим отформатированную строку
+            printer.printNode(sb, node);
+            console.log(sb.toString());
         });
 
         LogInternal.consolePrinter = printer;
@@ -744,17 +743,14 @@ export interface LogFacadeInterface {
     warn(msg: string | ToString, data?: LogData): LNode;
     error(msg: string | ToString | Error, throwable?: Error | LogData, data?: LogData): LNode;
 
-    // Wrappers
     wrapExecutor(executor: Executor): Executor;
     wrap<T extends (...args: any[]) => any>(fn: T): T;
 
-    // Controls
     loggerOff(): void;
     loggerOn(): void;
     addFilter(filter: LogFilter): void;
     addListener(filter: LogFilter, consumer: AConsumer<LNode>): Disposable;
 
-    // Printers
     printConsoleColored(filter?: LogFilter): LogPrinter;
 }
 
@@ -773,7 +769,6 @@ export const Log: LogFacadeInterface = {
     MSG: LogKeys.MSG,
     EXCEPTION_STR: LogKeys.EXCEPTION_STR,
 
-    // Bind all methods from the LogInternal implementation class
     of: LogInternal.of.bind(LogInternal),
     ofNodes: LogInternal.ofNodes.bind(LogInternal),
     get: LogInternal.get.bind(LogInternal),

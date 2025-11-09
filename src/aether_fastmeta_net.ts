@@ -508,6 +508,9 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         };
     }
 
+    // Файл: aether_fastmeta_net.ts
+    // Внутри класса: FastMetaClientWebSocket
+
     /**
      * @private
      * @description Called when the WebSocket connection is successfully opened.
@@ -549,6 +552,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
 
             this.context = context;
 
+            // *** НАЧАЛО ИСПРАВЛЕННОЙ ЛОГИКИ FLUSH ***
             this.context.flush = (sendFuture: AFuture) => {
                 using _l_flush = Log.context(this.log);
                 try {
@@ -562,15 +566,19 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
                             frameBuffer.write(dataArray);
                             const finalBytesToSend = frameBuffer.toArray();
 
-                            try {
-                                this.websocket!.send(finalBytesToSend);
-                                Log.debug("Binary frame sent successfully", { totalBytes: finalBytesToSend.length });
-                                sendFuture.tryDone();
-                            } catch (sendError) {
-                                Log.error("Error sending data through WebSocket", sendError as Error);
-                                this.handleConnectionError(sendError as Error);
-                                sendFuture.error(sendError as Error);
-                            }
+                            this.websocket!.send(finalBytesToSend, (sendError: Error) => {
+                                if (sendError) {
+                                    // Ошибка при отправке (асинхронная)
+                                    Log.error("Error sending data through WebSocket", sendError);
+                                    this.handleConnectionError(sendError);
+                                    sendFuture.error(sendError);
+                                } else {
+                                    // Успешная асинхронная отправка
+                                    Log.debug("Binary frame sent successfully", { totalBytes: finalBytesToSend.length });
+                                    sendFuture.tryDone();
+                                }
+                            });
+
                         } else {
                             Log.trace("Flush called, but no data to send.");
                             sendFuture.tryDone();
@@ -582,11 +590,13 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
                         sendFuture.error(new Error("WebSocket is not open."));
                     }
                 } catch (e) {
-                    Log.error("Error during WebSocket flush", e as Error);
+                    // Этот catch теперь ловит ошибки подготовки (dataArray, frameBuffer)
+                    Log.error("Error during WebSocket flush preparation", e as Error);
                     this.handleConnectionError(e as Error);
                     sendFuture.error(e as Error);
                 }
             };
+            // *** КОНЕЦ ИСПРАВЛЕННОЙ ЛОГИКИ FLUSH ***
 
             this.connectFuture.tryDone(this.context);
 
@@ -599,7 +609,6 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
             this.scheduleReconnect();
         }
     }
-
     /**
      * @private
      * @description Called when a message is received from the WebSocket.
@@ -675,12 +684,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         this.handleConnectionError(new ClientApiException(`WebSocket error: ${error.message}`, error));
     }
 
-    /**
-     * @private
-     * @description Called when the WebSocket connection closes.
-     * @param {number} code The close code.
-     * @param {string} reason The close reason.
-     */
+    // aether_fastmeta_net.ts
     private handleClose(code: number, reason: string): void {
         using _l = Log.context(this.log);
         Log.info("WebSocket connection closed.", {
@@ -690,8 +694,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         });
 
         this.connectionStats.connected = false;
-        // This will trigger the writableConsumer in the adapter
-        this.setConnectionState(ConnectionState.DISCONNECTED);
+        this.setConnectionState(ConnectionState.DISCONNECTED); // <--- Важно
 
         if (!this.connectFuture.isFinalStatus()) {
             this.connectFuture.error(new ClientApiException(`WebSocket closed unexpectedly (Code: ${code}, Reason: ${reason})`));
@@ -699,7 +702,15 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
 
         this.context?.close();
         this.context = null;
-        this.websocket = null;
+        this.websocket = null; // Гарантированно обнуляем здесь
+
+        // --- [НАЧАЛО ИСПРАВЛЕНИЯ] ---
+        // Завершаем future, который был возвращен методом close()
+        if (this.closeFuture) {
+            this.closeFuture.tryDone();
+            this.closeFuture = null;
+        }
+        // --- [КОНЕЦ ИСПРАВЛЕНИЯ] ---
 
         if (!this.isManualClose && !this.isReconnecting) {
             this.scheduleReconnect();
@@ -718,7 +729,10 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         if (!this.connectFuture.isFinalStatus()) {
             this.connectFuture.error(error);
         }
-
+        if (this.closeFuture && !this.closeFuture.isFinalStatus()) {
+            this.closeFuture.tryError(error);
+            this.closeFuture = null;
+        }
         this.connectionStats.connected = false;
         // This will trigger the writableConsumer in the adapter
         this.setConnectionState(ConnectionState.DISCONNECTED);
@@ -818,7 +832,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
     public getConnectionState(): ConnectionState {
         return this.connectionState;
     }
-
+    private closeFuture: AFuture | null = null;
     /**
      * @description Closes the connection manually.
      * @returns {AFuture} A future that completes when the close operation is initiated.
@@ -827,9 +841,13 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         using _l = Log.context(this.log);
         Log.info("Closing FastMetaClientWebSocket...");
 
+        if (this.closeFuture) {
+            return this.closeFuture;
+        }
+        this.closeFuture = AFuture.make();
+
         this.isManualClose = true;
         this.isReconnecting = false;
-        this.setConnectionState(ConnectionState.DISCONNECTED);
 
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
@@ -845,21 +863,28 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
 
         if (this.websocket) {
             try {
+                // Только пытаемся закрыть, если он OPEN или CONNECTING
                 if (this.websocket.readyState === WebSocket.OPEN || this.websocket.readyState === WebSocket.CONNECTING) {
+                    Log.debug("Initiating WebSocket close (code 1000)...");
                     this.websocket.close(1000, "Client initiated close");
+                } else {
+                    Log.debug("WebSocket already closing or closed.", { state: this.websocket.readyState });
+                    this.closeFuture.tryDone();
                 }
             } catch (e) {
                 Log.warn("Error during WebSocket close", e as Error);
+                this.closeFuture.tryError(e as Error);
             }
-            this.websocket = null;
+        } else {
+            Log.debug("Close called but no WebSocket instance exists.");
+            this.closeFuture.tryDone();
         }
 
         this.connectionStats.connected = false;
         this.reconnectAttempts = 0;
 
-        return AFuture.of();
+        return this.closeFuture;
     }
-
     /**
      * @description Gets connection statistics.
      * @returns {*} An object with connection stats.
@@ -993,7 +1018,7 @@ class FastMetaClientAdapter<LT, RT extends RemoteApi> implements FastMetaClient<
 
         this.contextFuture = this.wsClient.connect(uri, lt, rt, localApiProvider);
 
-        this.contextFuture.to((ctx:FastApiContextLocal<LT>) => {
+        this.contextFuture.to((ctx: FastApiContextLocal<LT>) => {
             this.context = ctx;
         }).onError(() => {
             this.context = null;

@@ -2,12 +2,20 @@
  * @file aether_rcollection.ts
  * @purpose Contains reactive collection implementations (RMap, RSet, RQueue, BMap).
  * @dependencies aether.types.ts, aether.logging.ts, aether.utils.ts, aether_future.ts
+ *
+ * @version 4.0.0
+ * @description Убраны ограничения `extends JObj`.
+ * CustomHashMap теперь использует гибридный подход:
+ * 1. .hashCode()/.equals() для объектов, где они есть.
+ * 2. Стандартное хеширование/сравнение для примитивов (number, string, bigint).
+ * 3. `allRequests` и `BMapSender.requests` в BMapImpl используют CustomHashMap.
  */
 
 import {
     AConsumer,
     AFunction,
     ABiFunction,
+    JObj // Интерфейс JObj используется только для type-guard
 } from './aether_types';
 import {
     EventConsumer
@@ -15,6 +23,216 @@ import {
 import {
     ARFutureWithFlag,
 } from './aether_future';
+import { Log } from './aether_logging';
+
+// =============================================================================================
+// SECTION 0: CustomHashMap (Гибридная реализация HashMap)
+// =============================================================================================
+
+/**
+ * Внутренняя реализация HashMap, использующая .hashCode() и .equals()
+ * для объектов (если они есть) и стандартную логику для примитивов.
+ * @template K The key type.
+ * @template V The value type.
+ */
+class CustomHashMap<K, V> {
+    // Карта: hashCode -> "Бакет" (массив пар [ключ, значение])
+    private buckets = new Map<number, Array<[K, V]>>();
+    private _size = 0;
+
+    constructor(initialEntries?: Iterable<[K, V]>) {
+        if (initialEntries) {
+            for (const [key, value] of initialEntries) {
+                this.set(key, value);
+            }
+        }
+    }
+
+    /**
+     * Возвращает хэш-код для ключа.
+     * Проверяет наличие .hashCode(), иначе использует хэш от String(key).
+     */
+    private _getHash(key: K): number {
+        if (key === null || key === undefined) return 0;
+
+        // 1. Объект с JObj-контрактом
+        if (typeof key === 'object' && typeof (key as any).hashCode === 'function') {
+            return (key as any).hashCode();
+        }
+
+        // 2. Примитивы
+        if (typeof key === 'number') {
+            return key | 0; // Простой хэш для чисел
+        }
+
+        if (typeof key === 'bigint') {
+            const hash = key ^ (key >> 32n); // Java's Long.hashCode
+            return Number(hash & 0xFFFFFFFFn) | 0;
+        }
+
+        if (typeof key === 'string') {
+            let hash = 0;
+            for (let i = 0; i < key.length; i++) {
+                hash = (31 * hash + key.charCodeAt(i)) | 0;
+            }
+            return hash;
+        }
+
+        // 3. Fallback для других типов (boolean, etc.)
+        const s = String(key);
+        let hash = 0;
+        for (let i = 0; i < s.length; i++) {
+            hash = (31 * hash + s.charCodeAt(i)) | 0;
+        }
+        return hash;
+    }
+
+    /**
+     * Сравнивает два ключа на равенство.
+     * Проверяет наличие .equals(), иначе использует ===.
+     */
+    private _isEqual(keyA: K, keyB: K): boolean {
+        if (keyA === keyB) return true;
+        if (keyA === null || keyA === undefined) return (keyB === null || keyB === undefined);
+        if (keyB === null || keyB === undefined) return false;
+
+        // 1. Объект с JObj-контрактом
+        if (typeof keyA === 'object' && typeof (keyA as any).equals === 'function') {
+            return (keyA as any).equals(keyB);
+        }
+
+        // 2. Примитивы (уже покрыты ===, но на всякий случай)
+        // (bigint === bigint) работает корректно для значений
+        // (number === number) работает корректно
+        // (string === string) работает корректно
+
+        // 3. Fallback (разные объекты без .equals)
+        return false;
+    }
+
+    set(key: K, value: V): this {
+        const hash = this._getHash(key);
+        let bucket = this.buckets.get(hash);
+
+        if (!bucket) {
+            // Новый бакет
+            this.buckets.set(hash, [[key, value]]);
+            this._size++;
+            return this;
+        }
+
+        // Бакет существует, ищем ключ
+        for (const entry of bucket) {
+            if (this._isEqual(entry[0], key)) {
+                // Ключ найден, обновляем значение
+                entry[1] = value;
+                return this;
+            }
+        }
+
+        // Ключ не найден, добавляем новую пару (коллизия)
+        bucket.push([key, value]);
+        this._size++;
+        return this;
+    }
+
+    get(key: K): V | undefined {
+        const bucket = this.buckets.get(this._getHash(key));
+        if (!bucket) {
+            return undefined;
+        }
+
+        for (const entry of bucket) {
+            if (this._isEqual(entry[0], key)) {
+                return entry[1]; // Ключ найден
+            }
+        }
+
+        return undefined; // Ключ не найден в бакете
+    }
+
+    has(key: K): boolean {
+        const bucket = this.buckets.get(this._getHash(key));
+        if (!bucket) {
+            return false;
+        }
+        for (const entry of bucket) {
+            if (this._isEqual(entry[0], key)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    delete(key: K): boolean {
+        const hash = this._getHash(key);
+        const bucket = this.buckets.get(hash);
+        if (!bucket) {
+            return false;
+        }
+
+        for (let i = 0; i < bucket.length; i++) {
+            if (this._isEqual(bucket[i][0], key)) {
+                // Ключ найден, удаляем
+                bucket.splice(i, 1);
+                this._size--;
+                // Если бакет пуст, удаляем и его
+                if (bucket.length === 0) {
+                    this.buckets.delete(hash);
+                }
+                return true;
+            }
+        }
+
+        return false; // Ключ не найден
+    }
+
+    get size(): number {
+        return this._size;
+    }
+
+    clear(): void {
+        this.buckets.clear();
+        this._size = 0;
+    }
+
+    // --- Iterators ---
+
+    *entries(): IterableIterator<[K, V]> {
+        for (const bucket of this.buckets.values()) {
+            yield* bucket;
+        }
+    }
+
+    *[Symbol.iterator](): IterableIterator<[K, V]> {
+        yield* this.entries();
+    }
+
+    *keys(): IterableIterator<K> {
+        for (const bucket of this.buckets.values()) {
+            for (const entry of bucket) {
+                yield entry[0];
+            }
+        }
+    }
+
+    *values(): IterableIterator<V> {
+        for (const bucket of this.buckets.values()) {
+            for (const entry of bucket) {
+                yield entry[1];
+            }
+        }
+    }
+
+    forEach(callbackfn: (value: V, key: K, map: this) => void, thisArg?: any): void {
+        for (const bucket of this.buckets.values()) {
+            for (const [key, value] of bucket) {
+                callbackfn.call(thisArg, value, key, this);
+            }
+        }
+    }
+}
+
 
 // =============================================================================================
 // SECTION 1: RMap (Reactive Map)
@@ -50,135 +268,38 @@ export interface RMapEntry<K, V> {
 
 /**
  * A reactive Map interface.
- * NOTE: This does NOT extend the built-in 'Map' to avoid iterator type conflicts.
- *
  * @template K The key type.
  * @template V The value type.
  */
 export interface RMap<K, V> extends Iterable<[K, V]> {
     // --- Standard Map Properties & Methods ---
-
-    /**
-     * Gets the number of entries in the map.
-     */
     readonly size: number;
-
-    /**
-     * Sets a value for a key.
-     * @param key The key.
-     * @param value The value.
-     * @returns This RMap instance.
-     */
     set(key: K, value: V): this;
-
-    /**
-     * Gets a value for a key.
-     * @param key The key.
-     * @returns The value or undefined.
-     */
     get(key: K): V | undefined;
-
-    /**
-     * Checks if a key exists.
-     * @param key The key.
-     * @returns True if the key exists.
-     */
     has(key: K): boolean;
-
-    /**
-     * Deletes an entry.
-     * @param key The key to delete.
-     * @returns True if an element was deleted, false otherwise.
-     */
     delete(key: K): boolean;
-
-    /**
-     * Clears the map.
-     */
     clear(): void;
-
-    /**
-     * Executes a callback for each entry.
-     * @param callbackfn The callback function.
-     * @param thisArg The `this` context for the callback.
-     */
     forEach(callbackfn: (value: V, key: K, map: RMap<K, V>) => void, thisArg?: any): void;
-
-    /**
-     * Returns an iterator for the map entries.
-     */
     entries(): IterableIterator<[K, V]>;
-
-    /**
-     * Returns an iterator for the map keys.
-     */
     keys(): IterableIterator<K>;
-
-    /**
-     * Returns an iterator for the map values.
-     */
     values(): IterableIterator<V>;
-
-    /**
-     * Returns an iterator for the map entries.
-     */
     [Symbol.iterator](): IterableIterator<[K, V]>;
 
     // --- Reactive Methods ---
-
-    /**
-     * Fires when an entry is added or updated.
-     * @returns An EventConsumer for RMapUpdate events.
-     */
     forUpdate(): EventConsumer<RMapUpdate<K, V>>;
-
-    /**
-     * Fires when an entry is removed.
-     * The value in the entry is the value that was removed.
-     * @returns An EventConsumer for RMapEntry events.
-     */
     forRemove(): EventConsumer<RMapEntry<K, V>>;
-
-    /**
-     * Creates a new RMap by mapping the values of this map.
-     * @param v1ToV2 Function to map V to V2.
-     * @param v2ToV1 Function to map V2 back to V (for reverse operations).
-     */
     mapVal<V2>(v1ToV2: AFunction<V | null, V2 | null>, v2ToV1: AFunction<V2 | null, V | null>): RMap<K, V2>;
-
-    /**
-     * Creates a new RMap by mapping keys and values.
-     * @param k1ToK2 Function to map K to K2.
-     * @param k2ToK1 Function to map K2 back to K.
-     * @param v1ToV2 Function to map V to V2.
-     * @param v2ToV1 Function to map V2 back to V.
-     */
     map<K2, V2>(
         k1ToK2: AFunction<K, K2>, k2ToK1: AFunction<K2, K>,
         v1ToV2: AFunction<V | null, V2 | null>, v2ToV1: AFunction<V2 | null, V | null>
     ): RMap<K2, V2>;
-
-    /**
-     * Creates a new one-way RMap by mapping keys based on key and value.
-     * @param k1ToK2 A function that derives a new key (K2) from an old key (K) and value (V).
-     */
     mapKey<K2>(k1ToK2: ABiFunction<K, V, K2>): RMap<K2, V>;
-
-    /**
-     * Links this map to another map, synchronizing changes in both directions.
-     * @param other The other RMap to link with.
-     */
     link(other: RMap<K, V>): void;
-
-    /**
-     * Converts this RMap into an RFMap, where values are wrapped in ARFutureWithFlag.
-     * @returns A new RFMap instance.
-     */
     mapToFutures(): RFMap<K, V>;
 }
 
 /**
- * Base implementation for RMap that wraps a standard Map.
+ * Base implementation for RMap that wraps a **CustomHashMap**.
  * @template K The key type.
  * @template V The value type.
  */
@@ -189,31 +310,33 @@ export class RMapBySrc<K, V> implements RMap<K, V> {
     private readonly removeEvent = new EventConsumer<RMapEntry<K, V>>();
 
     /**
-     * @param src The underlying Map instance to wrap.
+     * @param src The underlying CustomHashMap instance to wrap.
      */
-    constructor(protected readonly src: Map<K, V>) { }
+    constructor(protected readonly src: CustomHashMap<K, V>) { }
 
-    /**
-     * Fires when an entry is added or updated.
-     * @returns An EventConsumer for RMapUpdate events.
-     */
     public forUpdate(): EventConsumer<RMapUpdate<K, V>> { return this.updateEvent; }
-
-    /**
-     * Fires when an entry is removed.
-     * @returns An EventConsumer for RMapEntry events.
-     */
     public forRemove(): EventConsumer<RMapEntry<K, V>> { return this.removeEvent; }
 
     /**
-     * Sets a value for a key and fires an update event.
-     * @param key The key.
-     * @param value The value.
-     * @returns This RMap instance.
+     * Внутренний метод сравнения, используется в mapKeyFuture
      */
+    protected _isEqual(keyA: any, keyB: any): boolean {
+        if (keyA === keyB) return true;
+        if (keyA === null || keyA === undefined) return (keyB === null || keyB === undefined);
+        if (keyB === null || keyB === undefined) return false;
+
+        // 1. Объект с JObj-контрактом
+        if (typeof keyA === 'object' && typeof (keyA as any).equals === 'function') {
+            return (keyA as any).equals(keyB);
+        }
+
+        return false;
+    }
+
+
     public set(key: K, value: V): this {
         const oldValue = this.src.get(key) ?? null;
-        if (oldValue === value) {
+        if (oldValue === value || (oldValue !== null && this._isEqual(oldValue, value))) {
             return this;
         }
         this.src.set(key, value);
@@ -221,11 +344,6 @@ export class RMapBySrc<K, V> implements RMap<K, V> {
         return this;
     }
 
-    /**
-     * Deletes an entry and fires a remove event.
-     * @param key The key to delete.
-     * @returns True if an element was deleted, false otherwise.
-     */
     public delete(key: K): boolean {
         const oldValue = this.src.get(key);
         if (oldValue !== undefined) {
@@ -238,102 +356,60 @@ export class RMapBySrc<K, V> implements RMap<K, V> {
         return false;
     }
 
-    /**
-     * Clears the map, firing remove events for each entry.
-     */
     public clear(): void {
-        /**
-         * We must iterate and call this.delete() to ensure events fire
-         * for each removed item, as required by RMap.java.
-         */
-        for (const [key] of this.src.entries()) {
-            this.delete(key);
+        for (const [key, value] of this.src.entries()) {
+            // Must fire event for each removed item
+            this.removeEvent.fire({ key: key, value: value });
         }
+        this.src.clear();
     }
 
-    /**
-     * Gets a value for a key.
-     * @param key The key.
-     * @returns The value or undefined.
-     */
     public get(key: K): V | undefined {
         return this.src.get(key);
     }
 
-    /**
-     * Checks if a key exists.
-     * @param key The key.
-     * @returns True if the key exists.
-     */
     public has(key: K): boolean {
         return this.src.has(key);
     }
 
-    /**
-     * Gets the number of entries in the map.
-     */
     public get size(): number {
         return this.src.size;
     }
 
-    /**
-     * Executes a callback for each entry.
-     * @param callbackfn The callback function.
-     * @param thisArg The `this` context for the callback.
-     */
     public forEach(callbackfn: (value: V, key: K, map: RMap<K, V>) => void, thisArg?: any): void {
-        // Pass 'this' (the RMap) to the callback, not 'this.src' (the raw Map)
         this.src.forEach((value, key) => {
             callbackfn.call(thisArg, value, key, this);
         });
     }
 
-    /**
-     * Returns an iterator for the map entries.
-     */
     public [Symbol.iterator](): IterableIterator<[K, V]> {
         return this.src[Symbol.iterator]();
     }
 
-    /**
-     * Returns an iterator for the map entries.
-     */
     public entries(): IterableIterator<[K, V]> {
         return this.src.entries();
     }
 
-    /**
-     * Returns an iterator for the map keys.
-     */
     public keys(): IterableIterator<K> {
         return this.src.keys();
     }
 
-    /**
-     * Returns an iterator for the map values.
-     */
     public values(): IterableIterator<V> {
         return this.src.values();
     }
 
-    /**
-     * Implements the RMap.mapVal default method.
-     */
     public mapVal<V2>(v1ToV2: AFunction<V | null, V2 | null>, v2ToV1: AFunction<V2 | null, V | null>): RMap<K, V2> {
         return this.map(k => k, k => k, v1ToV2, v2ToV1);
     }
 
-    /**
-     * Implements the RMap.map default method.
-     */
     public map<K2, V2>(
         k1ToK2: AFunction<K, K2>, k2ToK1: AFunction<K2, K>,
         v1ToV2: AFunction<V | null, V2 | null>, v2ToV1: AFunction<V2 | null, V | null>
     ): RMap<K2, V2> {
 
-        const resMap = new Map<K2, V2>();
+        const resMap = new CustomHashMap<K2, V2>();
         for (const [k, v] of this.entries()) {
-            resMap.set(k1ToK2(k), v1ToV2(v));
+            resMap.set(k1ToK2(k), v1ToV2(v)!);
         }
 
         const res: RMap<K2, V2> = RCol.of(resMap);
@@ -359,9 +435,6 @@ export class RMapBySrc<K, V> implements RMap<K, V> {
         return res;
     }
 
-    /**
-     * Implements the RMap.mapKey default method .
-     */
     public mapKey<K2>(k1ToK2: ABiFunction<K, V, K2>): RMap<K2, V> {
         const res = RCol.map<K2, V>();
 
@@ -387,9 +460,6 @@ export class RMapBySrc<K, V> implements RMap<K, V> {
         return res;
     }
 
-    /**
-     * Implements the RMap.link default method.
-     */
     public link(other: RMap<K, V>): void {
         this.forUpdate().add(e => { if (e.newValue !== null) other.set(e.key, e.newValue); });
         this.forRemove().add(e => other.delete(e.key));
@@ -404,11 +474,8 @@ export class RMapBySrc<K, V> implements RMap<K, V> {
         }
     }
 
-    /**
-     * Implements the RMap.mapToFutures default method.
-     */
     public mapToFutures(): RFMap<K, V> {
-        const map2 = new Map<K, ARFutureWithFlag<V>>();
+        const map2 = new CustomHashMap<K, ARFutureWithFlag<V>>();
 
         const getOrCreateFuture = (key: K): ARFutureWithFlag<V> => {
             let future = map2.get(key);
@@ -426,7 +493,7 @@ export class RMapBySrc<K, V> implements RMap<K, V> {
 
         const rfMap: RFMap<K, V> = new RMapBySrc<K, ARFutureWithFlag<V>>(map2) as unknown as RFMap<K, V>;
 
-        for(const [key, value] of this.entries()) {
+        for (const [key, value] of this.entries()) {
             if (value !== null) {
                 const f = getOrCreateFuture(key);
                 f.tryDone(value);
@@ -465,22 +532,11 @@ export class RMapBySrc<K, V> implements RMap<K, V> {
 
 /**
  * A reactive Map where values are ARFutureWithFlag.
- *
  * @template K The key type.
  * @template V The value type held by the future.
  */
 export interface RFMap<K, V> extends RMap<K, ARFutureWithFlag<V>> {
-    /**
-     * Creates a new RFMap by mapping the *values* inside the futures.
-     * @param vToV2 Function to map V to V2.
-     * @param v2ToV Function to map V2 back to V.
-     */
     mapValFuture<V2>(vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K, V2>;
-
-    /**
-     * Creates a new RFMap by mapping the *keys* based on the *resolved value*.
-     * @param vToK2 Function to derive a new key K2 from the value V.
-     */
     mapKeyFuture<K2>(vToK2: AFunction<V, K2>): RFMap<K2, V>;
 }
 
@@ -488,11 +544,28 @@ export interface RFMap<K, V> extends RMap<K, ARFutureWithFlag<V>> {
  * Contains implementations for RFMap default methods.
  */
 namespace RFMapImpl {
+
+    /**
+     * Внутренняя (private) функция. Не экспортируется.
+     */
+    const _isEqual = (keyA: any, keyB: any): boolean => {
+        if (keyA === keyB) return true;
+        if (keyA === null || keyA === undefined) return (keyB === null || keyB === undefined);
+        if (keyB === null || keyB === undefined) return false;
+
+        if (typeof keyA === 'object' && typeof (keyA as any).equals === 'function') {
+            return (keyA as any).equals(keyB);
+        }
+
+        return false;
+    };
+
+
     /**
      * Implementation for RFMap.mapValFuture.
      */
     export function mapValFuture<K, V, V2>(this: RFMap<K, V>, vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K, V2> {
-        const newMap = new Map<K, ARFutureWithFlag<V2>>();
+        const newMap = new CustomHashMap<K, ARFutureWithFlag<V2>>();
         const res: RFMap<K, V2> = RCol.of(newMap) as unknown as RFMap<K, V2>;
 
         const mapFuture = (f: ARFutureWithFlag<V> | null): ARFutureWithFlag<V2> | null => {
@@ -530,9 +603,9 @@ namespace RFMapImpl {
      * Implementation for RFMap.mapKeyFuture .
      */
     export function mapKeyFuture<K, V, K2>(this: RFMap<K, V>, vToK2: AFunction<V, K2>): RFMap<K2, V> {
-        const newMap = new Map<K2, ARFutureWithFlag<V>>();
+        const newMap = new CustomHashMap<K2, ARFutureWithFlag<V>>();
         const res: RFMap<K2, V> = RCol.of(newMap) as unknown as RFMap<K2, V>;
-        const keyMapping = new Map<K2, K>();
+        const keyMapping = new CustomHashMap<K2, K>();
 
         const processEntry = (key: K, future: ARFutureWithFlag<V> | null) => {
             if (!future) return;
@@ -541,7 +614,8 @@ namespace RFMapImpl {
                 const newKey = vToK2(v);
                 const oldOriginalKey = keyMapping.get(newKey);
 
-                if (oldOriginalKey && oldOriginalKey !== key) {
+                // *** ИСПРАВЛЕНИЕ: Используем локальный _isEqual ***
+                if (oldOriginalKey && !_isEqual(oldOriginalKey, key)) {
                     this.delete(oldOriginalKey);
                 }
 
@@ -571,8 +645,9 @@ namespace RFMapImpl {
 
         this.forRemove().add(e => {
             let keyToRemove: K2 | null = null;
-            for(const [k2, k] of keyMapping.entries()) {
-                if (k === e.key) {
+            for (const [k2, k] of keyMapping.entries()) {
+                // *** ИСПРАВЛЕНИЕ: Используем локальный _isEqual ***
+                if (_isEqual(k, e.key)) {
                     keyToRemove = k2;
                     break;
                 }
@@ -597,74 +672,18 @@ namespace RFMapImpl {
 
 /**
  * An asynchronous, throttling map for managing external data requests.
- * Extends RFMap and adds methods for batching and request management.
- *
  * @template K The key type.
  * @template V The value type to be retrieved asynchronously.
  */
 export interface BMap<K, V> extends RFMap<K, V> {
-    /**
-     * Retrieves the ARFutureWithFlag for a key.
-     * If not present, this conditionally adds the key to the request pool.
-     * @param key The key.
-     * @returns An ARFutureWithFlag for the value.
-     */
     getFuture(key: K): ARFutureWithFlag<V>;
-
-    /**
-     * Returns all keys that are currently pending a network request.
-     * @returns A Set of pending keys.
-     */
-    getPendingRequests(): Set<K>;
-
-    /**
-     * Puts a resolved value into the map, completing the pending future.
-     * @param key The key.
-     * @param value The resolved value.
-     */
+    getPendingRequests(): Set<K>; // Возвращает JS Set
     putResolved(key: K, value: V): void;
-
-    /**
-     * Puts a resolved value, using an updater function if the value already exists.
-     * @param key The key.
-     * @param updater A function to update the existing value (v: V) => void.
-     * @param value The new value (used if no old value exists).
-     */
     putResolved(key: K, updater: AConsumer<V>, value: V): void;
-
-    /**
-     * Marks a pending future as errored.
-     * @param key The key.
-     * @param error The error.
-     */
     putError(key: K, error: Error): void;
-
-    /**
-     * Returns an EventConsumer that fires when a value is *definitively resolved*
-     * (not just when the future is created).
-     * @returns An EventConsumer for (K, V) updates.
-     */
     forValueUpdate(): EventConsumer<RMapUpdate<K, V>>;
-
-    /**
-     * Gets pending request keys for a specific sender.
-     * This "flushes" the queue for that sender.
-     * @param sender The sender object (e.g., a connection).
-     * @returns An array of keys (K[]) for the sender to fetch.
-     */
     getRequestsFor(sender: object): K[];
-
-    /**
-     * Checks if any requests are pending globally.
-     * @returns True if requests are pending.
-     */
     isRequests(): boolean;
-
-    /**
-     * Checks if any requests are pending for a specific sender.
-     * @param sender The sender object.
-     * @returns True if requests are pending for the sender.
-     */
     isRequestsFor(sender: object): boolean;
 }
 
@@ -675,23 +694,16 @@ export interface BMap<K, V> extends RFMap<K, V> {
  */
 class BMapSender<K> {
     /**
-     * The set of keys this specific sender needs to fetch.
+     * **ИЗМЕНЕНО:** Используем CustomHashMap как HashSet
      */
-    public readonly requests = new Set<K>();
+    public readonly requests = new CustomHashMap<K, true>();
 
-    /**
-     * @param allRequests Initial set of all pending requests to copy.
-     */
-    constructor(allRequests: Set<K>) {
-        allRequests.forEach(k => this.requests.add(k));
+    constructor(allRequests: CustomHashMap<K, true>) {
+        allRequests.forEach((_v, k) => this.requests.set(k, true));
     }
 
-    /**
-     * Extracts all pending keys for this sender and clears its internal queue.
-     * @returns An array of keys (K[]) that this sender should fetch.
-     */
     public extract(): K[] {
-        const r = Array.from(this.requests);
+        const r = Array.from(this.requests.keys());
         this.requests.clear();
         return r;
     }
@@ -705,47 +717,32 @@ class BMapSender<K> {
 export class BMapImpl<K, V> extends RMapBySrc<K, ARFutureWithFlag<V>> implements BMap<K, V> {
 
     /**
-     * Stores all keys that are currently requested by any sender.
+     * **ИЗМЕНЕНО:** Используем CustomHashMap как HashSet
      */
-    private readonly allRequests = new Set<K>();
+    private readonly allRequests = new CustomHashMap<K, true>();
 
-    /**
-     * Fires when a value is successfully resolved.
-     */
     private readonly valueUpdate = new EventConsumer<RMapUpdate<K, V>>();
 
     /**
-     * Tracks requests per sender.
-     * We use a Map, not a WeakMap, to mirror the Java implementation's
-     * ability to iterate `senders.values()`.
-     * Senders must be manually deregistered if needed.
+     * **ОСТАВЛЕНО:** Используем стандартный `Map`.
+     * Ключи - это объекты `ConnectionWork` (sender), для них
+     * нам нужно равенство по ССЫЛКЕ (===).
      */
     private readonly senders = new Map<object, BMapSender<K>>();
 
-    /**
-     * @param _initialCapacity (Not used in TS Map).
-     * @param _name (Not used in this impl).
-     * @param _timeoutMs (Not used in this impl).
-     */
     constructor(
         _initialCapacity: number,
         _name: string,
         _timeoutMs: number
     ) {
-        super(new Map<K, ARFutureWithFlag<V>>());
+        super(new CustomHashMap<K, ARFutureWithFlag<V>>());
     }
 
-    /**
-     * Gets or creates the ARFutureWithFlag associated with the key.
-     * This replicates the `ConcurrentHashMapWithDefault` logic from Java.
-     * @param key The key.
-     * @returns The existing or new future.
-     */
     private getOrCreateFuture(key: K): ARFutureWithFlag<V> {
-        let future = this.src.get(key);
+        let future = this.src.get(key); // `get` из CustomHashMap
         if (!future) {
             future = new ARFutureWithFlag<V>();
-            this.src.set(key, future);
+            this.src.set(key, future); // `set` из CustomHashMap
 
             future.to(
                 (v: V) => {
@@ -766,12 +763,8 @@ export class BMapImpl<K, V> extends RMapBySrc<K, ARFutureWithFlag<V>> implements
         return future;
     }
 
-    /**
-     * Removes a key from the global pool and all sender-specific pools.
-     * @param key The key to remove.
-     * @returns True if the key was present in the global pool.
-     */
     private removeRequest(key: K): boolean {
+        // `delete` из CustomHashMap
         const res = this.allRequests.delete(key);
         for (const s of this.senders.values()) {
             s.requests.delete(key);
@@ -779,23 +772,16 @@ export class BMapImpl<K, V> extends RMapBySrc<K, ARFutureWithFlag<V>> implements
         return res;
     }
 
-    /**
-     * Adds a key to the global request pool and all *existing* sender pools.
-     * @param key The key to add.
-     */
     private addRequest(key: K): void {
-        this.allRequests.add(key);
+        // `set` из CustomHashMap
+        this.allRequests.set(key, true);
         for (const s of this.senders.values()) {
-            s.requests.add(key);
+            s.requests.set(key, true);
         }
     }
 
-    /**
-     * Helper to retrieve or create a Sender object.
-     * @param k The sender object.
-     * @returns The Sender instance.
-     */
     private getSender(k: object): BMapSender<K> {
+        // `get`/`set` для `senders` использует ===
         let sender = this.senders.get(k);
         if (!sender) {
             sender = new BMapSender<K>(this.allRequests);
@@ -804,23 +790,14 @@ export class BMapImpl<K, V> extends RMapBySrc<K, ARFutureWithFlag<V>> implements
         return sender;
     }
 
-    /**
-     * @override
-     */
     public getFuture(key: K): ARFutureWithFlag<V> {
         return this.getOrCreateFuture(key);
     }
 
-    /**
-     * @override
-     */
     public getPendingRequests(): Set<K> {
-        return this.allRequests;
+        return new Set(this.allRequests.keys());
     }
 
-    /**
-     * @override
-     */
     public putResolved(key: K, valueOrUpdater: V | AConsumer<V>, valueIfUpdater?: V): void {
         if (arguments.length === 2) {
             const value = valueOrUpdater as V;
@@ -838,86 +815,54 @@ export class BMapImpl<K, V> extends RMapBySrc<K, ARFutureWithFlag<V>> implements
         }
     }
 
-    /**
-     * @override
-     */
     public putError(key: K, error: Error): void {
         const future = this.getOrCreateFuture(key);
         future.tryError(error);
     }
 
-    /**
-     * @override
-     */
     public forValueUpdate(): EventConsumer<RMapUpdate<K, V>> {
         return this.valueUpdate;
     }
 
-
-
-    /**
-     * @override
-     */
     public getRequestsFor(sender: object): K[] {
         return this.getSender(sender).extract();
     }
 
-    /**
-     * @override
-     */
     public isRequests(): boolean {
         return this.allRequests.size > 0;
     }
 
-    /**
-     * @override
-     */
     public isRequestsFor(sender: object): boolean {
+        // Мы не можем просто проверить `this.senders.has(sender)`,
+        // т.к. sender мог быть создан, но очередь его пуста.
+        // `getSender` создаст его, если его нет, и мы проверим его .requests.size
         return this.getSender(sender).requests.size > 0;
     }
 
-    /**
-     * @override
-     */
     public get(key: K): ARFutureWithFlag<V> | undefined {
         return this.getFuture(key);
     }
 
-    /**
-     * @override
-     */
     public set(key: K, value: ARFutureWithFlag<V>): this {
         throw new Error("Cannot .set() a future directly on BMap. Use putResolved() or putError().");
     }
 
-    /**
-     * @override
-     */
     public delete(key: K): boolean {
         this.removeRequest(key);
-        const future = this.src.get(key);
+        const future = this.src.get(key); // `get` из CustomHashMap
         if (future) {
             future.cancel();
         }
-        return super.delete(key);
+        return super.delete(key); // `delete` из RMapBySrc
     }
 
     // --- ADDED METHODS TO SATISFY RFMap INTERFACE ---
 
-    /**
-     * @override
-     */
     public mapValFuture<V2>(vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K, V2> {
-        // This implementation is defined in RFMapImpl
-        // We bind it to `this` which is an RFMap
         return RFMapImpl.mapValFuture.bind(this)(vToV2, v2ToV);
     }
 
-    /**
-     * @override
-     */
     public mapKeyFuture<K2>(vToK2: AFunction<V, K2>): RFMap<K2, V> {
-        // This implementation is defined in RFMapImpl
         return RFMapImpl.mapKeyFuture.bind(this)(vToK2);
     }
 }
@@ -928,171 +873,65 @@ export class BMapImpl<K, V> extends RMapBySrc<K, ARFutureWithFlag<V>> implements
 // =============================================================================================
 
 /**
- * A reactive Collection interface, providing event consumers for adds and removes.
- *
+ * A reactive Collection interface.
  * @template T The element type.
  */
 export interface RCollection<T> extends Iterable<T> {
-    /**
-     * Fires when an element is added.
-     */
     forAdd(): EventConsumer<T>;
-
-    /**
-     * Fires when an element is removed.
-     */
     forRemove(): EventConsumer<T>;
-
-    /**
-     * Gets the number of elements in the collection.
-     */
     readonly size: number;
-
-    /**
-     * Checks if the collection is empty.
-     */
     isEmpty(): boolean;
-
-    /**
-     * Checks if the collection contains an element.
-     * @param o The element to check.
-     */
     contains(o: T): boolean;
-
-    /**
-     * Adds an element to the collection.
-     * @param e The element to add.
-     * @returns True if the collection changed.
-     */
     add(e: T): boolean;
-
-    /**
-     * Removes an element from the collection.
-     * @param o The element to remove.
-     * @returns True if the collection changed.
-     */
     remove(o: T): boolean;
-
-    /**
-     * Removes all elements from the collection.
-     */
     clear(): void;
-
-    /**
-     * Adds all elements from an iterable to this collection.
-     * @param c The iterable of elements to add.
-     * @returns True if the collection changed.
-     */
     addAll(c: Iterable<T>): boolean;
-
-    /**
-     * Removes all elements from this collection that are present
-     * in the specified iterable.
-     * @param c The iterable of elements to remove.
-     * @returns True if the collection changed.
-     */
     removeAll(c: Iterable<T>): boolean;
-
-    /**
-     * Retains only the elements in this collection that are contained
-     * in the specified iterable.
-     * @param c The iterable of elements to retain.
-     * @returns True if the collection changed.
-     */
     retainAll(c: Iterable<T>): boolean;
-
-    /**
-     * Creates a new RCollection by mapping elements.
-     * @param f Function to map T to T2.
-     * @param f2 Function to map T2 back to T.
-     */
     map<T2>(f: AFunction<T, T2>, f2: AFunction<T2, T>): RCollection<T2>;
 }
 
 /**
- * Base implementation for RCollection that wraps a Set or Array.
+ * Base implementation for RCollection.
  * @template T The element type.
- * @template S The underlying storage type (Set or Array).
+ * @template S The underlying storage type.
  */
-export abstract class RCollectionBySrc<T, S extends Set<T> | Array<T>> implements RCollection<T> {
+export abstract class RCollectionBySrc<T, S extends Set<T> | Array<T> | CustomHashMap<T, any>> implements RCollection<T> {
 
     protected readonly forAddEvent = new EventConsumer<T>();
     protected readonly forRemoveEvent = new EventConsumer<T>();
 
-    /**
-     * @param src The underlying collection (Set or Array).
-     */
-    constructor(protected readonly src: S) {}
+    constructor(protected readonly src: S) { }
 
-    /**
-     * Fires when an element is added.
-     */
     public forAdd(): EventConsumer<T> { return this.forAddEvent; }
-
-    /**
-     * Fires when an element is removed.
-     */
     public forRemove(): EventConsumer<T> { return this.forRemoveEvent; }
 
-    /**
-     * Gets the number of elements.
-     */
     public get size(): number {
+        if (this.src instanceof CustomHashMap) {
+            return this.src.size;
+        }
         return (this.src as Set<T>).size ?? (this.src as Array<T>).length;
     }
 
-    /**
-     * Checks if empty.
-     */
     public isEmpty(): boolean {
         return this.size === 0;
     }
 
-    /**
-     * Protected method to fire add event.
-     * @param val The value added.
-     */
     protected add0(val: T): void {
         this.forAddEvent.fire(val);
     }
 
-    /**
-     * Protected method to fire remove event.
-     * @param val The value removed.
-     */
     protected remove0(val: T): void {
         this.forRemoveEvent.fire(val);
     }
 
-    /**
-     * @abstract
-     */
     public abstract [Symbol.iterator](): IterableIterator<T>;
-
-    /**
-     * @abstract
-     */
     public abstract contains(o: T): boolean;
-
-    /**
-     * @abstract
-     */
     public abstract add(e: T): boolean;
-
-    /**
-     * @abstract
-     */
     public abstract remove(o: T): boolean;
-
-    /**
-     * @abstract
-     */
     public abstract clear(): void;
 
 
-    /**
-     * @override
-     */
     public addAll(c: Iterable<T>): boolean {
         let modified = false;
         for (const e of c) {
@@ -1103,9 +942,6 @@ export abstract class RCollectionBySrc<T, S extends Set<T> | Array<T>> implement
         return modified;
     }
 
-    /**
-     * @override
-     */
     public removeAll(c: Iterable<T>): boolean {
         let modified = false;
         for (const e of c) {
@@ -1116,10 +952,8 @@ export abstract class RCollectionBySrc<T, S extends Set<T> | Array<T>> implement
         return modified;
     }
 
-    /**
-     * @override
-     */
     public retainAll(c: Iterable<T>): boolean {
+        // Используем стандартный Set для retainSet, т.к. JObj не гарантирован
         const retainSet = new Set(c);
         let modified = false;
         const toRemove: T[] = [];
@@ -1138,20 +972,18 @@ export abstract class RCollectionBySrc<T, S extends Set<T> | Array<T>> implement
         return modified;
     }
 
-    /**
-     * @override
-     */
     public map<T2>(f: AFunction<T, T2>, f2: AFunction<T2, T>): RCollection<T2> {
-        /**
-         * This creates a new RCollection (backed by a Set) and binds it.
-         */
+        // Используем стандартный Set для mappedSet
         const mappedSet = new Set<T2>();
-
         for (const e of this) {
             mappedSet.add(f(e));
         }
+        // RCol.of(Set) вернет RSetBySrc<T2, CustomHashMap<T2, true>>
+        // что требует T2 extends JObj.
+        // Меняем на RCol.queue()
+        const res: RCollection<T2> = RCol.queue<T2>();
+        mappedSet.forEach(e => res.add(e));
 
-        const res: RCollection<T2> = RCol.of(mappedSet);
 
         this.forAdd().add(v => res.add(f(v)));
         this.forRemove().add(v => res.remove(f(v)));
@@ -1169,119 +1001,46 @@ export abstract class RCollectionBySrc<T, S extends Set<T> | Array<T>> implement
 
 /**
  * A reactive Set interface.
- * NOTE: This does NOT extend the built-in 'Set' to avoid iterator type conflicts.
  * @template T The element type.
  */
 export interface RSet<T> extends RCollection<T> {
-    // --- Standard Set Methods ---
-
-    /**
-     * Checks if a value exists.
-     * @param value The value.
-     * @returns True if the value exists.
-     */
     has(value: T): boolean;
-
-    /**
-     * Deletes a value.
-     * @param value The value to delete.
-     * @returns True if the value was deleted.
-     */
     delete(value: T): boolean;
-
-    /**
-     * Executes a callback for each element.
-     * @param callbackfn The callback function.
-     * @param thisArg The `this` context for the callback.
-     */
     forEach(callbackfn: (value: T, value2: T, set: RSet<T>) => void, thisArg?: any): void;
-
-    /**
-     * Returns an iterator for the set entries.
-     */
     entries(): IterableIterator<[T, T]>;
-
-    /**
-     * Returns an iterator for the set keys (values).
-     */
     keys(): IterableIterator<T>;
-
-    /**
-     * Returns an iterator for the set values.
-     */
     values(): IterableIterator<T>;
-
-
-    // --- Reactive Methods ---
-
-    /**
-     * Links this set to another set, synchronizing changes in both directions.
-     * @param other The other RSet to link with.
-     * @param f Function to map T to T2.
-     * @param back Function to map T2 back to T.
-     */
     link<T2>(other: RSet<T2>, f: AFunction<T, T2>, back: AFunction<T2, T>): void;
-
-    /**
-     * Links this set to another set of the same type.
-     * @param other The other RSet to link with.
-     */
     link(other: RSet<T>): void;
-
-    /**
-     * Creates a new RSet by mapping elements.
-     * @param f Function to map T to T2.
-     * @param f2 Function to map T2 back to T.
-     */
     map<T2>(f: AFunction<T, T2>, f2: AFunction<T2, T>): RSet<T2>;
-
-    /**
-     * Creates a new one-way mapped RSet.
-     * @param f Function to map T to T2.
-     */
     map<T2>(f: AFunction<T, T2>): RSet<T2>;
 }
 
 /**
- * Implementation of RSet wrapping a standard Set.
+ * Implementation of RSet wrapping a **CustomHashMap**.
  * @template T The element type.
  */
-export class RSetBySrc<T> extends RCollectionBySrc<T, Set<T>> implements RSet<T> {
+export class RSetBySrc<T> extends RCollectionBySrc<T, CustomHashMap<T, true>> implements RSet<T> {
     public readonly [Symbol.toStringTag] = "RSet";
 
-    constructor(src: Set<T>) {
+    constructor(src: CustomHashMap<T, true>) {
         super(src);
     }
 
-    /**
-     * @override
-     */
     public [Symbol.iterator](): IterableIterator<T> {
-        return this.src[Symbol.iterator]();
+        return this.src.keys();
     }
-
-    /**
-     * @override
-     */
     public contains(o: T): boolean {
         return this.src.has(o);
     }
-
-    /**
-     * @override
-     */
     public add(e: T): boolean {
         if (this.src.has(e)) {
             return false;
         }
-        this.src.add(e);
+        this.src.set(e, true);
         this.add0(e);
         return true;
     }
-
-    /**
-     * @override
-     */
     public remove(o: T): boolean {
         const result = this.src.delete(o);
         if (result) {
@@ -1289,65 +1048,35 @@ export class RSetBySrc<T> extends RCollectionBySrc<T, Set<T>> implements RSet<T>
         }
         return result;
     }
-
-    /**
-     * @override
-     */
     public clear(): void {
-        for (const e of this.src) {
+        for (const e of this.src.keys()) {
             this.remove0(e);
         }
         this.src.clear();
     }
-
-    /**
-     * @override
-     */
-    public entries(): IterableIterator<[T, T]> {
-        return this.src.entries();
+    public *entries(): IterableIterator<[T, T]> {
+        for (const k of this.src.keys()) {
+            yield [k, k];
+        }
     }
-
-    /**
-     * @override
-     */
     public keys(): IterableIterator<T> {
         return this.src.keys();
     }
-
-    /**
-     * @override
-     */
     public values(): IterableIterator<T> {
-        return this.src.values();
+        return this.src.keys();
     }
-
-    /**
-     * @override
-     */
     public forEach(callbackfn: (value: T, value2: T, set: RSet<T>) => void, thisArg?: any): void {
-        // Pass 'this' (the RSet) to the callback, not 'this.src' (the raw Set)
-        this.src.forEach((value, value2) => {
-            callbackfn.call(thisArg, value, value2, this);
+        this.src.forEach((_v, k) => {
+            callbackfn.call(thisArg, k, k, this);
         });
     }
-
-    /**
-     * @override
-     */
     public has(value: T): boolean {
         return this.src.has(value);
     }
-
-    /**
-     * @override
-     */
     public delete(value: T): boolean {
         return this.remove(value);
     }
 
-    /**
-     * @override
-     */
     public link<T2>(other: RSet<T2> | RSet<T>, f?: AFunction<T, T2>, back?: AFunction<T2, T>): void {
         if (f && back) {
             const otherRSet = other as RSet<T2>;
@@ -1355,25 +1084,19 @@ export class RSetBySrc<T> extends RCollectionBySrc<T, Set<T>> implements RSet<T>
             this.forRemove().add(v => otherRSet.remove(f(v)));
             otherRSet.forAdd().add(v => this.add(back(v)));
             otherRSet.forRemove().add(v => this.remove(back(v)));
-
             for (const e of otherRSet) { this.add(back(e)); }
             for (const e of this) { otherRSet.add(f(e)); }
-
         } else {
             const otherRSet = other as RSet<T>;
             this.forAdd().add(v => otherRSet.add(v));
             this.forRemove().add(v => otherRSet.remove(v));
             otherRSet.forAdd().add(v => this.add(v));
             otherRSet.forRemove().add(v => this.remove(v));
-
             otherRSet.addAll(this);
             this.addAll(otherRSet);
         }
     }
 
-    /**
-     * @override
-     */
     public map<T2>(f: AFunction<T, T2>, f2?: AFunction<T2, T>): RSet<T2> {
         if (f2) {
             return super.map(f, f2) as RSet<T2>;
@@ -1381,7 +1104,7 @@ export class RSetBySrc<T> extends RCollectionBySrc<T, Set<T>> implements RSet<T>
             const res = RCol.set<T2>();
             this.forAdd().add(v => { res.add(f(v)); });
             this.forRemove().add(v => { res.remove(f(v)); });
-            for(const e of this) { res.add(f(e)); }
+            for (const e of this) { res.add(f(e)); }
             return res;
         }
     }
@@ -1394,39 +1117,12 @@ export class RSetBySrc<T> extends RCollectionBySrc<T, Set<T>> implements RSet<T>
 
 /**
  * A reactive Queue interface.
- * Based on Java's Queue interface.
  * @template T The element type.
  */
 export interface RQueue<T> extends RCollection<T> {
-    /**
-     * Inserts the specified element into this queue if possible.
-     * @param e The element to add.
-     * @returns True if the element was added.
-     */
     offer(e: T): boolean;
-
-    // --- ИСПРАВЛЕНИЕ ---
-    // Удален конфликтующий метод 'remove(): T'.
-    // RQueue<T> теперь наследует только 'remove(o: T): boolean' из RCollection<T>.
-    // Для удаления и возврата элемента используйте 'poll()'.
-
-    /**
-     * Retrieves and removes the head of this queue.
-     * @returns The head of the queue, or null if this queue is empty.
-     */
     poll(): T | null;
-
-    /**
-     * Retrieves, but does not remove, the head of this queue.
-     * Throws an error if this queue is empty.
-     * @returns The head of the queue.
-     */
     element(): T;
-
-    /**
-     * Retrieves, but does not remove, the head of this queue.
-     * @returns The head of the queue, or null if this queue is empty.
-     */
     peek(): T | null;
 }
 
@@ -1437,45 +1133,20 @@ export interface RQueue<T> extends RCollection<T> {
 export class RQueueBySrc<T> extends RCollectionBySrc<T, Array<T>> implements RQueue<T> {
     public readonly [Symbol.toStringTag] = "RQueue";
 
-    /**
-     * @param src The underlying array.
-     */
     constructor(src: Array<T>) {
         super(src);
     }
-
-    /**
-     * @override
-     */
     public [Symbol.iterator](): IterableIterator<T> {
         return this.src[Symbol.iterator]();
     }
-
-    /**
-     * @override
-     */
     public contains(o: T): boolean {
         return this.src.includes(o);
     }
-
-    /**
-     * Adds an element to the end of the queue.
-     * @override
-     */
     public add(e: T): boolean {
         this.src.push(e);
         this.add0(e);
         return true;
     }
-
-    // --- ИСПРАВЛЕНИЕ ---
-    // Удалена перегруженная реализация 'remove'.
-    // Теперь реализован только 'remove(o: T): boolean' из RCollection.
-
-    /**
-     * Removes the first occurrence of an element.
-     * @override
-     */
     public remove(o: T): boolean {
         const index = this.src.indexOf(o);
         if (index > -1) {
@@ -1485,27 +1156,15 @@ export class RQueueBySrc<T> extends RCollectionBySrc<T, Array<T>> implements RQu
         }
         return false;
     }
-
-    /**
-     * @override
-     */
     public clear(): void {
         for (const e of this.src) {
             this.remove0(e);
         }
         this.src.length = 0;
     }
-
-    /**
-     * @override
-     */
     public offer(e: T): boolean {
         return this.add(e);
     }
-
-    /**
-     * @override
-     */
     public poll(): T | null {
         if (this.isEmpty()) {
             return null;
@@ -1517,20 +1176,12 @@ export class RQueueBySrc<T> extends RCollectionBySrc<T, Array<T>> implements RQu
         }
         return null;
     }
-
-    /**
-     * @override
-     */
     public element(): T {
         if (this.isEmpty()) {
             throw new Error("Queue is empty");
         }
         return this.src[0];
     }
-
-    /**
-     * @override
-     */
     public peek(): T | null {
         return this.isEmpty() ? null : this.src[0];
     }
@@ -1544,55 +1195,51 @@ export class RQueueBySrc<T> extends RCollectionBySrc<T, Array<T>> implements RQu
  * Factory namespace for creating reactive collections.
  */
 export namespace RCol {
-    /**
-     * Creates a new reactive RQueue, backed by an Array.
-     * @param src Optional initial array.
-     */
     export function of<T>(src: Array<T>): RQueue<T>;
-
-    /**
-     * Creates a new reactive RSet, backed by a Set.
-     * @param src Optional initial set.
-     */
     export function of<T>(src: Set<T>): RSet<T>;
-
-    /**
-     * Creates a new reactive RMap, backed by a Map.
-     * @param src Optional initial map.
-     */
     export function of<K, V>(src: Map<K, V>): RMap<K, V>;
+    export function of<K, V>(src: CustomHashMap<K, V>): RMap<K, V>;
+    export function of<T>(src: Iterable<T>): RSet<T>;
+    export function of<T, K, V>(
+        src: Set<T> | Array<T> | Map<K, V> | CustomHashMap<K, V> | Iterable<T>
+    ): RSet<T> | RQueue<T> | RMap<K, V> | RCollection<T> {
 
-    /**
-     * Creates a new reactive collection wrapper.
-     */
-    export function of<T, K, V>(src: Set<T> | Array<T> | Map<K, V> | Iterable<T>): RSet<T> | RQueue<T> | RMap<K, V> | RCollection<T> {
-        if (src instanceof Set) {
-            return new RSetBySrc(src);
-        }
         if (src instanceof Array) {
             return new RQueueBySrc(src);
         }
+        if (src instanceof CustomHashMap) {
+            return new RMapBySrc(src as CustomHashMap<K, V>);
+        }
         if (src instanceof Map) {
-            return new RMapBySrc(src as Map<K, V>);
+            return new RMapBySrc(new CustomHashMap<K, V>(src.entries()));
+        }
+        if (src instanceof Set) {
+            const customMap = new CustomHashMap<T, true>();
+            src.forEach(e => customMap.set(e, true));
+            return new RSetBySrc(customMap);
         }
         if (typeof (src as Iterable<T>)[Symbol.iterator] === 'function') {
-            return new RSetBySrc(new Set(src as Iterable<T>));
+            const customMap = new CustomHashMap<T, true>();
+            for (const e of (src as Iterable<T>)) {
+                customMap.set(e, true);
+            }
+            return new RSetBySrc(customMap);
         }
         throw new Error("Unsupported source type for RCol.of");
     }
 
     /**
-     * Creates a new, empty, reactive RMap.
+     * Creates a new, empty, reactive RMap (backed by CustomHashMap).
      */
     export function map<K, V>(): RMap<K, V> {
-        return new RMapBySrc(new Map<K, V>());
+        return new RMapBySrc(new CustomHashMap<K, V>());
     }
 
     /**
-     * Creates a new, empty, reactive RSet.
+     * Creates a new, empty, reactive RSet (backed by CustomHashMap).
      */
     export function set<T>(): RSet<T> {
-        return new RSetBySrc(new Set<T>());
+        return new RSetBySrc(new CustomHashMap<T, true>());
     }
 
     /**
@@ -1602,22 +1249,8 @@ export namespace RCol {
         return new RQueueBySrc(new Array<T>());
     }
 
-    /**
-     * Creates an asynchronous Batching Map (BMap) implementation.
-     * @param timeoutMs The request timeout duration (not used in default impl).
-     * @param name A descriptive name (not used in default impl).
-     */
     export function bMap<K, V>(timeoutMs: number, name: string): BMap<K, V>;
-
-    /**
-     * Creates an asynchronous Batching Map (BMap) with default parameters.
-     */
     export function bMap<K, V>(): BMap<K, V>;
-
-    /**
-     * Implementation for bMap overloads.
-     * @internal
-     */
     export function bMap<K, V>(timeoutMs?: number, name?: string): BMap<K, V> {
         const finalTimeout = timeoutMs ?? 4000;
         const finalName = name ?? "GenericBMap";

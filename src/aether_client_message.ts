@@ -49,16 +49,17 @@ export const MessageEventListenerDefault: MessageEventListener = {
      * It attempts to resolve the first server ID listed in the cloud data.
      */
     setConsumerCloud: (messageNode: MessageNode, cloud: Cloud) => {
-        Log.trace("setConsumerCloud called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString() });
+        Log.debug("Strategy: setConsumerCloud called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString() });
         if (cloud?.data?.length > 0) {
             // Attempt to connect using the first server ID in the cloud
+            Log.debug("Strategy: Cloud has servers. Requesting server descriptor...", { component: "MsgEvListenerDefault", serverId: cloud.data[0] });
             messageNode.addConsumerServerOutById(cloud.data[0]);
         } else {
             // No servers found for this consumer
             Log.warn("Received null or empty cloud, cannot establish connection.", { cloud });
             let msg;
             // Error out any messages that were buffered waiting for this
-            while ((msg = messageNode.bufferOut.poll()) !== undefined) {
+            while ((msg = messageNode.bufferOut.poll())) {
                 msg.future.error(new Error(`Could not resolve cloud/server for consumer ${messageNode.consumerUUID}`));
             }
         }
@@ -69,7 +70,7 @@ export const MessageEventListenerDefault: MessageEventListener = {
      * It attempts to get or create an active connection using the descriptor.
      */
     onResolveConsumerServer: (messageNode: MessageNode, serverDescriptor: ServerDescriptor) => {
-        Log.trace("onResolveConsumerServer called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString(), serverId: serverDescriptor.id });
+        Log.debug("Strategy: onResolveConsumerServer called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString(), serverId: serverDescriptor.id });
         messageNode.addConsumerServerOutByDescriptor(serverDescriptor);
     },
 
@@ -78,7 +79,7 @@ export const MessageEventListenerDefault: MessageEventListener = {
      * It adds the connection to the MessageNode's set of outgoing connections.
      */
     onResolveConsumerConnection: (messageNode: MessageNode, connection: ConnectionWork) => {
-        Log.trace("onResolveConsumerConnection called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString(), uri: connection.uri });
+        Log.debug("Strategy: onResolveConsumerConnection called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString(), uri: connection.uri });
         messageNode.addConsumerConnectionOut(connection);
     },
 };
@@ -138,23 +139,26 @@ export class MessageNode {
         this.client.getCloud(consumerId).to(
             (c: Cloud | null) => {
                 if (c) {
+                    // *** НОВЫЙ ЛОГ ***
+                    Log.debug("Cloud resolution SUCCESS", { component: "MessageNode", uidTo: this.consumerUUID.toString(), cloudData: c.data });
                     try { this.strategy.setConsumerCloud(this, c); }
                     catch (e) { Log.error("Error in strategy.setConsumerCloud", e as Error); }
                 } else {
                     // Cloud resolution failed or returned null
-                    Log.warn("Consumer cloud resolved to null");
+                    // *** УЛУЧШЕННЫЙ ЛОГ ***
+                    Log.warn("Cloud resolution FAILED (result was null)", { component: "MessageNode", uidTo: this.consumerUUID.toString() });
                     let msg;
                     // Error out any buffered messages
-                    while ((msg = this.bufferOut.poll()) !== undefined) {
+                    while ((msg = this.bufferOut.poll())) {
                         msg.future.error(new Error(`Could not resolve cloud for consumer ${this.consumerUUID}`));
                     }
                 }
             }).onError(
                 (err: Error) => {
-                    // Failed to even request the cloud
-                    Log.error("Failed to get consumer cloud in MessageNode constructor", err);
+                    // *** УЛУЧШЕННЫЙ ЛОГ ***
+                    Log.error("Cloud resolution FAILED (exception thrown)", err, { component: "MessageNode", uidTo: this.consumerUUID.toString() });
                     let msg;
-                    while ((msg = this.bufferOut.poll()) !== undefined) {
+                    while ((msg = this.bufferOut.poll())) {
                         msg.future.error(new Error(`Failed to get cloud for consumer ${this.consumerUUID}: ${err.message}`));
                     }
                 }
@@ -221,6 +225,9 @@ export class MessageNode {
      * @param {ConnectionWork} conn The active connection.
      */
     public addConsumerConnectionOut(conn: ConnectionWork): void {
+            // *** НОВЫЙ ЛОГ ***
+            Log.debug("Attempting to add connection to connectionsOut", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri, currentSize: this.connectionsOut.size });
+
             // This logic matches the updated Java version.
             // We just add the connection to the Set.
             // The ConnectionWork's flushMessageQueue will poll this node's buffer.
@@ -229,7 +236,9 @@ export class MessageNode {
                 return;
             }
             this.connectionsOut.add(conn);
-            Log.debug("Added outgoing connection for messages", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri });
+
+            // *** УЛУЧШЕННЫЙ ЛОГ (INFO) ***
+            Log.info("SUCCESS: Added new outgoing connection", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri, newSize: this.connectionsOut.size });
     }
 
     /**
@@ -238,7 +247,8 @@ export class MessageNode {
      */
     public removeConsumerConnectionOut(conn: ConnectionWork): void {
         if (this.connectionsOut.delete(conn)) {
-            Log.trace("Removed outgoing connection", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri });
+             // *** УЛУЧШЕННЫЙ ЛОГ (WARN) ***
+            Log.warn("Removing outgoing connection", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri, newSize: this.connectionsOut.size });
             // If this was the last connection and we still have messages,
             // try to resolve the cloud again to find a new connection.
             if (this.connectionsOut.size === 0 && this.bufferOut.size() > 0) {

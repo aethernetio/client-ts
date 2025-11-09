@@ -385,7 +385,8 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
                 const messagesFromNode: { data: Uint8Array, future: AFuture }[] = [];
                 let msgEntry: { data: Uint8Array, future: AFuture } | undefined;
 
-                while ((msgEntry = m.bufferOut.poll()) !== undefined) {
+                while ((msgEntry = m.bufferOut.poll())) {
+                    Log.trace("read message from bufferOut",{data:msgEntry.data,uid:m.consumerUUID});
                     messagesFromNode.push(msgEntry);
                 }
 
