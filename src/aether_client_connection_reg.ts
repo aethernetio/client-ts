@@ -7,35 +7,80 @@ import { AString } from './aether_astring';
 import { AKey, CryptoEngine, CryptoProviderFactory } from './aether_crypto';
 import { FastApiContext } from './aether_fastmeta';
 import { URI } from './aether_types';
-import { AFuture } from './aether_future';
+import { AFuture, ARFuture } from './aether_future';
 import { Log } from './aether_logging';
-import { ClientApiRegSafe, ClientApiRegSafeStream, ClientApiRegUnsafe, FinishResultGlobalRegServerApi, GlobalApiRegistrationServerRegistrationApi, GlobalRegClientApi, GlobalRegClientApiStream, GlobalRegServerApiRemote, Key, PowMethod, RegistrationRootApi, RegistrationRootApiRemote, ServerDescriptor, ServerRegistrationApiRemote, ServerRegistrationApiStream, SignedKey, WorkProofDTO } from './aether_api';
+import { ClientApiRegSafe, ClientApiRegSafeStream, ClientApiRegUnsafe, Cloud, FinishResultGlobalRegServerApi, GlobalApiRegistrationServerRegistrationApi, GlobalRegClientApi, GlobalRegClientApiStream, GlobalRegServerApiRemote, Key, PowMethod, RegistrationRootApi, RegistrationRootApiRemote, ServerDescriptor, ServerRegistrationApiRemote, ServerRegistrationApiStream, SignedKey, WorkProofDTO } from './aether_api';
 import { Connection } from './aether_client_connection_base';
 
+/**
+ * @class ConnectionRegistration
+ * @extends {Connection<ClientApiRegUnsafe, RegistrationRootApiRemote>}
+ * @implements {ClientApiRegUnsafe}
+ * @description Manages the initial connection and registration process with the Aether cloud.
+ */
 export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, RegistrationRootApiRemote> implements ClientApiRegUnsafe {
 
+    /**
+     * @private
+     * @readonly
+     * @type {AKey.Symmetric}
+     */
     private readonly tempKey: AKey.Symmetric;
+
+    /**
+     * @private
+     * @readonly
+     * @type {Key}
+     */
     private readonly tempKeyNative: Key;
+
+    /**
+     * @private
+     * @readonly
+     * @type {CryptoEngine}
+     */
     private readonly tempKeyCp: CryptoEngine;
+
+    /**
+     * @private
+     * @readonly
+     * @type {FastApiContext}
+     */
     private readonly ctxSafe: FastApiContext;
+
+    /**
+     * @private
+     * @readonly
+     * @type {FastApiContext}
+     */
     private readonly globalCtx: FastApiContext;
+
+    /**
+     * @private
+     * @type {(CryptoEngine | null)}
+     */
     private gcp: CryptoEngine | null = null;
 
+    /**
+     * @constructor
+     * @param {AetherCloudClient} client The main client instance.
+     * @param {URI} uri The registration server URI.
+     */
     constructor(client: AetherCloudClient, uri: URI) {
-        // 1. ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЕ META:
+        // 1. USE CORRECT META:
         //    LT (Local)  = ClientApiRegUnsafe.META
         //    RT (Remote) = RegistrationRootApi.META
         super(client, uri, ClientApiRegUnsafe.META, RegistrationRootApi.META);
 
-        // 2. Инициализируем крипто-поля (как в Java)
+        // 2. Initialize crypto fields
         const cryptoLib = client.state.getCryptoLib();
-        const provider = CryptoProviderFactory.getProvider(cryptoLib); //
+        const provider = CryptoProviderFactory.getProvider(cryptoLib);
         this.tempKey = provider.createSymmetricKey();
 
         this.tempKeyNative = CryptoUtils.aKeyToDtoKey(this.tempKey);
         this.tempKeyCp = this.tempKey.toCryptoEngine();
 
-        // 4. Инициализируем stub-контексты
+        // 3. Initialize stub contexts
         this.ctxSafe = new FastApiContext();
         this.ctxSafe.flush = (sendFuture: AFuture) => {
             Log.trace("ctxSafe flush stub called", { component: "ConnectionReg" });
@@ -47,129 +92,149 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
             sendFuture.tryDone();
         };
 
-        // 5. Запускаем асинхронный процесс подключения
-        this.connect(); //
+        // 4. NOTE: Connection is *not* started here.
+        // The AetherCloudClient must call registration()
     }
 
     /**
      * @private
-     * @description (Port from Java) Starts the connection chain.
+     * @description (Port from Java) Fetches, verifies, and returns the server's asymmetric public key engine.
+     * @returns {ARFuture<CryptoEngine>} A future that resolves with the CryptoEngine.
      */
-    private connect(): void {
-        Log.debug("RegConn: Starting async registration process.", { uri: this.uri });
+    private getAsymmetricPublicKey(): ARFuture<CryptoEngine> {
+        const result = ARFuture.of<CryptoEngine>();
 
-        this.getRootApiFuture() //
-            .to((api: RegistrationRootApiRemote) => { //
+        this.getRootApiFuture()
+            .to((api: RegistrationRootApiRemote) => {
                 Log.debug("RegConn: WS connection successful, requesting asymmetric key.", { uri: this.uri });
 
-                // 1. Начинаем запрос ключа
-                api.getAsymmetricPublicKey(this.client.state.getCryptoLib()) //
-                    .to((signedKey: SignedKey) => { //
-                        // 2. При успехе -> переходим к шагу 1 (обработка ключа)
-                        this.regProcessStep1_HandleKey(api, signedKey);
+                api.getAsymmetricPublicKey(this.client.state.getCryptoLib())
+                    .to((signedKey: SignedKey) => {
+                        try {
+                            if (!this.client.verifySign(CryptoUtils.dtoSignedKeyToInternal(signedKey))) {
+                                throw new Error("Key verification exception");
+                            }
+                            const asymAKey = CryptoUtils.dtoKeyToAKey(signedKey.key);
+                            const asymCE = (asymAKey as AKey.AsymmetricPublic).toCryptoEngine();
+                            result.tryDone(asymCE);
+                        } catch (e) {
+                            Log.error("RegConn: Failed to verify asymmetric public key.", e as Error, { uri: this.uri });
+                            result.tryError(e as Error);
+                        }
                     })
-                    .onError((e: Error) => { //
-                        // Ошибка при получении ключа
+                    .onError((e: Error) => {
                         Log.error("RegConn: Failed to get asymmetric public key.", e, { uri: this.uri });
-                        this.client.startFuture.tryError(e);
+                        result.tryError(e);
                     });
 
-                // 3. !!! ВАЖНО: Отправляем запрос из очереди !!!
                 api.flush();
             })
-            .onError((e: Error) => { //
-                // Ошибка при самом первом подключении (WebSocket)
+            .onError((e: Error) => {
                 Log.error("RegConn: Initial connection failed.", e, { uri: this.uri });
+                result.tryError(e);
+            });
+
+        return result;
+    }
+
+    /**
+     * @description (Port from Java) Starts the asynchronous registration process.
+     * @returns {AFuture} A future that completes when the connection is established (but not necessarily registered).
+     */
+    public registration(): AFuture {
+        Log.debug("RegConn: Starting async registration process.", { uri: this.uri });
+        this.getAsymmetricPublicKey()
+            .to((asymCE: CryptoEngine) => {
+                this.regProcess(asymCE);
+            })
+            .onError((e: Error) => {
                 this.client.startFuture.tryError(e);
+            });
+
+        return this.connectFuture.toFuture();
+    }
+
+    /**
+     * @private
+     * @description (Port from Java) Main registration logic flow.
+     * @param {CryptoEngine} asymCE The verified asymmetric crypto engine from the server.
+     */
+    private regProcess(asymCE: CryptoEngine): void {
+        Log.info("RegConn: Asym public key was received.");
+
+        this.getRootApiFuture()
+            .to((api: RegistrationRootApiRemote) => {
+                if (!api) {
+                    Log.error("RegConn: Root API is null after successful connection.");
+                    this.client.startFuture.tryError(new Error("Root API is null"));
+                    return;
+                }
+
+                api.enter(this.client.state.getCryptoLib(),
+                    ServerRegistrationApiStream.fromRemoteConsumer(
+                        this.ctxSafe,
+                        asymCE.encrypt.bind(asymCE),
+                        (apiInner: ServerRegistrationApiRemote) => {
+                            apiInner.setReturnKey(this.tempKeyNative);
+                            apiInner.requestWorkProofData(this.client.getParent(), PowMethod.AE_BCRYPT_CRC32)
+                                .to((wpd: WorkProofDTO) => {
+
+                                    this.handlePoWAndRegister(api, asymCE, wpd);
+                                })
+                                .onError((e: Error) => {
+                                    Log.error("RegConn: Failed to request work proof data.", e, { uri: this.uri });
+                                    this.client.startFuture.tryError(e);
+                                });
+                        }
+                    )
+                );
+                api.flush();
+            })
+            .onError((e: Error) => {
+                 this.client.startFuture.tryError(e);
             });
     }
 
     /**
      * @private
-     * @description Шаг 1: Обработка ключа и запрос PoW
+     * @description (Port from Java) Handles PoW calculation and sends the registration request.
+     * @param {RegistrationRootApiRemote} api The root API.
+     * @param {CryptoEngine} asymCE The asymmetric crypto engine.
+     * @param {WorkProofDTO} workProofDTO The PoW challenge data.
      */
-    private regProcessStep1_HandleKey(remoteApi: RegistrationRootApiRemote, signedKey: SignedKey): void {
-        try { // Обертка для синхронного кода
-            Log.info("RegConn: Asym public key was received.");
-
-            // Шаг 2: Проверяем ключ (Sync)
-            if (!this.client.verifySign(CryptoUtils.dtoSignedKeyToInternal(signedKey))) {
-                throw new Error("Key verification exception"); // IllegalStateException
-            }
-            const asymAKey = CryptoUtils.dtoKeyToAKey(signedKey.key);
-            const asymCE = (asymAKey as AKey.AsymmetricPublic).toCryptoEngine();
-
-            // Шаг 3: Вызываем 'enter' для запроса PoW
-            remoteApi.enter(this.client.state.getCryptoLib(),
-                ServerRegistrationApiStream.fromRemoteConsumer(
-                    this.ctxSafe,
-                    asymCE.encrypt.bind(asymCE),
-                    (apiInner: ServerRegistrationApiRemote) => {
-
-                        apiInner.requestWorkProofData(this.client.getParent(), PowMethod.AE_BCRYPT_CRC32, this.tempKeyNative)
-                            .to((wpd: WorkProofDTO) => { //
-                                this.regProcessStep2_HandlePoW(remoteApi, asymCE, wpd);
-                            })
-                            .onError((e: Error) => {
-                                Log.error("RegConn: Failed to request work proof data.", e, { uri: this.uri });
-                                this.client.startFuture.tryError(e);
-                            });
-                    }
-                )
-            );
-            // !!! ВАЖНО: Отправляем 'enter' !!!
-            remoteApi.flush();
-
-        } catch (e) {
-            // Ловим синхронные ошибки (напр. проверка ключа)
-            Log.error("RegConn: Registration step 1 (key handling) failed.", e as Error, { uri: this.uri });
-            this.client.startFuture.tryError(e as Error);
-        }
-    }
-
-    /**
-     * @private
-     * @description Шаг 2: Расчет PoW и отправка регистрации
-     */
-    private regProcessStep2_HandlePoW(remoteApi: RegistrationRootApiRemote, asymCE: CryptoEngine, workProofDTO: WorkProofDTO): void {
+    private handlePoWAndRegister(api: RegistrationRootApiRemote, asymCE: CryptoEngine, workProofDTO: WorkProofDTO): void {
         try {
             Log.info("RegConn: WorkProofData has been received. Starting PoW calculation.");
-            const passwords = WorkProofUtil.generateProofOfWorkPool( //
+            const passwords = WorkProofUtil.generateProofOfWorkPool(
                 workProofDTO.getSalt(),
                 workProofDTO.getSuffix(),
                 workProofDTO.getMaxHashVal(),
                 workProofDTO.getPoolSize(),
-                5000 // 5 секунд на PoW
+                5000 // 5 seconds
             );
 
-            if (!this.client.verifySign(CryptoUtils.dtoSignedKeyToInternal(workProofDTO.getGlobalKey()))) { //
-                throw new Error("Global key verification failed."); // RuntimeException
+            if (!this.client.verifySign(CryptoUtils.dtoSignedKeyToInternal(workProofDTO.getGlobalKey()))) {
+                throw new Error("Global key verification failed.");
             }
-            Log.debug("workProofDTO was received: $workProofDTO",{workProofDTO:workProofDTO})
+
             const globalAKey = CryptoUtils.dtoKeyToAKey(workProofDTO.getGlobalKey().getKey());
-            Log.debug("globalAKey: $key",{key:globalAKey})
             const masterKeyAKey = this.client.getMasterKeyAKey();
+            this.gcp = CryptoEngine.of(globalAKey.asAsymmetric().toCryptoEngine(), masterKeyAKey.asSymmetric().toCryptoEngine());
 
-            this.gcp = CryptoEngine.of(globalAKey.asAsymmetric().toCryptoEngine(),masterKeyAKey.asSymmetric().toCryptoEngine());
-
-            // Шаг 5: Вызываем 'enter' -> 'registration' -> 'finish'
-            remoteApi.enter(this.client.state.getCryptoLib(),
-                ServerRegistrationApiStream.fromRemoteConsumer(
-                    this.ctxSafe,
-                    asymCE.encrypt.bind(asymCE),
+            api.enter(this.client.state.getCryptoLib(),
+                ServerRegistrationApiStream.fromRemoteConsumer(this.ctxSafe,asymCE.encrypt.bind(asymCE),
                     (a2: ServerRegistrationApiRemote) => {
-
-                        a2.registration(workProofDTO.getSalt(), workProofDTO.getSuffix(), passwords, this.client.getParent(), this.tempKeyNative,
-
+                        a2.setReturnKey(this.tempKeyNative);
+                        a2.registration(workProofDTO.getSalt(), workProofDTO.getSuffix(), passwords, this.client.getParent(),
                             GlobalApiRegistrationServerRegistrationApi.fromRemoteConsumer(
                                 this.globalCtx,
-                                this.gcp.encrypt.bind(this.gcp),
+                                this.gcp!.encrypt.bind(this.gcp!),
                                 (gapi: GlobalRegServerApiRemote) => {
 
                                     gapi.setMasterKey(CryptoUtils.aKeyToDtoKey(this.client.getMasterKeyAKey()));
                                     gapi.finish()
                                         .to((finishResult: FinishResultGlobalRegServerApi) => {
-                                            this.regProcessStep3_Finalize(remoteApi, asymCE, finishResult);
+                                            this.handleRegistrationFinish(finishResult, asymCE);
                                         })
                                         .onError((e: Error) => {
                                             Log.error("RegConn: Failed to finish registration.", e, { uri: this.uri });
@@ -181,7 +246,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
                     }
                 )
             );
-            remoteApi.flush();
+            api.flush();
 
         } catch (e) {
             Log.error("RegConn: Registration step 2 (PoW) failed.", e as Error, { uri: this.uri });
@@ -191,47 +256,73 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
 
     /**
      * @private
-     * @description Шаг 3: Финализация и фоновый запрос серверов
+     * @description (Port from Java) Finalizes registration and triggers background server resolution.
+     * @param {FinishResultGlobalRegServerApi} finishResult The result from the server.
+     * @param {CryptoEngine} asymCE The asymmetric crypto engine.
      */
-    private regProcessStep3_Finalize(remoteApi: RegistrationRootApiRemote, asymCE: CryptoEngine, finishResult: FinishResultGlobalRegServerApi): void {
+    private handleRegistrationFinish(finishResult: FinishResultGlobalRegServerApi, asymCE: CryptoEngine): void {
         try {
             Log.trace("RegConn: registration step finish.");
-            this.client.confirmRegistration(finishResult); // Это разблокирует client.startFuture
+            this.client.confirmRegistration(finishResult);
             Log.info("RegConn: Registration confirmed.");
 
-            remoteApi.enter(this.client.state.getCryptoLib(),
-                ServerRegistrationApiStream.fromRemoteConsumer(
-                    this.ctxSafe,
-                    asymCE.encrypt.bind(asymCE),
-                    (a3: ServerRegistrationApiRemote) => {
-                        Log.trace("RegConn: registration step resolve servers:", { cloud: finishResult.getCloud() });
-
-                        a3.resolveServers(finishResult.getCloud()) //
-                            .to((ss: ServerDescriptor[]) => {
-                                for (const s of ss) {
-                                    this.client.servers.putResolved(s.id, s);
-                                }
-                                Log.info("RegConn: Server descriptors resolved.");
-                            })
-                            .onError((e: Error) => {
-                                // Не проваливаем startFuture, т.к. это фоновая задача
-                                Log.error("RegConn: background resolveServers failed.", e);
-                            });
-                    }
-                )
-            );
-            // !!! ВАЖНО: Отправляем 'enter' (для resolveServers) !!!
-            remoteApi.flush();
+            this.resolveCloud(finishResult.getCloud(), asymCE);
 
         } catch (e) {
-            // Ловим синхронные ошибки (напр. confirmRegistration)
             Log.error("RegConn: Registration step 3 (Finalize) failed.", e as Error, { uri: this.uri });
             this.client.startFuture.tryError(e as Error);
         }
     }
 
     /**
-     * @description Вызывается сервером для входа в GlobalApiStream
+     * @private
+     * @description (Port from Java) Resolves server descriptors in the background.
+     * @param {Cloud} cloud The cloud data containing server IDs.
+     * @param {CryptoEngine} asymCE The asymmetric crypto engine.
+     * @returns {AFuture} A future that completes when resolution is attempted.
+     */
+    private resolveCloud(cloud: Cloud, asymCE: CryptoEngine): AFuture {
+        // TODO: The Java version has a client.isRecoveryInProgress check here.
+        // This is omitted as it's part of AetherCloudClient logic not fully ported.
+        const result = AFuture.make();
+
+        this.getRootApiFuture().to((api: RegistrationRootApiRemote) => {
+            api.enter(this.client.state.getCryptoLib(),
+                ServerRegistrationApiStream.fromRemoteConsumer(
+                    this.ctxSafe,
+                    asymCE.encrypt.bind(asymCE),
+                    (a3: ServerRegistrationApiRemote) => {
+                        Log.trace("RegConn: registration step resolve servers:", { cloud: cloud });
+
+                        a3.resolveServers(cloud)
+                            .to((ss: ServerDescriptor[]) => {
+                                for (const s of ss) {
+                                    this.client.servers.putResolved(s.id, s);
+                                }
+                                Log.info("RegConn: Server descriptors resolved.");
+                                result.tryDone();
+                            })
+                            .onError((e: Error) => {
+                                Log.error("RegConn: background resolveServers failed.", e);
+                                result.tryError(e);
+                            });
+                    }
+                )
+            );
+            api.flush();
+        }).onError((e: Error) => {
+            Log.error("RegConn: Failed to get rootApi for resolveCloud.", e);
+            result.tryError(e);
+        });
+
+        return result;
+    }
+
+
+    /**
+     * @description Called by the server to enter the GlobalApiStream.
+     * @param {GlobalRegClientApiStream} stream The incoming data stream.
+     * @returns {AFuture} A future that completes when the stream is accepted.
      */
     public enterGlobal(stream: GlobalRegClientApiStream): AFuture {
         if (!this.gcp) {
@@ -249,7 +340,9 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
     }
 
     /**
-     * @description Вызывается сервером для входа в ClientApiRegSafeStream
+     * @description Called by the server to enter the ClientApiRegSafeStream.
+     * @param {ClientApiRegSafeStream} stream The incoming data stream.
+     * @returns {AFuture} A future that completes when the stream is accepted.
      */
     public enter(stream: ClientApiRegSafeStream): AFuture {
          try {

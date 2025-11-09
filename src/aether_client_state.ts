@@ -229,6 +229,7 @@ export class ClientStateInMemory implements ClientState {
 
     /** @inheritDoc */
     getMasterKey(): AKey | null {
+        if(this.masterKey===null)return null;
         return CryptoUtils.dtoKeyToAKey(this.masterKey);
     }
 
@@ -362,10 +363,10 @@ export class ClientStateInMemory implements ClientState {
                 .map((c) => new ClientInfo(c.getUid(), c.getCloud()!)),
             dtoRootSigners,
             this.cryptoLib,
-            this.pingDuration.getNow() ?? 1000,
+            BigInt(this.pingDuration.getNow() ?? 1000),
             this.parentUid,
             this.countServersForRegistration,
-            this.timeoutForConnectToRegistrationServer,
+            BigInt(this.timeoutForConnectToRegistrationServer),
             this.uid,
             this.alias,
             this.masterKey
@@ -390,8 +391,8 @@ export class ClientStateInMemory implements ClientState {
             this.cryptoLib = dto.cryptoLib;
             this.countServersForRegistration = dto.countServersForRegistration;
             this.timeoutForConnectToRegistrationServer =
-                dto.timeoutForConnectToRegistrationServer;
-            this.pingDuration.set(dto.pingDuration);
+                Number(dto.timeoutForConnectToRegistrationServer);
+            this.pingDuration.set(Number(dto.pingDuration));
             this.registrationUris = dto.registrationUri.slice();
             this.servers.clear();
             dto.servers.forEach((sd: ServerDescriptor) =>

@@ -3,6 +3,7 @@
 // PURPOSE: Contains Data I/O interfaces and implementation (DataInOut, DataInOutStatic).
 // DEPENDENCIES: aether_types.ts, aether_utils.ts (for HexUtils)
 // (ИСПРАВЛЕННАЯ ВЕРСИЯ - Refactored: Merged Impl classes with interfaces, fixed exports)
+// (ВЕРСИЯ 2: Обновлена поддержка 64-bit Long -> readLong() : bigint, writeLong(v: number | bigint))
 // =============================================================================================
 
 import { Uint8Array } from './aether_types';
@@ -19,7 +20,7 @@ type DataInOutStaticJava = { data: Uint8Array, readPos: number, writePos: number
 // SECTION 6: DATA I/O INTERFACES AND IMPLEMENTATION (Little Endian)
 // =============================================================================================
 
-// --- DataIn Interface (Остается без изменений) ---
+// --- DataIn Interface ---
 export interface DataIn {
     /** Returns the size of the data that can be read from this input stream, in bytes. */
     getSizeForRead(): number;
@@ -41,7 +42,8 @@ export interface DataIn {
     readUShort(): number;
     readInt(): number;
     readUInt(): number;
-    readLong(): number;
+    /** Reads a 64-bit signed long integer (Little Endian). */
+    readLong(): bigint;
     readFloat(): number;
     readDouble(): number;
     readChar(): string;
@@ -58,7 +60,7 @@ export interface DataIn {
 }
 
 
-// --- DataOut Interface (Остается без изменений) ---
+// --- DataOut Interface ---
 export interface DataOut {
     /** Returns whether this output stream is writableConsumer or not. */
     isWritable(): boolean;
@@ -82,23 +84,24 @@ export interface DataOut {
     writeShort(v: number): void;
     writeChar(v: string): void;
     writeInt(v: number): void;
-    writeLong(v: number): void;
+    /** Writes a 64-bit signed long integer (Little Endian). */
+    writeLong(v: number | bigint): void;
     writeFloat(v: number): void;
     writeDouble(v: number): void;
     writeHexBytes(hex: string): void;
 }
 
 
-// --- DataIO Interface (Остается без изменений) ---
+// --- DataIO Interface ---
 export interface DataIO extends DataIn, DataOut { }
 
 
-// --- Implementation Helpers (Остается без изменений) ---
+// --- Implementation Helpers ---
 const DataIO_Utils = {
     /** Reads N bytes in Little Endian format, calling readUByte0 for each byte. */
     readLE(readUByte0: () => number, numBytes: number, isLong: boolean): number {
         let res = 0;
-        if (isLong) { // Use floating-point arithmetic for potential > 32-bit results
+        if (isLong) { // Use floating-point arithmetic for potential > 32-bit results (e.g., readUInt)
             for (let i = 0; i < numBytes; i++) {
                 res += readUByte0() * Math.pow(2, 8 * i);
             }
@@ -112,7 +115,7 @@ const DataIO_Utils = {
 };
 
 
-// --- DataIOBase Abstract Class (Остается без изменений, исправлен readShort) ---
+// --- DataIOBase Abstract Class ---
 abstract class DataIOBase implements DataIO {
     // --- Core Abstract Methods ---
     abstract getSizeForRead(): number;
@@ -176,7 +179,24 @@ abstract class DataIOBase implements DataIO {
     }
     readInt(): number { return DataIO_Utils.readLE(this.readUByte.bind(this), 4, false) | 0; } // Ensure 32-bit signed int
     readUInt(): number { return DataIO_Utils.readLE(this.readUByte.bind(this), 4, true); } // Use floating point for unsigned
-    readLong(): number { return DataIO_Utils.readLE(this.readUByte.bind(this), 8, true); } // Use floating point for potential > 53 bits
+
+    readLong(): bigint {
+        let res = 0n;
+        let shift = 0n;
+        const readUByte = this.readUByte.bind(this); // Bind once
+        for (let i = 0; i < 8; i++) {
+            const byte = BigInt(readUByte());
+            res |= (byte << shift);
+            shift += 8n;
+        }
+
+        // Handle signed 64-bit integer (twos complement)
+        if (res >= 0x8000000000000000n) { // If sign bit (63) is set
+            res -= 0x10000000000000000n; // Subtract 2^64
+        }
+        return res;
+    }
+
     readChar(): string { return String.fromCharCode(this.readUByte()); }
     readFloat(): number {
         const buffer = this.readBytes(4).buffer;
@@ -215,7 +235,7 @@ abstract class DataIOBase implements DataIO {
         return res;
     }
 
-
+    // --- DataOut Implementations ---
     write(b: Uint8Array, off: number, len: number): number;
     write(b: number[], off: number, len: number): number;
     write(b: Uint8Array): void;
@@ -275,10 +295,19 @@ abstract class DataIOBase implements DataIO {
         this.writeByte((v >>> 16) & 0xFF);
         this.writeByte((v >>> 24) & 0xFF);
     }
-    writeLong(v: number): void {
-        this.writeInt(v & 0xFFFFFFFF);
-        this.writeInt(Math.floor(v / 0x100000000));
+
+    writeLong(v: number | bigint): void {
+        if (typeof v === 'bigint') {
+            const low = v & 0xFFFFFFFFn;
+            const high = v >> 32n;
+            this.writeInt(Number(low));  // Write low 32 bits
+            this.writeInt(Number(high)); // Write high 32 bits
+        } else {
+            this.writeInt(v & 0xFFFFFFFF);
+            this.writeInt(Math.floor(v / 0x100000000));
+        }
     }
+
     writeFloat(v: number): void {
         const buffer = new ArrayBuffer(4); (new DataView(buffer)).setFloat32(0, v, true);
         this._writeCore(new Uint8Array(buffer), 0, 4);
@@ -417,7 +446,7 @@ export class DataInOut extends DataIOBase {
         this.trim();
         return res;
     }
-     override readShort(): number { // Использует исправленный readShort из базы
+     override readShort(): number {
          if (this.readPos + 2 > this.writePos) throw new Error(`Underflow: Cannot read Short, need 2 bytes, have ${this.getSizeForRead()}`);
          const ushortVal = DataIO_Utils.readLE(this.readUByte0.bind(this), 2, false);
          this.trim();
@@ -437,10 +466,25 @@ export class DataInOut extends DataIOBase {
          return res;
      }
 
-    override readLong(): number {
+    override readLong(): bigint {
         if (this.readPos + 8 > this.writePos) throw new Error(`Underflow: Cannot read Long, need 8 bytes, have ${this.getSizeForRead()}`);
-        const res = DataIO_Utils.readLE(this.readUByte0.bind(this), 8, true);
-        this.trim();
+
+        let res = 0n;
+        let shift = 0n;
+        const readUByte0 = this.readUByte0.bind(this); // Use the internal, non-trimming read
+
+        for (let i = 0; i < 8; i++) {
+            const byte = BigInt(readUByte0());
+            res |= (byte << shift);
+            shift += 8n;
+        }
+
+        this.trim(); // Trim once at the end
+
+        // Handle signed 64-bit integer (twos complement)
+        if (res >= 0x8000000000000000n) {
+            res -= 0x10000000000000000n;
+        }
         return res;
     }
 

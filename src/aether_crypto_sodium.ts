@@ -1,4 +1,3 @@
-// FILE: aether_crypto_sodium.ts
 // PURPOSE: Complete implementation of the SODIUM cryptographic provider.
 // STATUS: ИСПРАВЛЕННАЯ ВЕРСИЯ С ПРОВЕРКАМИ АРГУМЕНТОВ
 
@@ -485,7 +484,10 @@ class SodiumSigner implements Signer {
 /** @class SodiumCryptoProvider */
 export class SodiumCryptoProvider implements CryptoProvider {
     public static INSTANCE: SodiumCryptoProvider;
-    private static readonly SODIUM_KDF_CONTEXT = "_aether_";
+
+    // [FIX] Определяем KDF_CONTEXT как строку и как байты
+    private static readonly SODIUM_KDF_CONTEXT_STRING = "_aether_";
+    private static readonly SODIUM_KDF_CONTEXT_BYTES = new TextEncoder().encode(SodiumCryptoProvider.SODIUM_KDF_CONTEXT_STRING);
 
     public constructor() {
         // Конструктор оставляем пустым, инициализация через applySodium
@@ -723,7 +725,7 @@ export class SodiumCryptoProvider implements CryptoProvider {
         const derivedKey = sodium.crypto_kdf_derive_from_key(
             keySize * 2,
             subkeyId as any as number,
-            SodiumCryptoProvider.SODIUM_KDF_CONTEXT,
+            SodiumCryptoProvider.SODIUM_KDF_CONTEXT_STRING,
             masterKey.getData()
         );
 
@@ -768,7 +770,7 @@ export class SodiumCryptoProvider implements CryptoProvider {
         if (!masterKey) {
             throw new Error("Master key cannot be null or undefined");
         }
-        return this.deriveSymmetricKeys(masterKey, sid, 1);
+        return this.deriveSymmetricKeys(masterKey, sid, 0);
     }
 
     createKeyForClient(masterKey: AKey.Symmetric, sid: number): PairSymKeys {

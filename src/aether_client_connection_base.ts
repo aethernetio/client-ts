@@ -1,23 +1,36 @@
 // =============================================================================================
 // FILE: aether_client_connection_base.ts
-// PURPOSE: Contains the Connection base class (NOW NON-ABSTRACT) and IP address utility functions.
-// DEPENDENCIES: aether_client_types.ts, aether_client_core.ts (for AetherCloudClient)
+// PURPOSE: Contains the Connection base class and IP address utility functions.
+// DEPENDENCIES: aether_types.ts, aether_client.ts, aether_api.ts, aether_logging.ts,
+//               aether_fastmeta.ts
 // =============================================================================================
-// Import necessary types from aether_client_types.ts (assuming it's in the same directory)
-import {ClientStartException, Destroyable, URI} from './aether_types'
-import { AetherCloudClient } from './aether_client'; // Assuming AetherCloudClient is available
+
+import {
+    ClientStartException,
+    Destroyable,
+    URI,
+    AFunction,
+    AConsumer
+} from './aether_types'
+import { AetherCloudClient } from './aether_client';
 import { AetherCodec, IPAddress, IPAddressV4, IPAddressV6, ServerDescriptor } from './aether_api';
 import { Log } from './aether_logging';
-import { FastApiContextLocal, FastMetaApi, FastMetaClient, RemoteApi } from './aether_fastmeta';
+import {
+    FastMetaApi,
+    RemoteApi
+} from './aether_fastmeta';
 import { AFuture, ARFuture } from './aether_future';
-import { FastMetaClientWebSocket } from './aether_fastmeta_websocket';
+import { FastMetaClient, FastMetaNet } from './aether_fastmeta_net';
+// Removed: import { FastMetaClientWebSocket } from './aether_fastmeta_websocket';
 
 
 /**
- * Converts an IPAddress DTO to its string representation.
+ * @description Converts an IPAddress DTO to its string representation.
+ * @param {IPAddress} ipAddr The IPAddress object from the API.
+ * @returns {string | null} A string representation (e.g., "1.2.3.4" or "[::1]") or null if invalid.
  */
 export function ipAddressToString(ipAddr: IPAddress): string | null {
-    Log.trace("Formatting IPAddress", { ipAddress: ipAddr }); // <-- CHANGED
+    Log.trace("Formatting IPAddress", { ipAddress: ipAddr });
     try {
         if (ipAddr instanceof IPAddressV4) {
             if (ipAddr.data && ipAddr.data.length === 4) {
@@ -30,6 +43,8 @@ export function ipAddressToString(ipAddr: IPAddress): string | null {
                     parts.push(((ipAddr.data[i] << 8) | ipAddr.data[i + 1]).toString(16));
                 }
                 let ipStr = parts.join(':');
+
+                // --- Start IPv6 compression logic ---
                 let longestSeq = "";
                 let currentSeq = "";
                 ipStr.split(':').forEach(part => {
@@ -42,34 +57,38 @@ export function ipAddressToString(ipAddr: IPAddress): string | null {
                         currentSeq = "";
                     }
                 });
-                 if (currentSeq.length > longestSeq.length) { // Check trailing sequence
+                 if (currentSeq.length > longestSeq.length) {
                     longestSeq = currentSeq;
                  }
 
-                 if (longestSeq.length > 2) { // Need at least two zeros (:0:0:)
-                     if (ipStr === longestSeq.substring(1)) { // All zeros
+                 if (longestSeq.length > 2) {
+                     if (ipStr === longestSeq.substring(1)) {
                         ipStr = "::";
-                     } else if (ipStr.startsWith(longestSeq.substring(1) + ":")) { // Leading zeros
+                     } else if (ipStr.startsWith(longestSeq.substring(1) + ":")) {
                           ipStr = ipStr.replace(longestSeq.substring(1) + ":","::");
-                     } else if (ipStr.endsWith(":" + longestSeq.substring(1))) { // Trailing zeros
+                     } else if (ipStr.endsWith(":" + longestSeq.substring(1))) {
                           ipStr = ipStr.replace(":" + longestSeq.substring(1),"::");
-                     } else { // Middle zeros
+                     } else {
                          ipStr = ipStr.replace(longestSeq, ":");
                      }
                  }
+                // --- End IPv6 compression logic ---
                 return ipStr;
             }
         }
     } catch (e) {
-         Log.error("Error formatting IPAddress", e as Error, { ipAddress: ipAddr }); // <-- CHANGED
+         Log.error("Error formatting IPAddress", e as Error, { ipAddress: ipAddr });
     }
 
-    Log.error("Unknown or invalid IPAddress format provided to ipAddressToString", { ipAddress: ipAddr }); // <-- CHANGED
+    Log.error("Unknown or invalid IPAddress format provided to ipAddressToString", { ipAddress: ipAddr });
     return null;
 }
 
 /**
- * Gets a suitable URI (WebSocket preferred) from a ServerDescriptor.
+ * @description Gets a suitable URI (WebSocket preferred) from a ServerDescriptor.
+ * @param {ServerDescriptor} sd The server descriptor.
+ * @param {AetherCodec} preferredCodec The preferred codec (e.g., WSS).
+ * @returns {URI | null} A full URI string (e.g., "wss://[::1]:9010") or null if none found.
  */
 export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec: AetherCodec): URI | null {
     Log.trace("Getting URI from ServerDescriptor", { serverId: sd?.id, preferredCodec });
@@ -77,22 +96,30 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
          Log.warn("Cannot get URI from invalid ServerDescriptor", { serverId: sd?.id });
          return null;
     }
+
     let fallbackUri: URI | null = null;
+
     for (const addrInfo of sd.ipAddress.addresses) {
         for (const cap of addrInfo.coderAndPorts) {
             const ipString = ipAddressToString(addrInfo.address);
             if (ipString) {
                  const hostString = addrInfo.address instanceof IPAddressV6 ? `[${ipString}]` : ipString;
-                const scheme = cap.codec === AetherCodec.WS ? 'wss' : 'tcp'; // Assuming wss for WebSocket
+
+                 // TODO: This logic might need refinement based on actual protocol names
+                const scheme = cap.codec === AetherCodec.WS ? 'ws' : 'tcp';
                 const uri = `${scheme}://${hostString}:${cap.port}`;
+
                 if (cap.codec === preferredCodec) {
                     Log.trace(`Found preferred URI: ${uri}`, { serverId: sd.id });
                     return uri;
                 }
-                if (!fallbackUri) fallbackUri = uri;
+                if (!fallbackUri) {
+                    fallbackUri = uri;
+                }
             }
         }
      }
+
     if (!fallbackUri) {
         Log.warn("No valid URI found in ServerDescriptor", { serverId: sd.id });
     } else {
@@ -102,125 +129,180 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
 }
 
 
-// --- Connection Class (REMOVED abstract) ---
 /**
- * Base class for client connections (Registration and Work).
+ * @class Connection
+ * @template LT - The local API interface.
+ * @template RT - The remote API interface.
+ * @implements {Destroyable}
+ * @description Base class for client connections (Registration and Work).
  */
 export class Connection<LT, RT extends RemoteApi> implements Destroyable {
+
+    /**
+     * @description Reference to the main client instance.
+     * @protected
+     * @type {AetherCloudClient}
+     */
     protected readonly client: AetherCloudClient;
-    /** The URI of the connected server. */
+
+    /** * @description The URI of the connected server.
+     * @type {URI}
+     */
     public readonly uri: URI;
-    /** Future that completes when the connection is established and the root remote API is ready. */
+
+    /** * @description Future that completes when the connection is established and the root remote API is ready.
+     * @type {ARFuture<RT>}
+     */
     public readonly connectFuture: ARFuture<RT>;
-    protected readonly fastMetaClient: FastMetaClient<LT, RT>;
-    protected rootApi: RT | null = null; // Java: volatile
-    /** Base logging context for this connection instance. */
+
+    /** * @description The underlying FastMeta client implementation.
+     * @protected
+     * @type {FastMetaClient<LT, RT>}
+     */
+    protected readonly fastMetaClient: FastMetaClient<LT, RT> | null;
+
+    /** * @description The root remote API instance, available after connectFuture completes.
+     * @protected
+     * @type {(RT | null)}
+     */
+    protected rootApi: RT | null = null;
+
+    /** * @description Base logging context for this connection instance.
+     * @protected
+     * @type {*}
+     */
     protected readonly logCtxData: any;
 
+    /**
+     * @constructor
+     * @param {AetherCloudClient} client The main client instance.
+     * @param {URI} uri The server URI to connect to.
+     * @param {FastMetaApi<LT, any>} localApiMeta The META object for the local API implementation.
+     * @param {FastMetaApi<unknown, RT>} remoteApiMeta The META object for the remote API.
+     */
     constructor(
         client: AetherCloudClient,
          uri: URI,
         localApiMeta: FastMetaApi<LT, any>,
-        remoteApiMeta: FastMetaApi<unknown, RT>,
-        clientImpl?: FastMetaClient<LT, RT>
+        remoteApiMeta: FastMetaApi<unknown, RT>
     ) {
         if (!uri) throw new Error("Connection URI cannot be null");
         this.uri = uri;
         this.client = client;
-        // Set up logging context for this specific connection
         this.logCtxData = {  component: "Connection", uri: this.uri };
+        this.connectFuture = ARFuture.of<RT>();
 
         Log.debug("Connection: Initializing...", this.logCtxData);
 
-        this.fastMetaClient = clientImpl || new FastMetaClientWebSocket<LT, RT>();
-        this.connectFuture = ARFuture.of<RT>();
-
         if (client.destroyer.isDestroyed()) {
             Log.warn("Attempting to create connection on destroyed client", this.logCtxData);
-            this.fastMetaClient.close();
             this.connectFuture.cancel();
             this.rootApi = null;
+            this.fastMetaClient = null;
             return;
         }
 
         client.destroyer.add(this);
-        client.destroyer.add(this.fastMetaClient);
 
         const localApi = this as unknown as LT;
 
+        /**
+         * @description Provides the local API implementation to the network layer.
+         * @type {AFunction<RT, LT>}
+         */
+        const localApiProvider: AFunction<RT, LT> = (remoteApi: RT) => {
+            this.rootApi = remoteApi;
+            return localApi;
+        };
 
-        Log.debug("Connection: Initiating connect...", this.logCtxData);
+        /**
+         * @description Callback for the network layer to report connection status.
+         * @type {AConsumer<boolean>}
+         */
+        const writableConsumer: AConsumer<boolean> = (isWritable: boolean) => {
+            if (isWritable) {
+                if (this.rootApi) {
+                    this.connectFuture.tryDone(this.rootApi);
+                } else {
+                    Log.error("Connection is writable but rootApi was not set.", this.logCtxData);
+                    this.connectFuture.tryError(new Error("Connection established but rootApi is null."));
+                }
+            } else {
+                Log.warn("Connection lost.", this.logCtxData);
+                // TODO: Implement connection loss handling if necessary
+            }
+        };
 
-        this.fastMetaClient.connect(uri, localApiMeta, remoteApiMeta,
-            (remoteApi: RT) => {
-                 this.rootApi = remoteApi;
-                return localApi; // Return the created/cast localApi instance
-            })
-            .map((_context: FastApiContextLocal<LT>): RT => {
-                if (!this.rootApi) {
-                     // This should ideally not happen if connect succeeded
-                     Log.error("Root API not set after successful connection context creation.", this.logCtxData);
-                     throw new Error("Root API not set after successful connection context creation.");
-                }
-                 Log.debug("Connection: FastMeta connect successful, remote API ready.", this.logCtxData);
-                 return this.rootApi;
-            })
-            .to(
-                (remoteApiInstance: RT) => this.connectFuture.tryDone(remoteApiInstance),
-                (err: Error) => {
-                     Log.error("Connection failed", err, this.logCtxData);
-                     this.connectFuture.error(new ClientStartException(`Connection to ${this.uri} failed`, err));
-                }
-            )
-            .onCancel(() => {
-                 Log.warn("Connection cancelled", this.logCtxData);
-                 this.connectFuture.cancel();
-            });
+        this.fastMetaClient = FastMetaNet.INSTANCE.get().makeClient(
+            uri,
+            localApiMeta,
+            remoteApiMeta,
+            localApiProvider,
+            writableConsumer
+        );
+
+        client.destroyer.add(this.fastMetaClient);
     }
 
     /**
-     * Gets the root remote API instance.
-     * @returns {RT | null} The remote API instance or null.
+     * @description Gets the root remote API instance.
+     * @returns {RT | null} The remote API instance or null if not connected.
      */
     public getRootApi(): RT | null {
-        if (!this.connectFuture.isFinalStatus()) {
-             Log.warn("Accessing rootApi before connection attempt is complete (may be null or error).", this.logCtxData);
+        if (!this.connectFuture.isDone()) {
+             Log.warn("Accessing rootApi before connection attempt is complete (may be null).", this.logCtxData);
         }
         return this.rootApi;
     }
 
     /**
-     * Gets the future that completes when the root remote API is ready.
+     * @description Gets the future that completes when the root remote API is ready.
      * @returns {ARFuture<RT>} The future for the remote API.
      */
     public getRootApiFuture(): ARFuture<RT> {
         return this.connectFuture;
     }
 
-    /** @inheritdoc */
+    /** * @description Destroys the connection and underlying network client.
+     * @param {boolean} _force - Not currently used in this implementation.
+     * @returns {AFuture} A future that completes when the connection is closed.
+     * @inheritdoc
+     */
     public destroy(_force: boolean): AFuture {
         Log.info("Destroying Connection", this.logCtxData);
         if (!this.connectFuture.isFinalStatus()) {
              Log.trace("Cancelling connectFuture during destroy.", this.logCtxData);
              this.connectFuture.cancel();
         }
-        return this.fastMetaClient.close();
+
+        if (this.fastMetaClient) {
+            return this.fastMetaClient.destroy(_force);
+        } else {
+            return AFuture.completed();
+        }
     }
 
-    /** @inheritdoc */
+    /** * @description Implements the Symbol.dispose method for 'using' syntax.
+     * @inheritdoc
+     */
     [Symbol.dispose](): void {
         Log.info("Disposing Connection", this.logCtxData);
         this.destroy(true).onError(e => Log.error("Error during Connection dispose/destroy", e, this.logCtxData));
     }
 
-    /** Checks equality based on the connection URI. */
+    /** * @description Checks equality based on the connection URI.
+     * @param {unknown} other - The object to compare with.
+     * @returns {boolean} True if the URIs are identical.
+     */
     public equals(other: unknown): boolean {
         if (this === other) return true;
         if (other == null || !(other instanceof Connection)) return false;
-        return this.uri === other.uri;
+        return this.uri === (other as Connection<any, any>).uri;
     }
 
-    /** Calculates hash code based on the connection URI. */
+    /** * @description Calculates hash code based on the connection URI.
+     * @returns {number} The hash code.
+     */
     public hashCode(): number {
         let hash = 0;
         for (let i = 0; i < this.uri.length; i++) {

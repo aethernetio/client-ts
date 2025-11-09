@@ -1327,6 +1327,9 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
         if (value !== undefined) f.done(value);
         return f;
     }
+    public static make<T>(): ARFuture<T> {
+        return new ARFuture<T>();
+    }
 
     /**
      * Returns a statically canceled ARFuture.

@@ -25,19 +25,19 @@ class MyClientApiSafe implements ClientApiSafe {
     sendAllAccessedClients(uid: UUID, accessedClients: UUID[]): AFuture {
         throw new Error('Method not implemented.');
     }
-    removeAccessGroupsFromClient(uid: UUID, groups: number[]): AFuture {
+    removeAccessGroupsFromClient(uid: UUID, groups: bigint[]): AFuture {
         throw new Error('Method not implemented.');
     }
-    addAccessGroupsToClient(uid: UUID, groups: number[]): AFuture {
+    addAccessGroupsToClient(uid: UUID, groups: bigint[]): AFuture {
         throw new Error('Method not implemented.');
     }
-    removeItemsFromAccessGroup(id: number, groups: UUID[]): AFuture {
+    removeItemsFromAccessGroup(id: bigint, groups: UUID[]): AFuture {
         throw new Error('Method not implemented.');
     }
-    addItemsToAccessGroup(id: number, groups: UUID[]): AFuture {
+    addItemsToAccessGroup(id: bigint, groups: UUID[]): AFuture {
         throw new Error('Method not implemented.');
     }
-    sendAccessGroupForClient(uid: UUID, groups: number[]): AFuture {
+    sendAccessGroupForClient(uid: UUID, groups: bigint[]): AFuture {
         throw new Error('Method not implemented.');
     }
     sendAccessGroups(groups: AccessGroup[]): AFuture {
@@ -288,7 +288,7 @@ private hasPendingMessages(): boolean {
 
         if (messagesToSend !== null && messagesToSend.length > 0) {
             Log.trace(`Flushing ${messagesToSend.length} messages`, { component: "ConnectionWork", server: this.uri });
-            const messageSendFuture: AFuture = a.sendMessages(messagesToSend);
+            a.sendMessages(messagesToSend);
 
             messageSendFuture.to(
                 () => {
@@ -330,7 +330,7 @@ private hasPendingMessages(): boolean {
     private flushPing(a: AuthorizedApiRemote): void {
         if (!this.firstAuth) {
             Log.trace("Sending initial ping", { component: "ConnectionWork", server: this.uri });
-            a.ping(0).to(
+            a.ping(0n).to(
                 () => {
                     Log.trace("Initial ping successful", { component: "ConnectionWork", server: this.uri });
                     this.firstAuth = true;

@@ -1,7 +1,8 @@
 // =============================================================================================
 // FILE: aether_protocol_generator.ts
 // PURPOSE: Standalone Generator для генерации TypeScript кода из ADSL YAML,
-//          на основе Groovy-генератора. (ИСПРАВЛЕННАЯ ВЕРСИЯ 25 - Update AString.add overloads)
+//          на основе Groovy-генератора.
+// (ИСПРАВЛЕННАЯ ВЕРСИЯ 26 - Fix readLong() returning bigint)
 // =============================================================================================
 
 // --- Типы DSL ---
@@ -89,7 +90,7 @@ class ConstantInfo {
     }
 }
 // =============================================================================================
-// 1. TypeInfo (Парсинг типов DSL) - БЕЗ ИЗМЕНЕНИЙ
+// 1. TypeInfo (Парсинг типов DSL)
 // =============================================================================================
 // ... (код TypeInfo остается прежним) ...
 class TypeInfo {
@@ -192,9 +193,22 @@ class TypeInfo {
     private toTsType(allowNullable: boolean, _isField: boolean): string {
         let baseType: string;
         switch (this.javaType) {
-            case 'byte': case 'short': case 'int': case 'long': case 'float': case 'double': baseType = 'number'; break;
-            case 'boolean': case 'string': case 'UUID': case 'URI': case 'Date': baseType = this.javaType; break;
-            default: baseType = this.javaTypeBoxed;
+            case 'byte': case 'short': case 'int': case 'float': case 'double':
+                baseType = 'number';
+                break;
+            // =================================================================
+            // ИСПРАВЛЕНИЕ 1:
+            // 'long' (DSL) -> 'bigint' (TS)
+            // 'intpack' (DSL) -> (javaType: 'long', isPack: true) -> 'number' (TS)
+            // =================================================================
+            case 'long':
+                baseType = this.isPack ? 'number' : 'bigint';
+                break;
+            case 'boolean': case 'string': case 'UUID': case 'URI': case 'Date':
+                baseType = this.javaType;
+                break;
+            default:
+                baseType = this.javaTypeBoxed;
         }
         let result = baseType;
         if (this.isArray) {
@@ -212,7 +226,7 @@ class TypeInfo {
     }
 }
 // =============================================================================================
-// 2. GeneratorLogic (Вспомогательные методы и логика сериализации/десериализации) - БЕЗ ИЗМЕНЕНИЙ
+// 2. GeneratorLogic (Вспомогательные методы и логика сериализации/десериализации)
 // =============================================================================================
 // ... (код GeneratorLogic остается прежним) ...
 class GeneratorLogic {
@@ -375,7 +389,12 @@ class GeneratorLogic {
             } else {
                  if (t.javaType === 'string') return 'FastMeta.META_STRING';
                  if (t.javaType === 'int') return 'FastMeta.META_INT';
-                 if (t.javaType === 'long') return 'FastMeta.META_LONG';
+                 // =================================================================
+                 // ИСПРАВЛЕНИЕ 1.B: (Согласованность)
+                 // 'long' (не intpack) должен использовать META_LONG
+                 // 'intpack' (isPack=true) должен использовать META_PACK
+                 // =================================================================
+                 if (t.javaType === 'long') return t.isPack ? 'FastMeta.META_PACK' : 'FastMeta.META_LONG';
                  if (t.javaType === 'byte') return 'FastMeta.META_BYTE';
                  if (t.javaType === 'boolean') return 'FastMeta.META_BOOLEAN';
                  throw new Error(`Could not find or determine meta accessor for type: ${t.javaType} (className: ${className}, toString: ${typeKey})`);
@@ -445,8 +464,8 @@ export const ${name}: FastMetaType<${t.getArgumentType()}> = new class implement
                 case "short": sb.push(`${outVar}.writeShort(${inVar});`); break;
                 case "int": sb.push(`${outVar}.writeInt(${inVar});`); break;
                 case "long":
-                    if (type.isPack) sb.push(`SerializerPackNumber.INSTANCE.put(${outVar}, ${inVar});`);
-                    else sb.push(`${outVar}.writeLong(${inVar});`);
+                    if (type.isPack) sb.push(`SerializerPackNumber.INSTANCE.put(${outVar}, ${inVar} as number);`); // Уточняем number для intpack
+                    else sb.push(`${outVar}.writeLong(${inVar});`); // bigint
                     break;
                 case "float": sb.push(`${outVar}.writeFloat(${inVar});`); break;
                 case "double": sb.push(`${outVar}.writeDouble(${inVar});`); break;
@@ -493,12 +512,18 @@ export const ${name}: FastMetaType<${t.getArgumentType()}> = new class implement
                 case "short": sb.push(`${outVar} = ${inVar}.readShort();`); break;
                 case "int": sb.push(`${outVar} = ${inVar}.readInt();`); break;
                 case "long":
-                    if (type.isPack) sb.push(`${outVar} = DeserializerPackNumber.INSTANCE.put(${inVar}).valueOf();`);
-                    else sb.push(`${outVar} = ${inVar}.readLong();`);
+                    if (type.isPack) sb.push(`${outVar} = DeserializerPackNumber.INSTANCE.put(${inVar}).valueOf();`); // returns number
+                    else sb.push(`${outVar} = ${inVar}.readLong();`); // returns bigint
                     break;
                 case "float": sb.push(`${outVar} = ${inVar}.readFloat();`); break;
                 case "double": sb.push(`${outVar} = ${inVar}.readDouble();`); break;
-                case "Date": sb.push(`${outVar} = new Date(${inVar}.readLong());`); break;
+
+                // =================================================================
+                // ИСПРАВЛЕНИЕ 2:
+                // Конструктор Date() ожидает number, а readLong() возвращает bigint.
+                // =================================================================
+                case "Date": sb.push(`${outVar} = new Date(Number(${inVar}.readLong()));`); break;
+
                 case "string":
                     const sdv = this.getUniqueVarName("stringBytes");
                     sb.push(`let ${sdv}: Uint8Array;`);
@@ -524,7 +549,7 @@ export const ${name}: FastMetaType<${t.getArgumentType()}> = new class implement
             if (nullableCount <= 8) writeMethod = "writeByte";
             else if (nullableCount <= 16) writeMethod = "writeShort";
             else if (nullableCount <= 32) writeMethod = "writeInt";
-            else writeMethod = "writeLong";
+            else writeMethod = "writeLong"; // Должен принимать number | bigint, что OK
             sb.push(`let _mask: number = 0;`);
             let bitIndex = 0;
             nullableFields.forEach((_, fieldName) => {
@@ -557,13 +582,26 @@ export const ${name}: FastMetaType<${t.getArgumentType()}> = new class implement
             if (nullableCount <= 8) readMethod = "readByte";
             else if (nullableCount <= 16) readMethod = "readShort";
             else if (nullableCount <= 32) readMethod = "readInt";
-            else readMethod = "readLong";
-            sb.push(`const _mask: number = ${inVar}.${readMethod}();`);
+            else readMethod = "readLong"; // Возвращает bigint
+
+            // Если readMethod возвращает bigint, а мы используем битовые операции,
+            // TypeScript может ругаться. Но readLong() для маски > 32 бит - это редкость.
+            // В Groovy-генераторе 'readLong' для маски кастуется к (long).
+            // В JS, если readMethod=readLong, _mask будет bigint.
+
+            const isMaskBigInt = readMethod === "readLong";
+            sb.push(`const _mask = ${inVar}.${readMethod}();`); // Может быть number или bigint
+
             let bitIndex = 0;
             fieldVars.forEach((fieldType, varName) => {
                 if (fieldType.isNullable) {
-                    const shift = bitIndex === 0 ? "1" : `(1 << ${bitIndex})`;
-                    const check = `((_mask & ${shift}) === 0)`; // Check if the bit is NOT set (meaning not null)
+                    // Используем BigInt-литералы, если маска стала bigint
+                    const shift = isMaskBigInt
+                        ? (bitIndex === 0 ? "1n" : `(1n << ${bitIndex}n)`)
+                        : (bitIndex === 0 ? "1" : `(1 << ${bitIndex})`);
+
+                    const check = `((_mask & ${shift}) === ${isMaskBigInt ? '0n' : '0'})`; // Check if the bit is NOT set (meaning not null)
+
                     sb.push(`if (${check}) {`);
                     this.generateDeserializer(sb, serializeContextVar, inVar, varName, fieldType);
                     sb.push(`} else { ${varName} = null; }`);
@@ -889,10 +927,20 @@ const currentFields = this.getFieldTypes(cfg?.fields || {});
             const constructorParams: string[] = [];
             fields.forEach((typeInfo, fieldName) => {
                 const localVar = g.getUniqueVarName(fieldName);
+                // =================================================================
+                // ИСПРАВЛЕНИЕ 1.C:
+                // Здесь используется getLocalVarType(), который зависит от toTsType()
+                // (Исправление 1 уже применилось здесь)
+                // =================================================================
                 deserializeLines.push(`let ${localVar}: ${typeInfo.getLocalVarType()};`);
                 fieldsForDeserialize.set(localVar, typeInfo);
                 constructorParams.push(localVar);
             });
+            // =================================================================
+            // ИСПРАВЛЕНИЕ 2.B:
+            // Здесь вызывается generateDeserializerFields -> generateDeserializer
+            // (Исправление 2 уже применилось здесь)
+            // =================================================================
             g.generateDeserializerFields(deserializeLines, sCtxDeser, inVar, fieldsForDeserialize);
             sb.push(deserializeLines.map(l => `            ${l}`).join('\n'));
             sb.push(`            return new ${name}(${constructorParams.join(', ')});`);
@@ -1095,7 +1143,10 @@ class ApiGenerator {
              this.getAllMethodsRecursive(res, true, p, parentApiDef);
          });
          Object.entries(apiDef.methods || {}).forEach(([methodName, m]) => {
-            const methodDef: any = { id: 0, name: methodName, params: {}, returns: 'void', throws: null, parent: parent };
+            // =================================================================
+            // ИСПРАВЛЕНИЕ: returns по умолчанию null, а не 'void'
+            // =================================================================
+            const methodDef: any = { id: 0, name: methodName, params: {}, returns: null, throws: null, parent: parent };
             const mDef = m as TypeDefinition;
              if (!mDef) return;
 
@@ -1139,13 +1190,31 @@ class ApiGenerator {
                 return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
             }).join(', ');
 
-             const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
-                 ? (m.returns as TypeDefinition).stream!.name!
-                 : m.returns as string;
-            const returnTypeInfo = new TypeInfo(returnTypeStr);
+            // =================================================================
+            // ИСПРАВЛЕНИЕ: Логика определения возвращаемого типа
+            // =================================================================
+            const hasReturns = m.returns != null;
+            const hasThrows = m.throws != null;
+            let finalReturns: string;
 
-            const returns = returnTypeInfo.getAsReturnType();
-            const finalReturns = (returnTypeInfo.javaType === 'void') && !m.throws ? 'AFuture' : returns;
+            if (hasReturns) {
+                // Check for stream object first
+                const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
+                    ? (m.returns as TypeDefinition).stream!.name!
+                    : m.returns as string;
+
+                if (returnTypeStr === "void") {
+                    finalReturns = "AFuture";
+                } else {
+                    const returnTypeInfo = new TypeInfo(returnTypeStr);
+                    finalReturns = returnTypeInfo.getAsReturnType(); // This will be ARFuture<T>
+                }
+            } else if (hasThrows) {
+                finalReturns = "AFuture";
+            } else {
+                finalReturns = "void"; // Correctly handles: no returns AND no throws
+            }
+
             sb.push(`    ${m.name}(${paramTypes}): ${finalReturns};`);
         });
         sb.push(`}`);
@@ -1185,13 +1254,30 @@ class ApiGenerator {
                 return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
             }).join(', ');
 
-             const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
-                 ? (m.returns as TypeDefinition).stream!.name!
-                 : m.returns as string;
-            const returnTypeInfo = new TypeInfo(returnTypeStr);
+            // =================================================================
+            // ИСПРАВЛЕНИЕ: Логика определения возвращаемого типа
+            // =================================================================
+            const hasReturns = m.returns != null;
+            const hasThrows = m.throws != null;
+            let finalReturns: string;
 
-            const returns = returnTypeInfo.getAsReturnType();
-            const finalReturns = (returnTypeInfo.javaType === 'void') && !m.throws ? 'AFuture' : returns;
+            if (hasReturns) {
+                const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
+                    ? (m.returns as TypeDefinition).stream!.name!
+                    : m.returns as string;
+
+                if (returnTypeStr === "void") {
+                    finalReturns = "AFuture";
+                } else {
+                    const returnTypeInfo = new TypeInfo(returnTypeStr);
+                    finalReturns = returnTypeInfo.getAsReturnType(); // ARFuture<T>
+                }
+            } else if (hasThrows) {
+                finalReturns = "AFuture";
+            } else {
+                finalReturns = "void";
+            }
+
             sb.push(`    public abstract ${m.name}(${paramTypes}): ${finalReturns};`);
         });
         sb.push(`}`);
@@ -1210,7 +1296,12 @@ class ApiGenerator {
              // Handle cases where return or throws type might be an object (stream definition)
              const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
                  ? (m.returns as TypeDefinition).stream!.name!
+                 // =================================================================
+                 // ИСПРАВЛЕНИЕ: Используем m.returns (который может быть null)
+                 // =================================================================
                  : m.returns as string;
+
+            // Note: new TypeInfo(null) correctly becomes 'void'
             const returnTypeInfo = new TypeInfo(returnTypeStr);
 
             const throwsTypeStr = (typeof m.throws === 'object' && m.throws !== null && (m.throws as TypeDefinition).stream?.name)
@@ -1218,7 +1309,7 @@ class ApiGenerator {
                  : m.throws as string;
 
 
-            const hasResponse = returnTypeInfo.javaType !== 'void' || !!throwsTypeStr;
+            const hasResponse = m.returns != null || m.throws != null; // Groovy logic
             const reqIdVar = g.getUniqueVarName('reqId'); const paramVars: string[] = [];
             const fieldsForDeserialize = new Map<string, TypeInfo>();
             sb.push(`                case ${m.id}: {`);
@@ -1232,12 +1323,20 @@ class ApiGenerator {
                     : paramType as string;
                 const typeInfo = new TypeInfo(typeStr);
                 const localVar = g.getUniqueVarName(paramName);
+                // =================================================================
+                // ИСПРАВЛЕНИЕ 1.D:
+                // Здесь используется getLocalVarType() (Исправление 1)
+                // =================================================================
                 sb.push(`                    let ${localVar}: ${typeInfo.getLocalVarType()};`);
                 fieldsForDeserialize.set(localVar, typeInfo);
                 paramVars.push(localVar);
                 paramNames.push(paramName); // Store original param name
             });
 
+            // =================================================================
+            // ИСПРАВЛЕНИЕ 2.C:
+            // Здесь вызывается generateDeserializerFields (Исправление 2)
+            // =================================================================
             g.generateDeserializerFields(sb, 'ctx', 'dataIn', fieldsForDeserialize);
 
             const argsNamesVar = g.getUniqueVarName("argsNames");
@@ -1252,13 +1351,17 @@ class ApiGenerator {
             if (hasResponse) {
                 sb.push(`                        ctx.regLocalFuture(); const resultFuture = ${call};`);
                 sb.push(`                        ctx.invokeLocalMethodAfter("${m.name}", resultFuture, ${argsNamesVar}, ${argsValuesVar});`); // Log after call
-                if (returnTypeInfo.javaType !== 'void') {
+
+                // Groovy logic: (methodDef.returns && methodDef.returns == "void")
+                if (m.returns != null && returnTypeInfo.javaType === "void") {
+                    sb.push(`                        resultFuture.to(() => { ctx.sendResultToRemoteNoData(${reqIdVar}); });`);
+                }
+                // Groovy logic: else if (methodDef.returns)
+                else if (m.returns != null) {
                     const rt = returnTypeInfo; const d = g.getUniqueVarName("data"); const rr = g.getUniqueVarName("v");
                     sb.push(`                        resultFuture.to((${rr}: ${rt.getArgumentType()}) => { const ${d} = new DataInOut();`);
                     g.generateSerializer(sb, 'ctx', d, rr, rt);
                     sb.push(`                            ctx.sendResultToRemote(${reqIdVar}, ${d}.toArray()); });`);
-                } else {
-                    sb.push(`                        resultFuture.to(() => { ctx.sendResultToRemoteNoData(${reqIdVar}); });`);
                 }
             } else {
                  sb.push(`                        ${call};`);
@@ -1305,15 +1408,21 @@ class ApiGenerator {
             // Handle cases where return or throws type might be an object (stream definition)
              const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
                  ? (m.returns as TypeDefinition).stream!.name!
+                 // =================================================================
+                 // ИСПРАВЛЕНИЕ: Используем m.returns (который может быть null)
+                 // =================================================================
                  : m.returns as string;
+            // Note: new TypeInfo(null) correctly becomes 'void'
             const returnTypeInfo = new TypeInfo(returnTypeStr);
 
             const throwsTypeStr = (typeof m.throws === 'object' && m.throws !== null && (m.throws as TypeDefinition).stream?.name)
                  ? (m.throws as TypeDefinition).stream!.name!
                  : m.throws as string;
 
-
-            const hasResponse = returnTypeInfo.javaType !== 'void' || !!throwsTypeStr;
+            // =================================================================
+            // ИСПРАВЛЕНИЕ: Логика определения hasResponse (как в Groovy)
+            // =================================================================
+            const hasResponse = m.returns != null || m.throws != null;
 
             const paramTypes = Object.entries(m.params).map(([pn, pt]) => {
                 const typeStr = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
@@ -1322,8 +1431,25 @@ class ApiGenerator {
                 return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
             }).join(', ');
 
-            const returns = returnTypeInfo.getAsReturnType();
-            const finalReturns = (returnTypeInfo.javaType === 'void') && !throwsTypeStr ? 'AFuture' : returns;
+            // =================================================================
+            // ИСПРАВЛЕНИЕ: Логика определения возвращаемого типа (сигнатура)
+            // =================================================================
+            const hasReturns_sig = m.returns != null;
+            const hasThrows_sig = m.throws != null;
+            let finalReturns: string;
+
+            if (hasReturns_sig) {
+                if (returnTypeStr === "void") {
+                    finalReturns = "AFuture";
+                } else {
+                    finalReturns = returnTypeInfo.getAsReturnType(); // ARFuture<T>
+                }
+            } else if (hasThrows_sig) {
+                finalReturns = "AFuture";
+            } else {
+                finalReturns = "void";
+            }
+
             const paramNames = Object.keys(m.params); const reqIdVar = g.getUniqueVarName('reqId');
             const dataOutVar = g.getUniqueVarName('dataOut'); const resultVar = g.getUniqueVarName('result');
             sb.push(`                ${m.name}: (${paramTypes}): ${finalReturns} => {`);
@@ -1341,8 +1467,14 @@ class ApiGenerator {
                 sb.push(`                    ${sCtx}.invokeRemoteMethodAfter("${m.name}", ${resultVar}, ${argsNamesVar}, ${argsValuesVar});`); // Log before send
                 sb.push(`                    const ${reqIdVar} = ${sCtx}.regFuture({`);
                 sb.push(`                        onDone: (in_: DataIn) => {`);
-                if (returnTypeInfo.javaType !== 'void') {
+                // Groovy logic: (m.returns && m.returns != "void")
+                if (m.returns != null && returnTypeInfo.javaType !== "void") {
                     const rt = returnTypeInfo;
+                    // =================================================================
+                    // ИСПРАВЛЕНИЕ 1.E/2.D:
+                    // Десериализация ответа API также зависит от
+                    // .META.deserialize, который мы уже исправили
+                    // =================================================================
                     sb.push(`                            (${resultVar} as ARFuture<${rt.getArgumentType()}>).tryDone(${g.generateAccessMeta(rt)}.deserialize(${sCtx}, in_));`);
                 } else {
                     sb.push(`                            (${resultVar} as AFuture).tryDone();`);
@@ -1370,7 +1502,15 @@ class ApiGenerator {
             }));
             g.generateSerializerFields(sb, sCtx, dataOutVar, fieldsForSerialize);
             sb.push(`                    ${sCtx}.sendToRemote(${dataOutVar}.toArray());`);
-            sb.push(`                    return ${hasResponse ? resultVar : 'AFuture.of()'};`);
+
+            // =================================================================
+            // ИСПРАВЛЕНИЕ: Логика возврата значения
+            // =================================================================
+            if (hasResponse) {
+                sb.push(`                    return ${resultVar};`);
+            }
+            // Если !hasResponse, сигнатура 'void', поэтому return не нужен.
+
             sb.push(`                },`);
         });
         sb.push(`            };`);

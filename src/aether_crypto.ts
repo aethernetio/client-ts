@@ -164,7 +164,7 @@ export interface CryptoProvider {
      * @param sid The server ID.
      */
     createKeyForServer(masterKey: AKey.Symmetric,
-        sid: number): PairSymKeys; createKeyForClient(masterKey: AKey.Symmetric, sid: number): PairSymKeys;
+        sid: number): PairSymKeys;
     /**
      * Creates a SignPublic key instance from raw data.
      * @param data Raw key data.

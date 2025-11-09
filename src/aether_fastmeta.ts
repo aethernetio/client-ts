@@ -180,7 +180,7 @@ export const FastMeta: { [key: string]: FastMetaTypeWithDefaults<any> } = {
         serialize: (_ctx, obj, out) => out.writeLong(obj),
         deserialize: (_ctx, dataIn) => dataIn.readLong(),
         ...FastMetaTypeImpl,
-    } as FastMetaTypeWithDefaults<number>,
+    } as FastMetaTypeWithDefaults<bigint>,
 
     META_FLOAT: {
         serialize: (_ctx, obj, out) => out.writeFloat(obj),
@@ -196,7 +196,7 @@ export const FastMeta: { [key: string]: FastMetaTypeWithDefaults<any> } = {
 
     META_DATE: {
         serialize: (_ctx, obj, out) => out.writeLong(obj.getTime()),
-        deserialize: (_ctx, dataIn) => new Date(dataIn.readLong()),
+        deserialize: (_ctx, dataIn) => new Date(Number(dataIn.readLong())),
         ...FastMetaTypeImpl,
     } as FastMetaTypeWithDefaults<Date>,
 
@@ -509,34 +509,9 @@ export class FastApiContextLocal<LT> extends FastApiContext {
     }
 }
 
-// --- FastMetaClient Interface (Port of FastMetaClient.java) ---
-export interface FastMetaClient<LT, RT extends RemoteApi> extends Destroyable {
-    connect(uri: string,
-            localApiMeta: FastMetaApi<LT, any>,
-            remoteApiMeta: FastMetaApi<any, RT>,
-            localApi: AFunction<RT, LT>): ARFuture<FastApiContextLocal<LT>>;
-    close(): AFuture;
-}
-
-// --- FastMetaServer Interface (Port of FastMetaServer.java) ---
-export interface FastMetaServer<LT, RT extends RemoteApi> extends Destroyable {
-    start(uri: string,
-          localApiMeta: FastMetaApi<LT, any>,
-          remoteApiMeta: FastMetaApi<any, RT>,
-          handler: ServerHandler<LT, RT>): AFuture;
-    stop(): AFuture;
-    handlers(): Iterable<ServerConnection<LT, RT>>;
-}
-
-/** Interface for server connection events (Placeholder for Java ServerHandler) */
-export interface ServerHandler<LT, RT extends RemoteApi> {
-    // Define connection lifecycle methods if needed, e.g., onConnect, onDisconnect
-}
-
-/** Interface for an active server connection (Placeholder for Java ServerConnection) */
-export interface ServerConnection<LT, RT extends RemoteApi> {
-    // Define methods to interact with a specific connection if needed
-}
+// --- [DELETED] ---
+// --- FastMetaClient, FastMetaServer, ServerHandler, ServerConnection ---
+// --- [DELETED] ---
 
 
 // --- RemoteApiFuture Implementation (Port of RemoteApiFuture.java) ---
