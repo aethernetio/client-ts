@@ -1,32 +1,62 @@
 // =============================================================================================
 // FILE: AetherProtocolPlugin.ts
-// PURPOSE: Standalone Generator для генерации TypeScript кода из ADSL YAML
-// (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+// PURPOSE: Standalone Generator for generating TypeScript code from ADSL YAML
+// (Corrected Version)
 // =============================================================================================
 
 import * as path from 'path';
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
-import { generateAetherProtocol, IncludeResolver, AetherDslMeta, AetherDslMetaMap } from './aether_protocol_generator';
+import { generateAetherProtocol } from './aether_protocol_generator';
 import { TypeScriptCodeFormatter } from './TypeScriptCodeFormatter';
+import { AetherDslMeta, AetherDslMetaMap, IncludeResolver } from './aether_protocol_core';
 
 /**
  * @class AetherProtocolGenerator
- * @description Standalone Generator для генерации TypeScript кода из ADSL YAML
+ * @description Standalone Generator for generating TypeScript code from ADSL YAML files.
+ * This class scans a directory for `.adsl.yaml` or `.adsl.json` files,
+ * aggregates all definitions, and uses `aether_protocol_generator` to
+ * produce the final `aether_api.ts` and `aether_api_impl.ts` files.
  */
 export class AetherProtocolGenerator {
+    /**
+     * @private
+     * @readonly
+     * @type {TypeScriptCodeFormatter}
+     * @description Instance of the code formatter.
+     */
     private readonly formatter = new TypeScriptCodeFormatter();
-    private readonly outputFileName: string = 'aether_api.ts';
-    private readonly allDslMeta: AetherDslMetaMap = {}; // Новый словарь для хранения всех метаданных
+
+    /**
+     * @private
+     * @readonly
+     * @type {AetherDslMetaMap}
+     * @description A map to store all aggregated DSL metadata, keyed by baseName.
+     */
+    private readonly allDslMeta: AetherDslMetaMap = {};
+
+    /**
+     * @private
+     * @readonly
+     * @type {Set<string>}
+     * @description A set to track already processed DSL file paths to prevent recursion.
+     */
     private readonly processedDslPaths: Set<string> = new Set();
 
+    /**
+     * @public
+     * @async
+     * @function generate
+     * @description Main entry point for the generation process.
+     * Finds, loads, and processes all DSL files, then writes the generated
+     * TypeScript files to the disk.
+     */
     async generate() {
         console.log('Starting Aether protocol generation...');
 
         const srcDir = path.resolve(process.cwd(), 'src');
-        const outputFile = path.resolve(srcDir, this.outputFileName);
 
-        // 1. Находим все ADSL YAML файлы
+        // 1. Find all ADSL YAML files
         const dslFiles = this.findDslFiles(srcDir);
 
         if (dslFiles.length === 0) {
@@ -34,60 +64,57 @@ export class AetherProtocolGenerator {
         }
         console.log(`Found ${dslFiles.length} DSL files:`, dslFiles.map(f => path.basename(f)));
 
-        // 2. Агрегируем метаданные из всех файлов и их includes в allDslMeta
-        // Для упрощения, предполагаем, что главный файл — это первый найденный (или самый большой/основной).
-        // ИЗМЕНЕНО: Загружаем *все* найденные файлы и их 'includes' рекурсивно.
+        // 2. Aggregate metadata from all files and their includes into allDslMeta
         for (const filePath of dslFiles) {
             await this.loadAllMetaRecursively(filePath);
         }
 
-        // Выбираем первый файл (по конвенции) как "главный" для генерации.
+        // Use the first file (by convention) as the "primary" for generation.
         const primaryFilePath = dslFiles[0];
         const primaryBaseName = path.basename(primaryFilePath).replace(/\.adsl\.(yaml|json)$/, '');
 
         if (!this.allDslMeta[primaryBaseName]) {
-             // Эта проверка должна быть избыточной, если dslFiles не пуст, но оставляем для безопасности
              throw new Error('Failed to load primary DSL metadata.');
         }
 
-        // 3. Вызываем единый генератор с агрегированными метаданными
+        // 3. Call the unified generator with the aggregated metadata
         console.log('Running unified code generation...');
-
-        // =================================================================
-        // ИСПРАВЛЕНИЕ:
-        // Раньше: this.allDslMeta[primaryBaseName]
-        // Сейчас: this.allDslMeta
-        // Мы должны передать *всю карту* метаданных, а не только метаданные одного файла.
-        // =================================================================
         const generatedFiles = await generateAetherProtocol(
-            this.allDslMeta,                   // <--- ИСПРАВЛЕНО
-            this.createAggregatedResolver(),   // Передаем резолвер для обработки includes
+            this.allDslMeta,
+            this.createAggregatedResolver(),
             primaryBaseName
         );
 
-        // 4. Записываем результат (берем только aether_api.ts, который теперь содержит все)
-        const finalCode = generatedFiles[this.outputFileName];
+        // 4. Write *all* generated files
+        console.log(`Writing ${Object.keys(generatedFiles).length} generated file(s)...`);
 
-        if (!finalCode) {
-            throw new Error(`Generator did not produce the expected output file: ${this.outputFileName}`);
+        if (Object.keys(generatedFiles).length === 0) {
+            throw new Error('Generator returned no files.');
         }
 
-        // aether_protocol_generator теперь возвращает код с преамбулой и импортами внутри,
-        // поэтому мы просто форматируем его и записываем.
-        fs.writeFileSync(outputFile, this.formatter.format(finalCode));
-        console.log(`Successfully generated and overwrote: ${outputFile}`);
+        // Iterate over all files (aether_api.ts and aether_api_impl.ts)
+        for (const [fileName, fileContent] of Object.entries(generatedFiles)) {
+            if (!fileContent) {
+                console.warn(`Warning: Generator returned empty content for ${fileName}. Skipping.`);
+                continue;
+            }
+
+            // Determine the output path for *each* file
+            const currentOutputFile = path.resolve(srcDir, fileName);
+
+            // Format and write
+            fs.writeFileSync(currentOutputFile, this.formatter.format(fileContent));
+            console.log(`Successfully generated and overwrote: ${currentOutputFile}`);
+        }
     }
 
-    private generateFileHeader(): string {
-        return `// ===============================================================================\n` +
-               `// GENERATED FILE: ${this.outputFileName}\n` +
-               `// Generated by AetherProtocolGenerator\n` +
-               `// Timestamp: ${new Date().toISOString()}\n` +
-               `// ===============================================================================\n\n`;
-    }
-
-    // --- Новая логика агрегации ---
-
+    /**
+     * @private
+     * @async
+     * @function loadMetaFromFile
+     * @param {string} filePath - The absolute path to the DSL file.
+     * @returns {Promise<AetherDslMeta>} The parsed metadata object.
+     */
     private async loadMetaFromFile(filePath: string): Promise<AetherDslMeta> {
         const dslText = fs.readFileSync(filePath, 'utf8');
         const dslFormat = filePath.endsWith('.json') ? 'json' : 'yaml';
@@ -96,8 +123,15 @@ export class AetherProtocolGenerator {
             : yaml.load(dslText) as AetherDslMeta;
     }
 
+    /**
+     * @private
+     * @async
+     * @function loadAllMetaRecursively
+     * @description Loads a DSL file and all its `includes` recursively, populating `this.allDslMeta`.
+     * @param {string} filePath - The path to the DSL file to load.
+     */
     private async loadAllMetaRecursively(filePath: string): Promise<void> {
-        // Убедимся, что путь абсолютный и нормализованный для Set
+        // Ensure path is absolute and normalized for the Set
         const normalizedFilePath = path.resolve(filePath);
         if (this.processedDslPaths.has(normalizedFilePath)) return;
 
@@ -106,7 +140,7 @@ export class AetherProtocolGenerator {
 
         const meta = await this.loadMetaFromFile(normalizedFilePath);
 
-        // Добавляем 'api', если он есть (для совместимости с Groovy)
+        // Add 'api' if 'services' exists (for compatibility)
         if (meta.services) {
              meta.api = meta.services;
         }
@@ -130,13 +164,12 @@ export class AetherProtocolGenerator {
             }
 
             if (!foundInclude) {
-                 // Попытка найти файл в других корневых директориях DSL (если 'common' лежит рядом)
-                 // Это упрощенная логика; в идеале нужен полный include path resolver
-                 const rootDir = path.dirname(normalizedFilePath); // Ищем в той же директории
+                 // Attempt to find the file in other root DSL directories (e.g., as a sibling)
+                 const rootDir = path.dirname(normalizedFilePath);
 
                  for (const ext of possibleExtensions) {
-                     const siblingPath = path.resolve(rootDir, `../${includeName}/${includeName}${ext}`); // Пробуем найти как соседа
-                     const commonPath = path.resolve(rootDir, `${includeName}${ext}`); // Пробуем найти в той же папке
+                     const siblingPath = path.resolve(rootDir, `../${includeName}/${includeName}${ext}`); // Try to find as a neighbor
+                     const commonPath = path.resolve(rootDir, `${includeName}${ext}`); // Try to find in the same folder
 
                      if (fs.existsSync(commonPath)) {
                          await this.loadAllMetaRecursively(commonPath);
@@ -157,6 +190,13 @@ export class AetherProtocolGenerator {
         }
     }
 
+    /**
+     * @private
+     * @function createAggregatedResolver
+     * @description Creates an IncludeResolver function that resolves includes
+     * from the already aggregated `this.allDslMeta` map.
+     * @returns {IncludeResolver} An async function to resolve include names.
+     */
     private createAggregatedResolver(): IncludeResolver {
         return async (includeName: string): Promise<AetherDslMeta> => {
             const normalizedName = includeName.replace(/\.adsl\.(yaml|json)$/, '');
@@ -168,8 +208,13 @@ export class AetherProtocolGenerator {
         };
     }
 
-    // --- Старая логика поиска (оставлена) ---
-
+    /**
+     * @private
+     * @function findDslFiles
+     * @description Recursively scans a directory for `.adsl.yaml` and `.adsl.json` files.
+     * @param {string} dir - The directory to start scanning from.
+     * @returns {string[]} An array of absolute paths to the found DSL files.
+     */
     private findDslFiles(dir: string): string[] {
         const files: string[] = [];
 
@@ -196,7 +241,10 @@ export class AetherProtocolGenerator {
 
 // ==================== EXECUTABLE PART ====================
 
-// Если файл запущен напрямую, а не импортирован как модуль
+/**
+ * This block executes if the file is run directly from the command line
+ * (e.g., `node AetherProtocolPlugin.ts`).
+ */
 if (require.main === module) {
     const generator = new AetherProtocolGenerator();
     generator.generate().catch(error => {

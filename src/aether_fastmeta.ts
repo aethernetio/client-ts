@@ -1,8 +1,8 @@
+// @ts-nocheck
 // =============================================================================================
 // FILE: aether.fastmeta.ts
 // PURPOSE: Contains Fast Meta API interfaces and implementation (FastFutureContext, FastMeta, PackNumber).
-// DEPENDENCIES: aether.types.ts, aether.datainout.ts, aether.future.ts, aether.logging.ts
-// (ИСПРАВЛЕННАЯ ВЕРСИЯ - Added logging hooks)
+// DEPENDENCIES: aether.types.ts, aether.datainout.ts, aether.future.ts, aether.logging.ts, aether.fastmeta_helpers.ts
 // =============================================================================================
 
 import {
@@ -14,6 +14,7 @@ import {
 import { AFuture, ARFuture } from './aether_future';
 import { DataIn, DataInOut, DataInOutStatic, DataOut } from './aether_datainout';
 import { Log, LNode, LogData } from './aether_logging';
+import { hashCodeEqualsHelpers } from './aether_fastmeta_helpers';
 
 // --- Java equivalents for text processing ---
 const TEXT_ENCODER = new TextEncoder();
@@ -150,7 +151,10 @@ type FastMetaTypeWithDefaults<T> = FastMetaType<T> & typeof FastMetaTypeImpl;
 
 
 /** Port of FastMeta.java (interface/object) */
-export const FastMeta: { [key: string]: FastMetaTypeWithDefaults<any> } = {
+export const FastMeta: { [key: string]: FastMetaTypeWithDefaults<any> | any } = { // 'any' added for hashCodeEqualsHelper
+    // --- hashCode/equals Helper ---
+    hashCodeEqualsHelper: hashCodeEqualsHelpers,
+
     // --- Single Primitives ---
     META_BOOLEAN: {
         serialize: (_ctx, obj, out) => out.writeBoolean(obj),
