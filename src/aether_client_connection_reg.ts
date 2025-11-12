@@ -13,7 +13,7 @@ import { FastApiContext } from './aether_fastmeta';
 import { URI } from './aether_types';
 import { AFuture, ARFuture } from './aether_future';
 import { Log } from './aether_logging';
-import { ClientApiRegSafe, ClientApiRegSafeStream, ClientApiRegUnsafe, Cloud, FinishResultGlobalRegServerApi, GlobalApiRegistrationServerRegistrationApi, GlobalRegClientApi, GlobalRegClientApiStream, GlobalRegServerApiRemote, Key, PowMethod, RegistrationRootApi, RegistrationRootApiRemote, ServerDescriptor, ServerRegistrationApiRemote, ServerRegistrationApiStream, SignedKey, WorkProofDTO } from './aether_api';
+import { ClientApiRegSafe, ClientApiRegSafeStream, ClientApiRegUnsafe, Cloud, FinishResult, GlobalApi, GlobalRegClientApi, GlobalRegClientApiStream, GlobalRegServerApiRemote, Key, PowMethod, RegistrationRootApi, RegistrationRootApiRemote, ServerDescriptor, ServerRegistrationApiRemote, ServerRegistrationApiStream, SignedKey, WorkProofDTO } from './aether_api';
 import { Connection } from './aether_client_connection_base';
 
 /**
@@ -228,14 +228,14 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
                     (a2: ServerRegistrationApiRemote) => {
                         a2.setReturnKey(this.tempKeyNative);
                         a2.registration(workProofDTO.getSalt(), workProofDTO.getSuffix(), passwords, this.client.getParent(),
-                            GlobalApiRegistrationServerRegistrationApi.fromRemoteConsumer(
+                            GlobalApi.fromRemoteConsumer(
                                 this.globalCtx,
                                 this.gcp!.encrypt.bind(this.gcp!),
                                 (gapi: GlobalRegServerApiRemote) => {
 
                                     gapi.setMasterKey(CryptoUtils.aKeyToDtoKey(this.client.getMasterKeyAKey()));
                                     gapi.finish()
-                                        .to((finishResult: FinishResultGlobalRegServerApi) => {
+                                        .to((finishResult: FinishResult) => {
                                             this.handleRegistrationFinish(finishResult, asymCE);
                                         })
                                         .onError((e: Error) => {
@@ -262,7 +262,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
      * @param {FinishResultGlobalRegServerApi} finishResult The result from the server.
      * @param {CryptoEngine} asymCE The asymmetric crypto engine.
      */
-    private handleRegistrationFinish(finishResult: FinishResultGlobalRegServerApi, asymCE: CryptoEngine): void {
+    private handleRegistrationFinish(finishResult: FinishResult, asymCE: CryptoEngine): void {
         try {
             Log.trace("RegConn: registration step finish.");
             this.client.confirmRegistration(finishResult);

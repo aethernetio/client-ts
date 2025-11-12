@@ -543,7 +543,6 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         }
 
         try {
-            // [STEP 1] Create context, which calls localApiProvider and sets rootApi
             const context = new FastApiContextLocal<LT>((self: FastApiContextLocal<LT>) => {
                 const remoteApi = this.remoteApiMeta!.makeRemote(self);
                 const localApi = this.localApiProvider!(remoteApi);
@@ -552,7 +551,6 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
 
             this.context = context;
 
-            // *** НАЧАЛО ИСПРАВЛЕННОЙ ЛОГИКИ FLUSH ***
             this.context.flush = (sendFuture: AFuture) => {
                 using _l_flush = Log.context(this.log);
                 try {
@@ -566,18 +564,44 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
                             frameBuffer.write(dataArray);
                             const finalBytesToSend = frameBuffer.toArray();
 
-                            this.websocket!.send(finalBytesToSend, (sendError: Error) => {
-                                if (sendError) {
-                                    // Ошибка при отправке (асинхронная)
-                                    Log.error("Error sending data through WebSocket", sendError);
-                                    this.handleConnectionError(sendError);
-                                    sendFuture.error(sendError);
-                                } else {
-                                    // Успешная асинхронная отправка
-                                    Log.debug("Binary frame sent successfully", { totalBytes: finalBytesToSend.length });
-                                    sendFuture.tryDone();
-                                }
-                            });
+                            // --- [НАЧАЛО ИСПРАВЛЕНИЯ] ---
+
+                            // Проверяем арность (количество аргументов) функции send.
+                            // В Node.js (ws) она > 1 (data, options, cb).
+                            // В браузере (native) она == 1 (data).
+                            const hasCallbackSupport = this.websocket.send.length > 1;
+
+                            if (hasCallbackSupport) {
+                                // СРЕДА NODE.JS: Используем колбэк для обратной связи (backpressure)
+                                Log.trace("Using Node.js 'send' with callback.");
+                                this.websocket!.send(finalBytesToSend, (sendError: Error) => {
+                                    if (sendError) {
+                                        // Ошибка при отправке (асинхронная)
+                                        Log.error("Error sending data through WebSocket (async)", sendError);
+                                        this.handleConnectionError(sendError);
+                                        sendFuture.error(sendError);
+                                    } else {
+                                        // Успешная асинхронная отправка
+                                        Log.debug("Binary frame sent successfully (async)", { totalBytes: finalBytesToSend.length });
+                                        sendFuture.tryDone();
+                                    }
+                                });
+                            } else {
+                                // СРЕДА БРАУЗЕРА: "Fire-and-forget".
+                                // Отправка в браузере синхронно бросает ошибку, если не может
+                                // даже поставить данные в очередь.
+                                // Мы не можем ждать подтверждения, поэтому завершаем future СРАЗУ.
+                                Log.trace("Using Browser 'send' (fire-and-forget).");
+
+                                // `send` бросит ошибку СИНХРОННО, если что-то не так,
+                                // и она будет поймана внешним `catch (e)`
+                                this.websocket!.send(finalBytesToSend);
+
+                                // Если `send` не бросил ошибку, считаем, что flush успешен.
+                                Log.debug("Binary frame sent (fire-and-forget)", { totalBytes: finalBytesToSend.length });
+                                sendFuture.tryDone();
+                            }
+                            // --- [КОНЕЦ ИСПРАВЛЕНИЯ] ---
 
                         } else {
                             Log.trace("Flush called, but no data to send.");
@@ -590,18 +614,19 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
                         sendFuture.error(new Error("WebSocket is not open."));
                     }
                 } catch (e) {
-                    // Этот catch теперь ловит ошибки подготовки (dataArray, frameBuffer)
-                    Log.error("Error during WebSocket flush preparation", e as Error);
+                    // Этот catch теперь ловит:
+                    // 1. Ошибки подготовки (dataArray, frameBuffer)
+                    // 2. СИНХРОННЫЕ ошибки от `send()` в браузере
+                    // 3. (Маловероятно) Синхронные ошибки от `send()` в Node.js
+                    Log.error("Error during WebSocket flush preparation or sync send", e as Error);
                     this.handleConnectionError(e as Error);
                     sendFuture.error(e as Error);
                 }
             };
-            // *** КОНЕЦ ИСПРАВЛЕННОЙ ЛОГИКИ FLUSH ***
 
             this.connectFuture.tryDone(this.context);
 
-            // [STEP 2] Now that rootApi is set, notify the adapter.
-            this.setConnectionState(ConnectionState.CONNECTED); // <--- [MOVED HERE]
+            this.setConnectionState(ConnectionState.CONNECTED);
 
         } catch (e) {
             Log.error("Error during connection setup (onOpen)", e as Error);
@@ -684,7 +709,6 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         this.handleConnectionError(new ClientApiException(`WebSocket error: ${error.message}`, error));
     }
 
-    // aether_fastmeta_net.ts
     private handleClose(code: number, reason: string): void {
         using _l = Log.context(this.log);
         Log.info("WebSocket connection closed.", {

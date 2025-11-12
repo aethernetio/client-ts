@@ -592,7 +592,7 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
 
     public flush(): void {
         if (!this.inProcess.compareAndSet(false, true)) {
-            Log.trace("Flush skipped: Already in process", { component: "ConnectionWork" });
+//             Log.trace("Flush skipped: Already in process", { component: "ConnectionWork" });
             return;
         }
 
@@ -601,12 +601,12 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         const isFailed = rootFuture.isError();
         const isCancelled = rootFuture.isCanceled();
         if (!isReady || isFailed || isCancelled || !this.rootApi) {
-            Log.warn("Flush skipped: Root API not available or connection closed/errored.", { uri: this.uri, isReady, isFailed, isCancelled, hasRootApi: !!this.rootApi });
+//             Log.warn("Flush skipped: Root API not available or connection closed/errored.", { uri: this.uri, isReady, isFailed, isCancelled, hasRootApi: !!this.rootApi });
             this.inProcess.set(false);
             return;
         }
 
-        Log.trace("Executing explicit flush", { component: "ConnectionWork", server: this.uri });
+//         Log.trace("Executing explicit flush", { component: "ConnectionWork", server: this.uri });
         this.lastWorkTime = RU.time();
         const f = AFuture.make();
         f.addListener(() => this.inProcess.set(false));

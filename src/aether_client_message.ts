@@ -1,84 +1,60 @@
-// FILE: aether_client_message.ts
-// PURPOSE: Contains MessageNode, MessageEventListener, and MessageEventListenerDefault.
-// DEPENDENCIES: aether_client_types.ts, aether_client_connection_work.ts, aether_client_core.ts (for AetherCloudClient)
+// FILE: aether_client_message.ts (V2 - С МЕТОДАМИ toApi)
 // =============================================================================================
 import type { ConnectionWork } from './aether_client_connection_work';
 import { AetherCloudClient } from './aether_client';
 import { AuthorizedApiRemote, Cloud, Message, ServerDescriptor } from './aether_api';
 import { Log } from './aether_logging';
-import { AFuture, EventConsumer } from './aether_future';
-import { UUID } from './aether_types';
+import { AFuture, ARFuture, EventConsumer } from './aether_future';
+import { AConsumer, AFunction, UUID } from './aether_types';
 import { Queue } from './aether_utils';
 
-
-// --- MessageEventListener Interface & Default Implementation ---
+// --- [НОВЫЕ ИМПОРТЫ] ---
+// Эти импорты нужны для методов toApi
+import {
+    FastApiContext,
+    FastApiContextLocal,
+    FastFutureContext,
+    FastMetaApi
+} from './aether_fastmeta';
+import { DataInOutStatic } from './aether_datainout';
+// -----------------------
 
 /**
  * @interface MessageEventListener
- * @description Defines the strategy for resolving connections for a MessageNode.
+ * (Без изменений)
  */
 export interface MessageEventListener {
-    /**
-     * @description Called when the consumer's Cloud object is resolved.
-     * @param {MessageNode} messageNode The node managing the connection.
-     * @param {Cloud} cloud The resolved cloud data.
-     */
     setConsumerCloud(messageNode: MessageNode, cloud: Cloud): void;
-
-    /**
-     * @description Called when a ServerDescriptor (server details) is resolved from a server ID.
-     * @param {MessageNode} messageNode The node managing the connection.
-     * @param {ServerDescriptor} serverDescriptor The resolved server descriptor.
-     */
     onResolveConsumerServer(messageNode: MessageNode, serverDescriptor: ServerDescriptor): void;
-
-    /**
-     * @description Called when a ConnectionWork (active connection) is resolved from a ServerDescriptor.
-     * @param {MessageNode} messageNode The node managing the connection.
-     * @param {ConnectionWork} connection The resolved, active work connection.
-     */
     onResolveConsumerConnection(messageNode: MessageNode, connection: ConnectionWork): void;
 }
 
 /**
  * @description Default implementation of the connection resolution strategy.
+ * (Без изменений)
  */
 export const MessageEventListenerDefault: MessageEventListener = {
-    /**
-     * @description Default strategy for handling a resolved Cloud.
-     * It attempts to resolve the first server ID listed in the cloud data.
-     */
     setConsumerCloud: (messageNode: MessageNode, cloud: Cloud) => {
+        // ... (логика без изменений) ...
         Log.debug("Strategy: setConsumerCloud called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString() });
         if (cloud?.data?.length > 0) {
-            // Attempt to connect using the first server ID in the cloud
             Log.debug("Strategy: Cloud has servers. Requesting server descriptor...", { component: "MsgEvListenerDefault", serverId: cloud.data[0] });
             messageNode.addConsumerServerOutById(cloud.data[0]);
         } else {
-            // No servers found for this consumer
             Log.warn("Received null or empty cloud, cannot establish connection.", { cloud });
             let msg;
-            // Error out any messages that were buffered waiting for this
             while ((msg = messageNode.bufferOut.poll())) {
                 msg.future.error(new Error(`Could not resolve cloud/server for consumer ${messageNode.consumerUUID}`));
             }
         }
     },
-
-    /**
-     * @description Default strategy for handling a resolved ServerDescriptor.
-     * It attempts to get or create an active connection using the descriptor.
-     */
     onResolveConsumerServer: (messageNode: MessageNode, serverDescriptor: ServerDescriptor) => {
+        // ... (логика без изменений) ...
         Log.debug("Strategy: onResolveConsumerServer called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString(), serverId: serverDescriptor.id });
         messageNode.addConsumerServerOutByDescriptor(serverDescriptor);
     },
-
-    /**
-     * @description Default strategy for handling a resolved ConnectionWork.
-     * It adds the connection to the MessageNode's set of outgoing connections.
-     */
     onResolveConsumerConnection: (messageNode: MessageNode, connection: ConnectionWork) => {
+        // ... (логика без изменений) ...
         Log.debug("Strategy: onResolveConsumerConnection called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString(), uri: connection.uri });
         messageNode.addConsumerConnectionOut(connection);
     },
@@ -86,46 +62,18 @@ export const MessageEventListenerDefault: MessageEventListener = {
 
 /**
  * @class MessageNode
- * @description Manages message buffers and connection resolution for a specific peer (consumer).
+ * (Без изменений... до `send`)
  */
 export class MessageNode {
-    /**
-     * @description The set of active connections that can be used to send messages to the consumer.
-     */
     public readonly connectionsOut: Set<ConnectionWork> = new Set();
-
-    /**
-     * @description Queue for outgoing messages waiting to be sent.
-     */
     public readonly bufferOut = new Queue<{ data: Uint8Array, future: AFuture }>();
-
-    /**
-     * @description Event emitter for incoming messages received from this consumer.
-     */
     public readonly bufferIn = new EventConsumer<{ data: Uint8Array }>();
-
-    /**
-     * @description The UUID of the peer this node communicates with.
-     */
     public readonly consumerUUID: UUID;
-
-    /**
-     * @description Reference to the main AetherCloudClient.
-     */
     public readonly client: AetherCloudClient;
-
-    /**
-     * @description The connection resolution strategy instance.
-     */
     public strategy: MessageEventListener;
 
-    /**
-     * @constructor
-     * @param {AetherCloudClient} client The main client instance.
-     * @param {UUID} consumerId The UUID of the peer.
-     * @param {MessageEventListener} strategy The strategy for resolving connections.
-     */
     constructor(client: AetherCloudClient, consumerId: UUID, strategy: MessageEventListener) {
+        // ... (логика конструктора без изменений) ...
         Log.trace("Creating MessageNode", {
             component: "MessageNode",
             uidFrom: client.getUid()?.toString() ?? "N/A",
@@ -135,27 +83,21 @@ export class MessageNode {
         this.consumerUUID = consumerId;
         this.strategy = strategy;
 
-        // Start the connection resolution process by fetching the consumer's cloud
         this.client.getCloud(consumerId).to(
             (c: Cloud | null) => {
                 if (c) {
-                    // *** НОВЫЙ ЛОГ ***
                     Log.debug("Cloud resolution SUCCESS", { component: "MessageNode", uidTo: this.consumerUUID.toString(), cloudData: c.data });
                     try { this.strategy.setConsumerCloud(this, c); }
                     catch (e) { Log.error("Error in strategy.setConsumerCloud", e as Error); }
                 } else {
-                    // Cloud resolution failed or returned null
-                    // *** УЛУЧШЕННЫЙ ЛОГ ***
                     Log.warn("Cloud resolution FAILED (result was null)", { component: "MessageNode", uidTo: this.consumerUUID.toString() });
                     let msg;
-                    // Error out any buffered messages
                     while ((msg = this.bufferOut.poll())) {
                         msg.future.error(new Error(`Could not resolve cloud for consumer ${this.consumerUUID}`));
                     }
                 }
             }).onError(
                 (err: Error) => {
-                    // *** УЛУЧШЕННЫЙ ЛОГ ***
                     Log.error("Cloud resolution FAILED (exception thrown)", err, { component: "MessageNode", uidTo: this.consumerUUID.toString() });
                     let msg;
                     while ((msg = this.bufferOut.poll())) {
@@ -165,35 +107,33 @@ export class MessageNode {
             );
     }
 
+    // --- [ИЗМЕНЕНО] Добавлен оверлод 'send(data)' из Java ---
+
     /**
-     * @description Adds an outgoing message to the buffer.
-     * The message will be sent by a ConnectionWork's flush cycle.
-     * @param {Uint8Array} data The message payload.
-     * @param {AFuture} future The future to complete when the message is successfully sent or fails.
-     * @returns {AFuture} The same future that was passed in.
+     * @description Добавляет сообщение в очередь, *требуя* существующий AFuture.
+     * (Оригинальный метод)
      */
-    public send(data: Uint8Array, future: AFuture): AFuture {
-        const message = { data, future };
+    public send(data: Uint8Array, future: AFuture): AFuture;
+    /**
+     * @description Добавляет сообщение в очередь, *создавая* новый AFuture.
+     * (Портировано из MessageNode.java)
+     */
+    public send(data: Uint8Array): AFuture;
+
+    // Реализация
+    public send(data: Uint8Array, future?: AFuture): AFuture {
+        const sendFuture = future ?? AFuture.make();
+        const message = { data, future: sendFuture };
         this.bufferOut.add(message);
         Log.trace("MessageNode: Added message to bufferOut");
 
-        // NOTE: Direct sending logic was removed.
-        // ConnectionWork.flushMessageQueue is now solely responsible
-        // for polling this bufferOut queue and sending.
-
         if (this.connectionsOut.size === 0) {
-            Log.trace("MessageNode: Message buffered, no connections yet. Cloud resolution should trigger connection attempt.");
+            Log.trace("MessageNode: Message buffered, no connections yet.");
         }
-        return future;
+        return sendFuture;
     }
 
-    // --- private trySendDirectly method was removed ---
-    // This logic is now handled entirely by ConnectionWork.flushMessageQueue
-
-    /**
-     * @description Attempts to resolve a ServerDescriptor by its ID.
-     * @param {number} serverId The server's ID.
-     */
+    // --- (Методы addConsumer... без изменений) ---
     public addConsumerServerOutById(serverId: number): void {
         this.client.getServer(serverId).to(
             (sd: ServerDescriptor | null) => {
@@ -205,71 +145,146 @@ export class MessageNode {
                 (err: Error) => Log.error("Failed to resolve server ID in addConsumerServerOutById", err, { serverId })
             );
     }
-
-    /**
-     * @description Attempts to resolve a ConnectionWork from a ServerDescriptor.
-     * @param {ServerDescriptor} serverDescriptor The server's descriptor.
-     */
     public addConsumerServerOutByDescriptor(serverDescriptor: ServerDescriptor): void {
         try {
-            // Get or create the active connection for this server
             const connection = this.client.getConnection(serverDescriptor);
             this.strategy.onResolveConsumerConnection(this, connection);
         } catch (e) {
             Log.error("Error resolving/passing connection in addConsumerServerOutByDescriptor", e as Error);
         }
     }
-
-    /**
-     * @description Registers an active connection as a valid route for sending messages.
-     * @param {ConnectionWork} conn The active connection.
-     */
     public addConsumerConnectionOut(conn: ConnectionWork): void {
-            // *** НОВЫЙ ЛОГ ***
             Log.debug("Attempting to add connection to connectionsOut", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri, currentSize: this.connectionsOut.size });
-
-            // This logic matches the updated Java version.
-            // We just add the connection to the Set.
-            // The ConnectionWork's flushMessageQueue will poll this node's buffer.
             if (this.connectionsOut.has(conn)) {
                 Log.trace("Connection already added, skipping.", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri });
                 return;
             }
             this.connectionsOut.add(conn);
-
-            // *** УЛУЧШЕННЫЙ ЛОГ (INFO) ***
             Log.info("SUCCESS: Added new outgoing connection", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri, newSize: this.connectionsOut.size });
     }
-
-    /**
-     * @description Removes a connection (e.g., if it disconnects).
-     * @param {ConnectionWork} conn The connection to remove.
-     */
     public removeConsumerConnectionOut(conn: ConnectionWork): void {
         if (this.connectionsOut.delete(conn)) {
-             // *** УЛУЧШЕННЫЙ ЛОГ (WARN) ***
             Log.warn("Removing outgoing connection", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri, newSize: this.connectionsOut.size });
-            // If this was the last connection and we still have messages,
-            // try to resolve the cloud again to find a new connection.
             if (this.connectionsOut.size === 0 && this.bufferOut.size() > 0) {
                 Log.warn("Last connection removed, triggering cloud resolution again for buffered messages.", { component: "MessageNode" });
                 this.client.getCloud(this.consumerUUID).to((c: Cloud | null) => { if (c) this.strategy.setConsumerCloud(this, c); });
             }
         }
     }
-
-    /**
-     * @description Called by ConnectionWork when an incoming message is received from this peer.
-     * @param {Uint8Array} data The incoming message payload.
-     */
     public sendMessageFromServerToClient(data: Uint8Array): void {
         Log.trace("Received message from server", { component: "MessageNode", uidTo: this.consumerUUID.toString() });
         this.bufferIn.fire({ data });
     }
+    public toConsumer(o: AConsumer<Uint8Array>): void {
+        this.bufferIn.add((msg: { data: Uint8Array }) => o(msg.data));
+    }
+    public getConsumerUUID(): UUID { return this.consumerUUID; }
+
+
+    // --- [НОВЫЕ МЕТОДЫ] Портировано из MessageNode.java ---
 
     /**
-     * @description Gets the UUID of the peer.
-     * @returns {UUID} The consumer's UUID.
+     * @description Создает FastApiContext, который "промывает" (flushes) данные через этот MessageNode,
+     * используя фабрику для создания локального API.
+     * (Портировано из MessageNode.java)
      */
-    public getConsumerUUID(): UUID { return this.consumerUUID; }
+    public toApiR<LT>(
+        metaLt: FastMetaApi<LT, any>,
+        localApiFactory: AFunction<FastApiContextLocal<LT>, LT>
+    ): FastApiContextLocal<LT> {
+        const nodeSend = this.send.bind(this);
+
+        const ctx = new (class extends FastApiContextLocal<LT> {
+            constructor() {
+                super(localApiFactory); // Передаем фабрику
+            }
+            override flush(sendFuture: AFuture): void {
+                const d = this.remoteDataToArrayAsArray();
+                if (d.length > 0) {
+                    nodeSend(d).to(sendFuture); // Используем send(data)
+                } else {
+                    sendFuture.tryDone();
+                }
+            }
+        })();
+
+        // ctx.localApi теперь засетапен
+        this.toApi(ctx, metaLt, ctx.localApi);
+        return ctx;
+    }
+
+    /**
+     * @description Привязывает входящие данные (bufferIn) к локальной реализации API.
+     * (Портировано из MessageNode.java)
+     */
+    public toApi<LT>(
+        ctx: FastFutureContext,
+        metaLt: FastMetaApi<LT, any>,
+        localApi: LT
+    ): void;
+    /**
+     * @description Создает FastApiContext, который "промывает" (flushes) данные через этот MessageNode,
+     * и привязывает входящие данные к локальной реализации API.
+     * (Портировано из MessageNode.java)
+     */
+    public toApi<LT>(
+        metaLt: FastMetaApi<LT, any>,
+        localApi: LT
+    ): FastApiContextLocal<LT>;
+
+    // Реализация
+    public toApi<LT>(
+        arg1: FastFutureContext | FastMetaApi<LT, any>,
+        arg2: FastMetaApi<LT, any> | LT,
+        arg3?: LT
+    ): void | FastApiContextLocal<LT> {
+
+        // --- Случай 1: toApi(ctx, meta, localApi) ---
+        // (Используется в SmartHomeService.java)
+        if (arg1 instanceof FastApiContext) {
+            const ctx = arg1 as FastFutureContext;
+            const metaLt = arg2 as FastMetaApi<LT, any>;
+            const localApi = arg3 as LT;
+
+            this.toConsumer((v: Uint8Array) => {
+                if (v.length === 0) return;
+                try {
+                    metaLt.makeLocal_fromDataIn(ctx, new DataInOutStatic(v), localApi);
+                } catch (e) {
+                    Log.error("Error in toApi.makeLocal", e as Error, { component: "MessageNode" });
+                }
+            });
+            return;
+        }
+
+        // --- Случай 2: toApi(meta, localApi) ---
+        // (Будет использоваться в SmartHomeController.ts)
+        if (arg3 === undefined) {
+            const metaLt = arg1 as FastMetaApi<LT, any>;
+            const localApi = arg2 as LT;
+            const nodeSend = this.send.bind(this); // bind 'this'
+
+            const ctx = new (class extends FastApiContextLocal<LT> {
+                constructor() {
+                    super(localApi);
+                }
+
+                override flush(sendFuture: AFuture): void {
+                    const d = this.remoteDataToArrayAsArray();
+                    if (d.length > 0) {
+                        nodeSend(d).to(sendFuture); // Используем send(data)
+                    } else {
+                        sendFuture.tryDone();
+                    }
+                }
+            })();
+
+            // Вызываем Случай 1, чтобы привязать consumer
+            this.toApi(ctx, metaLt, localApi);
+            return ctx;
+        }
+
+        // Недостижимо
+        throw new Error("Invalid toApi overload");
+    }
 }

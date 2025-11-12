@@ -9,21 +9,21 @@
 
 import {
     UUID, URI, AtomicInteger
-} from './aether_types';
+} from '../src/aether_types';
 import {
     Log, LNode
-} from './aether_logging';
-import { AFuture } from './aether_future';
-import { CryptoLib, Cloud, ServerDescriptor, IPAddressV4, Message } from './aether_api';
+} from '../src/aether_logging';
+import { AFuture } from '../src/aether_future';
+import { CryptoLib, Cloud, ServerDescriptor, IPAddressV4, Message } from '../src/aether_api';
 import {
     AetherCloudClient,
     ClientStateInMemory,
     MessageEventListenerDefault,
-} from './aether_client';
+} from '../src/aether_client';
 import {
     applySodium as applySodium,
-} from './aether_crypto_sodium';
-import { MessageNode } from './aether_client_message';
+} from '../src/aether_crypto_sodium';
+import { MessageNode } from '../src/aether_client_message';
 
 // Включаем логгирование в консоль
 Log.printConsoleColored((node: LNode) => {

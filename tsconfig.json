@@ -5,16 +5,22 @@
     "module": "CommonJS",
     "target": "ES2022",
     "jsx": "react",
+    "declaration": true,
     "sourceMap": true,
     "moduleResolution": "node",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
     "lib": [
-      "ES2022",
+      "ES2023",
       "DOM",
-      "ScriptHost"
+      "ScriptHost",
+      "esnext.disposable"
+    ],
+    "types": [
+      "node"
     ],
     "baseUrl": ".",
     "paths": {
@@ -22,5 +28,8 @@
         "build/aether.api.ts"
       ]
     }
-  }
+  },
+  "include": [
+    "src/**/*"
+  ]
 }

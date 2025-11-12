@@ -154,10 +154,10 @@ export class LogPrinter implements Disposable {
      */
     public printRow(s: AString, n: LNode): void {
         let line = this.printNode(s, n).toString();
-        if (process) {
-            process.stdout.write(line + '\n');
-        } else if (console) {
+        if (console) {
             console.log(line);
+        } else if (process) {
+            process.stdout.write(line + '\n');
         }
     }
 

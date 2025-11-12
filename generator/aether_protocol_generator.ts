@@ -1,6 +1,6 @@
-// @ts-nocheck
-// Main orchestrator for the Aether DSL to TypeScript code generation process.
-
+#!/usr/bin/env node
+import * as fs from 'fs';
+import * as path from 'path';
 import {
     AetherDslMeta,
     AetherDslMetaMap,
@@ -25,6 +25,13 @@ export class AetherDslMetaProcessor {
     private generatedApis: Set<string> = new Set();
 
     /**
+     * @private
+     * @readonly
+     * @type {string}
+     */
+    private readonly importPrefix: string;
+
+    /**
      * Creates an instance of AetherDslMetaProcessor.
      * @param globalProtocolData - A map of all loaded DSL metadata.
      * @param baseName - The base name of the protocol being generated.
@@ -35,6 +42,22 @@ export class AetherDslMetaProcessor {
         this.generatorLogic = new GeneratorLogic(globalProtocolData, baseName, initialDslMeta);
         this.typeGenerator = new TypeGenerator(this.generatorLogic);
         this.apiGenerator = new ApiGenerator(this.generatorLogic);
+
+        let runningPackageName = '';
+        try {
+            const pkgPath = path.resolve(process.cwd(), 'package.json');
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+            runningPackageName = pkg.name;
+        } catch (e) {
+            console.warn("Could not read package.json, defaulting to package imports.");
+        }
+
+        if (runningPackageName === 'aether-client') {
+            this.importPrefix = './aether_client';
+        } else {
+            this.importPrefix = 'aether-client';
+        }
+        console.log(`Generator running in '${runningPackageName}', using import prefix: '${this.importPrefix}'`);
     }
 
     /**
@@ -42,15 +65,34 @@ export class AetherDslMetaProcessor {
      * @returns The preamble code string.
      */
     private getPreambleImports(): string {
-        return `import { AFuture, ARFuture } from './aether_future';
-import { DataIn, DataOut, DataInOut, DataInOutStatic } from './aether_datainout';
-import { FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, RemoteApiFuture } from './aether_fastmeta';
-import { UUID, URI, Uint8Array, AConsumer } from './aether_types';
-import { ToString, AString } from './aether_astring';
-import * as Impl from './aether_api_impl';
+        return `import {
+    AFuture,
+    ARFuture,
+    DataIn,
+    DataOut,
+    DataInOut,
+    DataInOutStatic,
+    FastMetaType,
+    FastFutureContext,
+    RemoteApi,
+    FastMeta,
+    SerializerPackNumber,
+    DeserializerPackNumber,
+    FastApiContextLocal,
+    FastMetaApi,
+    BytesConverter,
+    RemoteApiFuture,
+    UUID,
+    URI,
+    AConsumer,
+    ToString,
+    AString
+} from '${this.importPrefix}';
+import * as Impl from './aether_api_impl'; // This is always relative
 
 `;
     }
+
     /**
      * Generates the preamble for the `aether_api_impl.ts` file.
      * @param allTypeNames - All generated DTO/Enum/Stream names.
@@ -60,19 +102,37 @@ import * as Impl from './aether_api_impl';
     private getPreambleImportsImpl(allTypeNames: string[], allApiNames: string[]): string {
         const allImports = [...allTypeNames, ...allApiNames];
 
-        // Add `Remote` variants for all API names
         allApiNames.forEach(apiName => {
             allImports.push(`${apiName}Remote`);
         });
 
-        return `import { AFuture, ARFuture } from './aether_future';
-import { DataIn, DataOut, DataInOut, DataInOutStatic } from './aether_datainout';
-import { FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, RemoteApiFuture, FastFutureContextStub } from './aether_fastmeta';
-import { UUID, URI, Uint8Array, AConsumer } from './aether_types';
-import { ToString, AString } from './aether_astring';
+        return `import {
+    AFuture,
+    ARFuture,
+    DataIn,
+    DataOut,
+    DataInOut,
+    DataInOutStatic,
+    FastMetaType,
+    FastFutureContext,
+    RemoteApi,
+    FastMeta,
+    SerializerPackNumber,
+    DeserializerPackNumber,
+    FastApiContextLocal,
+    FastMetaApi,
+    BytesConverter,
+    RemoteApiFuture,
+    FastFutureContextStub,
+    UUID,
+    URI,
+    AConsumer,
+    ToString,
+    AString
+} from '${this.importPrefix}';
 import {
     ${allImports.join(',\n    ')}
-} from './aether_api';
+} from './aether_api'; // This is always relative
 
 `;
     }
@@ -108,27 +168,18 @@ import {
         this.generateSortedTypes(sortedTypeNames, enums, abstracts, concretes, streams);
         this.generateApiCode(apisCode);
 
-        // --- [УДАЛЕНО] ---
-        // const metaNamespacesCode = this.generateAllMetaNamespaces(this.generatorLogic);
-        // --- [КОНЕЦ УДАЛЕНИЯ] ---
-
-        // --- Сборка aether_api.ts ---
         this.generatedCode = this.assembleGeneratedFile(
             enums, abstracts, concretes, streams, apisCode
         );
 
-        // --- Сборка aether_api_impl.ts ---
         const allTypeNames = Array.from(this.generatedTypes);
         const allApiNames = Array.from(this.generatedApis);
 
-        // Preamble для impl должен включать все сгенерированные типы
-        // --- [ИЗМЕНЕНИЕ] Добавлен FastFutureContextStub в импорт
         const implPreamble = this.getPreambleImportsImpl(allTypeNames, allApiNames);
         const implBody = this.generatorLogic.allImplCode.join('\n\n');
 
         this.generatedImplCode = [implPreamble, implBody].filter(Boolean).join('\n\n');
 
-        // --- Форматирование и возврат ---
         this.generatedCode = this.formatCode(this.generatedCode);
         this.generatedImplCode = this.formatCode(this.generatedImplCode);
 
@@ -137,6 +188,7 @@ import {
             [`aether_api_impl.ts`]: this.generatedImplCode
         };
     }
+
     /**
      * Helper function to format generated code (e.g., fix indentation).
      * @param code - The code string to format.
@@ -181,32 +233,42 @@ import {
 
             if (!defn || this.generatedTypes.has(name) || isApi) return;
 
-            if (defn?.fields || defn?.enum || defn?.stream || defn?.abstract !== undefined) {
-                const code = this.typeGenerator.generateType(name, defn);
-                if (defn.enum) enums.push(code);
-                else if (defn.abstract) abstracts.push(code);
-                else if (defn.stream) streams.push(code);
-                else concretes.push(code);
-                this.generatedTypes.add(name);
-            }
+            const code = this.typeGenerator.generateType(name, defn);
+            if (defn.enum) enums.push(code);
+            else if (defn.abstract) abstracts.push(code);
+            else if (defn.stream) streams.push(code);
+            else concretes.push(code);
+            this.generatedTypes.add(name);
         });
     }
 
     /**
-     * Generates code for all API definitions.
-     * @param apisCode - An output array for API code.
-     */
-    private generateApiCode(apisCode: string[]): void {
-        Object.entries(this.globalProtocolData).forEach(([_, dslMeta]) => {
-            Object.entries(dslMeta.api || {}).forEach(([name, defn]) => {
-                if (!this.generatedApis.has(name)) {
-                    const apiOutput = this.apiGenerator.generateApi(name, defn as TypeDefinition);
-                    apisCode.push(apiOutput[name]);
-                    this.generatedApis.add(name);
+         * Generates code for all API definitions.
+         * [ИСПРАВЛЕНИЕ] Итерируется по канонической карте API, чтобы предотвратить дублирование.
+         * @param apisCode - An output array for API code.
+         */
+        private generateApiCode(apisCode: string[]): void {
+
+            // Итерируемся по списку канонических имен API (гарантирует уникальность)
+            this.generatorLogic.canonicalApiMap.forEach((canonicalName, lowerName) => {
+
+                // Генерируем каждое каноническое API только один раз
+                if (!this.generatedApis.has(canonicalName)) {
+
+                    // Находим определение (оно уже загружено в allTypes)
+                    const defn = this.generatorLogic.allTypes.get(canonicalName);
+
+                    if (defn) {
+                        const apiOutput = this.apiGenerator.generateApi(canonicalName, defn as TypeDefinition);
+                        apisCode.push(apiOutput[canonicalName]);
+                        this.generatedApis.add(canonicalName);
+                    } else {
+                        // Эта ошибка не должна происходить, если конструктор LogicLogic отработал верно
+                        console.warn(`[Generator] Не удалось найти определение для канонического API: ${canonicalName} (из ключа ${lowerName})`);
+                    }
                 }
             });
-        });
-    }
+        }
 
     /**
      * Assembles the final generated file from all its parts.
@@ -224,10 +286,6 @@ import {
         code += concretes.join('\n\n') + (concretes.length ? '\n\n' : '');
         code += streams.join('\n\n') + (streams.length ? '\n\n' : '');
         code += apisCode.join('\n\n');
-
-        // --- [УДАЛЕНО] ---
-        // if (metaNamespacesCode) { ... }
-        // --- [КОНЕЦ УДАЛЕНИЯ] ---
 
         return code;
     }
@@ -303,10 +361,6 @@ import {
             dtoDef.fields![fieldName] = processFieldType([fieldName, dtoName], fieldType);
         });
     }
-
-    // --- [УДАЛЕН] ---
-    // private generateAllMetaNamespaces(logicInstance: GeneratorLogic): string | null { ... }
-    // --- [КОНЕЦ УДАЛЕНИЯ] ---
 }
 
 /**

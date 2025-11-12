@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "mocha",
+      "chai",
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*",
+    "test/aether_point_to_point.browser.test.ts"
+  ]
+}

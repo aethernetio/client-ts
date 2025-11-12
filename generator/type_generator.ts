@@ -1,7 +1,3 @@
-// @ts-nocheck
-// This file contains the logic for generating TypeScript code for DSL types
-// (Structures, Enums, and Streams).
-
 import {
     GeneratorLogic,
     TypeDefinition,
@@ -44,7 +40,10 @@ export class TypeGenerator {
         const fieldTypes: Map<string, TypeInfo> = new Map();
         Object.entries(fields || {}).forEach(([fn, type]) => {
             if (typeof type === 'object' && type !== null) throw new Error(`Anonymous types cannot be validated this way.`);
-            fieldTypes.set(fn, new TypeInfo(type as string));
+
+            const referencedName = type as string;
+            const canonicalName = this.generatorLogic.resolveCanonicalTypeName(referencedName);
+            fieldTypes.set(fn, new TypeInfo(canonicalName));
         });
         return fieldTypes;
     }
@@ -67,7 +66,8 @@ export class TypeGenerator {
      */
     private getAllFieldsRecursive(res: Map<string, TypeInfo>, cfg: TypeDefinition): void {
         if (cfg?.parent) {
-            const parentName = cfg.parent as string;
+            const parentNameRaw = cfg.parent as string;
+            const parentName = this.generatorLogic.resolveCanonicalTypeName(parentNameRaw);
             const parentCfg = this.generatorLogic.findTypeDefinition(parentName);
             if (parentCfg) this.getAllFieldsRecursive(res, parentCfg);
         }
@@ -106,7 +106,8 @@ export class TypeGenerator {
      */
     private getAllConstantsRecursive(res: Map<string, ConstantInfo>, cfg: TypeDefinition): void {
         if (cfg?.parent) {
-            const parentName = cfg.parent as string;
+            const parentNameRaw = cfg.parent as string;
+            const parentName = this.generatorLogic.resolveCanonicalTypeName(parentNameRaw);
             const parentCfg = this.generatorLogic.findTypeDefinition(parentName);
             if (parentCfg) this.getAllConstantsRecursive(res, parentCfg);
         }
@@ -173,7 +174,9 @@ export class TypeGenerator {
         const isAbstract = !!cfg?.abstract;
         const allFields = this.getAllFields(cfg);
         const currentFields = this.getFieldTypes(cfg?.fields || {});
-        const parent = cfg?.parent;
+
+        const parent = cfg?.parent ? g.resolveCanonicalTypeName(cfg.parent) : undefined;
+
         const extendsClause = parent ? ` extends ${parent}` : '';
         const superFields = Array.from(allFields.keys()).filter(fn => !currentFields.has(fn));
 
@@ -182,7 +185,6 @@ export class TypeGenerator {
         const children = g.getConcreteTypesInHierarchy(rootForChildren);
         const needsTypeIdMethod = parent || g.isInTypeHierarchy(name) || (children.length > 0 && name !== "Message");
 
-        // --- JSDoc для класса ---
         const doc = (cfg as any).doc;
         const docLines: string[] = [];
         if (doc) {
@@ -192,14 +194,13 @@ export class TypeGenerator {
         }
 
         if (!isAbstract && typeId !== undefined && typeId >= 0) {
-            if (docLines.length > 0) docLines.push(` *`); // Разделитель
+            if (docLines.length > 0) docLines.push(` *`);
             docLines.push(` * @aetherTypeId ${typeId}`);
         }
 
         sb.push(`/**`);
         docLines.forEach(line => sb.push(line));
         sb.push(` */`);
-        // --- Конец JSDoc ---
 
         sb.push(`export ${isAbstract ? 'abstract class' : 'class'} ${name}${extendsClause} implements ToString {`);
 
@@ -224,7 +225,6 @@ export class TypeGenerator {
             }
         }
 
-        // --- META Generation Logic ---
         const metaBodyImplName = `${name}MetaBodyImpl`;
         if (!isAbstract) {
             this.generateMetaImpl(name, metaBodyImplName, true, allFields);
@@ -241,24 +241,15 @@ export class TypeGenerator {
         } else if (!isAbstract) {
             sb.push(`\n    public static readonly META: FastMetaType<${name}> = ${name}.META_BODY;`);
         } else {
-            // Abstract class with no hierarchy, still need a META for potential future use?
-            // Re-adding the logic from original to be safe.
             const metaImplName = `${name}MetaImpl`;
             this.generateMetaImpl(name, metaImplName, false, allFields, isAbstract, children);
             sb.push(`\n    public static readonly META: FastMetaType<${name}> = new Impl.${metaImplName}();`);
         }
-        // --- End META Generation ---
 
         this.generateStructureConstructor(sb, name, allFields, currentFields, superFields, parent);
-        this.generateFieldGetters(sb, allFields);
-
-        // --- hashCode and equals Generation ---
+        this.generateFieldGetters(sb, currentFields);
         this.generateHashCodeAndEquals(sb, name, allFields, isAbstract);
-        // --- End hashCode and equals Generation ---
-
-        // --- [ИЗМЕНЕНИЕ] ---
         this.generateStructureToString(sb, name, allFields, this.getAllConstants(cfg), isAbstract);
-        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
         sb.push(`}\n`);
         return sb.join('\n');
@@ -276,14 +267,12 @@ export class TypeGenerator {
     private generateStructureConstructor(sb: string[], name: string, allFields: Map<string, TypeInfo>, currentFields: Map<string, TypeInfo>, superFields: string[], parent: string | undefined): void {
         const constructorParams = Array.from(allFields.entries()).map(([fn, ti]) => `${fn}: ${ti.getArgumentType()}`).join(', ');
 
-        // --- JSDoc для конструктора ---
         sb.push(`\n    /**`);
         sb.push(`     * Creates an instance of ${name}.`);
         allFields.forEach((ti, fn) => {
             sb.push(`     * @param ${fn} - ${ti.getArgumentType()}`);
         });
         sb.push(`     */`);
-        // --- Конец JSDoc ---
 
         sb.push(`    constructor(${constructorParams}) {`);
         if (superFields.length > 0) sb.push(`        super(${superFields.join(', ')});`);
@@ -304,7 +293,6 @@ export class TypeGenerator {
         sb.push(`    }\n`);
     }
 
-    // --- [ИЗМЕНЕНИЕ] ---
     /**
      * Generates the `toString()` method for a structure.
      * @param sb - The string array to append code lines to.
@@ -323,7 +311,6 @@ export class TypeGenerator {
             sb.push(`    }`);
         }
     }
-    // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
     /**
      * Generates the implementation class for a META field and adds it to the generator logic.
@@ -347,7 +334,6 @@ export class TypeGenerator {
 
         sbImpl.push(`export class ${implName} implements FastMetaType<${name}> {`);
 
-        // --- serialize ---
         sbImpl.push(`    serialize(${sCtx}: FastFutureContext, ${objVar}: ${name}, ${outVar}: DataOut): void {`);
         if (isMetaBody) {
             const serializeLines: string[] = [];
@@ -385,7 +371,6 @@ export class TypeGenerator {
         }
         sbImpl.push(`    }`);
 
-        // --- deserialize ---
         sbImpl.push(`    deserialize(${sCtxDeser}: FastFutureContext, ${inVar}: DataIn): ${name} {`);
         if (isMetaBody) {
             const deserializeLines: string[] = [];
@@ -428,14 +413,11 @@ export class TypeGenerator {
         }
         sbImpl.push(`    }`);
 
-        // --- metaHashCode & metaEquals ---
         if (isMetaBody) {
-            // Это META_BODY, генерируем реальную логику
             sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number {`);
             sbImpl.push(`        if (obj === null || obj === undefined) return 0;`);
             sbImpl.push(`        let hash = 17;`);
             fields.forEach((typeInfo, fieldName) => {
-                // ИСПОЛЬЗУЕМ generateAccessMeta для получения полного META-объекта поля
                 const fieldMetaAccessor = g.generateAccessMeta(typeInfo);
                 sbImpl.push(`        hash = 37 * hash + ${fieldMetaAccessor}.metaHashCode(obj.${fieldName});`);
             });
@@ -445,17 +427,14 @@ export class TypeGenerator {
             sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean {`);
             sbImpl.push(`        if (v1 === v2) return true;`);
             sbImpl.push(`        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);`);
-            // Проверка instanceof для DTO всегда нужна
             sbImpl.push(`        if (v2 === null || v2 === undefined || !(v2 instanceof ${name})) return false;`);
             fields.forEach((typeInfo, fieldName) => {
-                // ИСПОЛЬЗУЕМ generateAccessMeta для получения полного META-объекта поля
                 const fieldMetaAccessor = g.generateAccessMeta(typeInfo);
                 sbImpl.push(`        if (!${fieldMetaAccessor}.metaEquals(v1.${fieldName}, v2.${fieldName})) return false;`);
             });
             sbImpl.push(`        return true;`);
             sbImpl.push(`    }`);
 
-            // --- [ИЗМЕНЕНИЕ] ---
             const cfg = g.findTypeDefinition(name);
             const allConstants = cfg ? this.getAllConstants(cfg) : new Map<string, ConstantInfo>();
 
@@ -479,16 +458,13 @@ export class TypeGenerator {
 
             sbImpl.push(`        res.add(')');`);
             sbImpl.push(`    }`);
-            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
         } else {
-            // Это META (диспетчер), генерируем логику диспатчинга
             const rootType = g.getRootTypeFor(name);
             const actualChildren = g.getConcreteTypesInHierarchy(rootType || name);
             const needsDispatch = isAbstract || (g.isInTypeHierarchy(name) && actualChildren.length > 0 && name !== "Message");
 
             if (needsDispatch) {
-                // --- metaHashCode (dispatcher) ---
                 sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number {`);
                 sbImpl.push(`        if (obj === null || obj === undefined) return 0;`);
                 sbImpl.push(`        const typeId = typeof (obj as any).getAetherTypeId === 'function' ? (obj as any).getAetherTypeId() : -1;`);
@@ -509,7 +485,6 @@ export class TypeGenerator {
                 sbImpl.push(`        }`);
                 sbImpl.push(`    }`);
 
-                // --- metaEquals (dispatcher) ---
                 sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean {`);
                 sbImpl.push(`        if (v1 === v2) return true;`);
                 sbImpl.push(`        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);`);
@@ -537,8 +512,6 @@ export class TypeGenerator {
                 sbImpl.push(`        }`);
                 sbImpl.push(`    }`);
 
-                // --- [ИЗМЕНЕНИЕ] ---
-                // --- metaToString (dispatcher) ---
                 sbImpl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void {`);
                 sbImpl.push(`        if (obj === null || obj === undefined) { res.add('null'); return ; }`);
                 sbImpl.push(`        const typeId = typeof (obj as any).getAetherTypeId === 'function' ? (obj as any).getAetherTypeId() : -1;`);
@@ -558,31 +531,21 @@ export class TypeGenerator {
                 sbImpl.push(`            default: throw new Error(\`Cannot toString '${name}' with unknown type id \${typeId}\`);`);
                 sbImpl.push(`        }`);
                 sbImpl.push(`    }`);
-                // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
             } else {
-                // Диспатч не нужен, просто делегируем META_BODY (если он есть)
                 if (!isAbstract) {
                     sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return (${name} as any).META_BODY.metaHashCode(obj); }`);
                     sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean { return (${name} as any).META_BODY.metaEquals(v1, v2); }`);
-                    // --- [ИЗМЕНЕНИЕ] ---
                     sbImpl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void { (${name} as any).META_BODY.metaToString(obj, res); }`);
-                    // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
                 } else {
-                    // Абстрактный класс без иерархии? Заглушка.
                     sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return (obj && typeof obj.hashCode === 'function') ? obj.hashCode() : 0; }`);
                     sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean { return (v1 && typeof v1.equals === 'function') ? v1.equals(v2) : v1 === v2; }`);
-                    // --- [ИЗМЕНЕНИЕ] ---
                     sbImpl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void { res.add(String(obj));  }`);
-                    // --- [КОНЕЦ ИМЕНЕНИЯ] ---
                 }
             }
         }
 
-        // --- [ИЗМЕНЕНИЕ] ---
-        // Заменяем `any` на конкретное имя типа
         sbImpl.push(FAST_META_TYPE_IMPL_STUB_METHODS.replace(/: any/g, `: ${name}`).replace(/: any {/g, `: ${name} {`));
-        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
         sbImpl.push(`}`);
 
@@ -623,21 +586,15 @@ export class TypeGenerator {
         sbImpl.push(`        return ${name}[keys[ordinal] as keyof typeof ${name}] as ${name};`);
         sbImpl.push(`    }`);
 
-        // ИСПОЛЬЗУЕМ FastMeta.META_STRING
         const stringMetaAccessor = this.generatorLogic.generateAccessMeta(new TypeInfo("string"));
         sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return ${stringMetaAccessor}.metaHashCode(obj as string); }`);
         sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean { return ${stringMetaAccessor}.metaEquals(v1 as string, v2); }`);
 
-        // --- [ИЗМЕНЕНИЕ] ---
         sbImpl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void {`);
         sbImpl.push(`        res.add(obj as string);`);
         sbImpl.push(`    }`);
-        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
-        // --- [ИЗМЕНЕНИЕ] ---
-        // Заменяем `any` на конкретное имя типа
         sbImpl.push(FAST_META_TYPE_IMPL_STUB_METHODS.replace(/: any/g, `: ${name}`).replace(/: any {/g, `: ${name} {`));
-        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
         sbImpl.push(`}`);
 
@@ -657,9 +614,10 @@ export class TypeGenerator {
     private generateStreamClass(name: string, cfg: TypeDefinition): string {
         const sb: string[] = [];
         const hasApi = cfg.stream?.api as string;
-        const apiType = hasApi;
+
+        const apiType = hasApi ? this.generatorLogic.resolveCanonicalTypeName(hasApi) : undefined;
         const hasCrypto = !!cfg.stream?.crypto;
-        const apiRemoteType = hasApi ? `${apiType}Remote` : 'unknown';
+        const apiRemoteType = apiType ? `${apiType}Remote` : 'unknown';
 
         const doc = (cfg as any).doc;
         if (doc) {
@@ -683,44 +641,35 @@ export class TypeGenerator {
         sbImpl.push(`    serialize(ctx: FastFutureContext, obj: ${name}, out: DataOut): void { FastMeta.META_ARRAY_BYTE.serialize(ctx, obj.data, out); }`);
         sbImpl.push(`    deserialize(ctx: FastFutureContext, in_: DataIn): ${name} { return new ${name}(FastMeta.META_ARRAY_BYTE.deserialize(ctx, in_)); }`);
 
-        // ИСПОЛЬЗУЕМ FastMeta.META_ARRAY_BYTE
         const byteArrayMetaAccessor = this.generatorLogic.generateAccessMeta(new TypeInfo("byte[]"));
         sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return ${byteArrayMetaAccessor}.metaHashCode(obj?.data); }`);
-        // При сравнении stream.data с другим stream или просто массивом байтов
         sbImpl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean { return ${byteArrayMetaAccessor}.metaEquals(v1?.data, (v2 instanceof ${name}) ? v2.data : v2); }`);
 
-        // --- [ИЗМЕНЕНИЕ] ---
         sbImpl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void {`);
         sbImpl.push(`        if (obj === null || obj === undefined) { res.add('null'); return; }`);
         sbImpl.push(`        res.add('${name}(').add('data:').add(obj.data).add(')');`);
         sbImpl.push(`    }`);
-        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
-        // --- [ИЗМЕНЕНИЕ] ---
-        // Заменяем `any` на конкретное имя типа
         sbImpl.push(FAST_META_TYPE_IMPL_STUB_METHODS.replace(/: any/g, `: ${name}`).replace(/: any {/g, `: ${name} {`));
-        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
         sbImpl.push(`}`);
         this.generatorLogic.allImplCode.push(sbImpl.join('\n'));
 
         sb.push(`    public static readonly META: FastMetaType<${name}> = new Impl.${metaImplName}();\n`);
 
-        // --- [ИЗМЕНЕНИЕ] ---
         sb.push(`    public toString(result: AString): AString {`);
         sb.push(`        ${name}.META.metaToString(this, result);`);
         sb.push(`        return result;`);
         sb.push(`    }`);
-        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
-        if (hasApi && hasCrypto) {
+        if (apiType && hasCrypto) {
             sb.push(`\n    public accept(context: FastFutureContext, provider: BytesConverter, localApi: ${apiType}): void {`);
             sb.push(`        const decryptedData = provider(this.data);`);
             sb.push(`        const dataInStatic = new DataInOutStatic(decryptedData);`);
             sb.push(`        if (!(${apiType} as any).META) throw new Error(\`META not found for API type ${apiType}\`);`);
             sb.push(`        (${apiType} as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);`);
             sb.push(`    }`);
-        } else if (hasApi) {
+        } else if (apiType) {
             sb.push(`\n    public accept(context: FastFutureContext, localApi: ${apiType}): void {`);
             sb.push(`        const dataInStatic = new DataInOutStatic(this.data);`);
             sb.push(`        if (!(${apiType} as any).META) throw new Error(\`META not found for API type ${apiType}\`);`);
@@ -733,7 +682,7 @@ export class TypeGenerator {
             sb.push(`    }`);
         }
 
-        if (hasApi && hasCrypto) {
+        if (apiType && hasCrypto) {
             sb.push(`\n    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<${apiRemoteType}>, sendFuture: AFuture): ${name} {`);
             sb.push(`        remote.executeAll(context, sendFuture);`);
             sb.push(`        const encryptedData = provider(context.remoteDataToArrayAsArray());`);
@@ -749,7 +698,7 @@ export class TypeGenerator {
             sb.push(`        const encryptedData = provider(remoteData);`);
             sb.push(`        return new ${name}(encryptedData);`);
             sb.push(`    }`);
-        } else if (hasApi) {
+        } else if (apiType) {
             sb.push(`\n    public static fromRemote(context: FastFutureContext, remote: RemoteApiFuture<${apiRemoteType}>, sendFuture: AFuture): ${name} {`);
             sb.push(`        remote.executeAll(context, sendFuture);`);
             sb.push(`        return new ${name}(context.remoteDataToArrayAsArray());`);
@@ -807,7 +756,6 @@ export class TypeGenerator {
      */
     private generateHashCodeAndEquals(sb: string[], name: string, allFields: Map<string, TypeInfo>, isAbstract: boolean): void {
         if (isAbstract) {
-            // --- abstract static staticHashCode ---
             sb.push(`\n    /**
      * Calculates a hash code for a static instance of ${name}.
      * @param {${name} | null | undefined} obj - The object to hash.
@@ -818,7 +766,6 @@ export class TypeGenerator {
             sb.push(`        return (obj.constructor as any).META.metaHashCode(obj);`);
             sb.push(`    }`);
 
-            // --- abstract static staticEquals ---
             sb.push(`\n    /**
      * Compares a static instance of ${name} with another object.
      * @param {${name} | null | undefined} v1 - The first object.
@@ -828,18 +775,15 @@ export class TypeGenerator {
             sb.push(`    public static staticEquals(v1: ${name} | null | undefined, v2: any | null | undefined): boolean {`);
             sb.push(`        if (v1 === v2) return true;`);
             sb.push(`        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);`);
-            // --- [ИСПРАВЛЕНИЕ] Добавлен sb.push() ---
             sb.push(`        return (v1.constructor as any).META.metaEquals(v1, v2);`);
             sb.push(`    }`);
 
-            // --- abstract instance hashCode ---
             sb.push(`\n    /**
      * Calculates a hash code for this object.
      * @returns {number} The hash code.
      */`);
             sb.push(`    public abstract hashCode(): number;`);
 
-            // --- abstract instance equals ---
             sb.push(`\n    /**
      * Checks if this object is equal to another.
      * @param {any} other - The object to compare with.
@@ -848,7 +792,6 @@ export class TypeGenerator {
             sb.push(`    public abstract equals(other: any): boolean;`);
 
         } else {
-            // --- concrete static staticHashCode (ДЕЛЕГИРУЕТ в META) ---
             sb.push(`\n    /**
      * Calculates a hash code for a static instance of ${name}.
      * @param {${name} | null | undefined} obj - The object to hash.
@@ -858,7 +801,6 @@ export class TypeGenerator {
             sb.push(`        return ${name}.META.metaHashCode(obj);`);
             sb.push(`    }`);
 
-            // --- concrete static staticEquals (ДЕЛЕГИРУЕТ в META) ---
             sb.push(`\n    /**
      * Compares a static instance of ${name} with another object.
      * @param {${name} | null | undefined} v1 - The first object.
@@ -869,7 +811,6 @@ export class TypeGenerator {
             sb.push(`        return ${name}.META.metaEquals(v1, v2);`);
             sb.push(`    }`);
 
-            // --- concrete instance hashCode ---
             sb.push(`\n    /**
      * Calculates a hash code for this object.
      * @returns {number} The hash code.
@@ -878,7 +819,6 @@ export class TypeGenerator {
             sb.push(`        return ${name}.staticHashCode(this);`);
             sb.push(`    }`);
 
-            // --- concrete instance equals ---
             sb.push(`\n    /**
      * Checks if this object is equal to another.
      * @param {any} other - The object to compare with.

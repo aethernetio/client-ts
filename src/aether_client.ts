@@ -30,12 +30,12 @@ import {
     LNode,
     Log
 } from './aether_logging';
-import { AConsumer, AFunction, ClientApiException, ClientStartException, Destroyable, URI, UUID } from './aether_types'; // <- Добавлен AccessCheckPair
-import { Destroyer, RU, StandardUUIDs, Queue } from './aether_utils'; // <- Добавлен Queue
+import { AConsumer, AFunction, ClientApiException, ClientStartException, Destroyable, URI, UUID } from './aether_types';
+import { Destroyer, RU, StandardUUIDs, Queue } from './aether_utils';
 import { AFuture, ARFuture, EventBiConsumer, EventConsumer } from './aether_future';
 import {
     Cloud,
-    FinishResultGlobalRegServerApi,
+    FinishResult,
     Key,
     ServerDescriptor,
     AccessGroup,
@@ -47,10 +47,8 @@ import {
     AccessCheckPair,
 } from './aether_api';
 import { BMap, RCol } from './aether_rcollection';
-// --- [КОНЕЦ] ДОБАВЛЕНЫ НОВЫЕ ИМПОРТЫ ---
 
 export enum RegStatus { NO, BEGIN, CONFIRM }
-
 
 /**
  * @interface AccessGroupI
@@ -247,7 +245,7 @@ export class AetherCloudClient implements Destroyable {
                 this.startFuture.tryError(e);
             });
         this.startFuture.to(() => {
-            this.forceUpdateStateFromCache().to(()=>{
+            this.forceUpdateStateFromCache().to(() => {
                 this.startFuture0.done();
             });
         })
@@ -459,7 +457,7 @@ export class AetherCloudClient implements Destroyable {
         regConn.registration(); // <--- [FIX] ЭТА СТРОКА БЫЛА ЗАКОММЕНТИРОВАНА
     }
 
-    public confirmRegistration(regResp: FinishResultGlobalRegServerApi): void {
+    public confirmRegistration(regResp: FinishResult): void {
         Log.info("confirmRegistration: Registration confirmed by server.", { uid: regResp.getUid().toString() });
 
         // Устанавливаем UID, только если его еще нет
@@ -1014,7 +1012,16 @@ export class AetherCloudClient implements Destroyable {
         return true;
     }
 }
-export {
-    ClientStateInMemory,
-    MessageEventListenerDefault
-}
+export * as aetherApi from './aether_api';
+export * from './aether_utils';
+export * from './aether_future';
+export * from './aether_logging';
+export * from './aether_types';
+export * from './aether_client_message';
+export * from './aether_client_state';
+export * from './aether_astring';
+export * from './aether_fastmeta';
+export * from './aether_fastmeta_net';
+export * from './aether_datainout';
+export * from './aether_rcollection';
+export * as aCrypto from './aether_crypto';

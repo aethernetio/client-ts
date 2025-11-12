@@ -1,24 +1,9 @@
 import  {
-    AFuture, ARFuture 
+    AFuture, ARFuture, DataIn, DataOut, DataInOut, DataInOutStatic, FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, RemoteApiFuture, UUID, URI, AConsumer, ToString, AString
 }
-from './aether_future';
-import  {
-    DataIn, DataOut, DataInOut, DataInOutStatic 
-}
-from './aether_datainout';
-import  {
-    FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, RemoteApiFuture 
-}
-from './aether_fastmeta';
-import  {
-    UUID, URI, Uint8Array, AConsumer 
-}
-from './aether_types';
-import  {
-    ToString, AString 
-}
-from './aether_astring';
+from './aether_client';
 import * as Impl from './aether_api_impl';
+// This is always relative
 export enum AetherCodec  {
     TCP = 'TCP', UDP = 'UDP', WS = 'WS', WSS = 'WSS' 
 }
@@ -45,6 +30,69 @@ export enum Status  {
 }
 export namespace Status  {
     export const META: FastMetaType<Status> = new Impl.StatusMetaImpl();
+    
+}
+/**
+ * Represents the abstract AetherTypeDescriptor structure.
+ */
+export abstract class AetherTypeDescriptor implements ToString  {
+    public abstract getKind(): string;
+    public readonly id: bigint;
+    public readonly docId: bigint | null;
+    public abstract getAetherTypeId(): number;
+    public static readonly META: FastMetaType<AetherTypeDescriptor> = new Impl.AetherTypeDescriptorMetaImpl();
+    /**
+     * Creates an instance of AetherTypeDescriptor.
+     * @param id - bigint
+     * @param docId - bigint
+     */
+    constructor(id: bigint, docId: bigint)  {
+        this.id = id;
+        this.docId = docId;
+        
+    }
+    public getId(): bigint  {
+        return this.id;
+        
+    }
+    public getDocId(): bigint | null  {
+        return this.docId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AetherTypeDescriptor.
+     * @param {AetherTypeDescriptor | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AetherTypeDescriptor | null | undefined): number  {
+        if (obj === null || obj === undefined) return 0;
+        return (obj.constructor as any).META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AetherTypeDescriptor with another object.
+     * @param {AetherTypeDescriptor | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AetherTypeDescriptor | null | undefined, v2: any | null | undefined): boolean  {
+        if (v1 === v2) return true;
+        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
+        return (v1.constructor as any).META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public abstract hashCode(): number;
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public abstract equals(other: any): boolean;
+    public abstract toString(result: AString): AString;
     
 }
 /**
@@ -926,6 +974,824 @@ export class AccessGroup implements ToString  {
     
 }
 /**
+ * Represents the AetherApiDefinition structure.
+ */
+export class AetherApiDefinition implements ToString  {
+    public readonly id: bigint;
+    public readonly nameId: bigint;
+    public readonly methods: AetherMethodDescriptor[];
+    public readonly docId: bigint | null;
+    public static readonly META_BODY: FastMetaType<AetherApiDefinition> = new Impl.AetherApiDefinitionMetaBodyImpl();
+    public static readonly META: FastMetaType<AetherApiDefinition> = AetherApiDefinition.META_BODY;
+    /**
+     * Creates an instance of AetherApiDefinition.
+     * @param id - bigint
+     * @param nameId - bigint
+     * @param methods - AetherMethodDescriptor[]
+     * @param docId - bigint
+     */
+    constructor(id: bigint, nameId: bigint, methods: AetherMethodDescriptor[], docId: bigint)  {
+        this.id = id;
+        this.nameId = nameId;
+        this.methods = methods;
+        this.docId = docId;
+        if (methods === null || methods === undefined) throw new Error(`Field 'methods' cannot be null for type AetherApiDefinition.`);
+        
+    }
+    public getId(): bigint  {
+        return this.id;
+        
+    }
+    public getNameId(): bigint  {
+        return this.nameId;
+        
+    }
+    public getMethods(): AetherMethodDescriptor[]  {
+        return this.methods;
+        
+    }
+    public methodsContains(el: AetherMethodDescriptor): boolean  {
+        return (this.methods as AetherMethodDescriptor[]).includes(el as any);
+        
+    }
+    public getDocId(): bigint | null  {
+        return this.docId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AetherApiDefinition.
+     * @param {AetherApiDefinition | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AetherApiDefinition | null | undefined): number  {
+        return AetherApiDefinition.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AetherApiDefinition with another object.
+     * @param {AetherApiDefinition | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AetherApiDefinition | null | undefined, v2: any | null | undefined): boolean  {
+        return AetherApiDefinition.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AetherApiDefinition.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AetherApiDefinition.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        AetherApiDefinition.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AetherArgumentDescriptor structure.
+ */
+export class AetherArgumentDescriptor implements ToString  {
+    public readonly nameId: bigint;
+    public readonly typeId: bigint;
+    public readonly docId: bigint | null;
+    public static readonly META_BODY: FastMetaType<AetherArgumentDescriptor> = new Impl.AetherArgumentDescriptorMetaBodyImpl();
+    public static readonly META: FastMetaType<AetherArgumentDescriptor> = AetherArgumentDescriptor.META_BODY;
+    /**
+     * Creates an instance of AetherArgumentDescriptor.
+     * @param nameId - bigint
+     * @param typeId - bigint
+     * @param docId - bigint
+     */
+    constructor(nameId: bigint, typeId: bigint, docId: bigint)  {
+        this.nameId = nameId;
+        this.typeId = typeId;
+        this.docId = docId;
+        
+    }
+    public getNameId(): bigint  {
+        return this.nameId;
+        
+    }
+    public getTypeId(): bigint  {
+        return this.typeId;
+        
+    }
+    public getDocId(): bigint | null  {
+        return this.docId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AetherArgumentDescriptor.
+     * @param {AetherArgumentDescriptor | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AetherArgumentDescriptor | null | undefined): number  {
+        return AetherArgumentDescriptor.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AetherArgumentDescriptor with another object.
+     * @param {AetherArgumentDescriptor | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AetherArgumentDescriptor | null | undefined, v2: any | null | undefined): boolean  {
+        return AetherArgumentDescriptor.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AetherArgumentDescriptor.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AetherArgumentDescriptor.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        AetherArgumentDescriptor.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AetherArrayType structure.
+ */
+export class AetherArrayType extends AetherTypeDescriptor implements ToString  {
+    public readonly elementTypeId: bigint;
+    public override getKind(): string  {
+        return "ARRAY";
+        
+    }
+    public override getAetherTypeId(): number  {
+        return -1;
+        
+    }
+    public static readonly META_BODY: FastMetaType<AetherArrayType> = new Impl.AetherArrayTypeMetaBodyImpl();
+    public static readonly META: FastMetaType<AetherArrayType> = AetherArrayType.META_BODY;
+    /**
+     * Creates an instance of AetherArrayType.
+     * @param id - bigint
+     * @param docId - bigint
+     * @param elementTypeId - bigint
+     */
+    constructor(id: bigint, docId: bigint, elementTypeId: bigint)  {
+        super(id, docId);
+        this.elementTypeId = elementTypeId;
+        
+    }
+    public getElementTypeId(): bigint  {
+        return this.elementTypeId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AetherArrayType.
+     * @param {AetherArrayType | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AetherArrayType | null | undefined): number  {
+        return AetherArrayType.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AetherArrayType with another object.
+     * @param {AetherArrayType | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AetherArrayType | null | undefined, v2: any | null | undefined): boolean  {
+        return AetherArrayType.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AetherArrayType.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AetherArrayType.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        AetherArrayType.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AetherBaseType structure.
+ */
+export class AetherBaseType extends AetherTypeDescriptor implements ToString  {
+    public readonly nameId: bigint;
+    public override getKind(): string  {
+        return "BASE";
+        
+    }
+    public override getAetherTypeId(): number  {
+        return -1;
+        
+    }
+    public static readonly META_BODY: FastMetaType<AetherBaseType> = new Impl.AetherBaseTypeMetaBodyImpl();
+    public static readonly META: FastMetaType<AetherBaseType> = AetherBaseType.META_BODY;
+    /**
+     * Creates an instance of AetherBaseType.
+     * @param id - bigint
+     * @param docId - bigint
+     * @param nameId - bigint
+     */
+    constructor(id: bigint, docId: bigint, nameId: bigint)  {
+        super(id, docId);
+        this.nameId = nameId;
+        
+    }
+    public getNameId(): bigint  {
+        return this.nameId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AetherBaseType.
+     * @param {AetherBaseType | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AetherBaseType | null | undefined): number  {
+        return AetherBaseType.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AetherBaseType with another object.
+     * @param {AetherBaseType | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AetherBaseType | null | undefined, v2: any | null | undefined): boolean  {
+        return AetherBaseType.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AetherBaseType.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AetherBaseType.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        AetherBaseType.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AetherFieldDescriptor structure.
+ */
+export class AetherFieldDescriptor implements ToString  {
+    public readonly nameId: bigint;
+    public readonly typeId: bigint;
+    public readonly docId: bigint | null;
+    public static readonly META_BODY: FastMetaType<AetherFieldDescriptor> = new Impl.AetherFieldDescriptorMetaBodyImpl();
+    public static readonly META: FastMetaType<AetherFieldDescriptor> = AetherFieldDescriptor.META_BODY;
+    /**
+     * Creates an instance of AetherFieldDescriptor.
+     * @param nameId - bigint
+     * @param typeId - bigint
+     * @param docId - bigint
+     */
+    constructor(nameId: bigint, typeId: bigint, docId: bigint)  {
+        this.nameId = nameId;
+        this.typeId = typeId;
+        this.docId = docId;
+        
+    }
+    public getNameId(): bigint  {
+        return this.nameId;
+        
+    }
+    public getTypeId(): bigint  {
+        return this.typeId;
+        
+    }
+    public getDocId(): bigint | null  {
+        return this.docId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AetherFieldDescriptor.
+     * @param {AetherFieldDescriptor | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AetherFieldDescriptor | null | undefined): number  {
+        return AetherFieldDescriptor.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AetherFieldDescriptor with another object.
+     * @param {AetherFieldDescriptor | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AetherFieldDescriptor | null | undefined, v2: any | null | undefined): boolean  {
+        return AetherFieldDescriptor.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AetherFieldDescriptor.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AetherFieldDescriptor.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        AetherFieldDescriptor.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AetherMethodDescriptor structure.
+ */
+export class AetherMethodDescriptor implements ToString  {
+    public readonly nameId: bigint;
+    public readonly args: AetherArgumentDescriptor[];
+    public readonly returnTypeId: bigint;
+    public readonly docId: bigint | null;
+    public static readonly META_BODY: FastMetaType<AetherMethodDescriptor> = new Impl.AetherMethodDescriptorMetaBodyImpl();
+    public static readonly META: FastMetaType<AetherMethodDescriptor> = AetherMethodDescriptor.META_BODY;
+    /**
+     * Creates an instance of AetherMethodDescriptor.
+     * @param nameId - bigint
+     * @param args - AetherArgumentDescriptor[]
+     * @param returnTypeId - bigint
+     * @param docId - bigint
+     */
+    constructor(nameId: bigint, args: AetherArgumentDescriptor[], returnTypeId: bigint, docId: bigint)  {
+        this.nameId = nameId;
+        this.args = args;
+        this.returnTypeId = returnTypeId;
+        this.docId = docId;
+        if (args === null || args === undefined) throw new Error(`Field 'args' cannot be null for type AetherMethodDescriptor.`);
+        
+    }
+    public getNameId(): bigint  {
+        return this.nameId;
+        
+    }
+    public getArgs(): AetherArgumentDescriptor[]  {
+        return this.args;
+        
+    }
+    public argsContains(el: AetherArgumentDescriptor): boolean  {
+        return (this.args as AetherArgumentDescriptor[]).includes(el as any);
+        
+    }
+    public getReturnTypeId(): bigint  {
+        return this.returnTypeId;
+        
+    }
+    public getDocId(): bigint | null  {
+        return this.docId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AetherMethodDescriptor.
+     * @param {AetherMethodDescriptor | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AetherMethodDescriptor | null | undefined): number  {
+        return AetherMethodDescriptor.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AetherMethodDescriptor with another object.
+     * @param {AetherMethodDescriptor | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AetherMethodDescriptor | null | undefined, v2: any | null | undefined): boolean  {
+        return AetherMethodDescriptor.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AetherMethodDescriptor.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AetherMethodDescriptor.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        AetherMethodDescriptor.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AetherModuleDescriptor structure.
+ */
+export class AetherModuleDescriptor implements ToString  {
+    public readonly stringPool: string[];
+    public readonly typeRegistry: AetherTypeDescriptor[];
+    public readonly structs: AetherStructDescriptor[];
+    public readonly apis: AetherApiDefinition[];
+    public static readonly META_BODY: FastMetaType<AetherModuleDescriptor> = new Impl.AetherModuleDescriptorMetaBodyImpl();
+    public static readonly META: FastMetaType<AetherModuleDescriptor> = AetherModuleDescriptor.META_BODY;
+    /**
+     * Creates an instance of AetherModuleDescriptor.
+     * @param stringPool - string[]
+     * @param typeRegistry - AetherTypeDescriptor[]
+     * @param structs - AetherStructDescriptor[]
+     * @param apis - AetherApiDefinition[]
+     */
+    constructor(stringPool: string[], typeRegistry: AetherTypeDescriptor[], structs: AetherStructDescriptor[], apis: AetherApiDefinition[])  {
+        this.stringPool = stringPool;
+        this.typeRegistry = typeRegistry;
+        this.structs = structs;
+        this.apis = apis;
+        if (stringPool === null || stringPool === undefined) throw new Error(`Field 'stringPool' cannot be null for type AetherModuleDescriptor.`);
+        if (typeRegistry === null || typeRegistry === undefined) throw new Error(`Field 'typeRegistry' cannot be null for type AetherModuleDescriptor.`);
+        if (structs === null || structs === undefined) throw new Error(`Field 'structs' cannot be null for type AetherModuleDescriptor.`);
+        if (apis === null || apis === undefined) throw new Error(`Field 'apis' cannot be null for type AetherModuleDescriptor.`);
+        
+    }
+    public getStringPool(): string[]  {
+        return this.stringPool;
+        
+    }
+    public stringPoolContains(el: string): boolean  {
+        return (this.stringPool as string[]).includes(el as any);
+        
+    }
+    public getTypeRegistry(): AetherTypeDescriptor[]  {
+        return this.typeRegistry;
+        
+    }
+    public typeRegistryContains(el: AetherTypeDescriptor): boolean  {
+        return (this.typeRegistry as AetherTypeDescriptor[]).includes(el as any);
+        
+    }
+    public getStructs(): AetherStructDescriptor[]  {
+        return this.structs;
+        
+    }
+    public structsContains(el: AetherStructDescriptor): boolean  {
+        return (this.structs as AetherStructDescriptor[]).includes(el as any);
+        
+    }
+    public getApis(): AetherApiDefinition[]  {
+        return this.apis;
+        
+    }
+    public apisContains(el: AetherApiDefinition): boolean  {
+        return (this.apis as AetherApiDefinition[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AetherModuleDescriptor.
+     * @param {AetherModuleDescriptor | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AetherModuleDescriptor | null | undefined): number  {
+        return AetherModuleDescriptor.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AetherModuleDescriptor with another object.
+     * @param {AetherModuleDescriptor | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AetherModuleDescriptor | null | undefined, v2: any | null | undefined): boolean  {
+        return AetherModuleDescriptor.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AetherModuleDescriptor.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AetherModuleDescriptor.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        AetherModuleDescriptor.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AetherNullableType structure.
+ */
+export class AetherNullableType extends AetherTypeDescriptor implements ToString  {
+    public readonly wrappedTypeId: bigint;
+    public override getKind(): string  {
+        return "NULLABLE";
+        
+    }
+    public override getAetherTypeId(): number  {
+        return -1;
+        
+    }
+    public static readonly META_BODY: FastMetaType<AetherNullableType> = new Impl.AetherNullableTypeMetaBodyImpl();
+    public static readonly META: FastMetaType<AetherNullableType> = AetherNullableType.META_BODY;
+    /**
+     * Creates an instance of AetherNullableType.
+     * @param id - bigint
+     * @param docId - bigint
+     * @param wrappedTypeId - bigint
+     */
+    constructor(id: bigint, docId: bigint, wrappedTypeId: bigint)  {
+        super(id, docId);
+        this.wrappedTypeId = wrappedTypeId;
+        
+    }
+    public getWrappedTypeId(): bigint  {
+        return this.wrappedTypeId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AetherNullableType.
+     * @param {AetherNullableType | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AetherNullableType | null | undefined): number  {
+        return AetherNullableType.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AetherNullableType with another object.
+     * @param {AetherNullableType | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AetherNullableType | null | undefined, v2: any | null | undefined): boolean  {
+        return AetherNullableType.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AetherNullableType.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AetherNullableType.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        AetherNullableType.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AetherStreamType structure.
+ */
+export class AetherStreamType extends AetherTypeDescriptor implements ToString  {
+    public readonly apiId: bigint;
+    public readonly isCrypto: boolean;
+    public override getKind(): string  {
+        return "STREAM";
+        
+    }
+    public override getAetherTypeId(): number  {
+        return -1;
+        
+    }
+    public static readonly META_BODY: FastMetaType<AetherStreamType> = new Impl.AetherStreamTypeMetaBodyImpl();
+    public static readonly META: FastMetaType<AetherStreamType> = AetherStreamType.META_BODY;
+    /**
+     * Creates an instance of AetherStreamType.
+     * @param id - bigint
+     * @param docId - bigint
+     * @param apiId - bigint
+     * @param isCrypto - boolean
+     */
+    constructor(id: bigint, docId: bigint, apiId: bigint, isCrypto: boolean)  {
+        super(id, docId);
+        this.apiId = apiId;
+        this.isCrypto = isCrypto;
+        
+    }
+    public getApiId(): bigint  {
+        return this.apiId;
+        
+    }
+    public isIsCrypto(): boolean  {
+        return this.isCrypto;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AetherStreamType.
+     * @param {AetherStreamType | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AetherStreamType | null | undefined): number  {
+        return AetherStreamType.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AetherStreamType with another object.
+     * @param {AetherStreamType | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AetherStreamType | null | undefined, v2: any | null | undefined): boolean  {
+        return AetherStreamType.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AetherStreamType.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AetherStreamType.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        AetherStreamType.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AetherStructDescriptor structure.
+ */
+export class AetherStructDescriptor implements ToString  {
+    public readonly baseTypeId: bigint;
+    public readonly parentTypeId: bigint | null;
+    public readonly fields: AetherFieldDescriptor[];
+    public readonly docId: bigint | null;
+    public static readonly META_BODY: FastMetaType<AetherStructDescriptor> = new Impl.AetherStructDescriptorMetaBodyImpl();
+    public static readonly META: FastMetaType<AetherStructDescriptor> = AetherStructDescriptor.META_BODY;
+    /**
+     * Creates an instance of AetherStructDescriptor.
+     * @param baseTypeId - bigint
+     * @param parentTypeId - bigint
+     * @param fields - AetherFieldDescriptor[]
+     * @param docId - bigint
+     */
+    constructor(baseTypeId: bigint, parentTypeId: bigint, fields: AetherFieldDescriptor[], docId: bigint)  {
+        this.baseTypeId = baseTypeId;
+        this.parentTypeId = parentTypeId;
+        this.fields = fields;
+        this.docId = docId;
+        if (fields === null || fields === undefined) throw new Error(`Field 'fields' cannot be null for type AetherStructDescriptor.`);
+        
+    }
+    public getBaseTypeId(): bigint  {
+        return this.baseTypeId;
+        
+    }
+    public getParentTypeId(): bigint | null  {
+        return this.parentTypeId;
+        
+    }
+    public getFields(): AetherFieldDescriptor[]  {
+        return this.fields;
+        
+    }
+    public fieldsContains(el: AetherFieldDescriptor): boolean  {
+        return (this.fields as AetherFieldDescriptor[]).includes(el as any);
+        
+    }
+    public getDocId(): bigint | null  {
+        return this.docId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AetherStructDescriptor.
+     * @param {AetherStructDescriptor | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AetherStructDescriptor | null | undefined): number  {
+        return AetherStructDescriptor.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AetherStructDescriptor with another object.
+     * @param {AetherStructDescriptor | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AetherStructDescriptor | null | undefined, v2: any | null | undefined): boolean  {
+        return AetherStructDescriptor.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AetherStructDescriptor.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AetherStructDescriptor.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        AetherStructDescriptor.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
  * Represents the ClientInfo structure.
  */
 export class ClientInfo implements ToString  {
@@ -1294,16 +2160,16 @@ export class CoderAndPort implements ToString  {
     
 }
 /**
- * Represents the FinishResultGlobalRegServerApi structure.
+ * Represents the FinishResult structure.
  */
-export class FinishResultGlobalRegServerApi implements ToString  {
+export class FinishResult implements ToString  {
     public readonly alias: UUID;
     public readonly uid: UUID;
     public readonly cloud: Cloud;
-    public static readonly META_BODY: FastMetaType<FinishResultGlobalRegServerApi> = new Impl.FinishResultGlobalRegServerApiMetaBodyImpl();
-    public static readonly META: FastMetaType<FinishResultGlobalRegServerApi> = FinishResultGlobalRegServerApi.META_BODY;
+    public static readonly META_BODY: FastMetaType<FinishResult> = new Impl.FinishResultMetaBodyImpl();
+    public static readonly META: FastMetaType<FinishResult> = FinishResult.META_BODY;
     /**
-     * Creates an instance of FinishResultGlobalRegServerApi.
+     * Creates an instance of FinishResult.
      * @param alias - UUID
      * @param uid - UUID
      * @param cloud - Cloud
@@ -1312,7 +2178,7 @@ export class FinishResultGlobalRegServerApi implements ToString  {
         this.alias = alias;
         this.uid = uid;
         this.cloud = cloud;
-        if (cloud === null || cloud === undefined) throw new Error(`Field 'cloud' cannot be null for type FinishResultGlobalRegServerApi.`);
+        if (cloud === null || cloud === undefined) throw new Error(`Field 'cloud' cannot be null for type FinishResult.`);
         
     }
     public getAlias(): UUID  {
@@ -1328,22 +2194,22 @@ export class FinishResultGlobalRegServerApi implements ToString  {
         
     }
     /**
-     * Calculates a hash code for a static instance of FinishResultGlobalRegServerApi.
-     * @param {FinishResultGlobalRegServerApi | null | undefined} obj - The object to hash.
+     * Calculates a hash code for a static instance of FinishResult.
+     * @param {FinishResult | null | undefined} obj - The object to hash.
      * @returns {number} The hash code.
      */
-    public static staticHashCode(obj: FinishResultGlobalRegServerApi | null | undefined): number  {
-        return FinishResultGlobalRegServerApi.META.metaHashCode(obj);
+    public static staticHashCode(obj: FinishResult | null | undefined): number  {
+        return FinishResult.META.metaHashCode(obj);
         
     }
     /**
-     * Compares a static instance of FinishResultGlobalRegServerApi with another object.
-     * @param {FinishResultGlobalRegServerApi | null | undefined} v1 - The first object.
+     * Compares a static instance of FinishResult with another object.
+     * @param {FinishResult | null | undefined} v1 - The first object.
      * @param {any | null | undefined} v2 - The second object.
      * @returns {boolean} True if the objects are equal.
      */
-    public static staticEquals(v1: FinishResultGlobalRegServerApi | null | undefined, v2: any | null | undefined): boolean  {
-        return FinishResultGlobalRegServerApi.META.metaEquals(v1, v2);
+    public static staticEquals(v1: FinishResult | null | undefined, v2: any | null | undefined): boolean  {
+        return FinishResult.META.metaEquals(v1, v2);
         
     }
     /**
@@ -1351,7 +2217,7 @@ export class FinishResultGlobalRegServerApi implements ToString  {
      * @returns {number} The hash code.
      */
     public hashCode(): number  {
-        return FinishResultGlobalRegServerApi.staticHashCode(this);
+        return FinishResult.staticHashCode(this);
         
     }
     /**
@@ -1360,11 +2226,11 @@ export class FinishResultGlobalRegServerApi implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public equals(other: any): boolean  {
-        return FinishResultGlobalRegServerApi.staticEquals(this, other);
+        return FinishResult.staticEquals(this, other);
         
     }
     public toString(result: AString): AString  {
-        FinishResultGlobalRegServerApi.META.metaToString(this, result);
+        FinishResult.META.metaToString(this, result);
         return result;
         
     }
@@ -3191,9 +4057,6 @@ export class TelemetryCPP extends Telemetry implements ToString  {
         this.os = os;
         this.compiler = compiler;
         if (blob === null || blob === undefined) throw new Error(`Field 'blob' cannot be null for type TelemetryCPP.`);
-        if (lib_version === null || lib_version === undefined) throw new Error(`Field 'lib_version' cannot be null for type TelemetryCPP.`);
-        if (os === null || os === undefined) throw new Error(`Field 'os' cannot be null for type TelemetryCPP.`);
-        if (compiler === null || compiler === undefined) throw new Error(`Field 'compiler' cannot be null for type TelemetryCPP.`);
         
     }
     public getUtm_id(): number  {
@@ -3441,8 +4304,6 @@ export class WorkProofDTO implements ToString  {
         this.poolSize = poolSize;
         this.maxHashVal = maxHashVal;
         this.globalKey = globalKey;
-        if (salt === null || salt === undefined) throw new Error(`Field 'salt' cannot be null for type WorkProofDTO.`);
-        if (suffix === null || suffix === undefined) throw new Error(`Field 'suffix' cannot be null for type WorkProofDTO.`);
         if (globalKey === null || globalKey === undefined) throw new Error(`Field 'globalKey' cannot be null for type WorkProofDTO.`);
         
     }
@@ -3622,19 +4483,19 @@ export class ClientInteractionClientStream implements ToString  {
     }
     
 }
-export class GlobalApiRegistrationServerRegistrationApi implements ToString  {
+export class GlobalApi implements ToString  {
     public readonly data: Uint8Array;
     /**
-     * Creates an instance of GlobalApiRegistrationServerRegistrationApi.
+     * Creates an instance of GlobalApi.
      * @param data - The raw byte data for this stream.
      */
     constructor(data: Uint8Array)  {
         this.data = data;
         
     }
-    public static readonly META: FastMetaType<GlobalApiRegistrationServerRegistrationApi> = new Impl.GlobalApiRegistrationServerRegistrationApiMetaImpl();
+    public static readonly META: FastMetaType<GlobalApi> = new Impl.GlobalApiMetaImpl();
     public toString(result: AString): AString  {
-        GlobalApiRegistrationServerRegistrationApi.META.metaToString(this, result);
+        GlobalApi.META.metaToString(this, result);
         return result;
         
     }
@@ -3645,22 +4506,22 @@ export class GlobalApiRegistrationServerRegistrationApi implements ToString  {
         (GlobalRegServerApi as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);
         
     }
-    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<GlobalRegServerApiRemote>, sendFuture: AFuture): GlobalApiRegistrationServerRegistrationApi  {
+    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<GlobalRegServerApiRemote>, sendFuture: AFuture): GlobalApi  {
         remote.executeAll(context, sendFuture);
         const encryptedData = provider(context.remoteDataToArrayAsArray());
-        return new GlobalApiRegistrationServerRegistrationApi(encryptedData);
+        return new GlobalApi(encryptedData);
         
     }
-    public static fromRemoteConsumer(context: FastFutureContext, provider: BytesConverter, remoteConsumer: AConsumer<GlobalRegServerApiRemote>): GlobalApiRegistrationServerRegistrationApi  {
+    public static fromRemoteConsumer(context: FastFutureContext, provider: BytesConverter, remoteConsumer: AConsumer<GlobalRegServerApiRemote>): GlobalApi  {
         const api = (GlobalRegServerApi as any).META.makeRemote(context);
         remoteConsumer(api);
         const encryptedData = provider(context.remoteDataToArrayAsArray());
-        return new GlobalApiRegistrationServerRegistrationApi(encryptedData);
+        return new GlobalApi(encryptedData);
         
     }
-    public static fromRemoteBytes(provider: BytesConverter, remoteData: Uint8Array): GlobalApiRegistrationServerRegistrationApi  {
+    public static fromRemoteBytes(provider: BytesConverter, remoteData: Uint8Array): GlobalApi  {
         const encryptedData = provider(remoteData);
-        return new GlobalApiRegistrationServerRegistrationApi(encryptedData);
+        return new GlobalApi(encryptedData);
         
     }
     
@@ -4130,7 +4991,6 @@ export interface AuthorizedApi  {
     backId(id: number): void;
     /**
      * @param nextConnectMsDuration - bigint
-     * @returns AFuture
      *
      * @aetherMethodId 4
      */
@@ -4180,7 +5040,6 @@ export interface AuthorizedApi  {
     removeFromAccessGroup(groupId: bigint, uid: UUID): ARFuture<boolean>;
     /**
      * @param uid - UUID
-     * @returns AFuture
      *
      * @aetherMethodId 11
      */
@@ -4318,7 +5177,6 @@ export abstract class AuthorizedApiLocal<RT extends AuthorizedApiRemote> impleme
     public abstract backId(id: number): void;
     /**
      * @param nextConnectMsDuration - bigint
-     * @returns AFuture
      *
      * @aetherMethodId 4
      */
@@ -4368,7 +5226,6 @@ export abstract class AuthorizedApiLocal<RT extends AuthorizedApiRemote> impleme
     public abstract removeFromAccessGroup(groupId: bigint, uid: UUID): ARFuture<boolean>;
     /**
      * @param uid - UUID
-     * @returns AFuture
      *
      * @aetherMethodId 11
      */
@@ -4574,14 +5431,11 @@ export interface ServerApiByUid  {
     getBalance(): ARFuture<bigint>;
     /**
      * @param uid - UUID
-     * @returns AFuture
      *
      * @aetherMethodId 4
      */
     setParent(uid: UUID): AFuture;
     /**
-     * @returns AFuture
-     *
      * @aetherMethodId 5
      */
     block(): AFuture;
@@ -4605,7 +5459,6 @@ export interface ServerApiByUid  {
     getBeneficiary(): ARFuture<UUID>;
     /**
      * @param uid - UUID
-     * @returns AFuture
      *
      * @aetherMethodId 9
      */
@@ -4617,8 +5470,6 @@ export interface ServerApiByUid  {
      */
     getBlockTime(): ARFuture<Date>;
     /**
-     * @returns AFuture
-     *
      * @aetherMethodId 11
      */
     unblock(): AFuture;
@@ -4675,14 +5526,11 @@ export abstract class ServerApiByUidLocal<RT extends ServerApiByUidRemote> imple
     public abstract getBalance(): ARFuture<bigint>;
     /**
      * @param uid - UUID
-     * @returns AFuture
      *
      * @aetherMethodId 4
      */
     public abstract setParent(uid: UUID): AFuture;
     /**
-     * @returns AFuture
-     *
      * @aetherMethodId 5
      */
     public abstract block(): AFuture;
@@ -4706,7 +5554,6 @@ export abstract class ServerApiByUidLocal<RT extends ServerApiByUidRemote> imple
     public abstract getBeneficiary(): ARFuture<UUID>;
     /**
      * @param uid - UUID
-     * @returns AFuture
      *
      * @aetherMethodId 9
      */
@@ -4718,8 +5565,6 @@ export abstract class ServerApiByUidLocal<RT extends ServerApiByUidRemote> imple
      */
     public abstract getBlockTime(): ARFuture<Date>;
     /**
-     * @returns AFuture
-     *
      * @aetherMethodId 11
      */
     public abstract unblock(): AFuture;
@@ -4849,11 +5694,11 @@ export interface GlobalRegServerApi  {
      */
     setMasterKey(key: Key): void;
     /**
-     * @returns ARFuture<FinishResultGlobalRegServerApi>
+     * @returns ARFuture<FinishResult>
      *
      * @aetherMethodId 4
      */
-    finish(): ARFuture<FinishResultGlobalRegServerApi>;
+    finish(): ARFuture<FinishResult>;
     
 }
 export namespace GlobalRegServerApi  {
@@ -4880,11 +5725,11 @@ export abstract class GlobalRegServerApiLocal<RT extends GlobalRegServerApiRemot
      */
     public abstract setMasterKey(key: Key): void;
     /**
-     * @returns ARFuture<FinishResultGlobalRegServerApi>
+     * @returns ARFuture<FinishResult>
      *
      * @aetherMethodId 4
      */
-    public abstract finish(): ARFuture<FinishResultGlobalRegServerApi>;
+    public abstract finish(): ARFuture<FinishResult>;
     
 }
 export interface ServerRegistrationApi  {
@@ -4893,11 +5738,11 @@ export interface ServerRegistrationApi  {
      * @param suffix - string
      * @param passwords - number[]
      * @param parent - UUID
-     * @param globalApi - GlobalApiRegistrationServerRegistrationApi
+     * @param globalApi - GlobalApi
      *
      * @aetherMethodId 3
      */
-    registration(salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApiRegistrationServerRegistrationApi): void;
+    registration(salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApi): void;
     /**
      * @param parent - UUID
      * @param powMethods - PowMethod
@@ -4943,11 +5788,11 @@ export abstract class ServerRegistrationApiLocal<RT extends ServerRegistrationAp
      * @param suffix - string
      * @param passwords - number[]
      * @param parent - UUID
-     * @param globalApi - GlobalApiRegistrationServerRegistrationApi
+     * @param globalApi - GlobalApi
      *
      * @aetherMethodId 3
      */
-    public abstract registration(salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApiRegistrationServerRegistrationApi): void;
+    public abstract registration(salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApi): void;
     /**
      * @param parent - UUID
      * @param powMethods - PowMethod

@@ -60,7 +60,7 @@ export class ClientStateInMemory implements ClientState {
      * @private
      * @type {AMFuture<number>}
      */
-    private pingDuration = AMFuture.completed(1000);
+    private pingDuration = AMFuture.completed(10);
 
     /**
      * @private

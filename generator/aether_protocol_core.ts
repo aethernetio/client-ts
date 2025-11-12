@@ -103,7 +103,7 @@ export class TypeInfo {
 
     private static readonly PRIMITIVE_TYPES = new Set([
         "void", "byte", "short", "int", "long", "float", "double", "boolean",
-        "String", "UUID", "URI", "Date", "java.util.Date"
+        "String", "UUID", "URI", "Date", "java.util.Date", "string"
     ]);
 
     /**
@@ -249,7 +249,7 @@ export class TypeInfo {
                 baseType = 'number';
                 break;
             case 'long':
-                baseType = this.isPack ? 'number' : 'bigint';
+                baseType = 'bigint';
                 break;
             case 'boolean': case 'string': case 'UUID': case 'URI': case 'Date':
                 baseType = this.javaType;
@@ -281,6 +281,7 @@ export class TypeInfo {
  * deserialization, and type hierarchy management.
  */
 export class GeneratorLogic {
+    public readonly canonicalApiMap = new Map<string, string>();
     private varCounter: number = 0;
     private metaAccessors: Map<string, string> = new Map();
     /**
@@ -291,6 +292,7 @@ export class GeneratorLogic {
     public readonly baseName: string;
     public readonly protocolData: AetherDslMeta;
     public readonly allTypes: Map<string, TypeDefinition> = new Map();
+    private readonly canonicalTypeNameMap = new Map<string, string>();
     private readonly typeHierarchyIds: Map<string, Map<string, number>> = new Map();
     private readonly typeToRootMap: Map<string, string> = new Map();
     private readonly rootToChildrenMap: Map<string, string[]> = new Map();
@@ -308,19 +310,76 @@ export class GeneratorLogic {
         this.globalProtocolData = globalProtocolData;
 
         Object.values(globalProtocolData).forEach(data => {
+            // Обработка TYPES (как в Groovy)
             Object.keys(data.types || {}).forEach(typeName => {
                 this.declaredTypeNames.add(typeName);
                 this.allTypes.set(typeName, (data.types as any)[typeName]);
+                this.canonicalTypeNameMap.set(typeName.toLowerCase(), typeName);
             });
+
+            // Обработка API (как в Groovy)
             Object.keys(data.api || {}).forEach(typeName => {
                 this.declaredTypeNames.add(typeName);
                 this.allTypes.set(typeName, (data.api as any)[typeName] || {});
+                this.canonicalApiMap.set(typeName.toLowerCase(), typeName);
             });
         });
 
         this.buildTypeHierarchies();
         this.initStandardMeta();
     }
+    /**
+     * Resolves a referenced type name to its canonical (declared) case.
+     * @param referencedName - The name used in the DSL (e.g., "string", "MyObject", "myobject").
+     * @returns The canonical name (e.g., "string", "MyObject").
+     */
+    public resolveCanonicalTypeName(referencedName: string): string {
+            if (!referencedName) return referencedName;
+
+            let t = referencedName.trim();
+
+            // Логика суффиксов ( ? и [] )
+            if (t.endsWith('?')) t = t.substring(0, t.length - 1);
+            const sIndex = t.lastIndexOf("[");
+            if (t.endsWith("]") && sIndex > -1) t = t.substring(0, sIndex);
+
+            if (t.toLowerCase() === "intpack") return referencedName;
+            if (t.endsWith('(intpack)')) t = t.substring(0, t.length - 9);
+
+            const lowerName = t.toLowerCase();
+
+            // Проверка примитивов (как в Groovy)
+            switch (lowerName) {
+                case "byte":
+                case "short":
+                case "int":
+                case "long":
+                case "float":
+                case "double":
+                case "boolean":
+                case "bool":
+                case "string":
+                case "uuid":
+                case "uri":
+                case "date":
+                case "java.util.date":
+                    return referencedName; // Это примитив, сопоставление не нужно
+            }
+
+            // 1. Поиск в канонической карте ТИПОВ
+            const canonicalType = this.canonicalTypeNameMap.get(lowerName);
+            if (canonicalType) {
+                return referencedName.replace(t, canonicalType);
+            }
+
+            // 2. Поиск в канонической карте API
+            const canonicalApi = this.canonicalApiMap.get(lowerName);
+            if (canonicalApi) {
+                return referencedName.replace(t, canonicalApi);
+            }
+
+            return referencedName;
+        }
 
     /**
      * Analyzes all loaded types and builds the inheritance and dispatch maps.
@@ -399,7 +458,7 @@ export class GeneratorLogic {
      * @returns True if it is an API definition.
      */
     public isApiDefinition(typeName: string): boolean {
-        return Object.values(this.globalProtocolData).some(meta => meta.api && meta.api[typeName]);
+        return this.canonicalApiMap.has(typeName.toLowerCase());
     }
 
     /**
@@ -514,45 +573,55 @@ export class GeneratorLogic {
         if (res) return res;
 
         if (t.isArray) {
-            // --- [ИЗМЕНЕНИЕ] ---
-            // Используем FastMeta.getMetaArray для всех массивов, кроме byte[]
             if (t.javaType === 'byte') {
                 res = "FastMeta.META_ARRAY_BYTE";
             } else {
-                // Рекурсивно получаем META для базового типа
                 const elementType = t.getElementType();
                 const elementMetaAccessor = this.generateAccessMeta(elementType);
-                // Используем универсальный метод из FastMeta
                 res = `FastMeta.getMetaArray(${elementMetaAccessor})`;
             }
-            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
         } else {
-            const className = t.getClassName();
-            const isKnownNonGenerated = ['UUID', 'URI', 'Date'].includes(className);
-            const isGeneratedType = !!this.findTypeDefinition(className);
+            // This block handles non-array types that were not in the metaAccessors map.
+            // This includes user-defined types (e.g., "MyObject") and nullable standard types (e.g., "Date?").
 
-            if (isKnownNonGenerated || isGeneratedType) {
-                res = `${className}.META`;
+            const canonicalClassName = t.getClassName(); // e.g., "Date", "string", "MyObject"
+
+            if (t.isPrimitive()) {
+                // It's a standard primitive type (like Date, string, UUID)
+                // but it wasn't in the map (e.g., it's nullable: "Date?").
+                // We must map it to the correct FastMeta constant.
+                switch (canonicalClassName) {
+                    case 'string': res = 'FastMeta.META_STRING'; break;
+                    case 'UUID': res = 'FastMeta.META_UUID'; break;
+                    case 'URI': res = 'FastMeta.META_URI'; break;
+                    case 'Date': res = 'FastMeta.META_DATE'; break;
+                    case 'byte': res = 'FastMeta.META_BYTE'; break;
+                    case 'short': res = 'FastMeta.META_SHORT'; break;
+                    case 'int': res = 'FastMeta.META_INT'; break;
+                    case 'long': res = t.isPack ? 'FastMeta.META_PACK' : 'FastMeta.META_LONG'; break;
+                    case 'float': res = 'FastMeta.META_FLOAT'; break;
+                    case 'double': res = 'FastMeta.META_DOUBLE'; break;
+                    case 'boolean': res = 'FastMeta.META_BOOLEAN'; break;
+                    default:
+                        // This should not be reachable if TypeInfo.PRIMITIVE_TYPES is correct
+                        throw new Error(`Internal error: Unhandled primitive type '${canonicalClassName}' in generateAccessMeta (for ${typeKey})`);
+                }
             } else {
-                if (t.javaType === 'string') return 'FastMeta.META_STRING';
-                if (t.javaType === 'int') return 'FastMeta.META_INT';
-                if (t.javaType === 'long') return t.isPack ? 'FastMeta.META_PACK' : 'FastMeta.META_LONG';
-                if (t.javaType === 'byte') return 'FastMeta.META_BYTE';
-                if (t.javaType === 'boolean') return 'FastMeta.META_BOOLEAN';
-                throw new Error(`Could not find or determine meta accessor for type: ${t.javaType} (className: ${className}, toString: ${typeKey})`);
+                // It's not a primitive, so it must be a generated user type.
+                // We resolve its canonical name (which might be case-corrected).
+                const resolvedName = this.resolveCanonicalTypeName(canonicalClassName);
+                const finalClassName = new TypeInfo(resolvedName).javaType;
+
+                if (!this.findTypeDefinition(finalClassName)) {
+                    throw new Error(`Could not find or determine meta accessor for non-primitive type: ${t.javaType} (className: ${canonicalClassName}, canonical: ${finalClassName}, toString: ${typeKey})`);
+                }
+                // It is a user-defined generated type.
+                res = `${finalClassName}.META`;
             }
         }
         this.metaAccessors.set(typeKey, res);
         return res;
     }
-
-    // --- [УДАЛЕНЫ] ---
-    // private regMeta(t: TypeInfo): string { ... }
-    // private generateArraySerializerString(...) { ... }
-    // private generateArrayDeserializerString(...) { ... }
-    // private regMeta0(...) { ... }
-    // --- [КОНЕЦ УДАЛЕНИЯ] ---
-
 
     /**
      * Generates serialization code for a given type.
@@ -611,7 +680,7 @@ export class GeneratorLogic {
             case "short": sb.push(`${outVar}.writeShort(${inVar});`); break;
             case "int": sb.push(`${outVar}.writeInt(${inVar});`); break;
             case "long":
-                if (type.isPack) sb.push(`SerializerPackNumber.INSTANCE.put(${outVar}, ${inVar} as number);`);
+                if (type.isPack) sb.push(`SerializerPackNumber.INSTANCE.put(${outVar}, ${inVar});`);
                 else sb.push(`${outVar}.writeLong(${inVar});`);
                 break;
             case "float": sb.push(`${outVar}.writeFloat(${inVar});`); break;
@@ -627,7 +696,9 @@ export class GeneratorLogic {
                 break;
             default:
                 const className = type.getClassName();
-                sb.push(`${className}.META.serialize(${serializeContextVar}, ${inVar}, ${outVar});`);
+                const resolvedName = this.resolveCanonicalTypeName(className);
+                const canonicalClassName = new TypeInfo(resolvedName).javaType;
+                sb.push(`${canonicalClassName}.META.serialize(${serializeContextVar}, ${inVar}, ${outVar});`);
         }
     }
 
@@ -652,7 +723,7 @@ export class GeneratorLogic {
      * @param sb - The string array to append code lines to.
      * @param serializeContextVar - The name of the FastFutureContext variable.
      * @param inVar - The name of the DataIn variable.
-     *g     * @param outVar - The name of the variable to assign the deserialized value to.
+     * @param outVar - The name of the variable to assign the deserialized value to.
      * @param type - The TypeInfo of the array.
      */
     private generateArrayDeserializer(sb: string[], serializeContextVar: string, inVar: string, outVar: string, type: TypeInfo): void {
@@ -661,7 +732,7 @@ export class GeneratorLogic {
         const vs = this.getUniqueVarName("len");
 
         if (type.arrayStaticSize === 0) {
-            sb.push(`const ${vs} = Number(DeserializerPackNumber.INSTANCE.put(${inVar}).valueOf());`);
+            sb.push(`const ${vs} = Number(DeserializerPackNumber.INSTANCE.put(${inVar}));`);
         } else {
             sb.push(`const ${vs} = ${type.arrayStaticSize};`);
         }
@@ -693,7 +764,7 @@ export class GeneratorLogic {
             case "short": sb.push(`${outVar} = ${inVar}.readShort();`); break;
             case "int": sb.push(`${outVar} = ${inVar}.readInt();`); break;
             case "long":
-                if (type.isPack) sb.push(`${outVar} = DeserializerPackNumber.INSTANCE.put(${inVar}).valueOf();`);
+                if (type.isPack) sb.push(`${outVar} = DeserializerPackNumber.INSTANCE.put(${inVar});`);
                 else sb.push(`${outVar} = ${inVar}.readLong();`);
                 break;
             case "float": sb.push(`${outVar} = ${inVar}.readFloat();`); break;
@@ -710,7 +781,9 @@ export class GeneratorLogic {
                 break;
             default:
                 const className = type.getClassName();
-                sb.push(`${outVar} = ${className}.META.deserialize(${serializeContextVar}, ${inVar});`);
+                const resolvedName = this.resolveCanonicalTypeName(className);
+                const canonicalClassName = new TypeInfo(resolvedName).javaType;
+                sb.push(`${outVar} = ${canonicalClassName}.META.deserialize(${serializeContextVar}, ${inVar});`);
         }
     }
 
@@ -850,26 +923,66 @@ export class GeneratorLogic {
     }
 
     /**
-     * Declares a new anonymous type, generating a unique name for it.
+     * Declares a new anonymous type, generating a unique name for it
+     * using the same logic as the Groovy generator.
      * @param nameParts - An array of strings to base the name on (e.g., ["field", "Struct"]).
      * @param typeDefinition - The definition of the anonymous type.
      * @returns The generated unique name for the type.
      */
     declareAnonymType(nameParts: string[], typeDefinition: TypeDefinition): string {
         let generatedName: string = typeDefinition.name || typeDefinition.stream?.name || "";
-        if (!generatedName) {
-            let tempName = nameParts.map(part => part.charAt(0).toUpperCase() + part.slice(1)).join("");
-            generatedName = tempName;
-            let counter = 0;
-            const processorDeclaredNames = this.declaredTypeNames;
-            while (processorDeclaredNames.has(generatedName)) {
-                generatedName = tempName + counter++;
+
+        // 1. Если имя задано явно (например, { name: MyAnonStruct, fields: ... })
+        if (generatedName) {
+            // [cм. Groovy, 1, строка 318]
+            // Проверяем, не было ли оно уже зарегистрировано
+            if (!this.declaredTypeNames.has(generatedName)) {
+                // [cм. Groovy, 1, строка 339]
+                this.declaredTypeNames.add(generatedName);
+                // [cм. Groovy, 1, строка 340]
+                this.canonicalTypeNameMap.set(generatedName.toLowerCase(), generatedName);
+            }
+            return generatedName;
+        }
+
+        // --- [ИЗМЕНЕНИЕ] Алгоритм из Groovy-генератора ---
+        let tempName = "";
+        const processorDeclaredNames = this.declaredTypeNames;
+
+        // 2. Попытка частичных комбинаций (e.g., "Field", "FieldMethod", "FieldMethodApi")
+        // [cм. Groovy, 1, строки 322-328]
+        for (const part of nameParts) {
+            tempName += part.charAt(0).toUpperCase() + part.slice(1);
+            if (!processorDeclaredNames.has(tempName)) {
+                generatedName = tempName;
+                break;
             }
         }
+
+        // 3. Если все комбинации заняты, объединяем и добавляем номер
+        // [cм. Groovy, 1, строка 332]
+        if (!generatedName) {
+            // [cм. Groovy, 1, строка 333]
+            tempName = nameParts.join("");
+            // [cм. Groovy, 1, строка 336]
+            let baseName = tempName.charAt(0).toUpperCase() + tempName.slice(1);
+            if (baseName.length === 0) baseName = "Anon"; // Failsafe
+
+            let counter = 0;
+            // [cм. Groovy, 1, строка 336]
+            generatedName = baseName + counter++;
+            // [cм. Groovy, 1, строка 337]
+            while (processorDeclaredNames.has(generatedName)) {
+                generatedName = baseName + counter++;
+            }
+        }
+
+        // 4. Регистрируем новое уникальное имя в системе
+        this.declaredTypeNames.add(generatedName);
+        this.canonicalTypeNameMap.set(generatedName.toLowerCase(), generatedName);
+
         return generatedName;
     }
-
-    // --- [УДАЛЕН: getHelperAccess] ---
 
 }
 
@@ -877,18 +990,17 @@ export class GeneratorLogic {
 /**
  * Stub methods for the FastMetaType implementation.
  */
-// --- [ИЗМЕНЕНИЕ: Реализация заглушек] ---
 export const FAST_META_TYPE_IMPL_STUB_METHODS = `
     public serializeToBytes(obj: any): Uint8Array {
         const d = new DataInOut();
-        // FastFutureContextStub импортируется в aether_api_impl.ts
+        // FastFutureContextStub is imported in aether_api_impl.ts
         this.serialize(FastFutureContextStub, obj, d);
         return d.toArray();
     }
 
     public deserializeFromBytes(data: Uint8Array): any {
         const d = new DataInOutStatic(data);
-        // FastFutureContextStub импортируется в aether_api_impl.ts
+        // FastFutureContextStub is imported in aether_api_impl.ts
         return this.deserialize(FastFutureContextStub, d);
     }
 
@@ -896,4 +1008,3 @@ export const FAST_META_TYPE_IMPL_STUB_METHODS = `
         throw new Error("UnsupportedOperationException: loadFromFile requires Node.js/Filesystem access.");
     }
     `;
-// --- [КОНЕЦ ИЗМЕНЕНИЯ] ---

@@ -78,9 +78,13 @@ export class ApiGenerator {
         if (!apiDef) return;
 
         (apiDef.parents as string[])?.forEach(p => {
-            const parentApiDef = this.generatorLogic.allTypes.get(p);
+            // --- [ИЗМЕНЕНИЕ] ---
+            const parentApiNameRaw = p as string;
+            const parentApiName = this.generatorLogic.resolveCanonicalTypeName(parentApiNameRaw);
+            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
+            const parentApiDef = this.generatorLogic.allTypes.get(parentApiName);
             if (!parentApiDef) throw new Error(`Parent API '${p}' not found for API '${apiName}'.`);
-            this.getAllMethodsRecursive(res, true, p, parentApiDef);
+            this.getAllMethodsRecursive(res, true, parentApiName, parentApiDef);
         });
 
         Object.entries(apiDef.methods || {}).forEach(([methodName, m]) => {
@@ -160,15 +164,18 @@ export class ApiGenerator {
         if (paramEntries.length > 0) {
             if (docLines.length > 0) docLines.push(`${indent} *`); // Separator
             paramEntries.forEach(([pn, pt]) => {
-                const typeStr = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
+                const typeStrRaw = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
                     ? (pt as TypeDefinition).stream!.name!
                     : pt as string;
+                // --- [ИЗМЕНЕНИЕ] ---
+                const typeStr = this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
+                // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
                 // TODO: Add support for param doc if the model supports it
                 docLines.push(`${indent} * @param ${pn} - ${new TypeInfo(typeStr).getArgumentType()}`);
             });
         }
 
-        if (finalReturns !== "void") {
+        if (finalReturns !== "void" && finalReturns !== "AFuture") { // Не документируем void или AFuture (для void)
             if (docLines.length > 0 && paramEntries.length === 0) docLines.push(`${indent} *`); // Separator
             docLines.push(`${indent} * @returns ${finalReturns}`);
         }
@@ -200,7 +207,9 @@ export class ApiGenerator {
      */
     private generateApiInterface(apiName: string, apiDef: TypeDefinition, methods: Map<string, any>, metaImplName: string): string {
         const sb: string[] = [];
-        const parents = (apiDef?.parents || []) as string[];
+        // --- [ИЗМЕНЕНИЕ] ---
+        const parents = ((apiDef?.parents || []) as string[]).map(p => this.generatorLogic.resolveCanonicalTypeName(p));
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
         const extendsClause = parents.length > 0 ? ` extends ${parents.join(', ')}` : '';
 
         // --- [ИЗМЕНЕНИЕ] JSDoc для интерфейса API (с проверкой) ---
@@ -232,10 +241,13 @@ export class ApiGenerator {
      */
     private generateApiInterfaceMethod(sb: string[], m: any): void {
         const paramTypes = Object.entries(m.params).map(([pn, pt]) => {
-            const typeStr = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
+            const typeStrRaw = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
                 ? (pt as TypeDefinition).stream!.name!
                 : pt as string;
+            // --- [ИЗМЕНЕНИЕ] ---
+            const typeStr = this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
             return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
+            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
         }).join(', ');
 
         const hasReturns = m.returns != null;
@@ -243,9 +255,13 @@ export class ApiGenerator {
         let finalReturns: string;
 
         if (hasReturns) {
-            const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
+            const returnTypeStrRaw = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
                 ? (m.returns as TypeDefinition).stream!.name!
                 : m.returns as string;
+
+            // --- [ИЗМЕНЕНИЕ] ---
+            const returnTypeStr = this.generatorLogic.resolveCanonicalTypeName(returnTypeStrRaw);
+            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
             if (returnTypeStr === "void") {
                 finalReturns = "AFuture";
@@ -273,7 +289,9 @@ export class ApiGenerator {
      * @returns The generated TypeScript code as a string.
      */
     private generateApiRemote(apiName: string, apiDef: TypeDefinition): string {
-        const parents = (apiDef?.parents || []) as string[];
+        // --- [ИЗМЕНЕНИЕ] ---
+        const parents = ((apiDef?.parents || []) as string[]).map(p => this.generatorLogic.resolveCanonicalTypeName(p));
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
         const extendsParents = parents.map(p => `${p}Remote`).join(', ');
         const extendsClause = parents.length > 0 ? `, ${extendsParents}` : '';
         return `export interface ${apiName}Remote extends ${apiName}, RemoteApi${extendsClause} {}`;
@@ -310,10 +328,13 @@ export class ApiGenerator {
      */
     private generateApiLocalMethod(sb: string[], m: any): void {
         const paramTypes = Object.entries(m.params).map(([pn, pt]) => {
-            const typeStr = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
+            const typeStrRaw = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
                 ? (pt as TypeDefinition).stream!.name!
                 : pt as string;
+            // --- [ИЗМЕНЕНИЕ] ---
+            const typeStr = this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
             return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
+            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
         }).join(', ');
 
         const hasReturns = m.returns != null;
@@ -321,9 +342,12 @@ export class ApiGenerator {
         let finalReturns: string;
 
         if (hasReturns) {
-            const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
+            const returnTypeStrRaw = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
                 ? (m.returns as TypeDefinition).stream!.name!
                 : m.returns as string;
+            // --- [ИЗМЕНЕНИЕ] ---
+            const returnTypeStr = this.generatorLogic.resolveCanonicalTypeName(returnTypeStrRaw);
+            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
             if (returnTypeStr === "void") {
                 finalReturns = "AFuture";
@@ -376,15 +400,20 @@ export class ApiGenerator {
      * @param localApiVar - The name of the local API implementation variable.
      */
     private generateApiMethodCase(sb: string[], g: GeneratorLogic, m: any, localApiVar: string): void {
-        const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
+        const returnTypeStrRaw = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
             ? (m.returns as TypeDefinition).stream!.name!
             : m.returns as string;
-
+        // --- [ИЗМЕНЕНИЕ] ---
+        const returnTypeStr = g.resolveCanonicalTypeName(returnTypeStrRaw);
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
         const returnTypeInfo = new TypeInfo(returnTypeStr);
 
-        const throwsTypeStr = (typeof m.throws === 'object' && m.throws !== null && (m.throws as TypeDefinition).stream?.name)
+        const throwsTypeStrRaw = (typeof m.throws === 'object' && m.throws !== null && (m.throws as TypeDefinition).stream?.name)
             ? (m.throws as TypeDefinition).stream!.name!
             : m.throws as string;
+        // --- [ИЗМЕНЕНИЕ] ---
+        const throwsTypeStr = g.resolveCanonicalTypeName(throwsTypeStrRaw);
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
         const hasResponse = m.returns != null || m.throws != null;
         const reqIdVar = g.getUniqueVarName('reqId');
@@ -396,9 +425,12 @@ export class ApiGenerator {
 
         const paramNames: string[] = [];
         Object.entries(m.params).forEach(([paramName, paramType]) => {
-            const typeStr = (typeof paramType === 'object' && paramType !== null && (paramType as TypeDefinition).stream?.name)
+            const typeStrRaw = (typeof paramType === 'object' && paramType !== null && (paramType as TypeDefinition).stream?.name)
                 ? (paramType as TypeDefinition).stream!.name!
                 : paramType as string;
+            // --- [ИЗМЕНЕНИЕ] ---
+            const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
+            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
             const typeInfo = new TypeInfo(typeStr);
             const localVar = g.getUniqueVarName(paramName);
 
@@ -512,23 +544,31 @@ export class ApiGenerator {
      * @param sCtx - The name of the FastFutureContext variable.
      */
     private generateRemoteApiMethodImpl(sb: string[], g: GeneratorLogic, m: any, sCtx: string): void {
-        const returnTypeStr = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
+        const returnTypeStrRaw = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
             ? (m.returns as TypeDefinition).stream!.name!
             : m.returns as string;
-
+        // --- [ИЗМЕНЕНИЕ] ---
+        const returnTypeStr = g.resolveCanonicalTypeName(returnTypeStrRaw);
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
         const returnTypeInfo = new TypeInfo(returnTypeStr);
 
-        const throwsTypeStr = (typeof m.throws === 'object' && m.throws !== null && (m.throws as TypeDefinition).stream?.name)
+        const throwsTypeStrRaw = (typeof m.throws === 'object' && m.throws !== null && (m.throws as TypeDefinition).stream?.name)
             ? (m.throws as TypeDefinition).stream!.name!
             : m.throws as string;
+        // --- [ИЗМЕНЕНИЕ] ---
+        const throwsTypeStr = g.resolveCanonicalTypeName(throwsTypeStrRaw);
+        // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
 
         const hasResponse = m.returns != null || m.throws != null;
 
         const paramTypes = Object.entries(m.params).map(([pn, pt]) => {
-            const typeStr = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
+            const typeStrRaw = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
                 ? (pt as TypeDefinition).stream!.name!
                 : pt as string;
+            // --- [ИЗМЕНЕНИЕ] ---
+            const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
             return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
+            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
         }).join(', ');
 
         const hasReturns_sig = m.returns != null;
@@ -592,10 +632,13 @@ export class ApiGenerator {
 
         const fieldsForSerialize = new Map(paramNames.map(pn => {
             const pt = (m.params as any)[pn];
-            const typeStr = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
+            const typeStrRaw = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
                 ? (pt as TypeDefinition).stream!.name!
                 : pt as string;
+            // --- [ИЗМЕНЕНИЕ] ---
+            const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
             return [pn, new TypeInfo(typeStr)];
+            // --- [КОНЕЦ ИЗМЕНЕНИЯ] ---
         }));
 
         const serLines: string[] = [];
