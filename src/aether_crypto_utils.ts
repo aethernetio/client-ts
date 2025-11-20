@@ -1,15 +1,9 @@
-// =============================================================================================
-// FILE: aether_crypto_utils.ts
-// PURPOSE: Contains conversion utilities between DTO (aether_api) types and
-//          internal (aether_crypto) types. Ported from CryptoUtils.java.
-// =============================================================================================
-
 import {
     AKey,
     KeyType,
     CryptoProviderFactory,
-    Sign as InternalSign, // Internal crypto Sign
-    SignedKey as InternalSignedKey, // Internal crypto SignedKey
+    Sign as InternalSign,
+    SignedKey as InternalSignedKey,
     SignChecker,
     CryptoEngine,
 } from './aether_crypto';
@@ -25,10 +19,10 @@ import {
     HydrogenSignPublic,
     SodiumSignPrivate,
     HydrogenSignPrivate,
-    Sign as DtoSign, // DTO Sign
+    Sign as DtoSign,
     SignAE_ED25519,
     SignHYDROGEN,
-    SignedKey as DtoSignedKey, // DTO SignedKey
+    SignedKey as DtoSignedKey,
 } from './aether_api';
 import { Log } from './aether_logging';
 import { RU } from './aether_utils';
@@ -36,18 +30,9 @@ import { RU } from './aether_utils';
 /**
  * Provides static utility methods for converting between DTO (aether_api)
  * transport types and internal (aether_crypto) types.
- * (Port of CryptoUtils.java)
  */
 export namespace CryptoUtils {
 
-    /**
-     * Converts a DTO Key (transport layer) to an AKey (cryptographic layer interface).
-     * (Port of Java: `public static <T extends AKey> T of(Key key)`)
-     *
-     * @param key The DTO Key instance from the generated aether_api.
-     * @returns The corresponding AKey implementation.
-     * @throws {Error} If the DTO Key type is unsupported or missing data.
-     */
     export function dtoKeyToAKey<T extends AKey>(key: DtoKey): T {
         let providerName: string | undefined = undefined;
         let keyType: KeyType | undefined = undefined;
@@ -55,8 +40,8 @@ export namespace CryptoUtils {
 
         if (!data || !(data instanceof Uint8Array)) {
             const className = (key.constructor as any).name;
-            if(className === "Key") {
-                 throw new Error(`DTO Key is abstract. Cannot convert abstract 'Key' to AKey.`);
+            if (className === "Key") {
+                throw new Error(`DTO Key is abstract. Cannot convert abstract 'Key' to AKey.`);
             }
             throw new Error(`DTO Key (${className}) is missing valid 'data' property.`);
         }
@@ -98,21 +83,11 @@ export namespace CryptoUtils {
             return RU.cast(provider.createKey(keyType, data));
         } else {
             const className = (key.constructor as any).name;
-            Log.error(`dtoKeyToAKey: Could not determine provider/type`, undefined, {
-                className,
-            });
+            Log.error("dtoKeyToAKey: Could not determine provider/type", undefined, { className: className });
             throw new Error(`Unsupported DTO Key type: ${className}`);
         }
     }
 
-    /**
-     * Converts an AKey (cryptographic layer interface) back to its corresponding DTO Key (transport layer).
-     * (Port of Java: `public static <T extends Key> T of(AKey key)`)
-     *
-     * @param key The AKey instance.
-     * @returns The corresponding DTO Key instance.
-     * @throws {Error} If the AKey type/provider combination is unsupported.
-     */
     export function aKeyToDtoKey<T extends DtoKey>(key: AKey): T {
         const providerName = key.getProviderName().toLowerCase();
         const keyType = key.getKeyType();
@@ -150,7 +125,6 @@ export namespace CryptoUtils {
                     default:
                         throw new Error(`Unsupported AKey KeyType for provider ${providerName}: ${KeyType[keyType]}`);
                 }
-            // Note: `break` is unreachable.
 
             default:
                 throw new Error(
@@ -159,10 +133,6 @@ export namespace CryptoUtils {
         }
     }
 
-    /**
-     * Converts a DTO Sign (transport layer) to an internal Sign (cryptographic layer).
-     * (Port of Java: `public static io.aether.crypto.Sign of(Sign sign)`)
-     */
     export function dtoSignToInternal(sign: DtoSign): InternalSign {
         if (sign instanceof SignAE_ED25519) {
             return CryptoProviderFactory.getProvider("SODIUM").createSign(sign.getData());
@@ -173,10 +143,6 @@ export namespace CryptoUtils {
         }
     }
 
-    /**
-     * Converts an internal Sign (cryptographic layer) to a DTO Sign (transport layer).
-     * (Port of Java: `public static Sign of(io.aether.crypto.Sign sign)`)
-     */
     export function internalSignToDto(sign: InternalSign): DtoSign {
         switch (sign.getProviderName().toLowerCase()) {
             case "sodium":
@@ -188,30 +154,17 @@ export namespace CryptoUtils {
         }
     }
 
-    /**
-     * Converts a DTO SignedKey (transport layer) to an internal SignedKey (cryptographic layer).
-     * (Port of Java: `public static io.aether.crypto.SignedKey of(SignedKey key)`)
-     */
     export function dtoSignedKeyToInternal(key: DtoSignedKey): InternalSignedKey {
         const internalAKey = dtoKeyToAKey(key.getKey());
         const internalSign = dtoSignToInternal(key.getSign());
-        // Re-create the InternalSignedKey using the provider to ensure correct implementation
         const provider = CryptoProviderFactory.getProvider(internalAKey.getProviderName());
         return provider.createSignedKey(internalAKey, internalSign);
     }
 
-    /**
-     * Converts an internal SignedKey (cryptographic layer) to a DTO SignedKey (transport layer).
-     * (Port of Java: `public static SignedKey of(io.aether.crypto.SignedKey key)`)
-     */
     export function internalSignedKeyToDto(key: InternalSignedKey): DtoSignedKey {
         return new DtoSignedKey(aKeyToDtoKey(key.key), internalSignToDto(key.sign));
     }
 
-    /**
-     * Verifies the signature of a DTO SignedKey using a list of trusted SignCheckers.
-     * (Port of Java: `public static boolean verifySign(SignedKey key, Iterable<SignChecker> checkers)`)
-     */
     export function verifySign(key: DtoSignedKey, checkers: Iterable<SignChecker>): boolean {
         const k = dtoKeyToAKey(key.getKey());
         const s = dtoSignToInternal(key.getSign());
@@ -223,10 +176,6 @@ export namespace CryptoUtils {
         return false;
     }
 
-    /**
-     * Creates a CryptoEngine (for encryption or decryption) from a DTO Key.
-     * (Port of Java: `public static CryptoEngine makeProvider(Key key)`)
-     */
     export function makeProvider(key: DtoKey): CryptoEngine {
         const k = dtoKeyToAKey(key);
         switch (k.getKeyType()) {
@@ -238,5 +187,4 @@ export namespace CryptoUtils {
                 throw new Error("UnsupportedOperationException: Key type cannot be used to make an engine");
         }
     }
-
 }

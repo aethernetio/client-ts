@@ -11,7 +11,9 @@ import {
     UUID, URI, AtomicInteger
 } from '../src/aether_types';
 import {
-    Log, LNode
+    Log,
+    LogFilter,
+    LogLevel,
 } from '../src/aether_logging';
 import { AFuture } from '../src/aether_future';
 import { CryptoLib, Cloud, ServerDescriptor, IPAddressV4, Message } from '../src/aether_api';
@@ -25,12 +27,7 @@ import {
 } from '../src/aether_crypto_sodium';
 import { MessageNode } from '../src/aether_client_message';
 
-// Включаем логгирование в консоль
-Log.printConsoleColored((node: LNode) => {
-//     const level = node.getLevel();
-//     return level !== 'TRACE';
-    return true;
-});
+Log.printConsolePlain(new LogFilter().notLevel(LogLevel.TRACE));
 
 
 describe('PointToPointCommunication', () => {
@@ -44,8 +41,6 @@ describe('PointToPointCommunication', () => {
     let service: AetherCloudClient;
 
     afterEach(async () => {
-        // Эта функция будет вызываться после КАЖДОГО теста
-        // и гарантированно очистит ресурсы
         if (client1) {
             await client1.destroy(true).toPromise();
             // @ts-ignore

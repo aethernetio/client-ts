@@ -110,7 +110,7 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
                 const uri = `${scheme}://${hostString}:${cap.port}`;
 
                 if (cap.codec === preferredCodec) {
-                    Log.trace(`Found preferred URI: ${uri}`, { serverId: sd.id });
+                    Log.trace(`Found preferred URI: $uri`, { serverId: sd.id, uri:uri });
                     return uri;
                 }
                 if (!fallbackUri) {
@@ -123,7 +123,7 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
     if (!fallbackUri) {
         Log.warn("No valid URI found in ServerDescriptor", { serverId: sd.id });
     } else {
-        Log.trace(`Using fallback URI: ${fallbackUri}`, { serverId: sd.id });
+        Log.trace(`Using fallback URI: $fallbackUri`, { serverId: sd.id,fallbackUri:fallbackUri });
     }
     return fallbackUri;
 }

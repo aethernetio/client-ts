@@ -198,13 +198,15 @@ export class MessageNode {
             constructor() {
                 super(localApiFactory); // Передаем фабрику
             }
-            override flush(sendFuture: AFuture): void {
+            override flush(sendFuture?: AFuture): AFuture {
+                if(!sendFuture)sendFuture=AFuture.make();
                 const d = this.remoteDataToArrayAsArray();
                 if (d.length > 0) {
                     nodeSend(d).to(sendFuture); // Используем send(data)
                 } else {
                     sendFuture.tryDone();
                 }
+                return sendFuture;
             }
         })();
 
@@ -269,13 +271,15 @@ export class MessageNode {
                     super(localApi);
                 }
 
-                override flush(sendFuture: AFuture): void {
+                override flush(sendFuture?: AFuture): AFuture {
+                    if (!sendFuture) sendFuture = AFuture.make();
                     const d = this.remoteDataToArrayAsArray();
                     if (d.length > 0) {
                         nodeSend(d).to(sendFuture); // Используем send(data)
                     } else {
                         sendFuture.tryDone();
                     }
+                    return sendFuture;
                 }
             })();
 

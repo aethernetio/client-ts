@@ -3,7 +3,9 @@ import {
     UUID, URI
 } from '../src/aether_types';
 import {
-    Log, LNode
+    Log,
+    LogFilter,
+    LogLevel
 } from '../src/aether_logging';
 import { AFuture } from '../src/aether_future';
 import { CryptoLib } from '../src/aether_api';
@@ -17,32 +19,23 @@ import {
 } from '../src/aether_crypto_sodium';
 import { MessageNode } from '../src/aether_client_message';
 
-// Включаем логгирование в консоль
-Log.printConsoleColored((node: LNode) => {
-    const level = node.getLevel();
-    return level !== 'TRACE';
-//     return true;
-});
+Log.printConsoleColored(new LogFilter().notLevel(LogLevel.TRACE));
 
 
 describe('PointToPointCommunication', () => {
-    // Используем 'before' (стандарт Mocha)
     before(async () => {
         await applySodium();
     });
 
-    // Эти переменные объявлены здесь, чтобы afterEach мог их очистить
     let client1: AetherCloudClient;
     let client2: AetherCloudClient;
     let service: AetherCloudClient;
 
     afterEach(async () => {
-        // Эта функция будет вызываться после КАЖДОГО теста
-        // и гарантированно очистит ресурсы
         if (client1) {
             await client1.destroy(true).toPromise();
             // @ts-ignore
-            client1 = undefined; // Помогаем сборщику мусора
+            client1 = undefined;
         }
         if (client2) {
             await client2.destroy(true).toPromise();
@@ -56,8 +49,6 @@ describe('PointToPointCommunication', () => {
         }
     });
 
-    // Общие конфигурации для тестов
-    // Убедитесь, что этот URI указывает на ваш запущенный Java-сервер (AetherMockServer или полный)
     const registrationUri: URI[] = ["ws://localhost:9011"];
     const defaultPingDuration = 10; // 100ms
 

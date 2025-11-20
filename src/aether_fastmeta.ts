@@ -114,7 +114,7 @@ export interface FastFutureContext extends Destroyable {
     remoteDataToArray(out: DataOut): void;
     remoteDataToArrayAsArray(): Uint8Array;
 
-    flush(sendFuture: AFuture): void;
+    flush(sendFuture?: AFuture): AFuture;
     isEmpty(): boolean;
     size(): number;
     close(): AFuture;
@@ -134,7 +134,7 @@ export const FastFutureContextStub: FastFutureContext = {
     regFuture: (worker: FutureRec) => 0,
     regLocalFuture: () => { /* no-op */ },
     getFuture: (requestId: number) => { throw new Error("UnsupportedOperationException"); },
-    flush: (sendFuture: AFuture) => { throw new Error("UnsupportedOperationException"); },
+    flush: (sendFuture?: AFuture) => { return AFuture.failed(new Error("UnsupportedOperationException")); },
     remoteDataToArray: (out: DataOut) => { /* no-op */ },
     remoteDataToArrayAsArray: () => new Uint8Array(0),
     isEmpty: () => true,
@@ -170,8 +170,7 @@ export interface FastMetaType<T> {
  * Interface for a remote API endpoint.
  */
 export interface RemoteApi {
-    flush(sendFuture: AFuture): void;
-    flush(): void;
+    flush(sendFuture?: AFuture): AFuture;
     getFastMetaContext(): FastFutureContext;
 }
 
@@ -788,8 +787,10 @@ export class FastApiContext implements FastFutureContext {
         return r;
     }
 
-    public flush(sendFuture: AFuture): void {
-        sendFuture.tryDone();
+    public flush(sendFuture?: AFuture): AFuture {
+        const futureToUse = sendFuture || AFuture.make();
+        futureToUse.tryDone();
+        return futureToUse;
     }
 
     public close(): AFuture {
@@ -811,7 +812,7 @@ export class FastApiContext implements FastFutureContext {
             for (let i = 0; i < argsNames.length; i++) {
                 logData[`arg_${argsNames[i]}`] = argsValues[i];
             }
-            Log.trace(`cmd local before: ${methodName}`, logData);
+            Log.trace(`cmd local before: $methodName`, logData);
     }
 
     public invokeLocalMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
@@ -822,7 +823,7 @@ export class FastApiContext implements FastFutureContext {
             for (let i = 0; i < argsNames.length; i++) {
                 logData[`arg_${argsNames[i]}`] = argsValues[i];
             }
-            Log.trace(`cmd local after : ${methodName}`, logData);
+            Log.trace(`cmd local after : $methodName`, logData);
     }
 
     public invokeRemoteMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
@@ -835,7 +836,7 @@ export class FastApiContext implements FastFutureContext {
             logData[`arg_${argsNames[i]}`] = argsValues[i];
         }
 
-        Log.trace(`cmd remote      : ${methodName}`, logData);
+        Log.trace(`cmd remote      : $methodName`, logData);
     }
 }
 

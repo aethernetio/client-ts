@@ -128,7 +128,7 @@ abstract class DataIOBase implements DataIO {
     abstract skipBytes(n: number): void;
     abstract toArray(): Uint8Array;
     abstract _readCore(b: Uint8Array, offset: number, len: number): number;
-    abstract _writeCore(b: Uint8Array, off: number, len: number): number;
+    abstract _writeCore(b: ArrayLike<number>, off: number, len: number): number;
 
 
     // --- DataIn Implementations ---
@@ -143,16 +143,16 @@ abstract class DataIOBase implements DataIO {
         }
 
         if (offset !== undefined && len !== undefined) { // Check for 3-argument overload
-             if (b instanceof Uint8Array) {
+            if (b instanceof Uint8Array) {
                 return this._readCore(b, offset, len);
             } else if (b instanceof Array) { // number[]
                 // Reading into number[] (assuming reading ints) - Less efficient
                 let elementsRead = 0;
                 const targetLen = Math.min(len, b.length - offset);
                 for (let i = offset; i < offset + targetLen; i++) {
-                     if (this.getSizeForRead() < 4) return elementsRead; // Check if enough bytes remain for an int
-                     b[i] = this.readInt(); // Use the class's readInt method
-                     elementsRead++;
+                    if (this.getSizeForRead() < 4) return elementsRead; // Check if enough bytes remain for an int
+                    b[i] = this.readInt(); // Use the class's readInt method
+                    elementsRead++;
                 }
                 return elementsRead;
             }
@@ -212,9 +212,9 @@ abstract class DataIOBase implements DataIO {
         if (typeof TextDecoder !== 'undefined') {
             return new TextDecoder("latin1").decode(data);
         } else {
-             let str = '';
-             for (let i = 0; i < data.length; i++) { str += String.fromCharCode(data[i]); }
-             return str;
+            let str = '';
+            for (let i = 0; i < data.length; i++) { str += String.fromCharCode(data[i]); }
+            return str;
         }
     }
     readSubData(length: number): DataIO {
@@ -230,12 +230,11 @@ abstract class DataIOBase implements DataIO {
         const res = new Uint8Array(len);
         const bytesRead = this._readCore(res, 0, len);
         if (bytesRead !== len) {
-             throw new Error(`Underflow: Tried to readBytes of length ${len}, but only got ${bytesRead} bytes.`);
+            throw new Error(`Underflow: Tried to readBytes of length ${len}, but only got ${bytesRead} bytes.`);
         }
         return res;
     }
 
-    // --- DataOut Implementations ---
     write(b: Uint8Array, off: number, len: number): number;
     write(b: number[], off: number, len: number): number;
     write(b: Uint8Array): void;
@@ -243,45 +242,81 @@ abstract class DataIOBase implements DataIO {
     write(data: DataIn): void;
     write(data: DataInOutJava): void;
     write(data: DataInOutStaticJava): void;
-    write(b: Uint8Array | number[] | DataIn | DataInOutJava | DataInOutStaticJava, off?: number, len?: number): number | void {
+    write(b: Uint8Array | number[] | DataIn | DataInOutJava | DataInOutStaticJava | ArrayBuffer | Buffer, off?: number, len?: number): number | void {
         if (off !== undefined && len !== undefined) {
             const targetLen = len as number;
+            let bb = b as any;
             if (b instanceof Uint8Array) {
                 return this._writeCore(b, off, targetLen);
             } else if (b instanceof Array) {
                 const buf = new Uint8Array((b as number[]).slice(off, off + targetLen));
                 return this._writeCore(buf, 0, buf.length);
+            } else if (b instanceof ArrayBuffer) {
+                const buf = new Uint8Array(b, off, targetLen);
+                return this._writeCore(buf, 0, buf.length);
+            } else if (typeof Buffer !== 'undefined' && b instanceof Buffer) {
+                // Для Node.js Buffer
+                const buf = new Uint8Array(b.buffer, b.byteOffset + off, targetLen);
+                return this._writeCore(buf, 0, buf.length);
+            } else if (b && (b as any).buffer instanceof ArrayBuffer && typeof (b as any).byteLength === 'number') {
+                // Для других типизированных массивов (Int8Array, Uint16Array и т.д.)
+                const buf = new Uint8Array((b as any).buffer, (b as any).byteOffset + off, targetLen);
+                return this._writeCore(buf, 0, buf.length);
+            } else if (bb && typeof bb.length === 'number') {
+                const r = this._writeCore(bb as ArrayLike<number>, 0, bb.length);
+                if (r !== bb.length) { throw new Error("Assertion failed: Failed to write all bytes from TypedArray"); }
+                return;
+
             } else {
-                 throw new Error("Invalid arguments for write(b, off, len)");
+                throw new Error("Invalid arguments for write(b, off, len)");
             }
         }
-
+        let bb = b as any;
         if (b instanceof Uint8Array) {
             const r = this._writeCore(b, 0, b.length);
             if (r !== b.length) { throw new Error("Assertion failed: Failed to write all bytes from Uint8Array"); }
             return;
         } else if (b instanceof Array) {
-             const buf = new Uint8Array(b as number[]);
-             const r = this._writeCore(buf, 0, buf.length);
-             if (r !== buf.length) { throw new Error("Assertion failed: Failed to write all bytes from number[]"); }
-             return;
+            const buf = new Uint8Array(b as number[]);
+            const r = this._writeCore(buf, 0, buf.length);
+            if (r !== buf.length) { throw new Error("Assertion failed: Failed to write all bytes from number[]"); }
+            return;
         } else if (b && typeof (b as any).getSizeForRead === 'function' && (b as any).data instanceof Uint8Array) {
-             const dataIn = b as DataIn & { data: Uint8Array, readPos: number };
-             const size = dataIn.getSizeForRead();
-             if (size > 0) {
-                 const bytesWritten = this._writeCore(dataIn.data, dataIn.readPos, size);
-                 if (bytesWritten !== size) { throw new Error("Assertion failed: Failed to write all data from DataIn source"); }
-                 // Не очищаем источник 'b'
-             }
-             return;
+            const dataIn = b as DataIn & { data: Uint8Array, readPos: number };
+            const size = dataIn.getSizeForRead();
+            if (size > 0) {
+                const bytesWritten = this._writeCore(dataIn.data, dataIn.readPos, size);
+                if (bytesWritten !== size) { throw new Error("Assertion failed: Failed to write all data from DataIn source"); }
+            }
+            return;
         } else if (b && typeof (b as any).toArray === 'function') {
             this.write((b as DataIn).toArray());
             return;
+        } else if (b instanceof ArrayBuffer) {
+            const buf = new Uint8Array(b);
+            const r = this._writeCore(buf, 0, buf.length);
+            if (r !== buf.length) { throw new Error("Assertion failed: Failed to write all bytes from ArrayBuffer"); }
+            return;
+        } else if (typeof Buffer !== 'undefined' && b instanceof Buffer) {
+            const buf = new Uint8Array(b.buffer, b.byteOffset, b.byteLength);
+            const r = this._writeCore(buf, 0, buf.length);
+            if (r !== buf.length) { throw new Error("Assertion failed: Failed to write all bytes from Buffer"); }
+            return;
+        } else if (b && bb.buffer instanceof ArrayBuffer && typeof bb.byteLength === 'number') {
+            // Для других типизированных массивов (Int8Array, Uint16Array и т.д.)
+            let bb = (b as any);
+            const buf = new Uint8Array(bb.buffer, bb.byteOffset, bb.byteLength);
+            const r = this._writeCore(buf, 0, buf.length);
+            if (r !== buf.length) { throw new Error("Assertion failed: Failed to write all bytes from TypedArray"); }
+            return;
+        } else if (bb && typeof bb.length === 'number') {
+            const r = this._writeCore(bb as ArrayLike<number>, 0, bb.length);
+            if (r !== bb.length) { throw new Error("Assertion failed: Failed to write all bytes from TypedArray"); }
+            return;
         } else {
-             throw new Error("Invalid arguments for write()");
+            throw new Error(`Invalid arguments for write: expected Uint8Array, number[], DataIn, or toArrayable, got ${typeof b} with value ${JSON.stringify(b)}`);
         }
     }
-
 
     writeBoolean(v: boolean): void { this.writeByte(v ? 1 : 0); }
     writeShort(v: number): void {
@@ -446,12 +481,12 @@ export class DataInOut extends DataIOBase {
         this.trim();
         return res;
     }
-     override readShort(): number {
-         if (this.readPos + 2 > this.writePos) throw new Error(`Underflow: Cannot read Short, need 2 bytes, have ${this.getSizeForRead()}`);
-         const ushortVal = DataIO_Utils.readLE(this.readUByte0.bind(this), 2, false);
-         this.trim();
-         return (ushortVal >= 0x8000) ? ushortVal - 0x10000 : ushortVal;
-     }
+    override readShort(): number {
+        if (this.readPos + 2 > this.writePos) throw new Error(`Underflow: Cannot read Short, need 2 bytes, have ${this.getSizeForRead()}`);
+        const ushortVal = DataIO_Utils.readLE(this.readUByte0.bind(this), 2, false);
+        this.trim();
+        return (ushortVal >= 0x8000) ? ushortVal - 0x10000 : ushortVal;
+    }
 
     override readInt(): number {
         if (this.readPos + 4 > this.writePos) throw new Error(`Underflow: Cannot read Int, need 4 bytes, have ${this.getSizeForRead()}`);
@@ -460,11 +495,11 @@ export class DataInOut extends DataIOBase {
         return res;
     }
     override readUInt(): number {
-         if (this.readPos + 4 > this.writePos) throw new Error(`Underflow: Cannot read UInt, need 4 bytes, have ${this.getSizeForRead()}`);
-         const res = DataIO_Utils.readLE(this.readUByte0.bind(this), 4, true);
-         this.trim();
-         return res;
-     }
+        if (this.readPos + 4 > this.writePos) throw new Error(`Underflow: Cannot read UInt, need 4 bytes, have ${this.getSizeForRead()}`);
+        const res = DataIO_Utils.readLE(this.readUByte0.bind(this), 4, true);
+        this.trim();
+        return res;
+    }
 
     override readLong(): bigint {
         if (this.readPos + 8 > this.writePos) throw new Error(`Underflow: Cannot read Long, need 8 bytes, have ${this.getSizeForRead()}`);
@@ -536,12 +571,12 @@ export class DataInOut extends DataIOBase {
     toArrayCopy(): Uint8Array { return this.data.slice(this.readPos, this.writePos); }
     getData(): Uint8Array { return this.data; }
     setData(data: Uint8Array, readPos: number = 0, writePos?: number): void {
-         this.data = data;
-         this.readPos = readPos;
-         this.writePos = writePos !== undefined ? writePos : data.length;
-         if (this.readPos < 0 || this.readPos > this.data.length || this.writePos < 0 || this.writePos > this.data.length || this.readPos > this.writePos) {
-             throw new Error(`Invalid positions set via setData: readPos=${readPos}, writePos=${writePos}, capacity=${this.data.length}`);
-         }
+        this.data = data;
+        this.readPos = readPos;
+        this.writePos = writePos !== undefined ? writePos : data.length;
+        if (this.readPos < 0 || this.readPos > this.data.length || this.writePos < 0 || this.writePos > this.data.length || this.readPos > this.writePos) {
+            throw new Error(`Invalid positions set via setData: readPos=${readPos}, writePos=${writePos}, capacity=${this.data.length}`);
+        }
     }
     getWritePos(): number { return this.writePos; }
     setWritePos(writePos: number): void {
@@ -551,7 +586,7 @@ export class DataInOut extends DataIOBase {
             this.checkSize(writePos - this.writePos);
         }
         this.writePos = writePos;
-     }
+    }
     getReadPos(): number { return this.readPos; }
     setReadPos(readPos: number): void {
         if (readPos < 0 || readPos > this.writePos) throw new Error(`IndexOutOfBounds: readPos ${readPos} is out of bounds [0, ${this.writePos}]`);
@@ -568,7 +603,7 @@ export class DataInOut extends DataIOBase {
 
             const newData = new Uint8Array(newSize);
             if (this.writePos > 0) {
-                 newData.set(this.data.subarray(0, this.writePos));
+                newData.set(this.data.subarray(0, this.writePos));
             }
             this.data = newData;
         }

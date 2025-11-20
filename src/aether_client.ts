@@ -47,6 +47,7 @@ import {
     AccessCheckPair,
 } from './aether_api';
 import { BMap, RCol } from './aether_rcollection';
+import { applySodium } from './aether_crypto_sodium';
 
 export enum RegStatus { NO, BEGIN, CONFIRM }
 
@@ -348,7 +349,7 @@ export class AetherCloudClient implements Destroyable {
 
         const pingTime = this.getPingTime();
         this.destroyer.add(RU.scheduleAtFixedRate(this.destroyer, pingTime, "MILLISECONDS", this.scheduledWork.bind(this)));
-        Log.debug(`AetherCloudClient: Scheduled work at fixed rate: ${pingTime}ms`);
+        Log.debug(`AetherCloudClient: Scheduled work at fixed rate: $pingTime ms`,{pingTime:pingTime});
     }
 
     /**
@@ -434,7 +435,7 @@ export class AetherCloudClient implements Destroyable {
             throw error;
         }
 
-        Log.debug(`initRegistration: Attempting connection to registration server: ${regUri}`);
+        Log.debug(`initRegistration: Attempting connection to registration server: $regUri`,{regUri:regUri});
 
         // --- ИЗМЕНЕНИЕ: Используем новый класс ConnectionRegistration ---
         const regConn = new ConnectionRegistration(this, regUri);
@@ -555,7 +556,7 @@ export class AetherCloudClient implements Destroyable {
     * @throws {Error} If the master key is missing or invalid.
     */
     public getCryptoEngineForServer(serverId: number): CryptoEngine {
-        Log.trace("getCryptoEngineForServer: Requesting crypto engine.", { sid: serverId });
+        Log.debug("getCryptoEngineForServer: Requesting crypto engine.", { sid: serverId });
 
         const keyImpl = this.getMasterKeyAKey();
 
@@ -596,10 +597,10 @@ export class AetherCloudClient implements Destroyable {
 
         // (Логика не изменилась, BMap сам обработает запрос)
         if (this.servers.has(serverId)) {
-            Log.trace(`getServer: Cache hit for serverId: ${serverId}`);
+            Log.trace(`getServer: Cache hit for serverId: $serverId`,{serverId:serverId});
             return this.servers.get(serverId)! as ARFuture<ServerDescriptor | null>;
         }
-        Log.trace(`getServer: Cache miss for serverId: ${serverId}. Fetching.`);
+        Log.trace(`getServer: Cache miss for serverId: $serverId. Fetching.`,{serverId:serverId});
         const future = this.servers.getFuture(serverId);
 
         return future as ARFuture<ServerDescriptor | null>;
@@ -618,7 +619,7 @@ export class AetherCloudClient implements Destroyable {
         // =================================================================
 
         if (this.clouds.has(uid)) {
-            Log.trace(`getCloud: Cache hit for uid: ${uid}`);
+            Log.trace(`getCloud: Cache hit for uid: $uid`,{uid:uid});
             return this.clouds.get(uid)! as ARFuture<Cloud | null>;
         }
 
@@ -695,13 +696,13 @@ export class AetherCloudClient implements Destroyable {
     public getMessageNode(consumerUid: UUID, strategy: MessageEventListener = MessageEventListenerDefault): MessageNode {
         const key = consumerUid.toString().toString();
         if (!this.messageNodeMap.has(key)) {
-            Log.debug(`getMessageNode: Creating new MessageNode for: ${key}`);
+            Log.debug(`getMessageNode: Creating new MessageNode for: $key`,{key:key});
             const newNode = new MessageNode(this, consumerUid, strategy);
             this.messageNodeMap.set(key, newNode);
             this.onClientStreamCreated.fire(newNode);
             return newNode;
         }
-        Log.trace(`getMessageNode: Reusing existing MessageNode for: ${key}`);
+        Log.trace(`getMessageNode: Reusing existing MessageNode for: $key`,{key:key});
         return this.messageNodeMap.get(key)!;
     }
 
@@ -727,7 +728,7 @@ export class AetherCloudClient implements Destroyable {
                 Log.trace(`getConnectionBySid: ServerDescriptor resolved for sid: $sid`, { sid: sid, descriptor: sd });
                 res.done(this.getConnection(sd));
             } else {
-                Log.warn(`getConnectionBySid: ServerDescriptor resolved to null for sid: ${sid}`);
+                Log.warn(`getConnectionBySid: ServerDescriptor resolved to null for sid: $sid`,{sid:sid});
                 res.error(new ClientApiException(`ServerDescriptor resolved to null for sid: ${sid}`));
             }
         }, (err) => {
@@ -991,7 +992,7 @@ export class AetherCloudClient implements Destroyable {
     * @returns {AFuture} An AFuture that completes when destruction is finished.
     */
     public destroy(force: boolean): AFuture {
-        Log.info(`destroy: Destroying client (force=${force}).`);
+        Log.info(`destroy: Destroying client (force=$force).`,{force:force});
         return this.destroyer.destroy(force);
     }
 
@@ -1003,11 +1004,7 @@ export class AetherCloudClient implements Destroyable {
         this.destroy(true);
     }
 
-    /**
-     * @description Проверяет подпись, используя корневые сертификаты из state.
-     */
     public verifySign(signedKey: SignedKey): boolean {
-        // TODO: Реализовать логику верификации (как в Java CryptoUtils.verifySign)
         Log.warn("verifySign: STUB! Returning true.");
         return true;
     }
@@ -1024,4 +1021,5 @@ export * from './aether_fastmeta';
 export * from './aether_fastmeta_net';
 export * from './aether_datainout';
 export * from './aether_rcollection';
+export {applySodium} from './aether_crypto_sodium';
 export * as aCrypto from './aether_crypto';
