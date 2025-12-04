@@ -4,8 +4,9 @@
 // =============================================================================================
 
 import { ToString, AString, Style, Color } from './aether_astring';
+import { AFuture } from './aether_future';
 import {
-    Disposable, Executor, ARunnable, AConsumer, APredicate,
+    Destroyable, Executor, ARunnable, AConsumer, APredicate,
     ABiPredicate
 } from './aether_types';
 
@@ -27,10 +28,10 @@ export type LogData = Record<string, any>;
 interface LogListener {
     filter: APredicate<LNode> | LogFilter;
     consumer: AConsumer<LNode>;
-    disposer: Disposable;
+    disposer: Destroyable;
 }
 
-export interface ContextCloser extends Disposable {
+export interface ContextCloser extends Destroyable {
     readonly node: LNode;
 }
 
@@ -64,7 +65,10 @@ export abstract class LNode {
         const self = this;
         return {
             node: self,
-            [Symbol.dispose](): void { Log.pop(self); }
+            destroy(f: boolean): AFuture {
+                Log.pop(self);
+                return AFuture.completed();
+            }
         };
     }
 
@@ -186,7 +190,7 @@ export abstract class LNode {
         protected forEach0(): void { }
         protected count0(): number { return 0; }
         public override add(): LNode { return this; }
-        public override context(): ContextCloser { return { node: this, [Symbol.dispose]: () => { } }; }
+        public override context(): ContextCloser { return { node: this, destroy: (f: boolean): AFuture => { return AFuture.completed() } }; }
         public override log(): void { }
     }();
 }
@@ -246,8 +250,8 @@ export class LogFilter {
         return this.filter(n => regex.test(String(n.get(LogKeys.MSG) || '')));
     }
     public notRegex(expr: string | RegExp): this {
-         const regex = typeof expr === 'string' ? new RegExp(expr) : expr;
-         return this.not(n => regex.test(String(n.get(LogKeys.MSG) || '')));
+        const regex = typeof expr === 'string' ? new RegExp(expr) : expr;
+        return this.not(n => regex.test(String(n.get(LogKeys.MSG) || '')));
     }
 
     public traceOff(): this { return this.not(n => n.check(LogKeys.LEVEL, LogLevel.TRACE)); }
@@ -329,10 +333,10 @@ abstract class ColumnBase implements Column {
     }
 }
 
-export class LogPrinter implements Disposable {
+export class LogPrinter implements Destroyable {
     public readonly filter: LogFilter;
     protected readonly columns: Column[];
-    private readonly listenerDisposer: Disposable;
+    private readonly listenerDisposer: Destroyable;
 
     constructor(columns: Column[], filter: LogFilter = new LogFilter()) {
         this.columns = columns;
@@ -355,7 +359,9 @@ export class LogPrinter implements Disposable {
         return s;
     }
 
-    public [Symbol.dispose](): void { this.listenerDisposer[Symbol.dispose](); }
+    public destroy(f: boolean): AFuture {
+        return this.listenerDisposer.destroy(f);
+    }
 
     public static splitter(text: string): Column {
         return new class extends ColumnBase {
@@ -417,7 +423,7 @@ export class Log {
     public static readonly EXCEPTION_STR = LogKeys.EXCEPTION_STR;
 
     // Prevent instantiation
-    private constructor() {}
+    private constructor() { }
 
     // --- Stack Management ---
 
@@ -518,13 +524,14 @@ export class Log {
 
     public static addFilter(f: APredicate<LNode>): void { this.filter.filter(f); }
 
-    public static addListener(filter: LogFilter | APredicate<LNode>, consumer: AConsumer<LNode>): Disposable {
+    public static addListener(filter: LogFilter | APredicate<LNode>, consumer: AConsumer<LNode>): Destroyable {
         const wrappedConsumer = this.wrap(consumer);
-        const entry: LogListener = { filter, consumer: wrappedConsumer, disposer: { [Symbol.dispose]: () => { } } };
+        const entry: LogListener = { filter, consumer: wrappedConsumer, disposer: { destroy: (f: boolean): AFuture => { return AFuture.completed() } } };
         entry.disposer = {
-            [Symbol.dispose]: () => {
+            destroy: (f: boolean): AFuture => {
                 const idx = this.LISTENERS.indexOf(entry);
                 if (idx > -1) this.LISTENERS.splice(idx, 1);
+                return AFuture.completed();
             }
         };
         this.LISTENERS.push(entry);

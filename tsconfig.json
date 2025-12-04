@@ -3,7 +3,7 @@
     "outDir": "./build/",
     "noImplicitAny": true,
     "module": "CommonJS",
-    "target": "ES2024",
+    "target": "ES2022",
     "jsx": "react",
     "declaration": true,
     "sourceMap": true,

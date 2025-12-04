@@ -5,7 +5,7 @@
 // =============================================================================================
 
 import {
-    ConcurrentLinkedQueue_C, Disposable, ARunnable, AConsumer,
+    ConcurrentLinkedQueue_C, ARunnable, AConsumer,
     AtomicReference, AtomicLong,
     Destroyable, UUID
 } from './aether_types';
@@ -63,20 +63,16 @@ export const HexUtils = {
 export class Destroyer implements Destroyable {
     public readonly name: string;
     // <-- Очередь может хранить оба типа, но Disposable является базовым
-    private readonly queue: ConcurrentLinkedQueue_C<Disposable> = new ConcurrentLinkedQueue_C();
+    private readonly queue: ConcurrentLinkedQueue_C<Destroyable> = new ConcurrentLinkedQueue_C();
     private destroyFuture: AtomicReference<AFuture | null> = new AtomicReference(null);
 
     constructor(name: string) { this.name = name; }
 
     public isDestroyed(): boolean { return this.destroyFuture.get() !== null; }
 
-    // <-- Принимает базовый Disposable или более конкретный Destroyable
-    public add(resource: Disposable | Destroyable): void {
-        // Важно: Сначала проверяем на Destroyable, т.к. он Tакже является Disposable
+    public add(resource: Destroyable): void {
         if (typeof (resource as Destroyable).destroy === 'function') {
             this.queue.add(resource as Destroyable);
-        } else if (typeof (resource as Disposable)[Symbol.dispose] === 'function') {
-            this.queue.add(resource as Disposable);
         } else {
             Log.error("Attempted to add non-Disposable/Destroyable to Destroyer", { object: resource });
         }
@@ -89,17 +85,13 @@ export class Destroyer implements Destroyable {
         }
 
         const destroyTasks: AFuture[] = [];
-        let e: Disposable | undefined;
+        let e: Destroyable | undefined;
         while ((e = this.queue.poll()) !== undefined) {
             try {
-                // Важно: Сначала проверяем на асинхронный 'destroy'
                 if (typeof (e as Destroyable).destroy === 'function') {
                     destroyTasks.push((e as Destroyable).destroy(force).timeoutError(5, `Timeout destroying unit: ${e.toString()}`));
                 }
-                // Иначе используем синхронный 'dispose'
-                else if (typeof (e as Disposable)[Symbol.dispose] === 'function') {
-                    (e as Disposable)[Symbol.dispose]();
-                } else {
+                else {
                     Log.warn("Object in Destroyer queue has no destroy or dispose method", { object: e });
                 }
             } catch (err) {
@@ -115,11 +107,6 @@ export class Destroyer implements Destroyable {
         res.timeoutError(5, `Timeout destroying all units in Destroyer[${this.name}]`);
         return res;
     }
-
-    // <-- Реализуем [Symbol.dispose] для самого Destroyer
-    public [Symbol.dispose](): void {
-        this.destroy(true); // 'true' для force, т.к. 'using' обычно быстрый
-    }
 }
 
 // =============================================================================================
@@ -134,9 +121,14 @@ export const RU = {
     ConcurrentHashSet: Set,
 
     time: (): number => Date.now(),
-    schedule: (ms: number, task: ARunnable): Disposable => {
+    schedule: (ms: number, task: ARunnable): Destroyable => {
         const timer = setTimeout(Log.wrap(task), ms);
-        return { [Symbol.dispose]: () => clearTimeout(timer) };
+        return {
+            destroy: (f: boolean) => {
+                clearTimeout(timer);
+                return AFuture.completed();
+            }
+        };
     },
 
     // <-- Возвращаемый тип изменен на Destroyable
@@ -151,10 +143,6 @@ export const RU = {
             destroy: (_f: boolean) => {
                 clearInterval(timer);
                 return AFuture.of();
-            },
-            // Синхронный dispose
-            [Symbol.dispose]: () => {
-                clearInterval(timer);
             }
         };
 
@@ -268,58 +256,58 @@ export const DataUtils = {
  * Интерфейс, определяющий методы очереди, как в java.util.Queue.
  */
 interface IQueue<T> {
-  /**
-   * Добавляет элемент в конец очереди.
-   * Возвращает true, если элемент был успешно добавлен.
-   * Выбрасывает ошибку, если очередь ограничена по размеру и заполнена.
-   */
-  add(element: T): boolean;
+    /**
+     * Добавляет элемент в конец очереди.
+     * Возвращает true, если элемент был успешно добавлен.
+     * Выбрасывает ошибку, если очередь ограничена по размеру и заполнена.
+     */
+    add(element: T): boolean;
 
-  /**
-   * Добавляет элемент в конец очереди.
-   * Возвращает true, если элемент был успешно добавлен.
-   * В случае с очередью с ограничением размера, вернет false, если очередь заполнена.
-   */
-  offer(element: T): boolean;
+    /**
+     * Добавляет элемент в конец очереди.
+     * Возвращает true, если элемент был успешно добавлен.
+     * В случае с очередью с ограничением размера, вернет false, если очередь заполнена.
+     */
+    offer(element: T): boolean;
 
-  /**
-   * Извлекает и удаляет элемент из начала очереди.
-   * Выбрасывает ошибку, если очередь пуста.
-   */
-  remove(): T;
+    /**
+     * Извлекает и удаляет элемент из начала очереди.
+     * Выбрасывает ошибку, если очередь пуста.
+     */
+    remove(): T;
 
-  /**
-   * Извлекает и удаляет элемент из начала очереди.
-   * Возвращает null, если очередь пуста.
-   */
-  poll(): T | null;
+    /**
+     * Извлекает и удаляет элемент из начала очереди.
+     * Возвращает null, если очередь пуста.
+     */
+    poll(): T | null;
 
-  /**
-   * Извлекает, но не удаляет, элемент из начала очереди.
-   * Выбрасывает ошибку, если очередь пуста.
-   */
-  element(): T;
+    /**
+     * Извлекает, но не удаляет, элемент из начала очереди.
+     * Выбрасывает ошибку, если очередь пуста.
+     */
+    element(): T;
 
-  /**
-   * Извлекает, но не удаляет, элемент из начала очереди.
-   * Возвращает null, если очередь пуста.
-   */
-  peek(): T | null;
+    /**
+     * Извлекает, но не удаляет, элемент из начала очереди.
+     * Возвращает null, если очередь пуста.
+     */
+    peek(): T | null;
 
-  /**
-   * Возвращает количество элементов в очереди.
-   */
-  size(): number;
+    /**
+     * Возвращает количество элементов в очереди.
+     */
+    size(): number;
 
-  /**
-   * Проверяет, пуста ли очередь.
-   */
-  isEmpty(): boolean;
+    /**
+     * Проверяет, пуста ли очередь.
+     */
+    isEmpty(): boolean;
 
-  /**
-   * Очищает очередь.
-   */
-  clear(): void;
+    /**
+     * Очищает очередь.
+     */
+    clear(): void;
 }
 
 /**
@@ -327,121 +315,121 @@ interface IQueue<T> {
  * Эта реализация является безразмерной (unbounded).
  */
 export class Queue<T> implements IQueue<T> {
-  // Мы используем приватный массив для хранения элементов.
-  // Добавление (enqueue) будет в конец массива (push).
-  // Удаление (dequeue) будет из начала массива (shift).
-  private storage: T[] = [];
+    // Мы используем приватный массив для хранения элементов.
+    // Добавление (enqueue) будет в конец массива (push).
+    // Удаление (dequeue) будет из начала массива (shift).
+    private storage: T[] = [];
 
-  /**
-   * Создает новую очередь.
-   * @param initialData Опциональный массив для инициализации очереди.
-   */
-  constructor(initialData: T[] = []) {
-    this.storage = [...initialData];
-  }
-
-  // --- МЕТОДЫ ДОБАВЛЕНИЯ ---
-
-  /**
-   * Вставляет элемент в конец очереди.
-   * Поскольку это безразмерная очередь, она всегда вернет true.
-   * Соответствует контракту Java: выбрасывает исключение, если не удалось добавить.
-   * @param element Элемент для добавления.
-   * @returns true
-   */
-  add(element: T): boolean {
-    const success = this.offer(element);
-    if (!success) {
-      // Этого не произойдет в данной реализации, но соответствует контракту Java
-      throw new Error("Queue full");
+    /**
+     * Создает новую очередь.
+     * @param initialData Опциональный массив для инициализации очереди.
+     */
+    constructor(initialData: T[] = []) {
+        this.storage = [...initialData];
     }
-    return true;
-  }
 
-  /**
-   * Вставляет элемент в конец очереди.
-   * Поскольку это безразмерная очередь, она всегда вернет true.
-   * @param element Элемент для добавления.
-   * @returns true
-   */
-  offer(element: T): boolean {
-    this.storage.push(element);
-    return true;
-  }
+    // --- МЕТОДЫ ДОБАВЛЕНИЯ ---
 
-  // --- МЕТОДЫ УДАЛЕНИЯ ---
-
-  /**
-   * Извлекает и удаляет элемент из начала очереди.
-   * Выбрасывает ошибку "NoSuchElementException", если очередь пуста.
-   * @returns Элемент из начала очереди.
-   */
-  remove(): T {
-    const item = this.storage.shift();
-    if (item === undefined) {
-      throw new Error("NoSuchElementException: Queue is empty");
+    /**
+     * Вставляет элемент в конец очереди.
+     * Поскольку это безразмерная очередь, она всегда вернет true.
+     * Соответствует контракту Java: выбрасывает исключение, если не удалось добавить.
+     * @param element Элемент для добавления.
+     * @returns true
+     */
+    add(element: T): boolean {
+        const success = this.offer(element);
+        if (!success) {
+            // Этого не произойдет в данной реализации, но соответствует контракту Java
+            throw new Error("Queue full");
+        }
+        return true;
     }
-    return item;
-  }
 
-  /**
-   * Извлекает и удаляет элемент из начала очереди.
-   * Возвращает null, если очередь пуста.
-   * @returns Элемент из начала очереди или null.
-   */
-  poll(): T | null {
-    const item = this.storage.shift();
-    // Используем '??' для обработки случая, когда item 'undefined'
-    return item ?? null;
-  }
-
-  // --- МЕТОДЫ ПРОВЕРКИ ---
-
-  /**
-   * Извлекает, но не удаляет, элемент из начала очереди.
-   * Выбрасывает ошибку "NoSuchElementException", если очередь пуста.
-   * @returns Элемент из начала очереди.
-   */
-  element(): T {
-    const item = this.storage[0];
-    if (item === undefined) {
-      throw new Error("NoSuchElementException: Queue is empty");
+    /**
+     * Вставляет элемент в конец очереди.
+     * Поскольку это безразмерная очередь, она всегда вернет true.
+     * @param element Элемент для добавления.
+     * @returns true
+     */
+    offer(element: T): boolean {
+        this.storage.push(element);
+        return true;
     }
-    return item;
-  }
 
-  /**
-   * Извлекает, но не удаляет, элемент из начала очереди.
-   * Возвращает null, если очередь пуста.
-   * @returns Элемент из начала очереди или null.
-   */
-  peek(): T | null {
-    const item = this.storage[0];
-    return item ?? null;
-  }
+    // --- МЕТОДЫ УДАЛЕНИЯ ---
 
-  // --- ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ---
+    /**
+     * Извлекает и удаляет элемент из начала очереди.
+     * Выбрасывает ошибку "NoSuchElementException", если очередь пуста.
+     * @returns Элемент из начала очереди.
+     */
+    remove(): T {
+        const item = this.storage.shift();
+        if (item === undefined) {
+            throw new Error("NoSuchElementException: Queue is empty");
+        }
+        return item;
+    }
 
-  /**
-   * Возвращает текущий размер очереди.
-   * @returns number
-   */
-  size(): number {
-    return this.storage.length;
-  }
+    /**
+     * Извлекает и удаляет элемент из начала очереди.
+     * Возвращает null, если очередь пуста.
+     * @returns Элемент из начала очереди или null.
+     */
+    poll(): T | null {
+        const item = this.storage.shift();
+        // Используем '??' для обработки случая, когда item 'undefined'
+        return item ?? null;
+    }
 
-  /**
-   * Проверяет, пуста ли очередь.
-   * @returns true, если очередь пуста, иначе false.
-   */
-  isEmpty(): boolean {
-    return this.storage.length === 0;
-  }
+    // --- МЕТОДЫ ПРОВЕРКИ ---
 
-  /**
-   * Удаляет все элементы из очереди.
-   */
-  clear(): void {
-    this.storage = [];
-  }
+    /**
+     * Извлекает, но не удаляет, элемент из начала очереди.
+     * Выбрасывает ошибку "NoSuchElementException", если очередь пуста.
+     * @returns Элемент из начала очереди.
+     */
+    element(): T {
+        const item = this.storage[0];
+        if (item === undefined) {
+            throw new Error("NoSuchElementException: Queue is empty");
+        }
+        return item;
+    }
+
+    /**
+     * Извлекает, но не удаляет, элемент из начала очереди.
+     * Возвращает null, если очередь пуста.
+     * @returns Элемент из начала очереди или null.
+     */
+    peek(): T | null {
+        const item = this.storage[0];
+        return item ?? null;
+    }
+
+    // --- ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ---
+
+    /**
+     * Возвращает текущий размер очереди.
+     * @returns number
+     */
+    size(): number {
+        return this.storage.length;
+    }
+
+    /**
+     * Проверяет, пуста ли очередь.
+     * @returns true, если очередь пуста, иначе false.
+     */
+    isEmpty(): boolean {
+        return this.storage.length === 0;
+    }
+
+    /**
+     * Удаляет все элементы из очереди.
+     */
+    clear(): void {
+        this.storage = [];
+    }
 }

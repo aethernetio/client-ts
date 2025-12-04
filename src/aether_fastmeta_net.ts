@@ -17,15 +17,184 @@ import {
 } from './aether_fastmeta';
 import { Log, LNode } from './aether_logging';
 import { DataInOut } from './aether_datainout';
-import WebSocket from 'isomorphic-ws';
 
-// =============================================================================================
-// SECTION 1: FastMetaNet and related Network Interfaces
-// =============================================================================================
+/**
+ * @interface IUniversalWebSocket
+ * @description Universal WebSocket interface for browser and Node.js environments
+ */
+interface IUniversalWebSocket {
+    onopen: ((event: any) => void) | null;
+    onerror: ((event: any) => void) | null;
+    onclose: ((event: any) => void) | null;
+    onmessage: ((event: any) => void) | null;
+    readonly readyState: number;
+    close(code?: number, reason?: string): void;
+    send(data: any): void;
+}
+
+/**
+ * @class BrowserWebSocketWrapper
+ * @description WebSocket wrapper for browser environments
+ * @implements {IUniversalWebSocket}
+ */
+class BrowserWebSocketWrapper implements IUniversalWebSocket {
+    public ws: WebSocket;
+
+    /**
+     * @constructor
+     * @param {string} uri WebSocket URI
+     */
+    constructor(uri: string) {
+        let WS: any = null;
+        if (typeof globalThis !== 'undefined' && (globalThis as any).WebSocket) {
+            WS = (globalThis as any).WebSocket;
+        } else if (typeof window !== 'undefined' && (window as any).WebSocket) {
+            WS = (window as any).WebSocket;
+        } else if (typeof self !== 'undefined' && (self as any).WebSocket) {
+            WS = (self as any).WebSocket;
+        }
+
+        if (!WS) {
+            throw new Error("Browser WebSocket implementation not found");
+        }
+
+        this.ws = new WS(uri);
+        try {
+            this.ws.binaryType = "arraybuffer";
+        } catch (e) {
+            /**
+             * Safari might throw here, but usually arraybuffer is supported
+             * This is intentionally left empty as it's a non-critical optimization
+             */
+        }
+    }
+
+    set onopen(handler: ((event: any) => void) | null) { this.ws.onopen = handler; }
+    get onopen() { return this.ws.onopen; }
+    set onerror(handler: ((event: any) => void) | null) { this.ws.onerror = handler; }
+    get onerror() { return this.ws.onerror; }
+    set onclose(handler: ((event: any) => void) | null) { this.ws.onclose = handler; }
+    get onclose() { return this.ws.onclose; }
+    set onmessage(handler: ((event: any) => void) | null) { this.ws.onmessage = handler; }
+    get onmessage() { return this.ws.onmessage; }
+    get readyState() { return this.ws.readyState; }
+    close(code?: number, reason?: string) { this.ws.close(code, reason); }
+    send(data: any) { this.ws.send(data); }
+}
+
+/**
+ * @class NodeWebSocketWrapper
+ * @description WebSocket wrapper for Node.js environments
+ * @implements {IUniversalWebSocket}
+ */
+class NodeWebSocketWrapper implements IUniversalWebSocket {
+    public ws: any;
+
+    /**
+     * @constructor
+     * @param {string} uri WebSocket URI
+     */
+    constructor(uri: string) {
+        try {
+            const wsModule = require('ws');
+            const WS = wsModule.default || wsModule;
+            this.ws = new WS(uri);
+            this.ws.binaryType = "nodebuffer";
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    set onopen(handler: ((event: any) => void) | null) { this.ws.onopen = handler; }
+    get onopen() { return this.ws.onopen; }
+    set onerror(handler: ((event: any) => void) | null) { this.ws.onerror = handler; }
+    get onerror() { return this.ws.onerror; }
+    set onclose(handler: ((event: any) => void) | null) { this.ws.onclose = handler; }
+    get onclose() { return this.ws.onclose; }
+    set onmessage(handler: ((event: any) => void) | null) { this.ws.onmessage = handler; }
+    get onmessage() { return this.ws.onmessage; }
+    get readyState() { return this.ws.readyState; }
+
+    /**
+     * @method close
+     * @description Close the WebSocket connection
+     * @param {number} code Close code
+     * @param {string} reason Close reason
+     */
+    close(code?: number, reason?: string) {
+        this.ws.close(code, reason);
+    }
+
+    /**
+     * @method send
+     * @description Send data through WebSocket with error handling
+     * @param {any} data Data to send
+     */
+    send(data: any) {
+        this.ws.send(data, (err: Error | undefined) => {
+            if (err) {
+                Log.error("Node WebSocket send error", err);
+                if (this.onerror) {
+                    this.onerror({ error: err } as any);
+                }
+            }
+        });
+    }
+
+    /**
+     * @method attachNodeErrorListener
+     * @description Attach error listener for Node.js specific error events
+     * @param {(err: Error) => void} callback Error callback
+     */
+    public attachNodeErrorListener(callback: (err: Error) => void) {
+        if (this.ws.on) {
+            this.ws.on('error', callback);
+        }
+    }
+}
+
+/**
+ * @class WebSocketFactory
+ * @description Factory for creating WebSocket instances based on environment
+ */
+class WebSocketFactory {
+    static isNode: boolean | null = null;
+
+    /**
+     * @static
+     * @method create
+     * @description Create appropriate WebSocket wrapper for environment
+     * @param {string} uri WebSocket URI
+     * @returns {IUniversalWebSocket} WebSocket instance
+     */
+    static create(uri: string): IUniversalWebSocket {
+        if (this.isNode === null) {
+            const isBrowser = typeof window !== 'undefined' || typeof self !== 'undefined';
+            const hasProcess = typeof process !== 'undefined';
+            this.isNode = !isBrowser && hasProcess && process.versions != null && process.versions.node != null;
+        }
+
+        if (this.isNode) {
+            return new NodeWebSocketWrapper(uri);
+        } else {
+            return new BrowserWebSocketWrapper(uri);
+        }
+    }
+
+    /**
+     * @static
+     * @method isNodeEnv
+     * @description Check if running in Node.js environment
+     * @returns {boolean} True if in Node.js environment
+     */
+    static isNodeEnv(): boolean {
+        return this.isNode === true;
+    }
+}
 
 /**
  * @interface FastMetaNet
- * @description Factory interface for creating FastMeta network clients and servers.
+ * @description Network abstraction for FastMeta protocol
  */
 export interface FastMetaNet {
     makeClient<LT, RT extends RemoteApi>(
@@ -44,11 +213,14 @@ export interface FastMetaNet {
     ): FastMetaServer<LT, RT>;
 }
 
+/**
+ * @namespace FastMetaNet
+ * @description Namespace for FastMetaNet interfaces
+ */
 export namespace FastMetaNet {
     /**
      * @interface Connection
-     * @implements {Destroyable}
-     * @description Represents an active network connection.
+     * @description Connection interface for FastMetaNet
      */
     export interface Connection<LT, RT extends RemoteApi> extends Destroyable {
         read(): void;
@@ -62,11 +234,16 @@ export namespace FastMetaNet {
 
     /**
      * @class DefaultFastMetaNetImpl
+     * @description Default implementation of FastMetaNet
      * @implements {FastMetaNet}
-     * @description Default implementation using WebSocket for clients.
-     * @internal
      */
     class DefaultFastMetaNetImpl implements FastMetaNet {
+        /**
+         * @method makeClient
+         * @description Create FastMeta client
+         * @template LT Local API type
+         * @template RT Remote API type
+         */
         public makeClient<LT, RT extends RemoteApi>(
             uri: URI,
             lt: FastMetaApi<LT, any>,
@@ -83,6 +260,10 @@ export namespace FastMetaNet {
             );
         }
 
+        /**
+         * @method makeServer
+         * @description Create FastMeta server (not supported in this build)
+         */
         public makeServer<LT, RT extends RemoteApi>(
             _uri: URI,
             _localApiMeta: FastMetaApi<LT, any>,
@@ -94,11 +275,18 @@ export namespace FastMetaNet {
     }
 
     /**
-     * @description Singleton instance container for FastMetaNet.
+     * @class Instance
+     * @description Singleton instance holder
      */
     class Instance {
         private static _instance: FastMetaNet | null = null;
 
+        /**
+         * @static
+         * @method get
+         * @description Get singleton instance
+         * @returns {FastMetaNet} FastMetaNet instance
+         */
         public static get(): FastMetaNet {
             if (!this._instance) {
                 this._instance = new DefaultFastMetaNetImpl();
@@ -106,34 +294,44 @@ export namespace FastMetaNet {
             return this._instance;
         }
     }
-
     export const INSTANCE = Instance;
 }
 
+/**
+ * @interface FastMetaClient
+ * @description FastMeta client interface
+ */
 export interface FastMetaClient<LT, RT extends RemoteApi> extends FastMetaNet.Connection<LT, RT> {
     flush(sendFuture: AFuture): void;
 }
 
+/**
+ * @interface FastMetaServer
+ * @description FastMeta server interface
+ */
 export interface FastMetaServer<LT, RT extends RemoteApi> extends Destroyable {
     stop(): AFuture;
     handlers(): Iterable<FastMetaNet.Connection<LT, RT>>;
 }
 
+/**
+ * @namespace FastMetaServer
+ * @description Namespace for FastMetaServer interfaces
+ */
 export namespace FastMetaServer {
+    /**
+     * @interface Handler
+     * @description Server connection handler interface
+     */
     export interface Handler<LT, RT extends RemoteApi> {
         onNewConnection(connection: FastMetaNet.Connection<LT, RT>): LT;
         onConnectionClose(connection: FastMetaNet.Connection<LT, RT>): void;
     }
 }
 
-// =============================================================================================
-// SECTION 2: Enhanced WebSocket Implementation with Robust Binary Data Handling
-// =============================================================================================
-
 /**
  * @interface ReconnectConfig
- * @description Configuration for WebSocket auto-reconnect logic.
- * @internal
+ * @description Configuration for reconnection behavior
  */
 interface ReconnectConfig {
     maxAttempts: number;
@@ -144,7 +342,7 @@ interface ReconnectConfig {
 
 /**
  * @enum ConnectionState
- * @description Business-logic level connection state.
+ * @description Connection state enumeration
  */
 export enum ConnectionState {
     CONNECTING = 'connecting',
@@ -155,37 +353,33 @@ export enum ConnectionState {
 
 /**
  * @class FastMetaClientWebSocket
- * @description Universal WebSocket implementation with robust binary data handling
- * that works reliably in Browser, Node.js, and Jest environments.
- * @internal
+ * @description WebSocket-based FastMeta client implementation
+ * @implements {Destroyable}
  */
 class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
-    private websocket: WebSocket | null = null;
-    private context: FastApiContextLocal<LT> | null = null;
-    private connectFuture: ARFuture<FastApiContextLocal<LT>>;
-    private log: LNode;
-    private uri: URI = "";
-    private localApiMeta: FastMetaApi<LT, any> | null = null;
-    private localApiProvider: AFunction<RT, LT> | null = null;
-    private remoteApiMeta: FastMetaApi<any, RT> | null = null;
-    private receiveBuffer: DataInOut = new DataInOut();
-    private reconnectConfig: ReconnectConfig;
-    private reconnectAttempts: number = 0;
-    private reconnectTimeout: NodeJS.Timeout | null = null;
-    private isManualClose: boolean = false;
-    private isReconnecting: boolean = false;
-    private connectionState: ConnectionState = ConnectionState.DISCONNECTED;
-    private stateChangeCallbacks: Array<(state: ConnectionState) => void> = [];
-    private closeFuture: AFuture | null = null;
+    public websocket: IUniversalWebSocket | null = null;
+    public context: FastApiContextLocal<LT> | null = null;
+    public connectFuture: ARFuture<FastApiContextLocal<LT>>;
+    public log: LNode;
+    public uri: URI = "";
+    public localApiMeta: FastMetaApi<LT, any> | null = null;
+    public localApiProvider: AFunction<RT, LT> | null = null;
+    public remoteApiMeta: FastMetaApi<any, RT> | null = null;
+    public receiveBuffer: DataInOut = new DataInOut();
+    public reconnectConfig: ReconnectConfig;
+    public reconnectAttempts: number = 0;
+    public reconnectTimeout: NodeJS.Timeout | null = null;
+    public isManualClose: boolean = false;
+    public isReconnecting: boolean = false;
+    public connectionState: ConnectionState = ConnectionState.DISCONNECTED;
+    public stateChangeCallbacks: Array<(state: ConnectionState) => void> = [];
+    public closeFuture: AFuture | null = null;
 
     /**
-     * @private
-     * @type {boolean}
-     * @description Universal environment detection that works in all contexts
+     * @property connectionStats
+     * @description Connection statistics tracking
      */
-    private readonly isNodeEnv: boolean;
-
-    private connectionStats = {
+    public connectionStats = {
         connected: false,
         lastConnectTime: 0,
         totalReconnects: 0,
@@ -196,15 +390,13 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         totalMessagesSent: 0
     };
 
+    /**
+     * @constructor
+     * @param {Partial<ReconnectConfig>} reconnectConfig Reconnection configuration
+     */
     constructor(reconnectConfig?: Partial<ReconnectConfig>) {
         this.log = Log.of({ component: 'FastMetaClientWebSocket' });
         this.connectFuture = ARFuture.of<FastApiContextLocal<LT>>();
-
-        // Universal environment detection
-        this.isNodeEnv = typeof process !== 'undefined' &&
-                        process.versions != null &&
-                        process.versions.node != null;
-
         this.reconnectConfig = {
             maxAttempts: 5,
             baseDelay: 1000,
@@ -213,269 +405,211 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
             ...reconnectConfig
         };
 
-        Log.debug("FastMetaClientWebSocket initialized", {
-            isNodeEnv: this.isNodeEnv,
-            hasProcess: typeof process !== 'undefined',
-            hasVersions: typeof process !== 'undefined' && process.versions != null
-        });
+        Log.info("FastMetaClientWebSocket initialized with enhanced reconnection");
     }
 
+    /**
+     * @method connect
+     * @description Establish WebSocket connection
+     * @param {URI} uri Connection URI
+     * @param {FastMetaApi<LT, any>} localApiMeta Local API metadata
+     * @param {FastMetaApi<any, RT>} remoteApiMeta Remote API metadata
+     * @param {AFunction<RT, LT>} localApiProvider Local API provider function
+     * @returns {ARFuture<FastApiContextLocal<LT>>} Future resolving to connection context
+     */
     public connect(
         uri: URI,
         localApiMeta: FastMetaApi<LT, any>,
         remoteApiMeta: FastMetaApi<any, RT>,
         localApiProvider: AFunction<RT, LT>
     ): ARFuture<FastApiContextLocal<LT>> {
-        using _l = Log.context(this.log);
-        Log.info("Connecting...", { uri });
-
-        if (this.websocket || !this.connectFuture.isNotDone()) {
-            Log.warn("Connect called on an already connecting or connected client.", { uri });
-            return this.connectFuture;
-        }
-
-        this.uri = uri;
-        this.connectionStats.connectionUri = uri;
-        this.localApiMeta = localApiMeta;
-        this.remoteApiMeta = remoteApiMeta;
-        this.localApiProvider = localApiProvider;
-        this.isManualClose = false;
-
-        this.setConnectionState(ConnectionState.CONNECTING);
-        this.createWebSocketConnection();
-
-        return this.connectFuture;
-    }
-
-    /**
-     * @private
-     * @description Creates WebSocket with universal binary type handling
-     */
-    private createWebSocketConnection(): void {
-        using _l = Log.context(this.log);
+        Log.info("connect() called", { uri });
 
         try {
-            Log.debug("Creating WebSocket connection", {
-                uri: this.uri,
-                environment: this.isNodeEnv ? 'Node.js' : 'Browser'
-            });
-
-            this.websocket = new WebSocket(this.uri);
-
-            // Universal binary type setting that works in all environments
-            if (this.isNodeEnv) {
-                // In Node.js/Jest, use 'nodebuffer' for best compatibility
-                (this.websocket as any).binaryType = "nodebuffer";
-            } else {
-                // In browser, use 'arraybuffer'
-            this.websocket.binaryType = "arraybuffer";
+            if (this.websocket || !this.connectFuture.isNotDone()) {
+                Log.warn("Connect called on already connecting or connected client", { uri });
+                return this.connectFuture;
             }
 
-            this.setupUniversalEventHandlers();
-            Log.debug("WebSocket created successfully");
+            this.uri = uri;
+            this.connectionStats.connectionUri = uri;
+            this.localApiMeta = localApiMeta;
+            this.remoteApiMeta = remoteApiMeta;
+            this.localApiProvider = localApiProvider;
+            this.isManualClose = false;
 
+            this.setConnectionState(ConnectionState.CONNECTING);
+            this.createWebSocketConnection();
+
+            return this.connectFuture;
+        } catch (e) {
+            Log.error("Critical crash inside connect()", e as Error);
+            throw e;
+        }
+    }
+
+    /**
+     * @method write
+     * @description Write data through WebSocket connection
+     * @param {Uint8Array} data Data to write
+     * @returns {AFuture} Future indicating write completion
+     */
+    public write(data: Uint8Array): AFuture {
+        const sendFuture = AFuture.make();
+        try {
+            if (!this.websocket || !this.isConnected()) {
+                return AFuture.ofThrow(new Error("WebSocket is not open"));
+            }
+            const frameBuffer = new DataInOut();
+            SerializerPackNumber.INSTANCE.put(frameBuffer, data.length);
+            frameBuffer.write(data);
+            const finalBytesToSend = frameBuffer.toArray();
+
+            this.connectionStats.totalBytesSent += finalBytesToSend.length;
+            this.connectionStats.totalMessagesSent++;
+            this.sendWebSocketData(finalBytesToSend, sendFuture);
+        } catch (e) {
+            sendFuture.error(e as Error);
+        }
+        return sendFuture;
+    }
+
+    /**
+     * @method createWebSocketConnection
+     * @description Create new WebSocket connection
+     */
+    private createWebSocketConnection(): void {
+        try {
+            Log.debug("Creating WebSocket");
+            this.websocket = WebSocketFactory.create(this.uri);
+            this.setupUniversalEventHandlers();
+            Log.debug("WebSocket created");
         } catch (e) {
             const error = e as Error;
-            Log.error("Failed to create WebSocket", error, { uri: this.uri });
-            this.handleConnectionError(new ClientStartException(
-                `Failed to create WebSocket: ${error.message}`,
-                error
-            ));
+            Log.error("Failed to create WebSocket", { message: error.message });
+            this.handleConnectionError(new ClientStartException(`Failed to create WebSocket: ${error.message}`, error));
         }
     }
 
     /**
-     * @private
-     * @description Universal event handler setup that works in all environments
+     * @method setupUniversalEventHandlers
+     * @description Set up event handlers for WebSocket events
      */
     private setupUniversalEventHandlers(): void {
-        if (!this.websocket) return;
+        if (!this.websocket) {
+            return;
+        }
+        this.websocket.onopen = () => this.handleOpen();
+        this.websocket.onerror = (event: any) => this.handleErrorEvent(event);
+        this.websocket.onclose = (event: any) => this.handleCloseEvent(event);
+        this.websocket.onmessage = (event: any) => this.handleUniversalMessage(event);
 
-        // Standard WebSocket events
-        this.websocket.onopen = () => {
-            this.handleOpen();
-        };
-
-        this.websocket.onerror = (event: Event) => {
-            this.handleErrorEvent(event);
-        };
-
-        this.websocket.onclose = (event: CloseEvent) => {
-            this.handleCloseEvent(event);
-        };
-
-        // Universal message handler with robust binary data extraction
-        this.websocket.onmessage = (event: MessageEvent) => {
-            this.handleUniversalMessage(event);
-        };
-
-        // Additional Node.js specific handlers for 'ws' library
-        if (this.isNodeEnv && this.websocket) {
-            const ws = this.websocket as any;
-
-            if (typeof ws.on === 'function') {
-                ws.on('error', (error: Error) => {
-                    Log.debug("WebSocket 'error' event (Node.js)", { error: error.message });
-                    this.handleConnectionError(new ClientApiException(
-                        `WebSocket error (Node.js): ${error.message}`,
-                        error
-                    ));
-                });
-            }
+        if (WebSocketFactory.isNodeEnv() && this.websocket instanceof NodeWebSocketWrapper) {
+            this.websocket.attachNodeErrorListener((error: Error) => {
+                this.handleConnectionError(new ClientApiException(`WebSocket error (Node.js): ${error.message}`, error));
+            });
         }
     }
 
     /**
-     * @private
-     * @description Universal message handler that extracts binary data from any environment
-     * @param {MessageEvent} event The message event
+     * @method handleUniversalMessage
+     * @description Handle incoming WebSocket messages
+     * @param {MessageEvent} event Message event
      */
     private handleUniversalMessage(event: MessageEvent): void {
-        using _l = Log.context(this.log);
-
         if (!this.context || !this.localApiMeta) {
-            Log.warn("Received WebSocket message, but context or localApiMeta is not initialized");
             return;
         }
 
         try {
             let binaryData: Uint8Array;
-
-            // Universal binary data extraction that works in all environments
             const data = event.data;
 
-            // Debug logging for data type analysis
-            Log.trace("WebSocket message received", {
-                dataType: typeof data,
-                constructor: data?.constructor?.name,
-                isArrayBuffer: data instanceof ArrayBuffer,
-                isBuffer: typeof Buffer !== 'undefined' && data instanceof Buffer,
-                isBlob: data instanceof Blob,
-                hasByteLength: data && typeof data.byteLength === 'number',
-                hasLength: data && typeof data.length === 'number'
-            });
-
-            // Environment-specific data extraction
-            if (this.isNodeEnv) {
-                // Node.js/Jest environment
+            if (WebSocketFactory.isNodeEnv()) {
                 if (typeof Buffer !== 'undefined' && data instanceof Buffer) {
                     binaryData = new Uint8Array(data);
                 } else if (data instanceof ArrayBuffer) {
                     binaryData = new Uint8Array(data);
                 } else if (data && typeof data === 'object' && data.buffer instanceof ArrayBuffer) {
-                    // Handle TypedArray views
                     binaryData = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
                 } else if (data && typeof data === 'object' && typeof data.byteLength === 'number') {
-                    // Handle ArrayBuffer-like objects
                     binaryData = new Uint8Array(data);
                 } else {
-                    Log.warn("Unsupported binary data format in Node.js", {
-                        constructor: data?.constructor?.name,
-                        type: typeof data
-                    });
-                return;
+                    return;
                 }
             } else {
-                // Browser environment
                 if (data instanceof ArrayBuffer) {
                     binaryData = new Uint8Array(data);
-                } else if (data instanceof Blob) {
+                } else if (typeof Blob !== 'undefined' && data instanceof Blob) {
                     this.convertBlobToArrayBuffer(data);
-                return;
+                    return;
                 } else if (data && typeof data === 'object' && data.buffer instanceof ArrayBuffer) {
                     binaryData = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-            } else {
-                    Log.warn("Unsupported binary data format in Browser", {
-                        constructor: data?.constructor?.name,
-                        type: typeof data
-                });
-                return;
+                } else {
+                    return;
+                }
             }
-            }
-
             this.processBinaryData(binaryData);
-
         } catch (e) {
-            Log.error("Error processing WebSocket message", e as Error, {
-                dataType: typeof event.data,
-                constructor: event.data?.constructor?.name
-            });
+            Log.error("Error processing WebSocket message", e as Error);
         }
     }
 
     /**
-     * @private
-     * @description Converts Blob to ArrayBuffer (browser only)
-     * @param {Blob} blob The blob to convert
+     * @method convertBlobToArrayBuffer
+     * @description Convert Blob to ArrayBuffer for processing
+     * @param {Blob} blob Blob to convert
      */
     private async convertBlobToArrayBuffer(blob: Blob): Promise<void> {
-        using _l = Log.context(this.log);
-
         try {
-            const arrayBuffer = await blob.arrayBuffer();
-            const binaryData = new Uint8Array(arrayBuffer);
-            this.processBinaryData(binaryData);
+            if (typeof blob.arrayBuffer === 'function') {
+                const arrayBuffer = await blob.arrayBuffer();
+                this.processBinaryData(new Uint8Array(arrayBuffer));
+            } else {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    if (reader.result instanceof ArrayBuffer) {
+                        this.processBinaryData(new Uint8Array(reader.result));
+                    }
+                };
+                reader.readAsArrayBuffer(blob);
+            }
         } catch (e) {
             Log.error("Error converting blob to ArrayBuffer", e as Error);
         }
     }
 
     /**
-     * @private
-     * @description Processes binary data with frame parsing
-     * @param {Uint8Array} binaryData The binary data to process
+     * @method processBinaryData
+     * @description Process incoming binary data
+     * @param {Uint8Array} binaryData Binary data to process
      */
     private processBinaryData(binaryData: Uint8Array): void {
-        using _l = Log.context(this.log);
-
         this.connectionStats.totalBytesReceived += binaryData.length;
         this.connectionStats.totalMessagesReceived++;
-
-        Log.trace("Processing binary data", {
-            bytes: binaryData.length,
-            totalBytesReceived: this.connectionStats.totalBytesReceived
-        });
-
-        // Write to receive buffer
         this.receiveBuffer.write(binaryData);
 
-        // Process complete frames
         while (this.receiveBuffer.getSizeForRead() > 0) {
             const originalReadPos = this.receiveBuffer.getReadPos();
-
             try {
-                // Try to read frame length (minimum 4 bytes needed)
                 if (this.receiveBuffer.getSizeForRead() < 4) {
                     this.receiveBuffer.setReadPos(originalReadPos);
                     break;
                 }
-
                 const payloadSize = Number(DeserializerPackNumber.INSTANCE.put(this.receiveBuffer));
-
-                // Check if we have complete frame
                 if (this.receiveBuffer.getSizeForRead() >= payloadSize) {
                     const payload = this.receiveBuffer.readBytes(payloadSize);
-                    Log.trace("Processing complete frame", {
-                        frameSize: payloadSize,
-                        remainingBuffer: this.receiveBuffer.getSizeForRead()
-                    });
-
-                    // Process frame through local API
                     try {
-                    this.localApiMeta.makeLocal_fromBytes_ctxLocal(this.context, payload);
+                        this.localApiMeta!.makeLocal_fromBytes_ctxLocal(this.context!, payload);
                     } catch (processingError) {
-                        Log.error("Error processing frame payload", processingError as Error);
+                        Log.error("Error processing frame", processingError as Error);
                     }
-
                 } else {
-                    // Incomplete frame, wait for more data
                     this.receiveBuffer.setReadPos(originalReadPos);
                     break;
                 }
-
             } catch (e) {
-                Log.error("Error parsing frame from receive buffer", e as Error);
-                // Reset buffer on parsing error
+                Log.error("Error parsing frame", e as Error);
                 this.receiveBuffer.clear();
                 break;
             }
@@ -483,18 +617,14 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
     }
 
     /**
-     * @private
-     * @description Handles WebSocket open event
+     * @method handleOpen
+     * @description Handle WebSocket open event
      */
     private handleOpen(): void {
-        this.log = Log.of({
-            component: 'FastMetaClientWebSocket',
-            connectionUri: this.uri
-        });
+        this.resetConnectionState();
 
-        using _l = Log.context(this.log);
+        this.log = Log.of({ component: 'FastMetaClientWebSocket', connectionUri: this.uri });
         Log.info("WebSocket connection established");
-
         this.reconnectAttempts = 0;
         this.isReconnecting = false;
         this.connectionStats.connected = true;
@@ -502,9 +632,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         this.connectionStats.totalReconnects++;
 
         if (!this.remoteApiMeta || !this.localApiProvider || !this.websocket) {
-            const err = new ClientStartException("Internal state error: API metadata or websocket missing during onOpen");
-            Log.error(err.message, err);
-            this.connectFuture.error(err);
+            this.connectFuture.error(new ClientStartException("Internal state error"));
             this.close();
             return;
         }
@@ -512,191 +640,126 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         try {
             const context = new FastApiContextLocal<LT>((self: FastApiContextLocal<LT>) => {
                 const remoteApi = this.remoteApiMeta!.makeRemote(self);
-                const localApi = this.localApiProvider!(remoteApi);
-                return localApi;
+                return this.localApiProvider!(remoteApi);
             });
 
             this.context = context;
 
-            // Override flush method for WebSocket-specific sending
             this.context.flush = (sendFuture?: AFuture): AFuture => {
                 if (!sendFuture) {
                     sendFuture = AFuture.make();
                 }
-
-                using _l_flush = Log.context(this.log);
-
                 try {
                     if (this.websocket && this.isConnected()) {
                         const dataArray = context.remoteDataToArrayAsArray();
-
                         if (dataArray.length > 0) {
-                            Log.trace("Flushing data to WebSocket", { bytes: dataArray.length });
-
-                            // Create frame with length prefix
                             const frameBuffer = new DataInOut();
                             SerializerPackNumber.INSTANCE.put(frameBuffer, dataArray.length);
                             frameBuffer.write(dataArray);
                             const finalBytesToSend = frameBuffer.toArray();
-
                             this.connectionStats.totalBytesSent += finalBytesToSend.length;
                             this.connectionStats.totalMessagesSent++;
-
                             this.sendWebSocketData(finalBytesToSend, sendFuture);
                         } else {
-                            Log.trace("Flush called, but no data to send");
                             sendFuture.tryDone();
                         }
                     } else {
-                        Log.warn("Flush called, but WebSocket is not open", {
-                            reconnecting: this.isReconnecting,
-                            readyState: this.websocket?.readyState
-                        });
                         sendFuture.error(new Error("WebSocket is not open"));
                     }
                 } catch (e) {
-                    Log.error("Error during WebSocket flush preparation", e as Error);
-                    this.handleConnectionError(e as Error);
                     sendFuture.error(e as Error);
                 }
-
                 return sendFuture;
             };
 
             this.connectFuture.tryDone(this.context);
             this.setConnectionState(ConnectionState.CONNECTED);
-
         } catch (e) {
-            Log.error("Error during connection setup (onOpen)", e as Error);
-            this.connectFuture.error(new ClientStartException(
-                "Failed to setup context onOpen",
-                e as Error
-            ));
+            Log.error("Error during connection setup", e as Error);
+            this.connectFuture.error(new ClientStartException("Failed to setup context", e as Error));
             this.scheduleReconnect();
         }
     }
 
     /**
-     * @private
-     * @description Universal WebSocket data sending that works in all environments
-     * @param {Uint8Array} data The data to send
-     * @param {AFuture} sendFuture The future to complete based on send result
+     * @method sendWebSocketData
+     * @description Send data through WebSocket
+     * @param {Uint8Array} data Data to send
+     * @param {AFuture} sendFuture Future to complete when sent
      */
     private sendWebSocketData(data: Uint8Array, sendFuture: AFuture): void {
         if (!this.websocket) {
             sendFuture.error(new Error("WebSocket not available"));
             return;
         }
-
         try {
-            // Environment-specific send methods
-            if (this.isNodeEnv) {
-                // Node.js 'ws' library with callback support
-                (this.websocket as any).send(data, (sendError: Error) => {
-                    if (sendError) {
-                        Log.error("Error sending data through WebSocket (Node.js)", sendError);
-                        this.handleConnectionError(sendError);
-                        sendFuture.error(sendError);
-                    } else {
-                        Log.trace("Binary frame sent successfully (Node.js)", {
-                            totalBytes: data.length
-                        });
-                        sendFuture.tryDone();
-                    }
-                });
-            } else {
-                // Browser environment (fire-and-forget)
-                this.websocket.send(data);
-                Log.trace("Binary frame sent (Browser)", {
-                    totalBytes: data.length
-                });
-                sendFuture.tryDone();
-            }
+            this.websocket.send(data);
+            sendFuture.tryDone();
         } catch (e) {
-            const error = e as Error;
-            Log.error("Error during WebSocket send operation", error);
-            this.handleConnectionError(error);
-            sendFuture.error(error);
+            sendFuture.error(e as Error);
         }
     }
 
     /**
-     * @private
-     * @description Handles WebSocket error events
-     * @param {Event} event The error event
+     * @method handleErrorEvent
+     * @description Handle WebSocket error event
+     * @param {any} event Error event
      */
-    private handleErrorEvent(event: Event): void {
-        using _l = Log.context(this.log);
-
-        const error = (event as ErrorEvent).error ||
-                     new Error(`WebSocket error event: ${event.type}`);
-
+    private handleErrorEvent(event: any): void {
+        const error = event.error || new Error(`WebSocket error event: ${event.type || 'unknown'}`);
         Log.error("WebSocket error event", error);
-        this.handleConnectionError(new ClientApiException(
-            `WebSocket error: ${error.message}`,
-            error
-        ));
+        this.handleConnectionError(new ClientApiException(`WebSocket error: ${error.message}`, error));
     }
 
     /**
-     * @private
-     * @description Handles WebSocket close events
-     * @param {CloseEvent} event The close event
+     * @method handleCloseEvent
+     * @description Handle WebSocket close event
+     * @param {any} event Close event
      */
-    private handleCloseEvent(event: CloseEvent): void {
-        using _l = Log.context(this.log);
-
-        Log.info("WebSocket connection closed", {
-            code: event.code,
-            reason: event.reason,
-            wasClean: event.wasClean
-        });
-
+    private handleCloseEvent(event: any): void {
+        Log.info("WebSocket connection closed", { code: event.code });
         this.connectionStats.connected = false;
         this.setConnectionState(ConnectionState.DISCONNECTED);
-
         if (!this.connectFuture.isFinalStatus()) {
-            this.connectFuture.error(new ClientApiException(
-                `WebSocket closed unexpectedly (Code: ${event.code}, Reason: ${event.reason})`
-            ));
+            this.connectFuture.error(new ClientApiException("WebSocket closed unexpectedly"));
         }
-
-        // Cleanup resources
         this.context?.close();
         this.context = null;
         this.websocket = null;
-
         if (this.closeFuture) {
             this.closeFuture.tryDone();
             this.closeFuture = null;
         }
-
-        // Attempt reconnect if not manually closed
         if (!this.isManualClose && !this.isReconnecting) {
             this.scheduleReconnect();
         }
     }
 
     /**
-     * @private
-     * @description Handles connection errors and initiates reconnection
-     * @param {Error} error The connection error
+     * @method handleConnectionError
+     * @description Handle connection error
+     * @param {Error} error Error that occurred
      */
     private handleConnectionError(error: Error): void {
-        using _l = Log.context(this.log);
         Log.error("Connection error", error);
+
+        if (this.isReconnecting) {
+            Log.debug("Already reconnecting, skipping duplicate reconnect");
+            return;
+        }
 
         if (!this.connectFuture.isFinalStatus()) {
             this.connectFuture.error(error);
         }
-
         if (this.closeFuture && !this.closeFuture.isFinalStatus()) {
             this.closeFuture.tryError(error);
             this.closeFuture = null;
         }
-
         this.connectionStats.connected = false;
         this.setConnectionState(ConnectionState.DISCONNECTED);
+
+        this.context?.close();
+        this.context = null;
 
         if (!this.isManualClose) {
             this.scheduleReconnect();
@@ -704,55 +767,106 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
     }
 
     /**
-     * @private
-     * @description Checks if WebSocket is connected
+     * @method isConnected
+     * @description Check if WebSocket is connected
      * @returns {boolean} True if connected
      */
     private isConnected(): boolean {
-        return this.websocket !== null && this.websocket.readyState === WebSocket.OPEN;
+        return this.websocket !== null && this.websocket.readyState === 1;
     }
 
     /**
-     * @private
-     * @description Schedules auto-reconnect with exponential backoff
+     * @method resetConnectionState
+     * @description Reset connection state for reconnection
+     */
+    private resetConnectionState(): void {
+        this.receiveBuffer.clear();
+        this.context?.close();
+        this.context = null;
+        if (this.reconnectTimeout) {
+            clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
+        this.isReconnecting = false;
+        Log.info("Connection state reset for reconnection");
+    }
+
+    /**
+     * @method scheduleReconnect
+     * @description Schedule reconnection attempt
      */
     private scheduleReconnect(): void {
-        using _l = Log.context(this.log);
-
-        if (this.isManualClose || this.reconnectAttempts >= this.reconnectConfig.maxAttempts) {
-            if (!this.isManualClose) {
-                Log.info("Auto-reconnect stopped: max attempts reached", {
-                    maxAttemptsReached: this.reconnectAttempts >= this.reconnectConfig.maxAttempts,
-                    totalAttempts: this.reconnectAttempts
-                });
-            }
+        if (this.isManualClose) {
+            Log.debug("Manual close, skipping reconnect");
             this.setConnectionState(ConnectionState.DISCONNECTED);
+            return;
+        }
+
+        if (this.reconnectAttempts >= this.reconnectConfig.maxAttempts) {
+            Log.warn("Max reconnection attempts reached", {
+                attempts: this.reconnectAttempts,
+                max: this.reconnectConfig.maxAttempts
+            });
+            this.setConnectionState(ConnectionState.DISCONNECTED);
+            return;
+        }
+
+        if (this.reconnectTimeout) {
+            Log.debug("Reconnection already scheduled");
             return;
         }
 
         this.reconnectAttempts++;
         this.isReconnecting = true;
-        const delay = this.calculateReconnectDelay();
-
-        Log.info("Scheduling auto-reconnect", {
-            attempt: this.reconnectAttempts,
-            maxAttempts: this.reconnectConfig.maxAttempts,
-            delayMs: delay
-        });
-
         this.setConnectionState(ConnectionState.RECONNECTING);
 
+        const delay = this.calculateReconnectDelay();
+        Log.info("Scheduling reconnect", {
+            attempt: this.reconnectAttempts,
+            delayMs: delay,
+            uri: this.uri
+        });
+
         this.reconnectTimeout = setTimeout(() => {
-            if (this.isManualClose) return;
-            Log.info("Attempting auto-reconnect", { attempt: this.reconnectAttempts });
-            this.connectFuture = ARFuture.of<FastApiContextLocal<LT>>();
+            this.reconnectTimeout = null;
+            if (this.isManualClose) {
+                Log.debug("Manual close during reconnect, aborting");
+                return;
+            }
+
+            Log.info("Attempting auto-reconnect", {
+                attempt: this.reconnectAttempts,
+                uri: this.uri
+            });
+
+            if (this.connectFuture.isFinalStatus()) {
+                this.connectFuture = ARFuture.of<FastApiContextLocal<LT>>();
+            }
+
+            if (this.websocket) {
+                try {
+                    this.websocket.onopen = null;
+                    this.websocket.onerror = null;
+                    this.websocket.onclose = null;
+                    this.websocket.onmessage = null;
+                    this.websocket.close(1000, "Reconnecting");
+                } catch (e) {
+                }
+                this.websocket = null;
+            }
+
+            // [Fix] Reset isReconnecting BEFORE calling createWebSocketConnection.
+            // If creation fails immediately (e.g. invalid URL or server down synchronous error),
+            // we want handleConnectionError to know that this is a NEW failure, not part of the waiting process.
+            this.isReconnecting = false;
+
             this.createWebSocketConnection();
         }, delay);
     }
 
     /**
-     * @private
-     * @description Calculates reconnect delay using exponential backoff
+     * @method calculateReconnectDelay
+     * @description Calculate reconnection delay with exponential backoff
      * @returns {number} Delay in milliseconds
      */
     private calculateReconnectDelay(): number {
@@ -762,38 +876,42 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
     }
 
     /**
-     * @private
-     * @description Sets connection state and notifies listeners
-     * @param {ConnectionState} state The new state
+     * @method setConnectionState
+     * @description Set connection state and notify listeners
+     * @param {ConnectionState} state New connection state
      */
     private setConnectionState(state: ConnectionState): void {
         if (this.connectionState !== state) {
             this.connectionState = state;
-            Log.debug("Connection state changed", { state: state });
-
-            // Notify state change callbacks with error protection
-            this.stateChangeCallbacks.forEach(callback => {
-                try {
-                    callback(state);
-                } catch (e) {
-                    Log.error("Error in connection state callback", e as Error);
-                }
-            });
+            this.stateChangeCallbacks.forEach(cb => cb(state));
         }
     }
 
+    /**
+     * @method onStateChange
+     * @description Register connection state change callback
+     * @param {(state: ConnectionState) => void} callback State change callback
+     */
     public onStateChange(callback: (state: ConnectionState) => void): void {
         this.stateChangeCallbacks.push(callback);
     }
 
+    /**
+     * @method getConnectionState
+     * @description Get current connection state
+     * @returns {ConnectionState} Current connection state
+     */
     public getConnectionState(): ConnectionState {
         return this.connectionState;
     }
 
+    /**
+     * @method close
+     * @description Close connection gracefully
+     * @returns {AFuture} Future indicating close completion
+     */
     public close(): AFuture {
-        using _l = Log.context(this.log);
-        Log.info("Closing FastMetaClientWebSocket");
-
+        Log.info("Closing FastMetaClientWebSocket", { uri: this.uri });
         if (this.closeFuture) {
             return this.closeFuture;
         }
@@ -802,102 +920,118 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         this.isManualClose = true;
         this.isReconnecting = false;
 
-        // Clear any pending reconnect
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = null;
         }
 
-        // Cancel connection future if still pending
         if (!this.connectFuture.isFinalStatus()) {
             this.connectFuture.cancel();
         }
 
-        // Cleanup context
         this.context?.close();
         this.context = null;
 
-        // Close WebSocket if available
         if (this.websocket) {
             try {
-                if (this.websocket.readyState === WebSocket.OPEN ||
-                    this.websocket.readyState === WebSocket.CONNECTING) {
-                    Log.debug("Initiating WebSocket close (code 1000)");
-                    this.websocket.close(1000, "Client initiated close");
-                } else {
-                    Log.debug("WebSocket already closing or closed", {
-                        state: this.websocket.readyState
-                    });
+                this.websocket.onopen = null;
+                this.websocket.onerror = null;
+                this.websocket.onmessage = null;
+                this.websocket.onclose = (event: any) => {
+                    Log.debug("WebSocket closed during client close");
+                    this.websocket = null;
+                    if (this.closeFuture && !this.closeFuture.isFinalStatus()) {
+                        this.closeFuture.tryDone();
+                    }
+                };
+                this.websocket.close(1000, "Client initiated close");
+            } catch (e) {
+                Log.error("Error closing WebSocket", e as Error);
+                this.websocket = null;
+                if (this.closeFuture) {
                     this.closeFuture.tryDone();
                 }
-            } catch (e) {
-                Log.warn("Error during WebSocket close", e as Error);
-                this.closeFuture.tryError(e as Error);
             }
         } else {
-            Log.debug("Close called but no WebSocket instance exists");
-            this.closeFuture.tryDone();
+            if (this.closeFuture && !this.closeFuture.isFinalStatus()) {
+                this.closeFuture.tryDone();
+            }
         }
 
         this.connectionStats.connected = false;
         this.reconnectAttempts = 0;
+        this.setConnectionState(ConnectionState.DISCONNECTED);
 
         return this.closeFuture;
     }
 
+    /**
+     * @method getConnectionStats
+     * @description Get connection statistics
+     * @returns {any} Connection statistics
+     */
     public getConnectionStats(): any {
-        return {
-            ...this.connectionStats,
-            reconnectAttempts: this.reconnectAttempts,
-            isReconnecting: this.isReconnecting,
-            isManualClose: this.isManualClose,
-            connectionState: this.connectionState,
-            environment: this.isNodeEnv ? 'Node.js' : 'Browser'
-        };
+        return { ...this.connectionStats };
     }
 
+    /**
+     * @method getContext
+     * @description Get connection context
+     * @returns {FastApiContextLocal<LT> | null} Connection context or null
+     */
     public getContext(): FastApiContextLocal<LT> | null {
         return this.context;
     }
 
+    /**
+     * @method getLocalApi
+     * @description Get local API instance
+     * @returns {LT} Local API instance
+     */
     public getLocalApi(): LT {
-        if (!this.context) throw new Error("Cannot getLocalApi: context is not initialized");
-        return this.context.localApi;
+        return this.context!.localApi;
     }
 
+    /**
+     * @method getRemoteApi
+     * @description Get remote API instance
+     * @returns {RT} Remote API instance
+     */
     public getRemoteApi(): RT {
-        if (!this.context) throw new Error("Cannot getRemoteApi: context is not initialized");
-        const remote = this.remoteApiMeta?.makeRemote(this.context);
-        if (!remote) throw new Error("Cannot getRemoteApi: failed to create remote from context");
-        return remote;
+        return this.remoteApiMeta!.makeRemote(this.context!);
     }
 
+    /**
+     * @method destroy
+     * @description Destroy connection
+     * @param {boolean} force Force destruction
+     * @returns {AFuture} Future indicating destruction completion
+     */
     public destroy(force: boolean): AFuture {
         return this.close();
     }
-
-    [Symbol.dispose](): void {
-        this.destroy(true);
-    }
 }
-
-// =============================================================================================
-// SECTION 3: FastMetaClientAdapter
-// =============================================================================================
 
 /**
  * @class FastMetaClientAdapter
+ * @description Adapter for FastMeta client
  * @implements {FastMetaClient<LT, RT>}
- * @description Adapter that implements FastMetaClient interface
- * @internal
  */
 class FastMetaClientAdapter<LT, RT extends RemoteApi> implements FastMetaClient<LT, RT> {
-    private readonly wsClient: FastMetaClientWebSocket<LT, RT>;
-    private readonly writableConsumer: AConsumer<boolean>;
-    private context: FastApiContextLocal<LT> | null = null;
-    private readonly log: LNode;
-    private readonly contextFuture: ARFuture<FastApiContextLocal<LT>>;
+    public wsClient: FastMetaClientWebSocket<LT, RT>;
+    public writableConsumer: AConsumer<boolean>;
+    public context: FastApiContextLocal<LT> | null = null;
+    public log: LNode;
+    public contextFuture: ARFuture<FastApiContextLocal<LT>>;
 
+    /**
+     * @constructor
+     * @param {URI} uri Connection URI
+     * @param {FastMetaApi<LT, any>} lt Local API metadata
+     * @param {FastMetaApi<any, RT>} rt Remote API metadata
+     * @param {AFunction<RT, LT>} localApiProvider Local API provider function
+     * @param {AConsumer<boolean>} writableConsumer Write status consumer
+     */
     constructor(
         uri: URI,
         lt: FastMetaApi<LT, any>,
@@ -908,113 +1042,57 @@ class FastMetaClientAdapter<LT, RT extends RemoteApi> implements FastMetaClient<
         this.writableConsumer = writableConsumer;
         this.log = Log.of({ component: "FastMetaClientAdapter", uri: uri });
 
+        Log.info("FastMetaClientAdapter init");
+
         this.wsClient = new FastMetaClientWebSocket<LT, RT>();
 
-        // Forward connection state changes to writable consumer
         this.wsClient.onStateChange((state) => {
-            try {
-                this.writableConsumer(state === ConnectionState.CONNECTED);
-            } catch (e) {
-                Log.error("Error in writableConsumer callback", e as Error);
-            }
+            this.writableConsumer(state === ConnectionState.CONNECTED);
         });
 
+        Log.info("Calling wsClient.connect");
         this.contextFuture = this.wsClient.connect(uri, lt, rt, localApiProvider);
 
         this.contextFuture.to((ctx: FastApiContextLocal<LT>) => {
             this.context = ctx;
         }).onError((error) => {
             Log.error("Failed to establish connection context", error);
-            this.context = null;
         });
     }
 
     public flush(sendFuture: AFuture): void {
-        if (this.context) {
-            this.context.flush(sendFuture);
-        } else {
-            Log.warn("Flush called, but client context is not available", {
-                uri: this.wsClient.getConnectionStats().connectionUri
-            });
-            sendFuture.error(new Error("Cannot flush: client context not available"));
-        }
+        this.context?.flush(sendFuture);
     }
 
     public close(): AFuture {
-        this.context = null;
         return this.wsClient.close();
     }
 
     public destroy(force: boolean): AFuture {
-        this.context = null;
         return this.wsClient.destroy(force);
     }
 
-    [Symbol.dispose](): void {
-        this.destroy(true);
-    }
-
     public getLocalApi(): LT {
-        const ctx = this.context;
-        if (!ctx) {
-            throw new Error("Cannot getLocalApi: context is not initialized or connection failed");
-        }
-        return ctx.localApi;
+        return this.context!.localApi;
     }
 
     public getRemoteApi(): RT {
-        const ctx = this.context;
-        if (!ctx) {
-            throw new Error("Cannot getRemoteApi: context is not initialized or connection failed");
-        }
         return this.wsClient.getRemoteApi();
     }
 
     public getMetaContext(): FastFutureContext {
-        const ctx = this.context;
-        if (!ctx) {
-            throw new Error("Cannot getMetaContext: context is not initialized or connection failed");
-        }
-        return ctx;
+        return this.context!;
     }
 
     public isWritable(): boolean {
         return this.wsClient.getConnectionState() === ConnectionState.CONNECTED;
     }
 
-    public read(): void {
-        // No-op for WebSocket
-    }
+    public read(): void {}
 
-    public stopRead(): void {
-        // No-op for WebSocket
-    }
+    public stopRead(): void {}
 
     public write(data: Uint8Array): AFuture {
-        const ctx = this.context;
-        if (!ctx) {
-            const err = new Error("Cannot write: context is not initialized");
-            Log.warn(err.message);
-            return AFuture.ofThrow(err);
-        }
-
-        // Create frame with length prefix
-        const frameBuffer = new DataInOut();
-        SerializerPackNumber.INSTANCE.put(frameBuffer, data.length);
-        frameBuffer.write(data);
-        const finalBytesToSend = frameBuffer.toArray();
-
-        // Use WebSocket directly for low-level write
-        const ws = (this.wsClient as any).websocket;
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            try {
-                ws.send(finalBytesToSend);
-                return AFuture.completed();
-            } catch (e) {
-                return AFuture.ofThrow(e as Error);
-            }
-        } else {
-            return AFuture.ofThrow(new Error("WebSocket is not open for writing"));
-        }
+        return this.wsClient.write(data);
     }
 }

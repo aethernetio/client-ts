@@ -5,7 +5,7 @@
  */
 
 import {
-    Disposable, ARunnable, ASupplier, AConsumer, ABiConsumer, AFunction,
+    Destroyable,ARunnable, ASupplier, AConsumer, ABiConsumer, AFunction,
     Executor, Tuple2,
     WeakConsumer_T, /** <-- IMPORTED */
 } from './aether_types';
@@ -331,7 +331,7 @@ class AMFutureBase<T> {
         if (typeof msOrSeconds === 'number' && typeof timeoutTask === 'function') {
             const ms = msOrSeconds > 1000000 ? msOrSeconds : msOrSeconds * 1000;
             const task = taskOrT2 as AConsumer<T>;
-            let timerDisposer: Disposable | null = null;
+            let timerDisposer: Destroyable | null = null;
             let executed = false;
             const wrappedTask = Log.wrap(task);
             (wrappedTask as any)['_onceFlag'] = true;
@@ -348,7 +348,7 @@ class AMFutureBase<T> {
             this.eventConsumer.add(wrappedTask);
             if (this.value !== null && this.value !== undefined && !executed) {
                 executed = true;
-                timerDisposer?.[Symbol.dispose]();
+                timerDisposer?.destroy(false);
                 try { wrappedTask(this.value); } /** fire() will handle removal */
                 catch (e) { Log.error(e as Error); removeListener(); }
             }
@@ -626,7 +626,7 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
             }
         });
         /** Clean up the timer if the future completes first */
-        this.addListener(_ => timerDisposer[Symbol.dispose]());
+        this.addListener(_ => timerDisposer.destroy(true));
         return this as unknown as Self;
     }
 
@@ -644,7 +644,7 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
             }
         });
         /** Clean up the timer if the future completes first */
-        this.addListener(_ => timerDisposer[Symbol.dispose]());
+        this.addListener(_ => timerDisposer.destroy(true));
         return this as unknown as Self;
     }
 
@@ -655,9 +655,9 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
      */
     public toPromise(timeoutMs?: number): Promise<any> { /** 'any' because AFuture has no value */
         return new Promise((resolve, reject) => {
-            let timerDisposer: Disposable | undefined;
+            let timerDisposer: Destroyable | undefined;
             let timedOut = false;
-            const cleanUp = () => { if (timerDisposer) { timerDisposer[Symbol.dispose](); timerDisposer = undefined; } };
+            const cleanUp = () => { if (timerDisposer) { timerDisposer.destroy(true); timerDisposer = undefined; } };
 
             if (timeoutMs !== undefined && timeoutMs > 0) {
                 timerDisposer = RU.schedule(timeoutMs, () => {
@@ -699,10 +699,6 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
         return AFuture.of(); /** Returns a *new* completed future */
     }
 
-    /**
-     * Implements the Disposable interface.
-     */
-    [Symbol.dispose](): void { this.destroy(true); }
 }
 
 /**
@@ -1225,7 +1221,7 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
                 try { onTimeout(); } catch (e) { Log.error("Error in .to() timeout task", e as Error); }
             });
             this.addListener(f => {
-                timerDisposer[Symbol.dispose](); /** Clean up timer */
+                timerDisposer.destroy(true); /** Clean up timer */
                 if (!timedOut && f.isDone()) {
                     task(f.getNow()!);
                 }
@@ -1284,9 +1280,9 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
      */
     public override toPromise(timeoutMs?: number): Promise<T> {
         return new Promise((resolve, reject) => {
-            let timerDisposer: Disposable | undefined;
+            let timerDisposer: Destroyable | undefined;
             let timedOut = false;
-            const cleanUp = () => { if (timerDisposer) { timerDisposer[Symbol.dispose](); timerDisposer = undefined; } };
+            const cleanUp = () => { if (timerDisposer) { timerDisposer.destroy(true); timerDisposer = undefined; } };
 
             if (timeoutMs !== undefined && timeoutMs > 0) {
                 timerDisposer = RU.schedule(timeoutMs, () => {

@@ -24,22 +24,34 @@ import { AtomicLong, AtomicReference, ClientApiException, ClientStartException, 
 import { AFuture } from './aether_future';
 import { Log } from './aether_logging';
 import { FastApiContext, RemoteApiFuture } from './aether_fastmeta';
+import { ConnectionState } from './aether_fastmeta_net';
 import { CryptoEngine } from './aether_crypto';
 import { RU } from './aether_utils';
 import { MessageNode } from './aether_client_message';
 
 /**
- * Local implementation of the `ClientApiSafe` interface, handling messages received from the server.
+ * @class MyClientApiSafe
+ * @description Local implementation of the ClientApiSafe interface
  */
 class MyClientApiSafe implements ClientApiSafe {
     private readonly client: AetherCloudClient;
 
+    /**
+     * @constructor
+     * @param {AetherCloudClient} client Client instance
+     */
     constructor(client: AetherCloudClient) {
         this.client = client;
     }
 
+    /**
+     * @method sendAccessGroups
+     * @description Handle incoming access groups
+     * @param {AccessGroup[]} groups Access groups
+     * @returns {AFuture} Completion future
+     */
     sendAccessGroups(groups: AccessGroup[]): AFuture {
-        Log.debug("Received $gLen AccessGroups", { component: "MyClientApiSafe", gLen: groups.length });
+        Log.debug("Received AccessGroups", { component: "MyClientApiSafe", gLen: groups.length });
         for (const group of groups) {
             if (group) {
                 this.client.accessGroups.putResolved(group.getId(), group);
@@ -48,14 +60,28 @@ class MyClientApiSafe implements ClientApiSafe {
         return AFuture.of();
     }
 
+    /**
+     * @method sendAccessGroupForClient
+     * @description Handle access groups for specific client
+     * @param {UUID} uid Client UUID
+     * @param {bigint[]} groups Group IDs
+     * @returns {AFuture} Completion future
+     */
     sendAccessGroupForClient(uid: UUID, groups: bigint[]): AFuture {
-        Log.debug("Received AccessGroups for client $uid", { component: "MyClientApiSafe", uid: uid });
+        Log.debug("Received AccessGroups for client", { component: "MyClientApiSafe", uid: uid });
         this.client.clientGroups.putResolved(uid, new Set(groups));
         return AFuture.of();
     }
 
+    /**
+     * @method addItemsToAccessGroup
+     * @description Handle addition to access group
+     * @param {bigint} id Group ID
+     * @param {UUID[]} groups UUIDs to add
+     * @returns {AFuture} Completion future
+     */
     addItemsToAccessGroup(id: bigint, groups: UUID[]): AFuture {
-        Log.debug("Server confirmed ADD items to group $gid, count: $count", { component: "MyClientApiSafe", gid: id, count: groups.length });
+        Log.debug("Server confirmed ADD items to group", { component: "MyClientApiSafe", gid: id, count: groups.length });
         const futures = this.client.accessOperationsAdd.get(id);
         if (futures) {
             for (const uid of groups) {
@@ -82,8 +108,15 @@ class MyClientApiSafe implements ClientApiSafe {
         return AFuture.of();
     }
 
+    /**
+     * @method removeItemsFromAccessGroup
+     * @description Handle removal from access group
+     * @param {bigint} id Group ID
+     * @param {UUID[]} groups UUIDs to remove
+     * @returns {AFuture} Completion future
+     */
     removeItemsFromAccessGroup(id: bigint, groups: UUID[]): AFuture {
-        Log.debug("Server confirmed REMOVE items from group $gid, count: $count", { component: "MyClientApiSafe", gid: id, count: groups.length });
+        Log.debug("Server confirmed REMOVE items from group", { component: "MyClientApiSafe", gid: id, count: groups.length });
         const futures = this.client.accessOperationsRemove.get(id);
         if (futures) {
             for (const uid of groups) {
@@ -110,36 +143,67 @@ class MyClientApiSafe implements ClientApiSafe {
         return AFuture.of();
     }
 
+    /**
+     * @method addAccessGroupsToClient
+     * @description Handle addition of access groups to client
+     * @param {UUID} uid Client UUID
+     * @param {bigint[]} groups Group IDs to add
+     * @returns {AFuture} Completion future
+     */
     addAccessGroupsToClient(uid: UUID, groups: bigint[]): AFuture {
-        Log.debug("Server pushed ADD groups to client $uid", { component: "MyClientApiSafe", uid: uid });
+        Log.debug("Server pushed ADD groups to client", { component: "MyClientApiSafe", uid: uid });
         this.client.clientGroups.getFuture(uid).to((existingGroups: Set<bigint> | null) => {
             const newGroups = existingGroups ? new Set(existingGroups) : new Set<bigint>();
-            for (const g of groups) newGroups.add(g);
+            for (const g of groups) {
+                newGroups.add(g);
+            }
             this.client.clientGroups.putResolved(uid, newGroups);
         });
         return AFuture.of();
     }
 
+    /**
+     * @method removeAccessGroupsFromClient
+     * @description Handle removal of access groups from client
+     * @param {UUID} uid Client UUID
+     * @param {bigint[]} groups Group IDs to remove
+     * @returns {AFuture} Completion future
+     */
     removeAccessGroupsFromClient(uid: UUID, groups: bigint[]): AFuture {
-        Log.debug("Server pushed REMOVE groups from client $uid", { component: "MyClientApiSafe", uid: uid });
+        Log.debug("Server pushed REMOVE groups from client", { component: "MyClientApiSafe", uid: uid });
         this.client.clientGroups.getFuture(uid).to((existingGroups: Set<bigint> | null) => {
             if (existingGroups) {
                 const newGroups = new Set(existingGroups);
-                for (const g of groups) newGroups.delete(g);
+                for (const g of groups) {
+                    newGroups.delete(g);
+                }
                 this.client.clientGroups.putResolved(uid, newGroups);
             }
         });
         return AFuture.of();
     }
 
+    /**
+     * @method sendAllAccessedClients
+     * @description Handle all accessed clients
+     * @param {UUID} uid Client UUID
+     * @param {UUID[]} accessedClients Accessed client UUIDs
+     * @returns {AFuture} Completion future
+     */
     sendAllAccessedClients(uid: UUID, accessedClients: UUID[]): AFuture {
-        Log.debug("Received $count AccessedClients for $uid", { component: "MyClientApiSafe", count: accessedClients.length, uid: uid });
+        Log.debug("Received AccessedClients", { component: "MyClientApiSafe", count: accessedClients.length, uid: uid });
         this.client.allAccessedClients.putResolved(uid, new Set(accessedClients));
         return AFuture.of();
     }
 
+    /**
+     * @method sendAccessCheckResults
+     * @description Handle access check results
+     * @param {AccessCheckResult[]} results Access check results
+     * @returns {AFuture} Completion future
+     */
     sendAccessCheckResults(results: AccessCheckResult[]): AFuture {
-        Log.debug("Received $count AccessCheckResults", { component: "MyClientApiSafe", count: results.length });
+        Log.debug("Received AccessCheckResults", { component: "MyClientApiSafe", count: results.length });
         for (const result of results) {
             if (result) {
                 this.client.accessCheckCache.putResolved(
@@ -151,27 +215,51 @@ class MyClientApiSafe implements ClientApiSafe {
         return AFuture.of();
     }
 
+    /**
+     * @method changeParent
+     * @description Handle parent change (not implemented)
+     * @param {UUID} _uid Parent UUID
+     * @returns {AFuture} Completion future
+     */
     changeParent(_uid: UUID): AFuture {
         Log.warn("MyClientApiSafe.changeParent not implemented");
         return AFuture.of();
     }
 
+    /**
+     * @method changeAlias
+     * @description Handle alias change (not implemented)
+     * @param {UUID} _alias Alias UUID
+     * @returns {AFuture} Completion future
+     */
     changeAlias(_alias: UUID): AFuture {
         Log.warn("MyClientApiSafe.changeAlias not implemented");
         return AFuture.of();
     }
 
+    /**
+     * @method newChild
+     * @description Handle new child notification
+     * @param {UUID} uid Child UUID
+     * @returns {AFuture} Completion future
+     */
     newChild(uid: UUID): AFuture {
-        Log.trace("newChild received for $uid", { component: "MyClientApiSafe", uid: uid });
+        Log.trace("newChild received", { component: "MyClientApiSafe", uid: uid });
         this.client.onNewChild.fire(uid);
         return AFuture.of();
     }
 
+    /**
+     * @method sendMessages
+     * @description Handle incoming messages
+     * @param {Message[]} msg Messages
+     * @returns {AFuture} Completion future
+     */
     sendMessages(msg: Message[]): AFuture {
-        Log.trace("receive $count messages", { component: "MyClientApiSafe", count: msg.length });
+        Log.trace("receive messages", { component: "MyClientApiSafe", count: msg.length });
         for (const m of msg) {
             const senderUid = m.getUid();
-            Log.trace("receive message from $sourceUid to $targetUid ($dataLen bytes)", {
+            Log.trace("receive message", {
                 targetUid: this.client.getUid(),
                 sourceUid: senderUid,
                 dataLen: m.getData().length
@@ -185,30 +273,60 @@ class MyClientApiSafe implements ClientApiSafe {
         return AFuture.of();
     }
 
+    /**
+     * @method sendServerDescriptor
+     * @description Handle server descriptor
+     * @param {ServerDescriptor} v Server descriptor
+     * @returns {AFuture} Completion future
+     */
     sendServerDescriptor(v: ServerDescriptor): AFuture {
-        Log.trace("sendServerDescriptor received for $serverId", { component: "MyClientApiSafe", serverId: v.id });
+        Log.trace("sendServerDescriptor received", { component: "MyClientApiSafe", serverId: v.id });
         this.client.servers.putResolved(v.id, v);
         return AFuture.of();
     }
 
+    /**
+     * @method sendServerDescriptors
+     * @description Handle multiple server descriptors
+     * @param {ServerDescriptor[]} serverDescriptors Server descriptors
+     * @returns {AFuture} Completion future
+     */
     sendServerDescriptors(serverDescriptors: ServerDescriptor[]): AFuture {
-        Log.trace("sendServerDescriptors received $count", { component: "MyClientApiSafe", count: serverDescriptors.length });
+        Log.trace("sendServerDescriptors received", { component: "MyClientApiSafe", count: serverDescriptors.length });
         serverDescriptors.forEach(c => this.sendServerDescriptor(c));
         return AFuture.of();
     }
 
+    /**
+     * @method sendCloud
+     * @description Handle cloud data
+     * @param {UUID} uid Client UUID
+     * @param {Cloud} cloud Cloud data
+     * @returns {AFuture} Completion future
+     */
     sendCloud(uid: UUID, cloud: Cloud): AFuture {
-        Log.trace("sendCloud received for $uid", { component: "MyClientApiSafe", uid: uid });
+        Log.trace("sendCloud received", { component: "MyClientApiSafe", uid: uid });
         this.client.setCloud(uid, cloud);
         return AFuture.of();
     }
 
+    /**
+     * @method sendClouds
+     * @description Handle multiple cloud data
+     * @param {UUIDAndCloud[]} clouds Cloud data array
+     * @returns {AFuture} Completion future
+     */
     sendClouds(clouds: UUIDAndCloud[]): AFuture {
-        Log.trace("sendClouds received $count", { component: "MyClientApiSafe", count: clouds.length });
+        Log.trace("sendClouds received", { component: "MyClientApiSafe", count: clouds.length });
         clouds.forEach(c => this.sendCloud(c.getUid(), c.getCloud()));
         return AFuture.of();
     }
 
+    /**
+     * @method requestTelemetry
+     * @description Handle telemetry request (not implemented)
+     * @returns {AFuture} Completion future
+     */
     requestTelemetry(): AFuture {
         Log.warn("MyClientApiSafe.requestTelemetry not implemented");
         return AFuture.of();
@@ -216,7 +334,10 @@ class MyClientApiSafe implements ClientApiSafe {
 }
 
 /**
- * Represents a working connection to an Aether server after successful login/authentication.
+ * @class ConnectionWork
+ * @description Represents a working connection to an Aether server after successful login/authentication
+ * @extends {Connection<ClientApiUnsafe, LoginApiRemote>}
+ * @implements {ClientApiUnsafe}
  */
 export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> implements ClientApiUnsafe {
     public readonly lastBackPing = new AtomicLong(Number.MAX_SAFE_INTEGER);
@@ -231,6 +352,15 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
     lastWorkTime: number = 0;
     firstAuth: boolean = false;
 
+    // [Fix] Store error timestamp locally to avoid modifying AFuture
+    private _errorTimestamp: number = 0;
+
+    /**
+     * @private
+     * @method hasPendingMessages
+     * @description Check if there are pending messages
+     * @returns {boolean} True if pending messages exist
+     */
     private hasPendingMessages(): boolean {
         for (const m of this.client.messageNodeMap.values()) {
             if (m.connectionsOut.has(this) && !m.bufferOut.isEmpty()) {
@@ -240,6 +370,11 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         return false;
     }
 
+    /**
+     * @constructor
+     * @param {AetherCloudClient} client Client instance
+     * @param {ServerDescriptor} s Server descriptor
+     */
     constructor(client: AetherCloudClient, s: ServerDescriptor) {
         const uri = getUriFromServerDescriptor(s, AetherCodec.WS);
         if (!uri) {
@@ -254,14 +389,16 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
             try {
                 this.flushBackgroundRequests(a, f);
             } catch (e) {
-                Log.error("Error in permanent remoteApiFutureAuth task (flushBackgroundRequests)", e as Error);
+                Log.error("Error in permanent remoteApiFutureAuth task", e as Error);
             }
         });
 
         this.apiSafeCtx = new FastApiContext();
 
         this.apiSafeCtx.flush = (sendFuture?: AFuture): AFuture => {
-            if (!sendFuture) sendFuture = AFuture.make();
+            if (!sendFuture) {
+                sendFuture = AFuture.make();
+            }
             const hasBMapRequests = this.client.clouds.isRequestsFor(this as unknown as object) ||
                 this.client.servers.isRequestsFor(this as unknown as object) ||
                 this.client.clientGroups.isRequestsFor(this as unknown as object) ||
@@ -303,11 +440,13 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
             const dataToSend = this.apiSafeCtx.remoteDataToArrayAsArray();
 
             if (dataToSend.length === 0) {
-                if (!sendFuture.isFinalStatus()) sendFuture.tryDone();
+                if (!sendFuture.isFinalStatus()) {
+                    sendFuture.tryDone();
+                }
                 return sendFuture;
             }
 
-            Log.trace("apiSafeCtx.flush: Encrypting $len bytes for LoginStream", { len: dataToSend.length });
+            Log.trace("apiSafeCtx.flush: Encrypting bytes for LoginStream", { len: dataToSend.length });
             const loginStream = LoginStream.fromRemoteBytes(
                 this.cryptoEngine.encrypt.bind(this.cryptoEngine),
                 dataToSend
@@ -330,13 +469,30 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
 
         this.connectFuture.to(
             () => { }
-        ).onError((err: Error) => { this.ready.error(err); }).onCancel(() => { this.ready.cancel(); });
+        ).onError((err: Error) => {
+            // [Fix] Capture the error time
+            this._errorTimestamp = RU.time();
+            this.ready.error(err);
+        }).onCancel(() => {
+            this.ready.cancel();
+        });
     }
 
+    // [Fix] Getter for the error timestamp
+    public getErrorTimestamp(): number {
+        return this._errorTimestamp;
+    }
+
+    /**
+     * @private
+     * @method flushCloudRequests
+     * @description Flush cloud requests
+     * @param {AuthorizedApiRemote} a Authorized API
+     */
     private flushCloudRequests(a: AuthorizedApiRemote): void {
         const requestCloud = this.client.clouds.getRequestsFor(this as unknown as object);
         if (requestCloud.length > 0) {
-            Log.trace("Flushing $count cloud requests for $uids", {
+            Log.trace("Flushing cloud requests", {
                 component: "ConnectionWork",
                 server: this.uri,
                 count: requestCloud.length,
@@ -346,11 +502,17 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         }
     }
 
+    /**
+     * @private
+     * @method flushServerRequests
+     * @description Flush server requests
+     * @param {AuthorizedApiRemote} a Authorized API
+     */
     private flushServerRequests(a: AuthorizedApiRemote): void {
         const requestServersObjects = this.client.servers.getRequestsFor(this as unknown as object);
         if (requestServersObjects.length > 0) {
             const serverIds = requestServersObjects.map(id => Number(id));
-            Log.trace("Flushing $count server requests for $sids", {
+            Log.trace("Flushing server requests", {
                 component: "ConnectionWork",
                 server: this.uri,
                 count: serverIds.length,
@@ -360,6 +522,14 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         }
     }
 
+    /**
+     * @private
+     * @method flushMessageQueue
+     * @description Flush message queue
+     * @param {AuthorizedApiRemote} a Authorized API
+     * @param {AFuture} sendFuture Send future
+     * @returns {boolean} True if messages were sent
+     */
     private flushMessageQueue(a: AuthorizedApiRemote, sendFuture: AFuture): boolean {
         let messagesToSend: Message[] | null = null;
         const futuresToComplete: AFuture[] = [];
@@ -372,13 +542,13 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
                 let msgEntry: { data: Uint8Array, future: AFuture } | undefined;
 
                 while ((msgEntry = m.bufferOut.poll())) {
-                    Log.trace("read message from bufferOut for $uid", { data: msgEntry.data, uid: m.consumerUUID });
+                    Log.trace("read message from bufferOut", { data: msgEntry.data, uid: m.consumerUUID });
                     messagesFromNode.push(msgEntry);
                 }
 
                 if (messagesFromNode.length > 0) {
                     const consumerUuidString = m.consumerUUID.toString().toString();
-                    Log.debug("Preparing $count messages client to server ($uidFrom -> $uidTo)", {
+                    Log.debug("Preparing messages client to server", {
                         component: "ConnectionWork",
                         server: this.uri,
                         uidFrom: this.client.getUid(),
@@ -386,7 +556,9 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
                         count: messagesFromNode.length
                     });
 
-                    if (messagesToSend === null) messagesToSend = [];
+                    if (messagesToSend === null) {
+                        messagesToSend = [];
+                    }
 
                     messagesFromNode.forEach(val => {
                         messagesToSend!.push(new Message(m.consumerUUID, val.data));
@@ -398,7 +570,7 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         }
 
         if (messagesToSend !== null && messagesToSend.length > 0) {
-            Log.trace("Flushing $count messages", {
+            Log.trace("Flushing messages", {
                 component: "ConnectionWork",
                 server: this.uri,
                 count: messagesToSend.length
@@ -406,18 +578,18 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
 
             sendFuture.to(
                 () => {
-                    Log.trace("Message batch send successful (sendFuture success)", { component: "ConnectionWork", server: this.uri });
+                    Log.trace("Message batch send successful", { component: "ConnectionWork", server: this.uri });
                     futuresToComplete.forEach(f => f.tryDone());
                 }).onError(
                     (err: Error) => {
-                        Log.error("Failed to send message batch (sendFuture error), requeuing", err, { component: "ConnectionWork", server: this.uri });
+                        Log.error("Failed to send message batch, requeuing", err, { component: "ConnectionWork", server: this.uri });
                         messagesToRequeue.forEach((msgs, node) => {
                             msgs.reverse().forEach(msg => node.bufferOut.add(msg));
                             msgs.forEach(msg => msg.future.error(err));
                         });
                     }
                 ).onCancel(() => {
-                    Log.warn("Message batch sending cancelled (sendFuture cancel), requeuing", { component: "ConnectionWork", server: this.uri });
+                    Log.warn("Message batch sending cancelled, requeuing", { component: "ConnectionWork", server: this.uri });
                     messagesToRequeue.forEach((msgs, node) => {
                         msgs.reverse().forEach(msg => node.bufferOut.add(msg));
                         msgs.forEach(msg => msg.future.cancel());
@@ -431,25 +603,62 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         return false;
     }
 
+    /**
+     * @private
+     * @method flushPing
+     * @description Flush ping with enhanced timeout handling
+     * @param {AuthorizedApiRemote} a Authorized API
+     */
     private flushPing(a: AuthorizedApiRemote): void {
         if (!this.firstAuth) {
             Log.trace("Sending initial ping", { component: "ConnectionWork", server: this.uri });
-            a.ping(0n).to(
+            const pingFuture = a.ping(0n);
+
+            pingFuture.timeoutError(30, "Ping timeout");
+
+            pingFuture.to(
                 () => {
                     Log.trace("Initial ping successful", { component: "ConnectionWork", server: this.uri });
                     this.firstAuth = true;
                     this.lastBackPing.set(RU.time());
-                    if (!this.ready.isDone()) this.ready.tryDone();
-                }).onError(
-                    (err: Error) => {
-                        Log.warn("Initial ping failed", { component: "ConnectionWork", server: this.uri, error: err.message });
-                        if (!this.ready.isDone()) this.ready.tryError(err);
-                        this.firstAuth = false;
+                    if (!this.ready.isDone()) {
+                        this.ready.tryDone();
                     }
-                );
+                }
+            ).onError(
+                (err: Error) => {
+                    Log.warn("Initial ping failed", {
+                        component: "ConnectionWork",
+                        server: this.uri,
+                        error: err.message
+                    });
+
+                    if (!this.ready.isDone()) {
+                        this.ready.tryError(err);
+                    }
+
+                    // [Fix] Update error time on ping fail as well
+                    this._errorTimestamp = RU.time();
+
+                    this.firstAuth = false;
+
+                    Log.info("Ping failure detected, scheduling reconnection");
+                    if (this.connectFuture.isDone()) {
+                        this.rootApi = null;
+                        this.inProcess.set(false);
+                    }
+                }
+            );
         }
     }
 
+    /**
+     * @private
+     * @method flushBackgroundRequests
+     * @description Flush all background requests
+     * @param {AuthorizedApiRemote} a Authorized API
+     * @param {AFuture} sendFuture Send future
+     */
     private flushBackgroundRequests(a: AuthorizedApiRemote, sendFuture: AFuture): void {
         try {
             this.flushCloudRequests(a);
@@ -478,7 +687,7 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
             for (const [groupId, groupMap] of this.client.accessOperationsAdd.entries()) {
                 const uidsToAdd = Array.from(groupMap.keys()).map(s => UUID.fromString(s));
                 if (uidsToAdd.length > 0) {
-                    Log.debug("Flushing ADD request for $gid: $uids", { gid: groupId, uids: uidsToAdd });
+                    Log.debug("Flushing ADD request", { gid: groupId, uids: uidsToAdd });
                     a.addItemsToAccessGroup(groupId, uidsToAdd);
                 }
             }
@@ -486,7 +695,7 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
             for (const [groupId, groupMap] of this.client.accessOperationsRemove.entries()) {
                 const uidsToRemove = Array.from(groupMap.keys()).map(s => UUID.fromString(s));
                 if (uidsToRemove.length > 0) {
-                    Log.debug("Flushing REMOVE request for $gid: $uids", { gid: groupId, uids: uidsToRemove });
+                    Log.debug("Flushing REMOVE request", { gid: groupId, uids: uidsToRemove });
                     a.removeItemsFromAccessGroup(groupId, uidsToRemove);
                 }
             }
@@ -514,20 +723,35 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
 
         } catch (e) {
             Log.error("Error during flushBackgroundRequests", e as Error, { component: "ConnectionWork", server: this.uri });
-            if (!sendFuture.isFinalStatus()) sendFuture.error(e as Error);
+            if (!sendFuture.isFinalStatus()) {
+                sendFuture.error(e as Error);
+            }
         }
     }
 
+    /**
+     * @method sendSafeApiDataMulti
+     * @description Handle multi-part safe API data (not supported)
+     * @param {number} _backId Back ID
+     * @param {LoginClientStream} _data Login client stream
+     * @returns {AFuture} Completion future
+     */
     sendSafeApiDataMulti(_backId: number, _data: LoginClientStream): AFuture {
         const err = new Error("UnsupportedOperationException: sendSafeApiDataMulti is not supported in TS client");
         Log.error("UnsupportedOperationException", err);
         return AFuture.ofThrow(err);
     }
 
+    /**
+     * @method sendSafeApiData
+     * @description Handle safe API data
+     * @param {LoginClientStream} data Login client stream
+     * @returns {AFuture} Completion future
+     */
     sendSafeApiData(data: LoginClientStream): AFuture {
         const future = AFuture.make();
         try {
-            Log.trace("Received sendSafeApiData stream ($dataLen bytes)", {
+            Log.trace("Received sendSafeApiData stream", {
                 component: "ConnectionWork",
                 server: this.uri,
                 dataLen: data.data.length
@@ -542,42 +766,103 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         return future;
     }
 
+    /**
+     * @method getServerDescriptor
+     * @description Get server descriptor
+     * @returns {ServerDescriptor} Server descriptor
+     */
     public getServerDescriptor(): ServerDescriptor {
         return this.serverDescriptor;
     }
 
+    /**
+     * @method toString
+     * @description Get string representation
+     * @returns {string} String representation
+     */
     override toString(): string {
         const uri = getUriFromServerDescriptor(this.serverDescriptor, AetherCodec.WS) ?? `serverID=${this.serverDescriptor.id}`;
         return `work(${uri})`;
     }
 
+    /**
+     * @method setBasic
+     * @description Set basic status
+     * @param {boolean} basic Basic status
+     */
     public setBasic(basic: boolean): void {
         this.basicStatus = basic;
     }
 
+    /**
+     * @method lifeTime
+     * @description Get connection lifetime
+     * @returns {number} Lifetime in milliseconds
+     */
     public lifeTime(): number {
         return RU.time() - this.lastBackPing.get();
     }
+
     private logTime = 0;
+
+    /**
+     * @method scheduledWork
+     * @description Execute scheduled work with connection health checks
+     */
     public scheduledWork(): void {
         const t = RU.time();
-        const timeSinceLastPing = t - this.lastBackPing.get();
         const pingInterval = this.client.getPingTime();
-        if ((t - this.lastWorkTime < pingInterval && timeSinceLastPing < pingInterval * 3) || !this.inProcess.compareAndSet(false, true)) {
+
+        if (this.connectFuture.isError() && !this.isReconnecting()) {
+            Log.info("Connection in error state, attempting recovery", {
+                component: "ConnectionWork",
+                server: this.uri
+            });
+            this.inProcess.set(false);
             return;
         }
+
+        // [Fix] Removed the logic that kills the connection if timeSinceLastPing > pingInterval * 3
+        // Connection liveness is not determined by the presence of a pong response.
+
+        if ((t - this.lastWorkTime < pingInterval) || !this.inProcess.compareAndSet(false, true)) {
+            return;
+        }
+
         if (RU.time() - this.logTime > 1000) {
             this.logTime = RU.time();
-            Log.trace("Executing scheduledWork (flush) on $server", { component: "ConnectionWork", server: this.uri });
+            Log.trace("Executing scheduledWork on server", {
+                component: "ConnectionWork",
+                server: this.uri
+            });
         }
+
         this.lastWorkTime = t;
         const f = AFuture.make();
         f.addListener(() => this.inProcess.set(false));
-        f.timeoutError(Math.max(5, pingInterval / 1000 * 2), `scheduledWork flush timeout on ${this.uri}`);
+        f.timeoutError(Math.max(5, pingInterval / 1000 * 2),
+            `scheduledWork flush timeout on ${this.uri}`);
 
         this.apiSafeCtx.flush(f);
     }
 
+    /**
+     * @private
+     * @method isReconnecting
+     * @description Check if connection is reconnecting
+     * @returns {boolean} True if reconnecting
+     */
+    private isReconnecting(): boolean {
+        // [Fix] Access underlying client via safe cast to avoid TS errors while keeping interfaces clean
+        // The implementation class 'FastMetaClientAdapter' has a 'wsClient', but the interface 'FastMetaClient' does not.
+        const client = this.fastMetaClient as any;
+        return client?.wsClient?.getConnectionState() === ConnectionState.RECONNECTING;
+    }
+
+    /**
+     * @method flush
+     * @description Flush connection
+     */
     public flush(): void {
         if (!this.inProcess.compareAndSet(false, true)) {
             return;

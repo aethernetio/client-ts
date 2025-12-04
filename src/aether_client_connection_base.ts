@@ -282,14 +282,6 @@ export class Connection<LT, RT extends RemoteApi> implements Destroyable {
         }
     }
 
-    /** * @description Implements the Symbol.dispose method for 'using' syntax.
-     * @inheritdoc
-     */
-    [Symbol.dispose](): void {
-        Log.info("Disposing Connection", this.logCtxData);
-        this.destroy(true).onError(e => Log.error("Error during Connection dispose/destroy", e, this.logCtxData));
-    }
-
     /** * @description Checks equality based on the connection URI.
      * @param {unknown} other - The object to compare with.
      * @returns {boolean} True if the URIs are identical.

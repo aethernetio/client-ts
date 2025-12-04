@@ -308,12 +308,7 @@ export class CopyOnWriteArrayList_C<T> {
 }
 
 
-/** Resource Management */
-export interface Disposable {
-    [Symbol.dispose](): void;
-}
-
-export interface Destroyable extends Disposable {
+export interface Destroyable {
     destroy(force: boolean): AFuture;
 }
 

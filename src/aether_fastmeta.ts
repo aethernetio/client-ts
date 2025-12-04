@@ -47,7 +47,7 @@ export class SerializerPackNumber {
             out.writeShort(Number(((v - SerializerPackNumber.u32) >> SerializerPackNumber.pow32_shift) - SerializerPackNumber.u16 + SerializerPackNumber.u32));
             out.writeInt(Number((v - SerializerPackNumber.u32) & SerializerPackNumber.pow32_mask));
         } else {
-             throw new Error("Value too large for SerializerPackNumber: " + v);
+            throw new Error("Value too large for SerializerPackNumber: " + v);
         }
     }
 }
@@ -141,7 +141,6 @@ export const FastFutureContextStub: FastFutureContext = {
     size: () => 0,
     close: () => AFuture.completed(),
     destroy: (_force: boolean) => AFuture.of(),
-    [Symbol.dispose]: () => {},
     invokeLocalMethodBefore: (_methodName, _argsNames, _argsValues) => { /* no-op */ },
     invokeLocalMethodAfter: (_methodName, _result, _argsNames, _argsValues) => { /* no-op */ },
     invokeRemoteMethodAfter: (_methodName, _result, _argsNames, _argsValues) => { /* no-op */ },
@@ -262,14 +261,14 @@ class UniversalMetaArrayImpl<T> implements FastMetaType<T[]> {
         if (v2 === null || v2 === undefined || !Array.isArray(v2)) return false;
 
         if (this.elementMeta === FastMeta.META_BYTE) {
-             const arr1 = v1 as unknown as Uint8Array;
-             const arr2 = v2 as unknown as Uint8Array;
-             if (!(v2 instanceof Uint8Array)) return false;
-             if (arr1.length !== arr2.length) return false;
-             for (let i = 0; i < arr1.length; i++) {
-                 if (arr1[i] !== arr2[i]) return false;
-             }
-             return true;
+            const arr1 = v1 as unknown as Uint8Array;
+            const arr2 = v2 as unknown as Uint8Array;
+            if (!(v2 instanceof Uint8Array)) return false;
+            if (arr1.length !== arr2.length) return false;
+            for (let i = 0; i < arr1.length; i++) {
+                if (arr1[i] !== arr2[i]) return false;
+            }
+            return true;
         }
 
         if (v1.length !== v2.length) return false;
@@ -317,10 +316,10 @@ export class FastMeta {
         }
         metaToString(obj: boolean | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: boolean): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): boolean {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_file: string): boolean { throw new Error("UnsupportedOperationException"); }
     };
@@ -337,10 +336,10 @@ export class FastMeta {
         }
         metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: number): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): number {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_f: string): number { throw new Error("UnsupportedOperationException"); }
     };
@@ -357,10 +356,10 @@ export class FastMeta {
         }
         metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: number): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): number {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_f: string): number { throw new Error("UnsupportedOperationException"); }
     };
@@ -377,10 +376,10 @@ export class FastMeta {
         }
         metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: number): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): number {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_f: string): number { throw new Error("UnsupportedOperationException"); }
     };
@@ -398,10 +397,10 @@ export class FastMeta {
         }
         metaToString(obj: bigint | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: bigint): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): bigint {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_file: string): bigint { throw new Error("UnsupportedOperationException"); }
     };
@@ -420,10 +419,10 @@ export class FastMeta {
         }
         metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: number): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): number {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_file: string): number { throw new Error("UnsupportedOperationException"); }
     };
@@ -444,10 +443,10 @@ export class FastMeta {
         }
         metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: number): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): number {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_file: string): number { throw new Error("UnsupportedOperationException"); }
     };
@@ -469,10 +468,10 @@ export class FastMeta {
         }
         metaToString(obj: Date | null | undefined, res: AString): void { res.add(obj ? obj.toISOString() : "null"); }
         serializeToBytes(obj: Date): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): Date {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_file: string): Date { throw new Error("UnsupportedOperationException"); }
     };
@@ -489,10 +488,10 @@ export class FastMeta {
         }
         metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: number): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): number {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_file: string): number { throw new Error("UnsupportedOperationException"); }
     };
@@ -521,10 +520,10 @@ export class FastMeta {
         }
         metaToString(obj: string | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: string): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): string {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_file: string): string { throw new Error("UnsupportedOperationException"); }
     };
@@ -565,12 +564,12 @@ export class FastMeta {
             let low: bigint;
 
             if (obj.data && obj.data.length === 16) {
-                 const view = new DataView(obj.data.buffer, obj.data.byteOffset);
-                 high = view.getBigInt64(0, false);
-                 low = view.getBigInt64(8, false);
+                const view = new DataView(obj.data.buffer, obj.data.byteOffset);
+                high = view.getBigInt64(0, false);
+                low = view.getBigInt64(8, false);
             } else if (typeof (obj as any).getMostSignificantBits === 'function') {
-                 high = (obj as any).getMostSignificantBits();
-                 low = (obj as any).getLeastSignificantBits();
+                high = (obj as any).getMostSignificantBits();
+                low = (obj as any).getLeastSignificantBits();
             } else {
                 return 0;
             }
@@ -585,34 +584,33 @@ export class FastMeta {
             if (v1 === null || v1 === undefined || v2 === null || v2 === undefined) return false;
 
             if (v1.data && v2.data) {
-                 if (!(v2 instanceof UUID)) return false;
-                 const d1 = v1.data;
-                 const d2 = v2.data;
+                if (!(v2 instanceof UUID)) return false;
+                const d1 = v1.data;
+                const d2 = v2.data;
 
-                 if (d1 === d2) return true;
-                 if (d1.length !== 16 || d2.length !== 16) return false;
+                if (d1 === d2) return true;
+                if (d1.length !== 16 || d2.length !== 16) return false;
 
-                 for (let i = 0; i < 16; i++) {
-                     if (d1[i] !== d2[i]) return false;
-                 }
-                 return true;
+                for (let i = 0; i < 16; i++) {
+                    if (d1[i] !== d2[i]) return false;
+                }
+                return true;
             }
 
-             if (typeof (v1 as any).getMostSignificantBits === 'function' &&
-                 typeof (v2 as any).getMostSignificantBits === 'function')
-             {
+            if (typeof (v1 as any).getMostSignificantBits === 'function' &&
+                typeof (v2 as any).getMostSignificantBits === 'function') {
                 return (v1 as any).getMostSignificantBits() === (v2 as any).getMostSignificantBits() &&
-                       (v1 as any).getLeastSignificantBits() === (v2 as any).getLeastSignificantBits();
-             }
+                    (v1 as any).getLeastSignificantBits() === (v2 as any).getLeastSignificantBits();
+            }
 
             return false;
         }
         metaToString(obj: UUID | null | undefined, res: AString): void { res.add(obj ? obj.toString() : "null"); }
         serializeToBytes(obj: UUID): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): UUID {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_file: string): UUID { throw new Error("UnsupportedOperationException"); }
     };
@@ -642,10 +640,10 @@ export class FastMeta {
         }
         metaToString(obj: URI | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: URI): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): URI {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_file: string): URI { throw new Error("UnsupportedOperationException"); }
     };
@@ -662,10 +660,10 @@ export class FastMeta {
         }
         metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: number): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): number {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_file: string): number { throw new Error("UnsupportedOperationException"); }
     };
@@ -682,10 +680,10 @@ export class FastMeta {
         }
         metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
         serializeToBytes(obj: number): Uint8Array {
-             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
+            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
         deserializeFromBytes(data: Uint8Array): number {
-             const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
+            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
         }
         loadFromFile(_file: string): number { throw new Error("UnsupportedOperationException"); }
     };
@@ -727,8 +725,6 @@ export class FastApiContext implements FastFutureContext {
     private sizeBytes: AtomicInteger = new AtomicInteger(0);
 
     public destroy(_force: boolean): AFuture { return this.close(); }
-    public [Symbol.dispose](): void { this.close(); }
-
     public getFuture(requestId: number): FutureRec | undefined {
         const future = this.futures.get(requestId);
         this.futures.delete(requestId);
@@ -806,24 +802,24 @@ export class FastApiContext implements FastFutureContext {
     }
 
     public invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void {
-            const logData: LogData = {
-                "methodName": methodName
-            };
-            for (let i = 0; i < argsNames.length; i++) {
-                logData[`arg_${argsNames[i]}`] = argsValues[i];
-            }
-            Log.trace(`cmd local before: $methodName`, logData);
+        const logData: LogData = {
+            "methodName": methodName
+        };
+        for (let i = 0; i < argsNames.length; i++) {
+            logData[`arg_${argsNames[i]}`] = argsValues[i];
+        }
+        Log.trace(`cmd local before: $methodName`, logData);
     }
 
     public invokeLocalMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
-            const logData: LogData = {
-                "methodName": methodName,
-                "result": result
-            };
-            for (let i = 0; i < argsNames.length; i++) {
-                logData[`arg_${argsNames[i]}`] = argsValues[i];
-            }
-            Log.trace(`cmd local after : $methodName`, logData);
+        const logData: LogData = {
+            "methodName": methodName,
+            "result": result
+        };
+        for (let i = 0; i < argsNames.length; i++) {
+            logData[`arg_${argsNames[i]}`] = argsValues[i];
+        }
+        Log.trace(`cmd local after : $methodName`, logData);
     }
 
     public invokeRemoteMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
@@ -867,7 +863,7 @@ export class RemoteApiFuture<T extends RemoteApi> {
 
     constructor(meta: FastMetaApi<any, T>) {
         this.meta = meta;
-        this.logContext = Log.of({Component: "RemoteApiFuture"});
+        this.logContext = Log.of({ Component: "RemoteApiFuture" });
     }
 
     public run(t: AConsumer<T>): void;
@@ -901,21 +897,22 @@ export class RemoteApiFuture<T extends RemoteApi> {
     }
 
     public executeAll(ctx: FastFutureContext, sendFuture: AFuture): void {
-        using ll=Log.context( this.logContext);
+        let ll = Log.context(this.logContext);
         try {
             const api = this.meta.makeRemote(ctx);
 
             let e: ABiConsumer<T, AFuture> | undefined;
             while ((e = this.queue.poll()) !== undefined) {
-                 try { e(api, sendFuture); } catch (err) { Log.error("Error executing queued RemoteApiFuture task.", err as Error); }
+                try { e(api, sendFuture); } catch (err) { Log.error("Error executing queued RemoteApiFuture task.", err as Error); }
             }
 
             for (const t of this.permanent) {
-                 try { t(api, sendFuture); } catch (err) { Log.error("Error executing permanent RemoteApiFuture task.", err as Error); }
+                try { t(api, sendFuture); } catch (err) { Log.error("Error executing permanent RemoteApiFuture task.", err as Error); }
             }
         } catch (e) {
             Log.error("Error creating remote API or executing RemoteApiFuture tasks.", e as Error);
         } finally {
+            ll.destroy(true);
         }
     }
 
