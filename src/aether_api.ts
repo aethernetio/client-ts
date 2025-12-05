@@ -1139,6 +1139,8 @@ export class AetherArgumentDescriptor implements ToString  {
 }
 /**
  * Represents the AetherArrayType structure.
+ *
+ * @aetherTypeId 2
  */
 export class AetherArrayType extends AetherTypeDescriptor implements ToString  {
     public readonly elementTypeId: bigint;
@@ -1147,11 +1149,11 @@ export class AetherArrayType extends AetherTypeDescriptor implements ToString  {
         
     }
     public override getAetherTypeId(): number  {
-        return -1;
+        return 2;
         
     }
     public static readonly META_BODY: FastMetaType<AetherArrayType> = new Impl.AetherArrayTypeMetaBodyImpl();
-    public static readonly META: FastMetaType<AetherArrayType> = AetherArrayType.META_BODY;
+    public static readonly META: FastMetaType<AetherArrayType> = new Impl.AetherArrayTypeMetaImpl();
     /**
      * Creates an instance of AetherArrayType.
      * @param id - bigint
@@ -1212,6 +1214,8 @@ export class AetherArrayType extends AetherTypeDescriptor implements ToString  {
 }
 /**
  * Represents the AetherBaseType structure.
+ *
+ * @aetherTypeId 1
  */
 export class AetherBaseType extends AetherTypeDescriptor implements ToString  {
     public readonly nameId: bigint;
@@ -1220,11 +1224,11 @@ export class AetherBaseType extends AetherTypeDescriptor implements ToString  {
         
     }
     public override getAetherTypeId(): number  {
-        return -1;
+        return 1;
         
     }
     public static readonly META_BODY: FastMetaType<AetherBaseType> = new Impl.AetherBaseTypeMetaBodyImpl();
-    public static readonly META: FastMetaType<AetherBaseType> = AetherBaseType.META_BODY;
+    public static readonly META: FastMetaType<AetherBaseType> = new Impl.AetherBaseTypeMetaImpl();
     /**
      * Creates an instance of AetherBaseType.
      * @param id - bigint
@@ -1552,6 +1556,8 @@ export class AetherModuleDescriptor implements ToString  {
 }
 /**
  * Represents the AetherNullableType structure.
+ *
+ * @aetherTypeId 4
  */
 export class AetherNullableType extends AetherTypeDescriptor implements ToString  {
     public readonly wrappedTypeId: bigint;
@@ -1560,11 +1566,11 @@ export class AetherNullableType extends AetherTypeDescriptor implements ToString
         
     }
     public override getAetherTypeId(): number  {
-        return -1;
+        return 4;
         
     }
     public static readonly META_BODY: FastMetaType<AetherNullableType> = new Impl.AetherNullableTypeMetaBodyImpl();
-    public static readonly META: FastMetaType<AetherNullableType> = AetherNullableType.META_BODY;
+    public static readonly META: FastMetaType<AetherNullableType> = new Impl.AetherNullableTypeMetaImpl();
     /**
      * Creates an instance of AetherNullableType.
      * @param id - bigint
@@ -1625,6 +1631,8 @@ export class AetherNullableType extends AetherTypeDescriptor implements ToString
 }
 /**
  * Represents the AetherStreamType structure.
+ *
+ * @aetherTypeId 3
  */
 export class AetherStreamType extends AetherTypeDescriptor implements ToString  {
     public readonly apiId: bigint;
@@ -1634,11 +1642,11 @@ export class AetherStreamType extends AetherTypeDescriptor implements ToString  
         
     }
     public override getAetherTypeId(): number  {
-        return -1;
+        return 3;
         
     }
     public static readonly META_BODY: FastMetaType<AetherStreamType> = new Impl.AetherStreamTypeMetaBodyImpl();
-    public static readonly META: FastMetaType<AetherStreamType> = AetherStreamType.META_BODY;
+    public static readonly META: FastMetaType<AetherStreamType> = new Impl.AetherStreamTypeMetaImpl();
     /**
      * Creates an instance of AetherStreamType.
      * @param id - bigint
@@ -2919,6 +2927,80 @@ export class IPAddressV6 extends IPAddress implements ToString  {
     }
     public toString(result: AString): AString  {
         IPAddressV6.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the IPAddressWeb structure.
+ *
+ * @aetherTypeId 3
+ */
+export class IPAddressWeb extends IPAddress implements ToString  {
+    public readonly data: Uint8Array;
+    public override getAetherTypeId(): number  {
+        return 3;
+        
+    }
+    public static readonly META_BODY: FastMetaType<IPAddressWeb> = new Impl.IPAddressWebMetaBodyImpl();
+    public static readonly META: FastMetaType<IPAddressWeb> = new Impl.IPAddressWebMetaImpl();
+    /**
+     * Creates an instance of IPAddressWeb.
+     * @param data - Uint8Array
+     */
+    constructor(data: Uint8Array)  {
+        super();
+        this.data = data;
+        if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type IPAddressWeb.`);
+        
+    }
+    public getData(): Uint8Array  {
+        return this.data;
+        
+    }
+    public dataContains(el: number): boolean  {
+        return (this.data as Uint8Array).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of IPAddressWeb.
+     * @param {IPAddressWeb | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: IPAddressWeb | null | undefined): number  {
+        return IPAddressWeb.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of IPAddressWeb with another object.
+     * @param {IPAddressWeb | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: IPAddressWeb | null | undefined, v2: any | null | undefined): boolean  {
+        return IPAddressWeb.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return IPAddressWeb.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return IPAddressWeb.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        IPAddressWeb.META.metaToString(this, result);
         return result;
         
     }

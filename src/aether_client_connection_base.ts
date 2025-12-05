@@ -37,7 +37,7 @@ export function ipAddressToString(ipAddr: IPAddress): string | null {
                 return Array.from(ipAddr.data).join('.');
             }
         } else if (ipAddr instanceof IPAddressV6) {
-             if (ipAddr.data && ipAddr.data.length === 16) {
+            if (ipAddr.data && ipAddr.data.length === 16) {
                 const parts: string[] = [];
                 for (let i = 0; i < 16; i += 2) {
                     parts.push(((ipAddr.data[i] << 8) | ipAddr.data[i + 1]).toString(16));
@@ -52,32 +52,32 @@ export function ipAddressToString(ipAddr: IPAddress): string | null {
                         currentSeq += ":0";
                     } else {
                         if (currentSeq.length > longestSeq.length) {
-                             longestSeq = currentSeq;
+                            longestSeq = currentSeq;
                         }
                         currentSeq = "";
                     }
                 });
-                 if (currentSeq.length > longestSeq.length) {
+                if (currentSeq.length > longestSeq.length) {
                     longestSeq = currentSeq;
-                 }
+                }
 
-                 if (longestSeq.length > 2) {
-                     if (ipStr === longestSeq.substring(1)) {
+                if (longestSeq.length > 2) {
+                    if (ipStr === longestSeq.substring(1)) {
                         ipStr = "::";
-                     } else if (ipStr.startsWith(longestSeq.substring(1) + ":")) {
-                          ipStr = ipStr.replace(longestSeq.substring(1) + ":","::");
-                     } else if (ipStr.endsWith(":" + longestSeq.substring(1))) {
-                          ipStr = ipStr.replace(":" + longestSeq.substring(1),"::");
-                     } else {
-                         ipStr = ipStr.replace(longestSeq, ":");
-                     }
-                 }
+                    } else if (ipStr.startsWith(longestSeq.substring(1) + ":")) {
+                        ipStr = ipStr.replace(longestSeq.substring(1) + ":", "::");
+                    } else if (ipStr.endsWith(":" + longestSeq.substring(1))) {
+                        ipStr = ipStr.replace(":" + longestSeq.substring(1), "::");
+                    } else {
+                        ipStr = ipStr.replace(longestSeq, ":");
+                    }
+                }
                 // --- End IPv6 compression logic ---
                 return ipStr;
             }
         }
     } catch (e) {
-         Log.error("Error formatting IPAddress", e as Error, { ipAddress: ipAddr });
+        Log.error("Error formatting IPAddress", e as Error, { ipAddress: ipAddr });
     }
 
     Log.error("Unknown or invalid IPAddress format provided to ipAddressToString", { ipAddress: ipAddr });
@@ -93,8 +93,8 @@ export function ipAddressToString(ipAddr: IPAddress): string | null {
 export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec: AetherCodec): URI | null {
     Log.trace("Getting URI from ServerDescriptor", { serverId: sd?.id, preferredCodec });
     if (!sd || !sd.ipAddress || !sd.ipAddress.addresses || sd.ipAddress.addresses.length === 0) {
-         Log.warn("Cannot get URI from invalid ServerDescriptor", { serverId: sd?.id });
-         return null;
+        Log.warn("Cannot get URI from invalid ServerDescriptor", { serverId: sd?.id });
+        return null;
     }
 
     let fallbackUri: URI | null = null;
@@ -103,14 +103,12 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
         for (const cap of addrInfo.coderAndPorts) {
             const ipString = ipAddressToString(addrInfo.address);
             if (ipString) {
-                 const hostString = addrInfo.address instanceof IPAddressV6 ? `[${ipString}]` : ipString;
-
-                 // TODO: This logic might need refinement based on actual protocol names
-                const scheme = cap.codec === AetherCodec.WS ? 'ws' : 'tcp';
+                const hostString = addrInfo.address instanceof IPAddressV6 ? `[${ipString}]` : ipString;
+                const scheme = cap.codec === AetherCodec.WS ? 'ws' : (cap.codec === AetherCodec.WSS?'wss':'tcp');
                 const uri = `${scheme}://${hostString}:${cap.port}`;
 
                 if (cap.codec === preferredCodec) {
-                    Log.trace(`Found preferred URI: $uri`, { serverId: sd.id, uri:uri });
+                    Log.trace(`Found preferred URI: $uri`, { serverId: sd.id, uri: uri });
                     return uri;
                 }
                 if (!fallbackUri) {
@@ -118,12 +116,12 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
                 }
             }
         }
-     }
+    }
 
     if (!fallbackUri) {
         Log.warn("No valid URI found in ServerDescriptor", { serverId: sd.id });
     } else {
-        Log.trace(`Using fallback URI: $fallbackUri`, { serverId: sd.id,fallbackUri:fallbackUri });
+        Log.trace(`Using fallback URI: $fallbackUri`, { serverId: sd.id, fallbackUri: fallbackUri });
     }
     return fallbackUri;
 }
@@ -182,14 +180,14 @@ export class Connection<LT, RT extends RemoteApi> implements Destroyable {
      */
     constructor(
         client: AetherCloudClient,
-         uri: URI,
+        uri: URI,
         localApiMeta: FastMetaApi<LT, any>,
         remoteApiMeta: FastMetaApi<unknown, RT>
     ) {
         if (!uri) throw new Error("Connection URI cannot be null");
         this.uri = uri;
         this.client = client;
-        this.logCtxData = {  component: "Connection", uri: this.uri };
+        this.logCtxData = { component: "Connection", uri: this.uri };
         this.connectFuture = ARFuture.of<RT>();
 
         Log.debug("Connection: Initializing...", this.logCtxData);
@@ -250,7 +248,7 @@ export class Connection<LT, RT extends RemoteApi> implements Destroyable {
      */
     public getRootApi(): RT | null {
         if (!this.connectFuture.isDone()) {
-             Log.warn("Accessing rootApi before connection attempt is complete (may be null).", this.logCtxData);
+            Log.warn("Accessing rootApi before connection attempt is complete (may be null).", this.logCtxData);
         }
         return this.rootApi;
     }
@@ -271,8 +269,8 @@ export class Connection<LT, RT extends RemoteApi> implements Destroyable {
     public destroy(_force: boolean): AFuture {
         Log.info("Destroying Connection", this.logCtxData);
         if (!this.connectFuture.isFinalStatus()) {
-             Log.trace("Cancelling connectFuture during destroy.", this.logCtxData);
-             this.connectFuture.cancel();
+            Log.trace("Cancelling connectFuture during destroy.", this.logCtxData);
+            this.connectFuture.cancel();
         }
 
         if (this.fastMetaClient) {

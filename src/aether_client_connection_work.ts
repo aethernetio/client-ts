@@ -376,10 +376,14 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
      * @param {ServerDescriptor} s Server descriptor
      */
     constructor(client: AetherCloudClient, s: ServerDescriptor) {
-        const uri = getUriFromServerDescriptor(s, AetherCodec.WS);
+        let uri = getUriFromServerDescriptor(s, AetherCodec.WSS);
+        if (!uri) {
+            uri = getUriFromServerDescriptor(s, AetherCodec.WS);
+        }
         if (!uri) {
             throw new ClientStartException(`Could not determine a valid WebSocket URI for ServerDescriptor ID ${s.id}`);
         }
+        Log.trace("try connect to work server: $uri", { uri: uri });
         super(client, uri, ClientApiUnsafe.META, LoginApi.META);
         this.cryptoEngine = client.getCryptoEngineForServer(s.id);
         this.serverDescriptor = s;
@@ -821,9 +825,6 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
             this.inProcess.set(false);
             return;
         }
-
-        // [Fix] Removed the logic that kills the connection if timeSinceLastPing > pingInterval * 3
-        // Connection liveness is not determined by the presence of a pong response.
 
         if ((t - this.lastWorkTime < pingInterval) || !this.inProcess.compareAndSet(false, true)) {
             return;
