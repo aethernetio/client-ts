@@ -376,13 +376,40 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
      * @param {ServerDescriptor} s Server descriptor
      */
     constructor(client: AetherCloudClient, s: ServerDescriptor) {
-        let uri = getUriFromServerDescriptor(s, AetherCodec.WSS);
-        if (!uri) {
+        // --- START PROTOCOL SELECTION FIX ---
+        // Logic:
+        // 1. If running in browser and HTTPS -> MUST use WSS (WS will be blocked).
+        // 2. If running in browser and HTTP -> Prefer WS (avoids self-signed cert issues on localhost), fallback to WSS.
+        // 3. If running in Node.js -> Prefer WS (faster), fallback to WSS (or configurable).
+
+        const isBrowser = typeof window !== 'undefined' || typeof self !== 'undefined';
+        // Get location safely
+        const loc = typeof window !== 'undefined' ? window.location : (typeof self !== 'undefined' ? self.location : null);
+        const isHttps = isBrowser && loc && loc.protocol === 'https:';
+
+        let uri: string | null = null;
+
+        if (isHttps) {
+            // Strict WSS requirement for Secure Contexts
+            uri = getUriFromServerDescriptor(s, AetherCodec.WSS);
+            if (!uri) {
+                Log.warn("ConnectionWork: Running on HTTPS but server did not provide WSS endpoint. Attempting WS (will likely fail due to Mixed Content).", { serverId: s.id });
+                uri = getUriFromServerDescriptor(s, AetherCodec.WS);
+            }
+        } else {
+            // HTTP or Node environment
+            // Prefer WS for standard connections, fallback to WSS
             uri = getUriFromServerDescriptor(s, AetherCodec.WS);
+            if (!uri) {
+                uri = getUriFromServerDescriptor(s, AetherCodec.WSS);
+            }
         }
+
         if (!uri) {
-            throw new ClientStartException(`Could not determine a valid WebSocket URI for ServerDescriptor ID ${s.id}`);
+            throw new ClientStartException(`Could not determine a valid WebSocket URI for ServerDescriptor ID ${s.id}. IsHttps: ${isHttps}`);
         }
+        // --- END PROTOCOL SELECTION FIX ---
+
         Log.trace("try connect to work server: $uri", { uri: uri });
         super(client, uri, ClientApiUnsafe.META, LoginApi.META);
         this.cryptoEngine = client.getCryptoEngineForServer(s.id);

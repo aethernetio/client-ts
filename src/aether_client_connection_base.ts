@@ -13,7 +13,8 @@ import {
     AConsumer
 } from './aether_types'
 import { AetherCloudClient } from './aether_client';
-import { AetherCodec, IPAddress, IPAddressV4, IPAddressV6, ServerDescriptor } from './aether_api';
+// [FIX] Добавлен импорт IPAddressWeb
+import { AetherCodec, IPAddress, IPAddressV4, IPAddressV6, IPAddressWeb, ServerDescriptor } from './aether_api';
 import { Log } from './aether_logging';
 import {
     FastMetaApi,
@@ -21,13 +22,11 @@ import {
 } from './aether_fastmeta';
 import { AFuture, ARFuture } from './aether_future';
 import { FastMetaClient, FastMetaNet } from './aether_fastmeta_net';
-// Removed: import { FastMetaClientWebSocket } from './aether_fastmeta_websocket';
-
 
 /**
  * @description Converts an IPAddress DTO to its string representation.
  * @param {IPAddress} ipAddr The IPAddress object from the API.
- * @returns {string | null} A string representation (e.g., "1.2.3.4" or "[::1]") or null if invalid.
+ * @returns {string | null} A string representation (e.g., "1.2.3.4", "[::1]", or "example.com") or null if invalid.
  */
 export function ipAddressToString(ipAddr: IPAddress): string | null {
     Log.trace("Formatting IPAddress", { ipAddress: ipAddr });
@@ -75,6 +74,17 @@ export function ipAddressToString(ipAddr: IPAddress): string | null {
                 // --- End IPv6 compression logic ---
                 return ipStr;
             }
+        } else if (ipAddr instanceof IPAddressWeb) {
+            // [FIX] Обработка DNS имени в IPAddressWeb
+            if (ipAddr.data && ipAddr.data.length > 0) {
+                try {
+                    // Используем TextDecoder для декодирования UTF-8 байтов в строку
+                    return new TextDecoder().decode(ipAddr.data);
+                } catch (e) {
+                    Log.error("Failed to decode IPAddressWeb data", e as Error);
+                    return null;
+                }
+            }
         }
     } catch (e) {
         Log.error("Error formatting IPAddress", e as Error, { ipAddress: ipAddr });
@@ -103,8 +113,10 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
         for (const cap of addrInfo.coderAndPorts) {
             const ipString = ipAddressToString(addrInfo.address);
             if (ipString) {
+                // [NOTE] IPAddressWeb не является инстансом IPAddressV6, поэтому скобки [] не добавятся.
+                // Это корректно для доменных имен (например, wss://example.com:443).
                 const hostString = addrInfo.address instanceof IPAddressV6 ? `[${ipString}]` : ipString;
-                const scheme = cap.codec === AetherCodec.WS ? 'ws' : (cap.codec === AetherCodec.WSS?'wss':'tcp');
+                const scheme = cap.codec === AetherCodec.WS ? 'ws' : (cap.codec === AetherCodec.WSS ? 'wss' : 'tcp');
                 const uri = `${scheme}://${hostString}:${cap.port}`;
 
                 if (cap.codec === preferredCodec) {
