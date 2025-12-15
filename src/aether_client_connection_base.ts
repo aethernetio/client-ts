@@ -13,7 +13,6 @@ import {
     AConsumer
 } from './aether_types'
 import { AetherCloudClient } from './aether_client';
-// [FIX] Добавлен импорт IPAddressWeb
 import { AetherCodec, IPAddress, IPAddressV4, IPAddressV6, IPAddressWeb, ServerDescriptor } from './aether_api';
 import { Log } from './aether_logging';
 import {
@@ -110,22 +109,43 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
     let fallbackUri: URI | null = null;
 
     for (const addrInfo of sd.ipAddress.addresses) {
-        for (const cap of addrInfo.coderAndPorts) {
-            const ipString = ipAddressToString(addrInfo.address);
-            if (ipString) {
-                // [NOTE] IPAddressWeb не является инстансом IPAddressV6, поэтому скобки [] не добавятся.
-                // Это корректно для доменных имен (например, wss://example.com:443).
-                const hostString = addrInfo.address instanceof IPAddressV6 ? `[${ipString}]` : ipString;
-                const scheme = cap.codec === AetherCodec.WS ? 'ws' : (cap.codec === AetherCodec.WSS ? 'wss' : 'tcp');
-                const uri = `${scheme}://${hostString}:${cap.port}`;
+        // Convert to string first to analyze the format
+        const ipString = ipAddressToString(addrInfo.address);
 
-                if (cap.codec === preferredCodec) {
-                    Log.trace(`Found preferred URI: $uri`, { serverId: sd.id, uri: uri });
-                    return uri;
-                }
-                if (!fallbackUri) {
-                    fallbackUri = uri;
-                }
+        if (!ipString) {
+            continue;
+        }
+
+        // Heuristic to detect if it's a raw IP or a Domain Name
+        // IPv4 pattern: 4 groups of digits separated by dots
+        const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(ipString);
+        // IPv6 pattern: contains colons (ipAddressToString ensures this format for v6)
+        const isIPv6 = ipString.includes(':');
+
+        const isRawIP = isIPv4 || isIPv6;
+
+        for (const cap of addrInfo.coderAndPorts) {
+            // FILTER: Strict WSS rule.
+            // WSS requires a valid SSL certificate, which implies a Domain Name.
+            // Browsers block WSS to raw IPs.
+            if (cap.codec === AetherCodec.WSS && isRawIP) {
+                Log.trace("Skipping WSS for raw IP address", { ip: ipString, port: cap.port });
+                continue;
+            }
+
+            // [NOTE] IPAddressWeb (domains) are not IPv6, so no brackets needed.
+            // However, ipAddressToString logic for IPv6 usually handles compression.
+            // We ensure brackets are added ONLY for IPv6 literals.
+            const hostString = isIPv6 ? `[${ipString}]` : ipString;
+            const scheme = cap.codec === AetherCodec.WS ? 'ws' : (cap.codec === AetherCodec.WSS ? 'wss' : 'tcp');
+            const uri = `${scheme}://${hostString}:${cap.port}`;
+
+            if (cap.codec === preferredCodec) {
+                Log.trace(`Found preferred URI: ${uri}`, { serverId: sd.id, uri: uri });
+                return uri;
+            }
+            if (!fallbackUri) {
+                fallbackUri = uri;
             }
         }
     }

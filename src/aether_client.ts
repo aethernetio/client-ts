@@ -19,8 +19,7 @@ import {
     MessageEventListenerDefault
 } from './aether_client_message';
 import {
-    ClientState,
-    ClientStateInMemory
+    ClientState
 } from './aether_client_state';
 import {
     LNode,
@@ -32,14 +31,10 @@ import { AFuture, ARFuture, EventBiConsumer, EventConsumer } from './aether_futu
 import {
     Cloud,
     FinishResult,
-    Key,
     ServerDescriptor,
     AccessGroup,
-    AccessCheckResult,
-    AuthorizedApi,
     AuthorizedApiRemote,
     ServerApiByUid,
-    ClientApiStream,
     AccessCheckPair,
 } from './aether_api';
 import { BMap, RCol } from './aether_rcollection';
