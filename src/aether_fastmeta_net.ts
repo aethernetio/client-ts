@@ -398,14 +398,18 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         this.log = Log.of({ component: 'FastMetaClientWebSocket' });
         this.connectFuture = ARFuture.of<FastApiContextLocal<LT>>();
         this.reconnectConfig = {
-            maxAttempts: 5,
-            baseDelay: 1000,
-            maxDelay: 30000,
-            backoffMultiplier: 2,
+            maxAttempts: 0,
+            baseDelay: 500,
+            maxDelay: 2000,
+            backoffMultiplier: 1.5,
             ...reconnectConfig
         };
 
-        Log.info("FastMetaClientWebSocket initialized with enhanced reconnection");
+        if (this.reconnectConfig.maxDelay > 2000) {
+            this.reconnectConfig.maxDelay = 2000;
+        }
+
+        Log.info("FastMetaClientWebSocket initialized with infinite reconnection strategy");
     }
 
     /**
@@ -797,22 +801,11 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
      */
     private scheduleReconnect(): void {
         if (this.isManualClose) {
-            Log.debug("Manual close, skipping reconnect");
-            this.setConnectionState(ConnectionState.DISCONNECTED);
-            return;
-        }
-
-        if (this.reconnectAttempts >= this.reconnectConfig.maxAttempts) {
-            Log.warn("Max reconnection attempts reached", {
-                attempts: this.reconnectAttempts,
-                max: this.reconnectConfig.maxAttempts
-            });
             this.setConnectionState(ConnectionState.DISCONNECTED);
             return;
         }
 
         if (this.reconnectTimeout) {
-            Log.debug("Reconnection already scheduled");
             return;
         }
 
@@ -820,58 +813,68 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         this.isReconnecting = true;
         this.setConnectionState(ConnectionState.RECONNECTING);
 
-        const delay = this.calculateReconnectDelay();
+        const attemptForDelay = Math.min(this.reconnectAttempts, 30);
+        const delay = this.calculateReconnectDelay(attemptForDelay);
+
         Log.info("Scheduling reconnect", {
             attempt: this.reconnectAttempts,
             delayMs: delay,
             uri: this.uri
         });
 
+        this.performScheduleReconnect(delay);
+    }
+
+    /**
+     * @method performScheduleReconnect
+     * @description Helper method to set up the reconnection timeout
+     * @param {number} delay Reconnection delay in milliseconds
+     */
+    private performScheduleReconnect(delay: number): void {
         this.reconnectTimeout = setTimeout(() => {
-            this.reconnectTimeout = null;
-            if (this.isManualClose) {
-                Log.debug("Manual close during reconnect, aborting");
-                return;
-            }
-
-            Log.info("Attempting auto-reconnect", {
-                attempt: this.reconnectAttempts,
-                uri: this.uri
-            });
-
-            if (this.connectFuture.isFinalStatus()) {
-                this.connectFuture = ARFuture.of<FastApiContextLocal<LT>>();
-            }
-
-            if (this.websocket) {
-                try {
-                    this.websocket.onopen = null;
-                    this.websocket.onerror = null;
-                    this.websocket.onclose = null;
-                    this.websocket.onmessage = null;
-                    this.websocket.close(1000, "Reconnecting");
-                } catch (e) {
-                }
-                this.websocket = null;
-            }
-
-            // [Fix] Reset isReconnecting BEFORE calling createWebSocketConnection.
-            // If creation fails immediately (e.g. invalid URL or server down synchronous error),
-            // we want handleConnectionError to know that this is a NEW failure, not part of the waiting process.
-            this.isReconnecting = false;
-
-            this.createWebSocketConnection();
+            this.executeReconnect();
         }, delay);
+    }
+
+    /**
+     * @method executeReconnect
+     * @description Execute the reconnection logic after delay
+     */
+    private executeReconnect(): void {
+        this.reconnectTimeout = null;
+        if (this.isManualClose) {
+            return;
+        }
+
+        if (this.connectFuture.isFinalStatus()) {
+            this.connectFuture = ARFuture.of<FastApiContextLocal<LT>>();
+        }
+
+        if (this.websocket) {
+            try {
+                this.websocket.onopen = null;
+                this.websocket.onerror = null;
+                this.websocket.onclose = null;
+                this.websocket.onmessage = null;
+                this.websocket.close(1000, "Reconnecting");
+            } catch (e) {
+            }
+            this.websocket = null;
+        }
+
+        this.isReconnecting = false;
+        this.createWebSocketConnection();
     }
 
     /**
      * @method calculateReconnectDelay
      * @description Calculate reconnection delay with exponential backoff
+     * @param {number} attempts Number of attempts
      * @returns {number} Delay in milliseconds
      */
-    private calculateReconnectDelay(): number {
+    private calculateReconnectDelay(attempts: number): number {
         const delay = this.reconnectConfig.baseDelay *
-            Math.pow(this.reconnectConfig.backoffMultiplier, this.reconnectAttempts - 1);
+            Math.pow(this.reconnectConfig.backoffMultiplier, attempts - 1);
         return Math.min(delay, this.reconnectConfig.maxDelay);
     }
 

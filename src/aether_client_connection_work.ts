@@ -351,8 +351,6 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
     basicStatus: boolean = false;
     lastWorkTime: number = 0;
     firstAuth: boolean = false;
-
-    // [Fix] Store error timestamp locally to avoid modifying AFuture
     private _errorTimestamp: number = 0;
 
     /**
@@ -376,7 +374,6 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
      * @param {ServerDescriptor} s Server descriptor
      */
     constructor(client: AetherCloudClient, s: ServerDescriptor) {
-        // --- START PROTOCOL SELECTION FIX ---
         const isBrowser = typeof window !== 'undefined' || typeof self !== 'undefined';
         const loc = typeof window !== 'undefined' ? window.location : (typeof self !== 'undefined' ? self.location : null);
         const isHttps = isBrowser && loc && loc.protocol === 'https:';
@@ -384,18 +381,12 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         let uri: string | null = null;
 
         if (isHttps) {
-            // Strict WSS requirement for Secure Contexts.
-            // The getUriFromServerDescriptor now strictly filters out IPs for WSS.
             uri = getUriFromServerDescriptor(s, AetherCodec.WSS);
 
             if (!uri) {
-                // If no WSS domain is available, we cannot connect from this environment.
-                // Do NOT fallback to WS (Mixed Content) or WSS+IP (Cert Error).
                 Log.warn("ConnectionWork: HTTPS environment requires WSS with a Domain Name. Server only provided IPs or non-WSS endpoints.", { serverId: s.id });
             }
         } else {
-            // HTTP or Node environment
-            // Prefer WS for standard connections (faster/easier), fallback to WSS
             uri = getUriFromServerDescriptor(s, AetherCodec.WS);
             if (!uri) {
                 uri = getUriFromServerDescriptor(s, AetherCodec.WSS);
@@ -403,10 +394,8 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         }
 
         if (!uri) {
-            // This exception will be caught by makeFirstConnection, preventing infinite loops on invalid URIs
             throw new ClientStartException(`Could not determine a valid WebSocket URI for ServerDescriptor ID ${s.id}. IsHttps: ${isHttps}`);
         }
-        // --- END PROTOCOL SELECTION FIX ---
 
         Log.trace("try connect to work server: " + uri, { uri: uri });
         super(client, uri, ClientApiUnsafe.META, LoginApi.META);
@@ -499,7 +488,6 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         this.connectFuture.to(
             () => { }
         ).onError((err: Error) => {
-            // [Fix] Capture the error time
             this._errorTimestamp = RU.time();
             this.ready.error(err);
         }).onCancel(() => {
@@ -507,7 +495,11 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         });
     }
 
-    // [Fix] Getter for the error timestamp
+    /**
+     * @method getErrorTimestamp
+     * @description Get timestamp when connection entered error state
+     * @returns {number} Timestamp
+     */
     public getErrorTimestamp(): number {
         return this._errorTimestamp;
     }
@@ -666,7 +658,6 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
                         this.ready.tryError(err);
                     }
 
-                    // [Fix] Update error time on ping fail as well
                     this._errorTimestamp = RU.time();
 
                     this.firstAuth = false;
@@ -879,8 +870,6 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
      * @returns {boolean} True if reconnecting
      */
     private isReconnecting(): boolean {
-        // [Fix] Access underlying client via safe cast to avoid TS errors while keeping interfaces clean
-        // The implementation class 'FastMetaClientAdapter' has a 'wsClient', but the interface 'FastMetaClient' does not.
         const client = this.fastMetaClient as any;
         return client?.wsClient?.getConnectionState() === ConnectionState.RECONNECTING;
     }
