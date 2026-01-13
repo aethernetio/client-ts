@@ -1,7 +1,8 @@
 // FILE: aether_client_state.ts
 // PURPOSE: Contains the implementation of ClientStateInMemory.
 
-import { ClientInfo, ClientStateForSave, Cloud, CryptoLib, Key, ServerDescriptor } from "./aether_api";
+import { ClientCloud } from "./aether_client_cloud_priority";
+import { ClientInfo, ClientStateForSave, Cloud, CloudWeight, CryptoLib, Key, ServerDescriptor } from "./aether_api";
 import {
     AString,
 } from "./aether_astring";
@@ -63,7 +64,6 @@ export class ClientStateInMemory implements ClientState {
     private pingDuration = AMFuture.completed(10);
 
     /**
-     * @private
      * @type {UUID}
      */
     private parentUid: UUID;
@@ -274,19 +274,6 @@ export class ClientStateInMemory implements ClientState {
     }
 
     /** @inheritDoc */
-    setCloud(uid: UUID, cloud: Cloud):
-        void {
-        this.getClientInfo(uid).setCloud(cloud);
-    }
-
-    /** @inheritDoc */
-    getCloud(uid: UUID): Cloud | null {
-        if (!uid) {
-            Log.warn("getCloud called with null/undefined UID");
-            return null;
-        }
-        return this.getClientInfo(uid).getCloud();
-    }
 
     /** @inheritDoc */
     getRegistrationUri(): URI[] {
@@ -360,23 +347,43 @@ export class ClientStateInMemory implements ClientState {
                 .map((s) => s.getDescriptor())
                 .filter((d): d is ServerDescriptor => d !== null),
             Array.from(this.clients.values())
-                .filter((c) => c.getCloud() !== null)
-                .map((c) => new ClientInfo(c.getUid(), c.getCloud()!)),
-            dtoRootSigners,
-            this.cryptoLib,
-            BigInt(this.pingDuration.getNow() ?? 1000),
-            this.parentUid,
-            this.countServersForRegistration,
-            BigInt(this.timeoutForConnectToRegistrationServer),
-            this.uid,
-            this.alias,
-            this.masterKey
-        );
+
+                 .filter((c) => c.getCloud() !== null)
+                  .map((c) => {
+                      const cloud = c.getCloud()!;
+                      const weights = Array.from(cloud.getWeights().entries()).map(([sid, w]) => {
+                          return new CloudWeight(sid, BigInt(w));
+                      });
+                      return new ClientInfo(c.getUid(), cloud.toCloud(), weights);
+                  }),
+
+             dtoRootSigners,
+             this.cryptoLib,
+             BigInt(this.pingDuration.getNow() ?? 0),
+             this.parentUid,
+             this.countServersForRegistration,
+             BigInt(this.timeoutForConnectToRegistrationServer),
+             this.uid!,
+             this.alias!,
+             this.masterKey!
+         );
 
         const d = new DataInOut();
         ClientStateForSave.META.serialize(null, dto, d);
         return d.toArray();
     }
+
+    /** @inheritDoc */
+    setCloud(uid: UUID, cloud: ClientCloud): void {
+        this.getClientInfo(uid).setCloud(cloud);
+    }
+
+    /** @inheritDoc */
+    getCloud(uid: UUID): ClientCloud | null {
+        if (!uid) return null;
+        return this.getClientInfo(uid).getCloud();
+    }
+
 
     /** @inheritDoc */
     load(data: Uint8Array): void {
@@ -400,9 +407,15 @@ export class ClientStateInMemory implements ClientState {
                 this.getServerInfo(sd.id).setDescriptor(sd)
             );
             this.clients.clear();
-            dto.clients.forEach((ci: ClientInfo) =>
-                this.getClientInfo(ci.uid).setCloud(ci.cloud)
-            );
+
+             dto.clients.forEach((ci: ClientInfo) => {
+                 const clientCloud = new ClientCloud(ci.uid, ci.cloud);
+                 if (ci.weights) {
+                     ci.weights.forEach(w => clientCloud.setWeight(w.sid, Number(w.weight)));
+                 }
+                 this.getClientInfo(ci.uid).setCloud(clientCloud);
+             });
+
 
             this.rootSigners.clear();
             dto.rootSigners.forEach((k: Key) => {
@@ -532,18 +545,17 @@ export interface ClientState {
     getClientInfoAll(): Iterable<ClientState.ClientInfo>;
 
     /**
-     * @description Caches the Cloud (server list) for a specific client (peer).
-     * @param {UUID} uid The client's UID.
-     * @param {Cloud} cloud The Cloud object to cache.
-     */
-    setCloud(uid: UUID, cloud: Cloud): void;
 
-    /**
-     * @description Gets the cached Cloud (server list) for a specific client (peer).
-     * @param {UUID} uid The client's UID.
-     * @returns {Cloud | null} The cached Cloud, or null if not found.
-     */
-    getCloud(uid: UUID): Cloud | null;
+     /**
+      * @description Caches the ClientCloud (with weights) for a specific client (peer).
+      */
+     setCloud(uid: UUID, cloud: ClientCloud): void;
+
+     /**
+      * @description Gets the cached ClientCloud for a specific client (peer).
+      */
+     getCloud(uid: UUID): ClientCloud | null;
+
 
     /**
      * @description Gets the list of registration server URIs.
@@ -639,25 +651,13 @@ export namespace ClientState {
      * @interface ClientInfo
      * @description Defines the contract for storing peer-specific information.
      */
-    export interface ClientInfo {
-        /**
-         * @description Gets the peer's UID.
-         * @returns {UUID} The peer's UID.
-         */
-        getUid(): UUID;
 
-        /**
-         * @description Gets the peer's Cloud object.
-         * @returns {Cloud | null} The Cloud, or null if not set.
-         */
-        getCloud(): Cloud | null;
+     export interface ClientInfo {
+         getUid(): UUID;
+         getCloud(): ClientCloud | null;
+         setCloud(cloud: ClientCloud): void;
+     }
 
-        /**
-         * @description Sets the peer's Cloud object.
-         * @param {Cloud} cloud The Cloud to set.
-         */
-        setCloud(cloud: Cloud): void;
-    }
 
     /**
      * @class ServerInfoImpl
@@ -710,33 +710,27 @@ export namespace ClientState {
         readonly uid: UUID;
 
         /**
-         * @description The peer's Cloud object.
-         */
-        cloud: Cloud | null = null;
 
-        /**
-         * @constructor
-         * @param {UUID | ClientInfo} uidOrDto Either the peer's UID or a DTO object.
-         * @param {Cloud} [cloud] Optional cloud object if constructing with a UID.
-         */
-        constructor(uidOrDto: UUID | ClientInfo, cloud?: Cloud) {
-            if (UUID && uidOrDto instanceof UUID) {
-                this.uid = uidOrDto;
-                this.cloud = cloud ?? null;
-            } else {
-                this.uid = (uidOrDto as ClientInfo).getUid();
-                this.cloud = (uidOrDto as ClientInfo).getCloud();
-            }
-        }
+         /**
+          * @description The peer's ClientCloud object (contains weights).
+          */
+         cloud: ClientCloud | null = null;
 
-        /** @inheritDoc */
-        getUid(): UUID { return this.uid; }
+         constructor(uidOrDto: UUID | ClientInfo, cloud?: ClientCloud) {
+             if (UUID && uidOrDto instanceof UUID) {
+                 this.uid = uidOrDto;
+                 this.cloud = cloud ?? null;
+             } else {
+                 this.uid = (uidOrDto as ClientInfo).getUid();
+                 this.cloud = (uidOrDto as ClientInfo).getCloud();
+             }
+         }
 
-        /** @inheritDoc */
-        getCloud(): Cloud | null { return this.cloud; }
+         getUid(): UUID { return this.uid; }
+         getCloud(): ClientCloud | null { return this.cloud; }
+         setCloud(cloud: ClientCloud): void { this.cloud = cloud; }
 
-        /** @inheritDoc */
-        setCloud(cloud: Cloud): void { this.cloud = cloud; }
+
     }
 
     export function setServerDescriptor(key: number, arg1: ServerDescriptor) {

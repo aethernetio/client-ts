@@ -1,3 +1,4 @@
+import { ClientCloud, CloudPriorityManager } from "./aether_client_cloud_priority";
 import {
     AKey,
     CryptoEngine,
@@ -167,6 +168,7 @@ export class AetherCloudClient implements Destroyable {
     public readonly state: ClientState;
     public readonly name: string;
     public readonly logClientContext: LNode;
+     public readonly priorityManager = new CloudPriorityManager();
     private regConnection: ConnectionRegistration | null = null;
     private workConnections = new Map<number, ConnectionWork>();
     private readonly registrationUrl: URI[];
@@ -246,12 +248,14 @@ export class AetherCloudClient implements Destroyable {
             timeout, `${name}-accessCheckCache`
         );
         this.onMessage.add((senderUid: UUID, msg: Uint8Array) => {
+             const sid = this.state.getCloud(senderUid)?.getData()[0];
+             if (sid) this.priorityManager.promote(this.getUid()!, sid);
             this.getMessageNode(senderUid, MessageEventListenerDefault).sendMessageFromServerToClient(msg);
         });
 
         this.populateCachesFromState();
 
-        this.clouds.forValueUpdate().add(uu => state.setCloud(uu.key, uu.newValue as Cloud));
+         this.clouds.forValueUpdate().add(uu => state.setCloud(uu.key, this.priorityManager.updateCloudFromWork(uu.key, uu.newValue as Cloud)));
         this.servers.forValueUpdate().add(s => {
             state.setServerDescriptor(s.newValue as ServerDescriptor);
         });
@@ -285,7 +289,7 @@ export class AetherCloudClient implements Destroyable {
      * @returns {AFuture} Future indicating connection completion
      */
     public connect(): AFuture {
-        if (this.beginConnect) {
+        if (this.beginConnect && !this.startFuture0.isError()) {
             return this.startFuture0;
         }
         this.beginConnect = true;
@@ -326,7 +330,8 @@ export class AetherCloudClient implements Destroyable {
                 return resultFuture.error(err);
             }
 
-            this.state.setCloud(uid, cloud);
+            const cc = this.priorityManager.updateCloudFromWork(uid, cloud);
+            this.state.setCloud(uid, cc);
             Log.trace("forceUpdateStateFromCache: Own cloud saved to state", { uid: uid.toString() });
 
             const sids = cloud.data;
@@ -592,12 +597,12 @@ export class AetherCloudClient implements Destroyable {
     public getCloud(uid: UUID): ARFuture<Cloud> {
         const r = this.state.getCloud(uid);
         if (r != null) {
-            return ARFuture.of(r);
+             return ARFuture.of((r as any).toCloud ? (r as any).toCloud() : r as any);
         }
 
         if (this.clouds.has(uid)) {
             Log.trace("getCloud: Cache hit",{uid:uid});
-            return this.clouds.get(uid)! as ARFuture<Cloud | null>;
+             return this.clouds.get(uid)! as unknown as ARFuture<Cloud | null>;
         }
 
         Log.trace("getCloud: Cache miss", { uid: uid });
@@ -613,8 +618,12 @@ export class AetherCloudClient implements Destroyable {
      * @param {Cloud} cloud Cloud data
      */
     public setCloud(uid: UUID, cloud: Cloud): void {
-        Log.debug("setCloud: Storing cloud", { uid: uid });
-        this.state.setCloud(uid, cloud);
+        Log.debug("setCloud: Storing cloud with adaptive weights", { uid: uid.toString() });
+        this.priorityManager.updateCloudFromWork(uid, cloud);
+        const cc = this.priorityManager.getClientCloud(uid);
+        if (cc) {
+            this.state.setCloud(uid, cc);
+        }
         this.clouds.putResolved(uid, cloud);
     }
 
@@ -769,7 +778,7 @@ export class AetherCloudClient implements Destroyable {
             return;
         }
 
-        const cloudFuture = this.getCloud(uid);
+        const cloudFuture = this.getCloud(uid).map(c => (c as any).toCloud ? (c as any).toCloud() : c);
 
         cloudFuture.to(
             (cloud: Cloud) => {
@@ -778,10 +787,11 @@ export class AetherCloudClient implements Destroyable {
                     return;
                 }
 
-                Log.trace("makeFirstConnection: Found cloud, attempting to connect", { serverIds: cloud.data });
+                const orderedSids = this.priorityManager.getOrderedSids(uid, cloud);
+                Log.trace("makeFirstConnection: Found cloud, attempting to connect in adaptive order", { serverIds: orderedSids });
 
                 const connectFutures: AFuture[] = [];
-                for (const serverId of cloud.data) {
+                for (const serverId of orderedSids) {
                     if (serverId <= 0) {
                         continue;
                     }
@@ -981,13 +991,8 @@ export class AetherCloudClient implements Destroyable {
         });
 
         if (this.workConnections.size === 0 && this.getUid() && !this.destroyer.isDestroyed()) {
-            const hasActiveWork = Array.from(this.workConnections.values())
-                .some(conn => conn.connectFuture.isDone() && !conn.connectFuture.isError());
-
-            if (!hasActiveWork) {
-                Log.info("No active work connections, attempting to reconnect");
-                this.makeFirstConnection();
-            }
+            Log.info("AetherCloudClient: No active work connections, attempting to reconnect");
+            this.makeFirstConnection();
         }
     }
 

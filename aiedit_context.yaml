@@ -1,0 +1,8 @@
+block:
+  roots:
+    MAIN:
+      path: /home/angel/IdeaProjects/client-ts/src
+text:
+  roots:
+    MAIN:
+      path: /home/angel/IdeaProjects/client-ts/src

@@ -1805,17 +1805,21 @@ export class AetherStructDescriptor implements ToString  {
 export class ClientInfo implements ToString  {
     public readonly uid: UUID;
     public readonly cloud: Cloud;
+    public readonly weights: CloudWeight[];
     public static readonly META_BODY: FastMetaType<ClientInfo> = new Impl.ClientInfoMetaBodyImpl();
     public static readonly META: FastMetaType<ClientInfo> = ClientInfo.META_BODY;
     /**
      * Creates an instance of ClientInfo.
      * @param uid - UUID
      * @param cloud - Cloud
+     * @param weights - CloudWeight[]
      */
-    constructor(uid: UUID, cloud: Cloud)  {
+    constructor(uid: UUID, cloud: Cloud, weights: CloudWeight[])  {
         this.uid = uid;
         this.cloud = cloud;
+        this.weights = weights;
         if (cloud === null || cloud === undefined) throw new Error(`Field 'cloud' cannot be null for type ClientInfo.`);
+        if (weights === null || weights === undefined) throw new Error(`Field 'weights' cannot be null for type ClientInfo.`);
         
     }
     public getUid(): UUID  {
@@ -1824,6 +1828,14 @@ export class ClientInfo implements ToString  {
     }
     public getCloud(): Cloud  {
         return this.cloud;
+        
+    }
+    public getWeights(): CloudWeight[]  {
+        return this.weights;
+        
+    }
+    public weightsContains(el: CloudWeight): boolean  {
+        return (this.weights as CloudWeight[]).includes(el as any);
         
     }
     /**
@@ -2092,6 +2104,75 @@ export class Cloud implements ToString  {
     }
     public toString(result: AString): AString  {
         Cloud.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the CloudWeight structure.
+ */
+export class CloudWeight implements ToString  {
+    public readonly sid: number;
+    public readonly weight: bigint;
+    public static readonly META_BODY: FastMetaType<CloudWeight> = new Impl.CloudWeightMetaBodyImpl();
+    public static readonly META: FastMetaType<CloudWeight> = CloudWeight.META_BODY;
+    /**
+     * Creates an instance of CloudWeight.
+     * @param sid - number
+     * @param weight - bigint
+     */
+    constructor(sid: number, weight: bigint)  {
+        this.sid = sid;
+        this.weight = weight;
+        
+    }
+    public getSid(): number  {
+        return this.sid;
+        
+    }
+    public getWeight(): bigint  {
+        return this.weight;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of CloudWeight.
+     * @param {CloudWeight | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: CloudWeight | null | undefined): number  {
+        return CloudWeight.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of CloudWeight with another object.
+     * @param {CloudWeight | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: CloudWeight | null | undefined, v2: any | null | undefined): boolean  {
+        return CloudWeight.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return CloudWeight.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return CloudWeight.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        CloudWeight.META.metaToString(this, result);
         return result;
         
     }

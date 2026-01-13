@@ -70,6 +70,7 @@ export class MessageNode {
     public readonly bufferIn = new EventConsumer<{ data: Uint8Array }>();
     public readonly consumerUUID: UUID;
     public readonly client: AetherCloudClient;
+     private static readonly MAX_BUFFER_SIZE = 1000;
     public strategy: MessageEventListener;
 
     constructor(client: AetherCloudClient, consumerId: UUID, strategy: MessageEventListener) {
@@ -123,9 +124,24 @@ export class MessageNode {
     // Реализация
     public send(data: Uint8Array, future?: AFuture): AFuture {
         const sendFuture = future ?? AFuture.make();
+        
+        if (this.bufferOut.size() >= 50) {
+            const oldest = this.bufferOut.poll();
+            if (oldest) {
+                Log.warn("MessageNode: Buffer pressure, dropping oldest message", { uidTo: this.consumerUUID.toString() });
+                oldest.future.error(new Error("Outgoing message queue overflow"));
+            }
+        }
+
         const message = { data, future: sendFuture };
-        this.bufferOut.add(message);
+        if (this.bufferOut.size() < MessageNode.MAX_BUFFER_SIZE) {
+            this.bufferOut.add(message);
+        } else {
+             sendFuture.error(new Error("Critical buffer overflow"));
+        }
         Log.trace("MessageNode: Added message to bufferOut");
+
+// Timeout moved to overflow logic
 
         if (this.connectionsOut.size === 0) {
             Log.trace("MessageNode: Message buffered, no connections yet.");

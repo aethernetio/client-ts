@@ -562,7 +562,11 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
                 const messagesFromNode: { data: Uint8Array, future: AFuture }[] = [];
                 let msgEntry: { data: Uint8Array, future: AFuture } | undefined;
 
-                while ((msgEntry = m.bufferOut.poll())) {
+                let currentBatchSize = 0;
+                const MAX_BATCH_BYTES = 256 * 1024; // 256 KB
+                while ((msgEntry = m.bufferOut.peek()) && (currentBatchSize + msgEntry.data.length < MAX_BATCH_BYTES)) {
+                    msgEntry = m.bufferOut.poll()!;
+                    currentBatchSize += msgEntry.data.length;
                     Log.trace("read message from bufferOut", { data: msgEntry.data, uid: m.consumerUUID });
                     messagesFromNode.push(msgEntry);
                 }
@@ -600,10 +604,12 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
             sendFuture.to(
                 () => {
                     Log.trace("Message batch send successful", { component: "ConnectionWork", server: this.uri });
+                     this.client.priorityManager.promote(this.client.getUid()!, this.serverDescriptor.id);
                     futuresToComplete.forEach(f => f.tryDone());
                 }).onError(
                     (err: Error) => {
                         Log.error("Failed to send message batch, requeuing", err, { component: "ConnectionWork", server: this.uri });
+                         this.client.priorityManager.demote(this.client.getUid()!, this.serverDescriptor.id);
                         messagesToRequeue.forEach((msgs, node) => {
                             msgs.reverse().forEach(msg => node.bufferOut.add(msg));
                             msgs.forEach(msg => msg.future.error(err));
@@ -620,6 +626,10 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
             a.sendMessages(messagesToSend);
 
             return true;
+        }
+
+        if (this.hasPendingMessages()) {
+            RU.schedule(() => this.flush(), 10); // Даем браузеру "дышать" 10мс
         }
         return false;
     }

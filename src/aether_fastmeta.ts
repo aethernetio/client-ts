@@ -783,11 +783,16 @@ export class FastApiContext implements FastFutureContext {
         return r;
     }
 
+
     public flush(sendFuture?: AFuture): AFuture {
         const futureToUse = sendFuture || AFuture.make();
+        if (this.isEmpty()) {
+            return futureToUse;
+        }
         futureToUse.tryDone();
         return futureToUse;
     }
+
 
     public close(): AFuture {
         this.futures.clear();
