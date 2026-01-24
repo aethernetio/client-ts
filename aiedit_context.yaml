@@ -1,8 +1,7 @@
 block:
   roots:
-    MAIN:
-      path: /home/angel/IdeaProjects/client-ts/src
+    MAIN: {path: /home/angel/IdeaProjects/client-ts/src}
 text:
   roots:
-    MAIN:
-      path: /home/angel/IdeaProjects/client-ts/src
+    MAIN: {path: /home/angel/IdeaProjects/client-ts/src}
+projectId: f75670d5

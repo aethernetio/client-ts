@@ -11,6 +11,13 @@ export namespace AetherCodec  {
     export const META: FastMetaType<AetherCodec> = new Impl.AetherCodecMetaImpl();
     
 }
+export enum ClientActivityType  {
+    CONNECT = 'CONNECT', DISCONNECT = 'DISCONNECT', MESSAGE_SEND = 'MESSAGE_SEND', MESSAGE_RECEIVE = 'MESSAGE_RECEIVE', COMMAND_EXEC = 'COMMAND_EXEC', API_CALL = 'API_CALL' 
+}
+export namespace ClientActivityType  {
+    export const META: FastMetaType<ClientActivityType> = new Impl.ClientActivityTypeMetaImpl();
+    
+}
 export enum CryptoLib  {
     SODIUM = 'SODIUM', HYDROGEN = 'HYDROGEN' 
 }
@@ -1800,6 +1807,192 @@ export class AetherStructDescriptor implements ToString  {
     
 }
 /**
+ * Represents the ClientActivity structure.
+ */
+export class ClientActivity implements ToString  {
+    public readonly timestamp: bigint;
+    public readonly type: ClientActivityType;
+    public readonly clientUid: UUID;
+    public readonly details: string;
+    public readonly serverId: number | null;
+    public static readonly META_BODY: FastMetaType<ClientActivity> = new Impl.ClientActivityMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientActivity> = ClientActivity.META_BODY;
+    /**
+     * Creates an instance of ClientActivity.
+     * @param timestamp - bigint
+     * @param type - ClientActivityType
+     * @param clientUid - UUID
+     * @param details - string
+     * @param serverId - number
+     */
+    constructor(timestamp: bigint, type: ClientActivityType, clientUid: UUID, details: string, serverId: number)  {
+        this.timestamp = timestamp;
+        this.type = type;
+        this.clientUid = clientUid;
+        this.details = details;
+        this.serverId = serverId;
+        if (type === null || type === undefined) throw new Error(`Field 'type' cannot be null for type ClientActivity.`);
+        
+    }
+    public getTimestamp(): bigint  {
+        return this.timestamp;
+        
+    }
+    public getType(): ClientActivityType  {
+        return this.type;
+        
+    }
+    public getClientUid(): UUID  {
+        return this.clientUid;
+        
+    }
+    public getDetails(): string  {
+        return this.details;
+        
+    }
+    public getServerId(): number | null  {
+        return this.serverId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientActivity.
+     * @param {ClientActivity | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientActivity | null | undefined): number  {
+        return ClientActivity.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientActivity with another object.
+     * @param {ClientActivity | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientActivity | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientActivity.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientActivity.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientActivity.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        ClientActivity.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientConnectionInfo structure.
+ */
+export class ClientConnectionInfo implements ToString  {
+    public readonly connectedAt: bigint;
+    public readonly disconnectedAt: bigint | null;
+    public readonly serverId: number;
+    public readonly context: KeyValuePair[];
+    public readonly protocol: string;
+    public static readonly META_BODY: FastMetaType<ClientConnectionInfo> = new Impl.ClientConnectionInfoMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientConnectionInfo> = ClientConnectionInfo.META_BODY;
+    /**
+     * Creates an instance of ClientConnectionInfo.
+     * @param connectedAt - bigint
+     * @param disconnectedAt - bigint
+     * @param serverId - number
+     * @param context - KeyValuePair[]
+     * @param protocol - string
+     */
+    constructor(connectedAt: bigint, disconnectedAt: bigint, serverId: number, context: KeyValuePair[], protocol: string)  {
+        this.connectedAt = connectedAt;
+        this.disconnectedAt = disconnectedAt;
+        this.serverId = serverId;
+        this.context = context;
+        this.protocol = protocol;
+        if (context === null || context === undefined) throw new Error(`Field 'context' cannot be null for type ClientConnectionInfo.`);
+        
+    }
+    public getConnectedAt(): bigint  {
+        return this.connectedAt;
+        
+    }
+    public getDisconnectedAt(): bigint | null  {
+        return this.disconnectedAt;
+        
+    }
+    public getServerId(): number  {
+        return this.serverId;
+        
+    }
+    public getContext(): KeyValuePair[]  {
+        return this.context;
+        
+    }
+    public contextContains(el: KeyValuePair): boolean  {
+        return (this.context as KeyValuePair[]).includes(el as any);
+        
+    }
+    public getProtocol(): string  {
+        return this.protocol;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientConnectionInfo.
+     * @param {ClientConnectionInfo | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientConnectionInfo | null | undefined): number  {
+        return ClientConnectionInfo.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientConnectionInfo with another object.
+     * @param {ClientConnectionInfo | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientConnectionInfo | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientConnectionInfo.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientConnectionInfo.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientConnectionInfo.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        ClientConnectionInfo.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
  * Represents the ClientInfo structure.
  */
 export class ClientInfo implements ToString  {
@@ -1876,6 +2069,94 @@ export class ClientInfo implements ToString  {
     }
     public toString(result: AString): AString  {
         ClientInfo.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientLogEntry structure.
+ */
+export class ClientLogEntry implements ToString  {
+    public readonly timestamp: bigint;
+    public readonly level: string;
+    public readonly message: string;
+    public readonly context: KeyValuePair[];
+    public static readonly META_BODY: FastMetaType<ClientLogEntry> = new Impl.ClientLogEntryMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientLogEntry> = ClientLogEntry.META_BODY;
+    /**
+     * Creates an instance of ClientLogEntry.
+     * @param timestamp - bigint
+     * @param level - string
+     * @param message - string
+     * @param context - KeyValuePair[]
+     */
+    constructor(timestamp: bigint, level: string, message: string, context: KeyValuePair[])  {
+        this.timestamp = timestamp;
+        this.level = level;
+        this.message = message;
+        this.context = context;
+        if (context === null || context === undefined) throw new Error(`Field 'context' cannot be null for type ClientLogEntry.`);
+        
+    }
+    public getTimestamp(): bigint  {
+        return this.timestamp;
+        
+    }
+    public getLevel(): string  {
+        return this.level;
+        
+    }
+    public getMessage(): string  {
+        return this.message;
+        
+    }
+    public getContext(): KeyValuePair[]  {
+        return this.context;
+        
+    }
+    public contextContains(el: KeyValuePair): boolean  {
+        return (this.context as KeyValuePair[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientLogEntry.
+     * @param {ClientLogEntry | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientLogEntry | null | undefined): number  {
+        return ClientLogEntry.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientLogEntry with another object.
+     * @param {ClientLogEntry | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientLogEntry | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientLogEntry.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientLogEntry.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientLogEntry.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        ClientLogEntry.META.metaToString(this, result);
         return result;
         
     }
@@ -3088,6 +3369,75 @@ export class IPAddressWeb extends IPAddress implements ToString  {
     
 }
 /**
+ * Represents the KeyValuePair structure.
+ */
+export class KeyValuePair implements ToString  {
+    public readonly key: string;
+    public readonly value: string;
+    public static readonly META_BODY: FastMetaType<KeyValuePair> = new Impl.KeyValuePairMetaBodyImpl();
+    public static readonly META: FastMetaType<KeyValuePair> = KeyValuePair.META_BODY;
+    /**
+     * Creates an instance of KeyValuePair.
+     * @param key - string
+     * @param value - string
+     */
+    constructor(key: string, value: string)  {
+        this.key = key;
+        this.value = value;
+        
+    }
+    public getKey(): string  {
+        return this.key;
+        
+    }
+    public getValue(): string  {
+        return this.value;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of KeyValuePair.
+     * @param {KeyValuePair | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: KeyValuePair | null | undefined): number  {
+        return KeyValuePair.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of KeyValuePair with another object.
+     * @param {KeyValuePair | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: KeyValuePair | null | undefined, v2: any | null | undefined): boolean  {
+        return KeyValuePair.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return KeyValuePair.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return KeyValuePair.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        KeyValuePair.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
  * Represents the Message structure.
  */
 export class Message implements ToString  {
@@ -3156,6 +3506,96 @@ export class Message implements ToString  {
     }
     public toString(result: AString): AString  {
         Message.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the MessageInfo structure.
+ */
+export class MessageInfo implements ToString  {
+    public readonly timestamp: bigint;
+    public readonly fromUid: UUID;
+    public readonly toUid: UUID;
+    public readonly size: number;
+    public readonly messageId: UUID;
+    public static readonly META_BODY: FastMetaType<MessageInfo> = new Impl.MessageInfoMetaBodyImpl();
+    public static readonly META: FastMetaType<MessageInfo> = MessageInfo.META_BODY;
+    /**
+     * Creates an instance of MessageInfo.
+     * @param timestamp - bigint
+     * @param fromUid - UUID
+     * @param toUid - UUID
+     * @param size - number
+     * @param messageId - UUID
+     */
+    constructor(timestamp: bigint, fromUid: UUID, toUid: UUID, size: number, messageId: UUID)  {
+        this.timestamp = timestamp;
+        this.fromUid = fromUid;
+        this.toUid = toUid;
+        this.size = size;
+        this.messageId = messageId;
+        
+    }
+    public getTimestamp(): bigint  {
+        return this.timestamp;
+        
+    }
+    public getFromUid(): UUID  {
+        return this.fromUid;
+        
+    }
+    public getToUid(): UUID  {
+        return this.toUid;
+        
+    }
+    public getSize(): number  {
+        return this.size;
+        
+    }
+    public getMessageId(): UUID  {
+        return this.messageId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of MessageInfo.
+     * @param {MessageInfo | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: MessageInfo | null | undefined): number  {
+        return MessageInfo.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of MessageInfo with another object.
+     * @param {MessageInfo | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: MessageInfo | null | undefined, v2: any | null | undefined): boolean  {
+        return MessageInfo.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return MessageInfo.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return MessageInfo.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        MessageInfo.META.metaToString(this, result);
         return result;
         
     }
@@ -3565,6 +4005,90 @@ export class ServerDescriptor implements ToString  {
     }
     public toString(result: AString): AString  {
         ServerDescriptor.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerDescriptorWithGeo structure.
+ */
+export class ServerDescriptorWithGeo implements ToString  {
+    public readonly id: number;
+    public readonly ipAddress: IPAddressAndPortsList;
+    public readonly latitude: number;
+    public readonly longitude: number;
+    public static readonly META_BODY: FastMetaType<ServerDescriptorWithGeo> = new Impl.ServerDescriptorWithGeoMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerDescriptorWithGeo> = ServerDescriptorWithGeo.META_BODY;
+    /**
+     * Creates an instance of ServerDescriptorWithGeo.
+     * @param id - number
+     * @param ipAddress - IPAddressAndPortsList
+     * @param latitude - number
+     * @param longitude - number
+     */
+    constructor(id: number, ipAddress: IPAddressAndPortsList, latitude: number, longitude: number)  {
+        this.id = id;
+        this.ipAddress = ipAddress;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        if (ipAddress === null || ipAddress === undefined) throw new Error(`Field 'ipAddress' cannot be null for type ServerDescriptorWithGeo.`);
+        
+    }
+    public getId(): number  {
+        return this.id;
+        
+    }
+    public getIpAddress(): IPAddressAndPortsList  {
+        return this.ipAddress;
+        
+    }
+    public getLatitude(): number  {
+        return this.latitude;
+        
+    }
+    public getLongitude(): number  {
+        return this.longitude;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerDescriptorWithGeo.
+     * @param {ServerDescriptorWithGeo | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerDescriptorWithGeo | null | undefined): number  {
+        return ServerDescriptorWithGeo.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerDescriptorWithGeo with another object.
+     * @param {ServerDescriptorWithGeo | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerDescriptorWithGeo | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerDescriptorWithGeo.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerDescriptorWithGeo.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerDescriptorWithGeo.staticEquals(this, other);
+        
+    }
+    public toString(result: AString): AString  {
+        ServerDescriptorWithGeo.META.metaToString(this, result);
         return result;
         
     }
@@ -5313,6 +5837,43 @@ export interface AuthorizedApi  {
      * @aetherMethodId 28
      */
     requestAccessCheck(requests: AccessCheckPair[]): void;
+    /**
+     * @param uid - UUID
+     * @param fromTime - bigint
+     * @param toTime - bigint
+     * @param limit - number
+     * @returns ARFuture<ClientActivity[]>
+     *
+     * @aetherMethodId 29
+     */
+    getClientActivity(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<ClientActivity[]>;
+    /**
+     * @param uid - UUID
+     * @param query - string
+     * @param limit - number
+     * @returns ARFuture<ClientLogEntry[]>
+     *
+     * @aetherMethodId 30
+     */
+    searchClientLogs(uid: UUID, query: string, limit: number): ARFuture<ClientLogEntry[]>;
+    /**
+     * @param uid - UUID
+     * @param limit - number
+     * @returns ARFuture<ClientConnectionInfo[]>
+     *
+     * @aetherMethodId 31
+     */
+    getClientConnections(uid: UUID, limit: number): ARFuture<ClientConnectionInfo[]>;
+    /**
+     * @param uid - UUID
+     * @param fromTime - bigint
+     * @param toTime - bigint
+     * @param limit - number
+     * @returns ARFuture<MessageInfo[]>
+     *
+     * @aetherMethodId 32
+     */
+    getClientMessages(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<MessageInfo[]>;
     
 }
 export namespace AuthorizedApi  {
@@ -5499,6 +6060,43 @@ export abstract class AuthorizedApiLocal<RT extends AuthorizedApiRemote> impleme
      * @aetherMethodId 28
      */
     public abstract requestAccessCheck(requests: AccessCheckPair[]): void;
+    /**
+     * @param uid - UUID
+     * @param fromTime - bigint
+     * @param toTime - bigint
+     * @param limit - number
+     * @returns ARFuture<ClientActivity[]>
+     *
+     * @aetherMethodId 29
+     */
+    public abstract getClientActivity(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<ClientActivity[]>;
+    /**
+     * @param uid - UUID
+     * @param query - string
+     * @param limit - number
+     * @returns ARFuture<ClientLogEntry[]>
+     *
+     * @aetherMethodId 30
+     */
+    public abstract searchClientLogs(uid: UUID, query: string, limit: number): ARFuture<ClientLogEntry[]>;
+    /**
+     * @param uid - UUID
+     * @param limit - number
+     * @returns ARFuture<ClientConnectionInfo[]>
+     *
+     * @aetherMethodId 31
+     */
+    public abstract getClientConnections(uid: UUID, limit: number): ARFuture<ClientConnectionInfo[]>;
+    /**
+     * @param uid - UUID
+     * @param fromTime - bigint
+     * @param toTime - bigint
+     * @param limit - number
+     * @returns ARFuture<MessageInfo[]>
+     *
+     * @aetherMethodId 32
+     */
+    public abstract getClientMessages(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<MessageInfo[]>;
     
 }
 export interface LoginApi  {

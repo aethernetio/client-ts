@@ -266,7 +266,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
         try {
             Log.trace("RegConn: registration step finish.");
             this.client.confirmRegistration(finishResult);
-             this.close();
+                this.destroy(false);
             Log.info("RegConn: Registration confirmed.");
 
             this.resolveCloud(finishResult.getCloud(), asymCE);

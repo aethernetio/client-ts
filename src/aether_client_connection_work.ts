@@ -629,7 +629,7 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
         }
 
         if (this.hasPendingMessages()) {
-            RU.schedule(() => this.flush(), 10); // Даем браузеру "дышать" 10мс
+                RU.schedule(10, () => this.flush()); // Даем браузеру "дышать" 10мс
         }
         return false;
     }
