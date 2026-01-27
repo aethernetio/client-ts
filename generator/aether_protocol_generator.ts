@@ -81,7 +81,6 @@ export class AetherDslMetaProcessor {
     FastApiContextLocal,
     FastMetaApi,
     BytesConverter,
-    RemoteApiFuture,
     UUID,
     URI,
     AConsumer,
