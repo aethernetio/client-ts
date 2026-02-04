@@ -5742,7 +5742,7 @@ export interface AuthorizedApi  {
      *
      * @aetherMethodId 13
      */
-    resolverClouds(uids: UUID[]): void;
+    resolveClouds(uids: UUID[]): void;
     /**
      * @param uid - UUID
      * @returns ARFuture<bigint[]>
@@ -5965,7 +5965,7 @@ export abstract class AuthorizedApiLocal<RT extends AuthorizedApiRemote> impleme
      *
      * @aetherMethodId 13
      */
-    public abstract resolverClouds(uids: UUID[]): void;
+    public abstract resolveClouds(uids: UUID[]): void;
     /**
      * @param uid - UUID
      * @returns ARFuture<bigint[]>

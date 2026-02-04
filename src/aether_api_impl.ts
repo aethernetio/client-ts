@@ -10196,9 +10196,9 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     }
                     const argsNames_981: string[] = ["uids"];
                     const argsValues_982: any[] = [uids_978];
-                    ctx.invokeLocalMethodBefore("resolverClouds", argsNames_981, argsValues_982);
-                    localApi.resolverClouds(uids_978);
-                    ctx.invokeLocalMethodAfter("resolverClouds", null, argsNames_981, argsValues_982);
+                    ctx.invokeLocalMethodBefore("resolveClouds", argsNames_981, argsValues_982);
+                    localApi.resolveClouds(uids_978);
+                    ctx.invokeLocalMethodAfter("resolveClouds", null, argsNames_981, argsValues_982);
                     break;
                     
                 }
@@ -10809,12 +10809,12 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                 sCtx_1114.sendToRemote(dataOut_1163.toArray());
                 
             }
-            , resolverClouds: (uids: UUID[]): void =>  {
+            , resolveClouds: (uids: UUID[]): void =>  {
                 const dataOut_1169 = new DataInOut();
                 dataOut_1169.writeByte(13);
                 const argsNames_1171: string[] = ["uids"];
                 const argsValues_1172: any[] = [uids];
-                sCtx_1114.invokeRemoteMethodAfter("resolverClouds", null, argsNames_1171, argsValues_1172);
+                sCtx_1114.invokeRemoteMethodAfter("resolveClouds", null, argsNames_1171, argsValues_1172);
                 SerializerPackNumber.INSTANCE.put(dataOut_1169, uids.length);
                 for (const el_1173 of uids)  {
                     FastMeta.META_UUID.serialize(sCtx_1114, el_1173, dataOut_1169);

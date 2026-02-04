@@ -519,7 +519,7 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
                 count: requestCloud.length,
                 uids: requestCloud
             });
-            a.resolverClouds(requestCloud);
+            a.resolveClouds(requestCloud);
         }
     }
 
