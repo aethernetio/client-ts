@@ -95,7 +95,7 @@ export class UUID implements ToString, JObj {
         return UUID.fromString(str);
     }
 
-    toString(s?: AString): AString {
+    toAString(s?: AString): AString {
         if (!s) s = AString.of();
         if (!this.data || this.data.length !== 16) {
             // Fallback for empty/invalid UUIDs to avoid crashes in logs

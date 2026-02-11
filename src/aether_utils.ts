@@ -55,6 +55,8 @@ export const HexUtils = {
     }
 };
 
+type DestroyerFunction = (f: boolean) => unknown;
+
 // =============================================================================================
 // DESTROYER
 // =============================================================================================
@@ -70,7 +72,19 @@ export class Destroyer implements Destroyable {
 
     public isDestroyed(): boolean { return this.destroyFuture.get() !== null; }
 
-    public add(resource: Destroyable): void {
+    public add(resource: Destroyable|DestroyerFunction): void {
+        if(typeof (resource) ==='function'){
+            this.queue.add(new class implements Destroyable{
+                destroy(force: boolean): AFuture {
+                    let res=(resource as (f:boolean)=>unknown)(force);
+                    if (res instanceof AFuture) {
+                        return res;
+                    } else {
+                        return AFuture.completed();
+                    }
+                }
+            } );
+        }else
         if (typeof (resource as Destroyable).destroy === 'function') {
             this.queue.add(resource as Destroyable);
         } else {
@@ -101,8 +115,9 @@ export class Destroyer implements Destroyable {
 
         const allDestroy = AFuture.all(...destroyTasks);
 
-        allDestroy.to(() => { if (res.tryDone()) { /* done */ } })
-            .onError(e => res.error(e));
+        allDestroy.to(() => {
+            res.tryDone();
+        }).onError(e => res.error(e));
 
         res.timeoutError(5, `Timeout destroying all units in Destroyer[${this.name}]`);
         return res;
@@ -119,8 +134,8 @@ export const RU = {
     ConcurrentHashMap: Map,
     ConcurrentLinkedQueue: ConcurrentLinkedQueue_C,
     ConcurrentHashSet: Set,
-
-    time: (): number => Date.now(),
+    time: () => Date.now(),
+    timeSeconds: () => Date.now() / 1000,
     schedule: (ms: number, task: ARunnable): Destroyable => {
         const timer = setTimeout(Log.wrap(task), ms);
         return {
@@ -131,7 +146,6 @@ export const RU = {
         };
     },
 
-    // <-- Возвращаемый тип изменен на Destroyable
     scheduleAtFixedRate: (resTo: Destroyable, period: number, timeUnit: "MILLISECONDS" | "SECONDS", t: ARunnable): Destroyable => {
         const periodMs = period * (timeUnit === "SECONDS" ? 1000 : 1);
         const wrappedTask = Log.wrap(t);
@@ -432,4 +446,26 @@ export class Queue<T> implements IQueue<T> {
     clear(): void {
         this.storage = [];
     }
+
+    /**
+     * Deque-like method: adds element to the front of the queue.
+     */
+    public addFirst(element: T): void {
+        this.storage.unshift(element);
+    }
+
+    /**
+     * Alias for peek() to match Deque naming.
+     */
+    public peekFirst(): T | null {
+        return this.peek();
+    }
+
+    /**
+     * Alias for poll() to match Deque naming.
+     */
+    public pollFirst(): T | null {
+        return this.poll();
+    }
+
 }

@@ -101,7 +101,7 @@ export class ClientCloud {
 export class CloudPriorityManager {
     private clouds: Map<string, ClientCloud> = new Map();
     public updateCloudFromWork(uid: UUID, cloud: Cloud): ClientCloud {
-         const key = uid.toString().toString();
+         const key = uid.toAString().toString();
         let cc = this.clouds.get(key);
         if (!cc) { 
             cc = new ClientCloud(uid, cloud); 
@@ -113,17 +113,17 @@ export class CloudPriorityManager {
     }
 
     public getClientCloud(uid: UUID): ClientCloud | undefined {
-        return this.clouds.get(uid.toString().toString());
+        return this.clouds.get(uid.toAString().toString());
     }
 
     public promote(uid: UUID, sid: number): void {
-        this.clouds.get(uid.toString().toString())?.promote(sid);
+        this.clouds.get(uid.toAString().toString())?.promote(sid);
     }
     public demote(uid: UUID, sid: number): void {
-        this.clouds.get(uid.toString().toString())?.demote(sid);
+        this.clouds.get(uid.toAString().toString())?.demote(sid);
     }
     public getOrderedSids(uid: UUID, raw: Cloud): number[] {
-         const key = uid.toString().toString();
+         const key = uid.toAString().toString();
         let cc = this.clouds.get(key);
         if (!cc) { cc = new ClientCloud(uid, raw); this.clouds.set(key, cc); }
         return cc.getOrderedSids();

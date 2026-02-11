@@ -19,7 +19,7 @@ import {
     FastMetaApi,
     RemoteApi
 } from './aether_fastmeta';
-import { AFuture, ARFuture } from './aether_future';
+import { AFuture, ARFuture, EventConsumer } from './aether_future';
 import { FastMetaClient, FastMetaNet } from './aether_fastmeta_net';
 
 /**
@@ -197,82 +197,59 @@ export class Connection<LT, RT extends RemoteApi> implements Destroyable {
      */
     protected rootApi: RT | null = null;
 
+    public readonly stateListeners = new EventConsumer<boolean>();
+
+
     /** * @description Base logging context for this connection instance.
      * @protected
      * @type {*}
      */
     protected readonly logCtxData: any;
 
-    /**
-     * @constructor
-     * @param {AetherCloudClient} client The main client instance.
-     * @param {URI} uri The server URI to connect to.
-     * @param {FastMetaApi<LT, any>} localApiMeta The META object for the local API implementation.
-     * @param {FastMetaApi<unknown, RT>} remoteApiMeta The META object for the remote API.
-     */
-    constructor(
+
+    public constructor(
         client: AetherCloudClient,
         uri: URI,
         localApiMeta: FastMetaApi<LT, any>,
-        remoteApiMeta: FastMetaApi<unknown, RT>
+        remoteApiMeta: FastMetaApi<any, RT>
     ) {
-        if (!uri) throw new Error("Connection URI cannot be null");
         this.uri = uri;
         this.client = client;
-        this.logCtxData = { component: "Connection", uri: this.uri };
-        this.connectFuture = ARFuture.of<RT>();
-
-        Log.debug("Connection: Initializing...", this.logCtxData);
+        this.logCtxData = { uri: uri.toString() };
+        this.connectFuture = ARFuture.make<RT>();
 
         if (client.destroyer.isDestroyed()) {
-            Log.warn("Attempting to create connection on destroyed client", this.logCtxData);
-            this.connectFuture.cancel();
-            this.rootApi = null;
+            this.connectFuture.tryError(new Error("Client is destroyed"));
             this.fastMetaClient = null;
             return;
         }
 
         client.destroyer.add(this);
-
         const localApi = this as unknown as LT;
 
-        /**
-         * @description Provides the local API implementation to the network layer.
-         * @type {AFunction<RT, LT>}
-         */
-        const localApiProvider: AFunction<RT, LT> = (remoteApi: RT) => {
+        const localApiProvider = (remoteApi: RT) => {
             this.rootApi = remoteApi;
             return localApi;
         };
 
-        /**
-         * @description Callback for the network layer to report connection status.
-         * @type {AConsumer<boolean>}
-         */
-        const writableConsumer: AConsumer<boolean> = (isWritable: boolean) => {
+        const writableConsumer = (isWritable: boolean) => {
+            this.onConnectionStateChanged(isWritable);
             if (isWritable) {
                 if (this.rootApi) {
                     this.connectFuture.tryDone(this.rootApi);
                 } else {
-                    Log.error("Connection is writable but rootApi was not set.", this.logCtxData);
-                    this.connectFuture.tryError(new Error("Connection established but rootApi is null."));
+                    Log.error("Connection writable but rootApi null", { uri: uri.toString() });
+                    this.connectFuture.tryError(new Error("rootApi is null"));
                 }
-            } else {
-                Log.warn("Connection lost.", this.logCtxData);
-                // TODO: Implement connection loss handling if necessary
             }
+            this.stateListeners.fire(isWritable);
         };
 
-        this.fastMetaClient = FastMetaNet.INSTANCE.get().makeClient(
-            uri,
-            localApiMeta,
-            remoteApiMeta,
-            localApiProvider,
-            writableConsumer
-        );
-
+        const factory = FastMetaNet.INSTANCE.get();
+        this.fastMetaClient = factory.makeClient(uri, localApiMeta, remoteApiMeta, localApiProvider, writableConsumer);
         client.destroyer.add(this.fastMetaClient);
     }
+
 
     /**
      * @description Gets the root remote API instance.
@@ -312,7 +289,9 @@ export class Connection<LT, RT extends RemoteApi> implements Destroyable {
         }
     }
 
-    /** * @description Checks equality based on the connection URI.
+
+    /**
+     * @description Checks equality based on the connection URI.
      * @param {unknown} other - The object to compare with.
      * @returns {boolean} True if the URIs are identical.
      */
@@ -334,4 +313,9 @@ export class Connection<LT, RT extends RemoteApi> implements Destroyable {
         }
         return hash;
     }
+
+    protected onConnectionStateChanged(isWritable: boolean): void {
+        // To be overridden by subclasses
+    }
+
 }

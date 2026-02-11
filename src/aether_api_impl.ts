@@ -1,9 +1,9 @@
 import  {
-    AFuture, ARFuture, DataIn, DataOut, DataInOut, DataInOutStatic, FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, RemoteApiFuture, FastFutureContextStub, UUID, URI, AConsumer, ToString, AString
+    AFuture, ARFuture, DataIn, DataOut, DataInOut, DataInOutStatic, FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, RemoteApiFuture, FastFutureContextStub, UUID, URI, AConsumer, ToString, AString, FlushReport
 }
 from './aether_client';
 import  {
-    AetherCodec, ClientActivityType, CryptoLib, PowMethod, Status, AetherTypeDescriptor, IPAddress, Key, KeyAsymmetric, KeyAsymmetricPrivate, KeyAsymmetricPublic, KeySign, KeySignPrivate, KeySignPublic, KeySymmetric, PairKeys, Sign, Telemetry, WorkProofConfig, AccessCheckPair, AccessCheckResult, AccessGroup, AetherApiDefinition, AetherArgumentDescriptor, AetherArrayType, AetherBaseType, AetherFieldDescriptor, AetherMethodDescriptor, AetherModuleDescriptor, AetherNullableType, AetherStreamType, AetherStructDescriptor, ClientActivity, ClientConnectionInfo, ClientInfo, ClientLogEntry, ClientStateForSave, Cloud, CloudWeight, CoderAndPort, FinishResult, HydrogenCurvePrivate, HydrogenCurvePublic, HydrogenSecretBox, HydrogenSignPrivate, HydrogenSignPublic, IPAddressAndPorts, IPAddressAndPortsList, IPAddressV4, IPAddressV6, IPAddressWeb, KeyValuePair, Message, MessageInfo, MoneyOperation, PairKeysAsym, PairKeysAsymSigned, PairKeysSign, ServerDescriptor, ServerDescriptorWithGeo, SignAE_ED25519, SignedKey, SignHYDROGEN, SodiumChacha20Poly1305, SodiumCurvePrivate, SodiumCurvePublic, SodiumSignPrivate, SodiumSignPublic, TelemetryCPP, UUIDAndCloud, WorkProofBCrypt, WorkProofDTO, ClientApiRegSafeStream, ClientApiStream, ClientInteractionClientStream, GlobalApi, GlobalRegClientApiStream, LoginClientStream, LoginStream, ServerRegistrationApiStream, ClientApiUnsafe, ClientApiSafe, AuthorizedApi, LoginApi, ServerApiByUidClient, ServerApiByUid, ClientApiRegSafe, GlobalRegClientApi, ClientApiRegUnsafe, GlobalRegServerApi, ServerRegistrationApi, RegistrationRootApi, ClientApiUnsafeRemote, ClientApiSafeRemote, AuthorizedApiRemote, LoginApiRemote, ServerApiByUidClientRemote, ServerApiByUidRemote, ClientApiRegSafeRemote, GlobalRegClientApiRemote, ClientApiRegUnsafeRemote, GlobalRegServerApiRemote, ServerRegistrationApiRemote, RegistrationRootApiRemote
+    AetherCodec, ClientActivityType, CryptoLib, PowMethod, Status, AetherTypeDescriptor, IPAddress, Key, KeyAsymmetric, KeyAsymmetricPrivate, KeyAsymmetricPublic, KeySign, KeySignPrivate, KeySignPublic, KeySymmetric, PairKeys, Sign, Telemetry, WorkProofConfig, AccessCheckPair, AccessCheckResult, AccessGroup, AetherApiDefinition, AetherArgumentDescriptor, AetherArrayType, AetherBaseType, AetherFieldDescriptor, AetherMethodDescriptor, AetherModuleDescriptor, AetherNullableType, AetherStreamType, AetherStructDescriptor, ClientActivity, ClientConnectionInfo, ClientInfo, ClientLogEntry, ClientStateForSave, Cloud, CloudWeight, CoderAndPort, FinishResult, HydrogenCurvePrivate, HydrogenCurvePublic, HydrogenSecretBox, HydrogenSignPrivate, HydrogenSignPublic, IPAddressAndPorts, IPAddressAndPortsList, IPAddressV4, IPAddressV6, IPAddressWeb, KeyValuePair, Message, MessageInfo, MoneyOperation, PairKeysAsym, PairKeysAsymSigned, PairKeysSign, ServerDescriptor, ServerDescriptorWithGeo, SignAE_ED25519, SignedKey, SignHYDROGEN, SodiumChacha20Poly1305, SodiumCurvePrivate, SodiumCurvePublic, SodiumSignPrivate, SodiumSignPublic, TelemetryCPP, UUIDAndCloud, WorkProofBCrypt, WorkProofDTO, ClientApiRegSafeStream, ClientApiStream, ClientInteractionClientStream, GlobalApiStream, GlobalRegClientApiStream, LoginClientStream, LoginStream, ServerRegistrationApiStream, ClientApiUnsafe, ClientApiSafe, AuthorizedApi, LoginApi, ServerApiByUidClient, ServerApiByUid, ClientApiRegSafe, GlobalRegClientApi, ClientApiRegUnsafe, GlobalRegServerApi, ServerRegistrationApi, RegistrationRootApi, ClientApiUnsafeRemote, ClientApiSafeRemote, AuthorizedApiRemote, LoginApiRemote, ServerApiByUidClientRemote, ServerApiByUidRemote, ClientApiRegSafeRemote, GlobalRegClientApiRemote, ClientApiRegUnsafeRemote, GlobalRegServerApiRemote, ServerRegistrationApiRemote, RegistrationRootApiRemote
 }
 from './aether_api';
 // This is always relative
@@ -9117,46 +9117,46 @@ export class ClientInteractionClientStreamMetaImpl implements FastMetaType<Clien
     }
     
 }
-export class GlobalApiMetaImpl implements FastMetaType<GlobalApi>  {
-    serialize(ctx: FastFutureContext, obj: GlobalApi, out: DataOut): void  {
+export class GlobalApiStreamMetaImpl implements FastMetaType<GlobalApiStream>  {
+    serialize(ctx: FastFutureContext, obj: GlobalApiStream, out: DataOut): void  {
         FastMeta.META_ARRAY_BYTE.serialize(ctx, obj.data, out);
         
     }
-    deserialize(ctx: FastFutureContext, in_: DataIn): GlobalApi  {
-        return new GlobalApi(FastMeta.META_ARRAY_BYTE.deserialize(ctx, in_));
+    deserialize(ctx: FastFutureContext, in_: DataIn): GlobalApiStream  {
+        return new GlobalApiStream(FastMeta.META_ARRAY_BYTE.deserialize(ctx, in_));
         
     }
-    metaHashCode(obj: GlobalApi | null | undefined): number  {
+    metaHashCode(obj: GlobalApiStream | null | undefined): number  {
         return FastMeta.META_ARRAY_BYTE.metaHashCode(obj?.data);
         
     }
-    metaEquals(v1: GlobalApi | null | undefined, v2: any | null | undefined): boolean  {
-        return FastMeta.META_ARRAY_BYTE.metaEquals(v1?.data, (v2 instanceof GlobalApi) ? v2.data : v2);
+    metaEquals(v1: GlobalApiStream | null | undefined, v2: any | null | undefined): boolean  {
+        return FastMeta.META_ARRAY_BYTE.metaEquals(v1?.data, (v2 instanceof GlobalApiStream) ? v2.data : v2);
         
     }
-    metaToString(obj: GlobalApi | null | undefined, res: AString): void  {
+    metaToString(obj: GlobalApiStream | null | undefined, res: AString): void  {
         if (obj === null || obj === undefined)  {
             res.add('null');
             return;
             
         }
-        res.add('GlobalApi(').add('data:').add(obj.data).add(')');
+        res.add('GlobalApiStream(').add('data:').add(obj.data).add(')');
         
     }
-    public serializeToBytes(obj: GlobalApi): Uint8Array  {
+    public serializeToBytes(obj: GlobalApiStream): Uint8Array  {
         const d = new DataInOut();
         // FastFutureContextStub is imported in aether_api_impl.ts
         this.serialize(FastFutureContextStub, obj, d);
         return d.toArray();
         
     }
-    public deserializeFromBytes(data: Uint8Array): GlobalApi  {
+    public deserializeFromBytes(data: Uint8Array): GlobalApiStream  {
         const d = new DataInOutStatic(data);
         // FastFutureContextStub is imported in aether_api_impl.ts
         return this.deserialize(FastFutureContextStub, d);
         
     }
-    public loadFromFile(file: string): GlobalApi  {
+    public loadFromFile(file: string): GlobalApiStream  {
         throw new Error("UnsupportedOperationException: loadFromFile requires Node.js/Filesystem access.");
         
     }
@@ -9404,10 +9404,8 @@ export class ClientApiUnsafeMetaImpl implements FastMetaApi<ClientApiUnsafe, Cli
     }
     makeRemote(sCtx_717: FastFutureContext): ClientApiUnsafeRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_717.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_717.flush(sendFuture);
                 
             }
             , getFastMetaContext: () => sCtx_717, sendSafeApiDataMulti: (backId: number, data: LoginClientStream): void =>  {
@@ -9480,256 +9478,263 @@ export class ClientApiSafeMetaImpl implements FastMetaApi<ClientApiSafe, ClientA
                     
                 }
                 case 5:  {
-                    let uid_737: UUID;
-                    uid_737 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const argsNames_738: string[] = ["uid"];
-                    const argsValues_739: any[] = [uid_737];
-                    ctx.invokeLocalMethodBefore("newChild", argsNames_738, argsValues_739);
-                    localApi.newChild(uid_737);
-                    ctx.invokeLocalMethodAfter("newChild", null, argsNames_738, argsValues_739);
+                    let uids_737: UUID[];
+                    const len_739 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    uids_737 = new Array<UUID>(len_739);
+                    for (let idx_738 = 0;
+                    idx_738 < len_739;
+                    idx_738++)  {
+                        uids_737[idx_738] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                        
+                    }
+                    const argsNames_740: string[] = ["uids"];
+                    const argsValues_741: any[] = [uids_737];
+                    ctx.invokeLocalMethodBefore("newChildren", argsNames_740, argsValues_741);
+                    localApi.newChildren(uids_737);
+                    ctx.invokeLocalMethodAfter("newChildren", null, argsNames_740, argsValues_741);
                     break;
                     
                 }
                 case 6:  {
-                    let msg_741: Message[];
-                    const len_743 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    msg_741 = new Array<Message>(len_743);
-                    for (let idx_742 = 0;
-                    idx_742 < len_743;
-                    idx_742++)  {
-                        msg_741[idx_742] = Message.META.deserialize(ctx, dataIn);
+                    let msg_743: Message[];
+                    const len_745 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    msg_743 = new Array<Message>(len_745);
+                    for (let idx_744 = 0;
+                    idx_744 < len_745;
+                    idx_744++)  {
+                        msg_743[idx_744] = Message.META.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_744: string[] = ["msg"];
-                    const argsValues_745: any[] = [msg_741];
-                    ctx.invokeLocalMethodBefore("sendMessages", argsNames_744, argsValues_745);
-                    localApi.sendMessages(msg_741);
-                    ctx.invokeLocalMethodAfter("sendMessages", null, argsNames_744, argsValues_745);
+                    const argsNames_746: string[] = ["msg"];
+                    const argsValues_747: any[] = [msg_743];
+                    ctx.invokeLocalMethodBefore("sendMessages", argsNames_746, argsValues_747);
+                    localApi.sendMessages(msg_743);
+                    ctx.invokeLocalMethodAfter("sendMessages", null, argsNames_746, argsValues_747);
                     break;
                     
                 }
                 case 7:  {
-                    let serverDescriptor_747: ServerDescriptor;
-                    serverDescriptor_747 = ServerDescriptor.META.deserialize(ctx, dataIn);
-                    const argsNames_748: string[] = ["serverDescriptor"];
-                    const argsValues_749: any[] = [serverDescriptor_747];
-                    ctx.invokeLocalMethodBefore("sendServerDescriptor", argsNames_748, argsValues_749);
-                    localApi.sendServerDescriptor(serverDescriptor_747);
-                    ctx.invokeLocalMethodAfter("sendServerDescriptor", null, argsNames_748, argsValues_749);
+                    let serverDescriptor_749: ServerDescriptor;
+                    serverDescriptor_749 = ServerDescriptor.META.deserialize(ctx, dataIn);
+                    const argsNames_750: string[] = ["serverDescriptor"];
+                    const argsValues_751: any[] = [serverDescriptor_749];
+                    ctx.invokeLocalMethodBefore("sendServerDescriptor", argsNames_750, argsValues_751);
+                    localApi.sendServerDescriptor(serverDescriptor_749);
+                    ctx.invokeLocalMethodAfter("sendServerDescriptor", null, argsNames_750, argsValues_751);
                     break;
                     
                 }
                 case 8:  {
-                    let serverDescriptors_751: ServerDescriptor[];
-                    const len_753 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    serverDescriptors_751 = new Array<ServerDescriptor>(len_753);
-                    for (let idx_752 = 0;
-                    idx_752 < len_753;
-                    idx_752++)  {
-                        serverDescriptors_751[idx_752] = ServerDescriptor.META.deserialize(ctx, dataIn);
+                    let serverDescriptors_753: ServerDescriptor[];
+                    const len_755 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    serverDescriptors_753 = new Array<ServerDescriptor>(len_755);
+                    for (let idx_754 = 0;
+                    idx_754 < len_755;
+                    idx_754++)  {
+                        serverDescriptors_753[idx_754] = ServerDescriptor.META.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_754: string[] = ["serverDescriptors"];
-                    const argsValues_755: any[] = [serverDescriptors_751];
-                    ctx.invokeLocalMethodBefore("sendServerDescriptors", argsNames_754, argsValues_755);
-                    localApi.sendServerDescriptors(serverDescriptors_751);
-                    ctx.invokeLocalMethodAfter("sendServerDescriptors", null, argsNames_754, argsValues_755);
+                    const argsNames_756: string[] = ["serverDescriptors"];
+                    const argsValues_757: any[] = [serverDescriptors_753];
+                    ctx.invokeLocalMethodBefore("sendServerDescriptors", argsNames_756, argsValues_757);
+                    localApi.sendServerDescriptors(serverDescriptors_753);
+                    ctx.invokeLocalMethodAfter("sendServerDescriptors", null, argsNames_756, argsValues_757);
                     break;
                     
                 }
                 case 9:  {
-                    let uid_757: UUID;
-                    let cloud_758: Cloud;
-                    uid_757 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    cloud_758 = Cloud.META.deserialize(ctx, dataIn);
-                    const argsNames_759: string[] = ["uid", "cloud"];
-                    const argsValues_760: any[] = [uid_757, cloud_758];
-                    ctx.invokeLocalMethodBefore("sendCloud", argsNames_759, argsValues_760);
-                    localApi.sendCloud(uid_757, cloud_758);
-                    ctx.invokeLocalMethodAfter("sendCloud", null, argsNames_759, argsValues_760);
+                    let uid_759: UUID;
+                    let cloud_760: Cloud;
+                    uid_759 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    cloud_760 = Cloud.META.deserialize(ctx, dataIn);
+                    const argsNames_761: string[] = ["uid", "cloud"];
+                    const argsValues_762: any[] = [uid_759, cloud_760];
+                    ctx.invokeLocalMethodBefore("sendCloud", argsNames_761, argsValues_762);
+                    localApi.sendCloud(uid_759, cloud_760);
+                    ctx.invokeLocalMethodAfter("sendCloud", null, argsNames_761, argsValues_762);
                     break;
                     
                 }
                 case 10:  {
-                    let clouds_762: UUIDAndCloud[];
-                    const len_764 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    clouds_762 = new Array<UUIDAndCloud>(len_764);
-                    for (let idx_763 = 0;
-                    idx_763 < len_764;
-                    idx_763++)  {
-                        clouds_762[idx_763] = UUIDAndCloud.META.deserialize(ctx, dataIn);
+                    let clouds_764: UUIDAndCloud[];
+                    const len_766 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    clouds_764 = new Array<UUIDAndCloud>(len_766);
+                    for (let idx_765 = 0;
+                    idx_765 < len_766;
+                    idx_765++)  {
+                        clouds_764[idx_765] = UUIDAndCloud.META.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_765: string[] = ["clouds"];
-                    const argsValues_766: any[] = [clouds_762];
-                    ctx.invokeLocalMethodBefore("sendClouds", argsNames_765, argsValues_766);
-                    localApi.sendClouds(clouds_762);
-                    ctx.invokeLocalMethodAfter("sendClouds", null, argsNames_765, argsValues_766);
+                    const argsNames_767: string[] = ["clouds"];
+                    const argsValues_768: any[] = [clouds_764];
+                    ctx.invokeLocalMethodBefore("sendClouds", argsNames_767, argsValues_768);
+                    localApi.sendClouds(clouds_764);
+                    ctx.invokeLocalMethodAfter("sendClouds", null, argsNames_767, argsValues_768);
                     break;
                     
                 }
                 case 11:  {
-                    const argsNames_768: string[] = [];
-                    const argsValues_769: any[] = [];
-                    ctx.invokeLocalMethodBefore("requestTelemetry", argsNames_768, argsValues_769);
+                    const argsNames_770: string[] = [];
+                    const argsValues_771: any[] = [];
+                    ctx.invokeLocalMethodBefore("requestTelemetry", argsNames_770, argsValues_771);
                     localApi.requestTelemetry();
-                    ctx.invokeLocalMethodAfter("requestTelemetry", null, argsNames_768, argsValues_769);
+                    ctx.invokeLocalMethodAfter("requestTelemetry", null, argsNames_770, argsValues_771);
                     break;
                     
                 }
                 case 12:  {
-                    let groups_771: AccessGroup[];
-                    const len_773 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    groups_771 = new Array<AccessGroup>(len_773);
-                    for (let idx_772 = 0;
-                    idx_772 < len_773;
-                    idx_772++)  {
-                        groups_771[idx_772] = AccessGroup.META.deserialize(ctx, dataIn);
+                    let groups_773: AccessGroup[];
+                    const len_775 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    groups_773 = new Array<AccessGroup>(len_775);
+                    for (let idx_774 = 0;
+                    idx_774 < len_775;
+                    idx_774++)  {
+                        groups_773[idx_774] = AccessGroup.META.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_774: string[] = ["groups"];
-                    const argsValues_775: any[] = [groups_771];
-                    ctx.invokeLocalMethodBefore("sendAccessGroups", argsNames_774, argsValues_775);
-                    localApi.sendAccessGroups(groups_771);
-                    ctx.invokeLocalMethodAfter("sendAccessGroups", null, argsNames_774, argsValues_775);
+                    const argsNames_776: string[] = ["groups"];
+                    const argsValues_777: any[] = [groups_773];
+                    ctx.invokeLocalMethodBefore("sendAccessGroups", argsNames_776, argsValues_777);
+                    localApi.sendAccessGroups(groups_773);
+                    ctx.invokeLocalMethodAfter("sendAccessGroups", null, argsNames_776, argsValues_777);
                     break;
                     
                 }
                 case 13:  {
-                    let uid_777: UUID;
-                    let groups_778: bigint[];
-                    uid_777 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const len_780 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    groups_778 = new Array<bigint>(len_780);
-                    for (let idx_779 = 0;
-                    idx_779 < len_780;
-                    idx_779++)  {
-                        groups_778[idx_779] = dataIn.readLong();
+                    let uid_779: UUID;
+                    let groups_780: bigint[];
+                    uid_779 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const len_782 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    groups_780 = new Array<bigint>(len_782);
+                    for (let idx_781 = 0;
+                    idx_781 < len_782;
+                    idx_781++)  {
+                        groups_780[idx_781] = dataIn.readLong();
                         
                     }
-                    const argsNames_781: string[] = ["uid", "groups"];
-                    const argsValues_782: any[] = [uid_777, groups_778];
-                    ctx.invokeLocalMethodBefore("sendAccessGroupForClient", argsNames_781, argsValues_782);
-                    localApi.sendAccessGroupForClient(uid_777, groups_778);
-                    ctx.invokeLocalMethodAfter("sendAccessGroupForClient", null, argsNames_781, argsValues_782);
+                    const argsNames_783: string[] = ["uid", "groups"];
+                    const argsValues_784: any[] = [uid_779, groups_780];
+                    ctx.invokeLocalMethodBefore("sendAccessGroupForClient", argsNames_783, argsValues_784);
+                    localApi.sendAccessGroupForClient(uid_779, groups_780);
+                    ctx.invokeLocalMethodAfter("sendAccessGroupForClient", null, argsNames_783, argsValues_784);
                     break;
                     
                 }
                 case 14:  {
-                    let id_784: bigint;
-                    let groups_785: UUID[];
-                    id_784 = dataIn.readLong();
-                    const len_787 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    groups_785 = new Array<UUID>(len_787);
-                    for (let idx_786 = 0;
-                    idx_786 < len_787;
-                    idx_786++)  {
-                        groups_785[idx_786] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    let id_786: bigint;
+                    let groups_787: UUID[];
+                    id_786 = dataIn.readLong();
+                    const len_789 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    groups_787 = new Array<UUID>(len_789);
+                    for (let idx_788 = 0;
+                    idx_788 < len_789;
+                    idx_788++)  {
+                        groups_787[idx_788] = FastMeta.META_UUID.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_788: string[] = ["id", "groups"];
-                    const argsValues_789: any[] = [id_784, groups_785];
-                    ctx.invokeLocalMethodBefore("addItemsToAccessGroup", argsNames_788, argsValues_789);
-                    localApi.addItemsToAccessGroup(id_784, groups_785);
-                    ctx.invokeLocalMethodAfter("addItemsToAccessGroup", null, argsNames_788, argsValues_789);
+                    const argsNames_790: string[] = ["id", "groups"];
+                    const argsValues_791: any[] = [id_786, groups_787];
+                    ctx.invokeLocalMethodBefore("addItemsToAccessGroup", argsNames_790, argsValues_791);
+                    localApi.addItemsToAccessGroup(id_786, groups_787);
+                    ctx.invokeLocalMethodAfter("addItemsToAccessGroup", null, argsNames_790, argsValues_791);
                     break;
                     
                 }
                 case 15:  {
-                    let id_791: bigint;
-                    let groups_792: UUID[];
-                    id_791 = dataIn.readLong();
-                    const len_794 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    groups_792 = new Array<UUID>(len_794);
-                    for (let idx_793 = 0;
-                    idx_793 < len_794;
-                    idx_793++)  {
-                        groups_792[idx_793] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    let id_793: bigint;
+                    let groups_794: UUID[];
+                    id_793 = dataIn.readLong();
+                    const len_796 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    groups_794 = new Array<UUID>(len_796);
+                    for (let idx_795 = 0;
+                    idx_795 < len_796;
+                    idx_795++)  {
+                        groups_794[idx_795] = FastMeta.META_UUID.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_795: string[] = ["id", "groups"];
-                    const argsValues_796: any[] = [id_791, groups_792];
-                    ctx.invokeLocalMethodBefore("removeItemsFromAccessGroup", argsNames_795, argsValues_796);
-                    localApi.removeItemsFromAccessGroup(id_791, groups_792);
-                    ctx.invokeLocalMethodAfter("removeItemsFromAccessGroup", null, argsNames_795, argsValues_796);
+                    const argsNames_797: string[] = ["id", "groups"];
+                    const argsValues_798: any[] = [id_793, groups_794];
+                    ctx.invokeLocalMethodBefore("removeItemsFromAccessGroup", argsNames_797, argsValues_798);
+                    localApi.removeItemsFromAccessGroup(id_793, groups_794);
+                    ctx.invokeLocalMethodAfter("removeItemsFromAccessGroup", null, argsNames_797, argsValues_798);
                     break;
                     
                 }
                 case 16:  {
-                    let uid_798: UUID;
-                    let groups_799: bigint[];
-                    uid_798 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const len_801 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    groups_799 = new Array<bigint>(len_801);
-                    for (let idx_800 = 0;
-                    idx_800 < len_801;
-                    idx_800++)  {
-                        groups_799[idx_800] = dataIn.readLong();
+                    let uid_800: UUID;
+                    let groups_801: bigint[];
+                    uid_800 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const len_803 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    groups_801 = new Array<bigint>(len_803);
+                    for (let idx_802 = 0;
+                    idx_802 < len_803;
+                    idx_802++)  {
+                        groups_801[idx_802] = dataIn.readLong();
                         
                     }
-                    const argsNames_802: string[] = ["uid", "groups"];
-                    const argsValues_803: any[] = [uid_798, groups_799];
-                    ctx.invokeLocalMethodBefore("addAccessGroupsToClient", argsNames_802, argsValues_803);
-                    localApi.addAccessGroupsToClient(uid_798, groups_799);
-                    ctx.invokeLocalMethodAfter("addAccessGroupsToClient", null, argsNames_802, argsValues_803);
+                    const argsNames_804: string[] = ["uid", "groups"];
+                    const argsValues_805: any[] = [uid_800, groups_801];
+                    ctx.invokeLocalMethodBefore("addAccessGroupsToClient", argsNames_804, argsValues_805);
+                    localApi.addAccessGroupsToClient(uid_800, groups_801);
+                    ctx.invokeLocalMethodAfter("addAccessGroupsToClient", null, argsNames_804, argsValues_805);
                     break;
                     
                 }
                 case 17:  {
-                    let uid_805: UUID;
-                    let groups_806: bigint[];
-                    uid_805 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const len_808 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    groups_806 = new Array<bigint>(len_808);
-                    for (let idx_807 = 0;
-                    idx_807 < len_808;
-                    idx_807++)  {
-                        groups_806[idx_807] = dataIn.readLong();
+                    let uid_807: UUID;
+                    let groups_808: bigint[];
+                    uid_807 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const len_810 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    groups_808 = new Array<bigint>(len_810);
+                    for (let idx_809 = 0;
+                    idx_809 < len_810;
+                    idx_809++)  {
+                        groups_808[idx_809] = dataIn.readLong();
                         
                     }
-                    const argsNames_809: string[] = ["uid", "groups"];
-                    const argsValues_810: any[] = [uid_805, groups_806];
-                    ctx.invokeLocalMethodBefore("removeAccessGroupsFromClient", argsNames_809, argsValues_810);
-                    localApi.removeAccessGroupsFromClient(uid_805, groups_806);
-                    ctx.invokeLocalMethodAfter("removeAccessGroupsFromClient", null, argsNames_809, argsValues_810);
+                    const argsNames_811: string[] = ["uid", "groups"];
+                    const argsValues_812: any[] = [uid_807, groups_808];
+                    ctx.invokeLocalMethodBefore("removeAccessGroupsFromClient", argsNames_811, argsValues_812);
+                    localApi.removeAccessGroupsFromClient(uid_807, groups_808);
+                    ctx.invokeLocalMethodAfter("removeAccessGroupsFromClient", null, argsNames_811, argsValues_812);
                     break;
                     
                 }
                 case 18:  {
-                    let uid_812: UUID;
-                    let accessedClients_813: UUID[];
-                    uid_812 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const len_815 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    accessedClients_813 = new Array<UUID>(len_815);
-                    for (let idx_814 = 0;
-                    idx_814 < len_815;
-                    idx_814++)  {
-                        accessedClients_813[idx_814] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    let uid_814: UUID;
+                    let accessedClients_815: UUID[];
+                    uid_814 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const len_817 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    accessedClients_815 = new Array<UUID>(len_817);
+                    for (let idx_816 = 0;
+                    idx_816 < len_817;
+                    idx_816++)  {
+                        accessedClients_815[idx_816] = FastMeta.META_UUID.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_816: string[] = ["uid", "accessedClients"];
-                    const argsValues_817: any[] = [uid_812, accessedClients_813];
-                    ctx.invokeLocalMethodBefore("sendAllAccessedClients", argsNames_816, argsValues_817);
-                    localApi.sendAllAccessedClients(uid_812, accessedClients_813);
-                    ctx.invokeLocalMethodAfter("sendAllAccessedClients", null, argsNames_816, argsValues_817);
+                    const argsNames_818: string[] = ["uid", "accessedClients"];
+                    const argsValues_819: any[] = [uid_814, accessedClients_815];
+                    ctx.invokeLocalMethodBefore("sendAllAccessedClients", argsNames_818, argsValues_819);
+                    localApi.sendAllAccessedClients(uid_814, accessedClients_815);
+                    ctx.invokeLocalMethodAfter("sendAllAccessedClients", null, argsNames_818, argsValues_819);
                     break;
                     
                 }
                 case 19:  {
-                    let results_819: AccessCheckResult[];
-                    const len_821 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    results_819 = new Array<AccessCheckResult>(len_821);
-                    for (let idx_820 = 0;
-                    idx_820 < len_821;
-                    idx_820++)  {
-                        results_819[idx_820] = AccessCheckResult.META.deserialize(ctx, dataIn);
+                    let results_821: AccessCheckResult[];
+                    const len_823 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    results_821 = new Array<AccessCheckResult>(len_823);
+                    for (let idx_822 = 0;
+                    idx_822 < len_823;
+                    idx_822++)  {
+                        results_821[idx_822] = AccessCheckResult.META.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_822: string[] = ["results"];
-                    const argsValues_823: any[] = [results_819];
-                    ctx.invokeLocalMethodBefore("sendAccessCheckResults", argsNames_822, argsValues_823);
-                    localApi.sendAccessCheckResults(results_819);
-                    ctx.invokeLocalMethodAfter("sendAccessCheckResults", null, argsNames_822, argsValues_823);
+                    const argsNames_824: string[] = ["results"];
+                    const argsValues_825: any[] = [results_821];
+                    ctx.invokeLocalMethodBefore("sendAccessCheckResults", argsNames_824, argsValues_825);
+                    localApi.sendAccessCheckResults(results_821);
+                    ctx.invokeLocalMethodAfter("sendAccessCheckResults", null, argsNames_824, argsValues_825);
                     break;
                     
                 }
@@ -9750,232 +9755,234 @@ export class ClientApiSafeMetaImpl implements FastMetaApi<ClientApiSafe, ClientA
         this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
         
     }
-    makeRemote(sCtx_824: FastFutureContext): ClientApiSafeRemote  {
+    makeRemote(sCtx_826: FastFutureContext): ClientApiSafeRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_824.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_826.flush(sendFuture);
                 
             }
-            , getFastMetaContext: () => sCtx_824, changeParent: (uid: UUID): void =>  {
-                const dataOut_826 = new DataInOut();
-                dataOut_826.writeByte(3);
-                const argsNames_828: string[] = ["uid"];
-                const argsValues_829: any[] = [uid];
-                sCtx_824.invokeRemoteMethodAfter("changeParent", null, argsNames_828, argsValues_829);
-                FastMeta.META_UUID.serialize(sCtx_824, uid, dataOut_826);
-                sCtx_824.sendToRemote(dataOut_826.toArray());
+            , getFastMetaContext: () => sCtx_826, changeParent: (uid: UUID): void =>  {
+                const dataOut_828 = new DataInOut();
+                dataOut_828.writeByte(3);
+                const argsNames_830: string[] = ["uid"];
+                const argsValues_831: any[] = [uid];
+                sCtx_826.invokeRemoteMethodAfter("changeParent", null, argsNames_830, argsValues_831);
+                FastMeta.META_UUID.serialize(sCtx_826, uid, dataOut_828);
+                sCtx_826.sendToRemote(dataOut_828.toArray());
                 
             }
             , changeAlias: (alias: UUID): void =>  {
-                const dataOut_831 = new DataInOut();
-                dataOut_831.writeByte(4);
-                const argsNames_833: string[] = ["alias"];
-                const argsValues_834: any[] = [alias];
-                sCtx_824.invokeRemoteMethodAfter("changeAlias", null, argsNames_833, argsValues_834);
-                FastMeta.META_UUID.serialize(sCtx_824, alias, dataOut_831);
-                sCtx_824.sendToRemote(dataOut_831.toArray());
+                const dataOut_833 = new DataInOut();
+                dataOut_833.writeByte(4);
+                const argsNames_835: string[] = ["alias"];
+                const argsValues_836: any[] = [alias];
+                sCtx_826.invokeRemoteMethodAfter("changeAlias", null, argsNames_835, argsValues_836);
+                FastMeta.META_UUID.serialize(sCtx_826, alias, dataOut_833);
+                sCtx_826.sendToRemote(dataOut_833.toArray());
                 
             }
-            , newChild: (uid: UUID): void =>  {
-                const dataOut_836 = new DataInOut();
-                dataOut_836.writeByte(5);
-                const argsNames_838: string[] = ["uid"];
-                const argsValues_839: any[] = [uid];
-                sCtx_824.invokeRemoteMethodAfter("newChild", null, argsNames_838, argsValues_839);
-                FastMeta.META_UUID.serialize(sCtx_824, uid, dataOut_836);
-                sCtx_824.sendToRemote(dataOut_836.toArray());
+            , newChildren: (uids: UUID[]): void =>  {
+                const dataOut_838 = new DataInOut();
+                dataOut_838.writeByte(5);
+                const argsNames_840: string[] = ["uids"];
+                const argsValues_841: any[] = [uids];
+                sCtx_826.invokeRemoteMethodAfter("newChildren", null, argsNames_840, argsValues_841);
+                SerializerPackNumber.INSTANCE.put(dataOut_838, uids.length);
+                for (const el_842 of uids)  {
+                    FastMeta.META_UUID.serialize(sCtx_826, el_842, dataOut_838);
+                    
+                }
+                sCtx_826.sendToRemote(dataOut_838.toArray());
                 
             }
             , sendMessages: (msg: Message[]): void =>  {
-                const dataOut_841 = new DataInOut();
-                dataOut_841.writeByte(6);
-                const argsNames_843: string[] = ["msg"];
-                const argsValues_844: any[] = [msg];
-                sCtx_824.invokeRemoteMethodAfter("sendMessages", null, argsNames_843, argsValues_844);
-                SerializerPackNumber.INSTANCE.put(dataOut_841, msg.length);
-                for (const el_845 of msg)  {
-                    Message.META.serialize(sCtx_824, el_845, dataOut_841);
+                const dataOut_844 = new DataInOut();
+                dataOut_844.writeByte(6);
+                const argsNames_846: string[] = ["msg"];
+                const argsValues_847: any[] = [msg];
+                sCtx_826.invokeRemoteMethodAfter("sendMessages", null, argsNames_846, argsValues_847);
+                SerializerPackNumber.INSTANCE.put(dataOut_844, msg.length);
+                for (const el_848 of msg)  {
+                    Message.META.serialize(sCtx_826, el_848, dataOut_844);
                     
                 }
-                sCtx_824.sendToRemote(dataOut_841.toArray());
+                sCtx_826.sendToRemote(dataOut_844.toArray());
                 
             }
             , sendServerDescriptor: (serverDescriptor: ServerDescriptor): void =>  {
-                const dataOut_847 = new DataInOut();
-                dataOut_847.writeByte(7);
-                const argsNames_849: string[] = ["serverDescriptor"];
-                const argsValues_850: any[] = [serverDescriptor];
-                sCtx_824.invokeRemoteMethodAfter("sendServerDescriptor", null, argsNames_849, argsValues_850);
-                ServerDescriptor.META.serialize(sCtx_824, serverDescriptor, dataOut_847);
-                sCtx_824.sendToRemote(dataOut_847.toArray());
+                const dataOut_850 = new DataInOut();
+                dataOut_850.writeByte(7);
+                const argsNames_852: string[] = ["serverDescriptor"];
+                const argsValues_853: any[] = [serverDescriptor];
+                sCtx_826.invokeRemoteMethodAfter("sendServerDescriptor", null, argsNames_852, argsValues_853);
+                ServerDescriptor.META.serialize(sCtx_826, serverDescriptor, dataOut_850);
+                sCtx_826.sendToRemote(dataOut_850.toArray());
                 
             }
             , sendServerDescriptors: (serverDescriptors: ServerDescriptor[]): void =>  {
-                const dataOut_852 = new DataInOut();
-                dataOut_852.writeByte(8);
-                const argsNames_854: string[] = ["serverDescriptors"];
-                const argsValues_855: any[] = [serverDescriptors];
-                sCtx_824.invokeRemoteMethodAfter("sendServerDescriptors", null, argsNames_854, argsValues_855);
-                SerializerPackNumber.INSTANCE.put(dataOut_852, serverDescriptors.length);
-                for (const el_856 of serverDescriptors)  {
-                    ServerDescriptor.META.serialize(sCtx_824, el_856, dataOut_852);
+                const dataOut_855 = new DataInOut();
+                dataOut_855.writeByte(8);
+                const argsNames_857: string[] = ["serverDescriptors"];
+                const argsValues_858: any[] = [serverDescriptors];
+                sCtx_826.invokeRemoteMethodAfter("sendServerDescriptors", null, argsNames_857, argsValues_858);
+                SerializerPackNumber.INSTANCE.put(dataOut_855, serverDescriptors.length);
+                for (const el_859 of serverDescriptors)  {
+                    ServerDescriptor.META.serialize(sCtx_826, el_859, dataOut_855);
                     
                 }
-                sCtx_824.sendToRemote(dataOut_852.toArray());
+                sCtx_826.sendToRemote(dataOut_855.toArray());
                 
             }
             , sendCloud: (uid: UUID, cloud: Cloud): void =>  {
-                const dataOut_858 = new DataInOut();
-                dataOut_858.writeByte(9);
-                const argsNames_860: string[] = ["uid", "cloud"];
-                const argsValues_861: any[] = [uid, cloud];
-                sCtx_824.invokeRemoteMethodAfter("sendCloud", null, argsNames_860, argsValues_861);
-                FastMeta.META_UUID.serialize(sCtx_824, uid, dataOut_858);
-                Cloud.META.serialize(sCtx_824, cloud, dataOut_858);
-                sCtx_824.sendToRemote(dataOut_858.toArray());
+                const dataOut_861 = new DataInOut();
+                dataOut_861.writeByte(9);
+                const argsNames_863: string[] = ["uid", "cloud"];
+                const argsValues_864: any[] = [uid, cloud];
+                sCtx_826.invokeRemoteMethodAfter("sendCloud", null, argsNames_863, argsValues_864);
+                FastMeta.META_UUID.serialize(sCtx_826, uid, dataOut_861);
+                Cloud.META.serialize(sCtx_826, cloud, dataOut_861);
+                sCtx_826.sendToRemote(dataOut_861.toArray());
                 
             }
             , sendClouds: (clouds: UUIDAndCloud[]): void =>  {
-                const dataOut_863 = new DataInOut();
-                dataOut_863.writeByte(10);
-                const argsNames_865: string[] = ["clouds"];
-                const argsValues_866: any[] = [clouds];
-                sCtx_824.invokeRemoteMethodAfter("sendClouds", null, argsNames_865, argsValues_866);
-                SerializerPackNumber.INSTANCE.put(dataOut_863, clouds.length);
-                for (const el_867 of clouds)  {
-                    UUIDAndCloud.META.serialize(sCtx_824, el_867, dataOut_863);
+                const dataOut_866 = new DataInOut();
+                dataOut_866.writeByte(10);
+                const argsNames_868: string[] = ["clouds"];
+                const argsValues_869: any[] = [clouds];
+                sCtx_826.invokeRemoteMethodAfter("sendClouds", null, argsNames_868, argsValues_869);
+                SerializerPackNumber.INSTANCE.put(dataOut_866, clouds.length);
+                for (const el_870 of clouds)  {
+                    UUIDAndCloud.META.serialize(sCtx_826, el_870, dataOut_866);
                     
                 }
-                sCtx_824.sendToRemote(dataOut_863.toArray());
+                sCtx_826.sendToRemote(dataOut_866.toArray());
                 
             }
             , requestTelemetry: (): void =>  {
-                const dataOut_869 = new DataInOut();
-                dataOut_869.writeByte(11);
-                const argsNames_871: string[] = [];
-                const argsValues_872: any[] = [];
-                sCtx_824.invokeRemoteMethodAfter("requestTelemetry", null, argsNames_871, argsValues_872);
-                sCtx_824.sendToRemote(dataOut_869.toArray());
+                const dataOut_872 = new DataInOut();
+                dataOut_872.writeByte(11);
+                const argsNames_874: string[] = [];
+                const argsValues_875: any[] = [];
+                sCtx_826.invokeRemoteMethodAfter("requestTelemetry", null, argsNames_874, argsValues_875);
+                sCtx_826.sendToRemote(dataOut_872.toArray());
                 
             }
             , sendAccessGroups: (groups: AccessGroup[]): void =>  {
-                const dataOut_874 = new DataInOut();
-                dataOut_874.writeByte(12);
-                const argsNames_876: string[] = ["groups"];
-                const argsValues_877: any[] = [groups];
-                sCtx_824.invokeRemoteMethodAfter("sendAccessGroups", null, argsNames_876, argsValues_877);
-                SerializerPackNumber.INSTANCE.put(dataOut_874, groups.length);
-                for (const el_878 of groups)  {
-                    AccessGroup.META.serialize(sCtx_824, el_878, dataOut_874);
+                const dataOut_877 = new DataInOut();
+                dataOut_877.writeByte(12);
+                const argsNames_879: string[] = ["groups"];
+                const argsValues_880: any[] = [groups];
+                sCtx_826.invokeRemoteMethodAfter("sendAccessGroups", null, argsNames_879, argsValues_880);
+                SerializerPackNumber.INSTANCE.put(dataOut_877, groups.length);
+                for (const el_881 of groups)  {
+                    AccessGroup.META.serialize(sCtx_826, el_881, dataOut_877);
                     
                 }
-                sCtx_824.sendToRemote(dataOut_874.toArray());
+                sCtx_826.sendToRemote(dataOut_877.toArray());
                 
             }
             , sendAccessGroupForClient: (uid: UUID, groups: bigint[]): void =>  {
-                const dataOut_880 = new DataInOut();
-                dataOut_880.writeByte(13);
-                const argsNames_882: string[] = ["uid", "groups"];
-                const argsValues_883: any[] = [uid, groups];
-                sCtx_824.invokeRemoteMethodAfter("sendAccessGroupForClient", null, argsNames_882, argsValues_883);
-                FastMeta.META_UUID.serialize(sCtx_824, uid, dataOut_880);
-                SerializerPackNumber.INSTANCE.put(dataOut_880, groups.length);
-                for (const el_884 of groups)  {
-                    dataOut_880.writeLong(el_884);
+                const dataOut_883 = new DataInOut();
+                dataOut_883.writeByte(13);
+                const argsNames_885: string[] = ["uid", "groups"];
+                const argsValues_886: any[] = [uid, groups];
+                sCtx_826.invokeRemoteMethodAfter("sendAccessGroupForClient", null, argsNames_885, argsValues_886);
+                FastMeta.META_UUID.serialize(sCtx_826, uid, dataOut_883);
+                SerializerPackNumber.INSTANCE.put(dataOut_883, groups.length);
+                for (const el_887 of groups)  {
+                    dataOut_883.writeLong(el_887);
                     
                 }
-                sCtx_824.sendToRemote(dataOut_880.toArray());
+                sCtx_826.sendToRemote(dataOut_883.toArray());
                 
             }
             , addItemsToAccessGroup: (id: bigint, groups: UUID[]): void =>  {
-                const dataOut_886 = new DataInOut();
-                dataOut_886.writeByte(14);
-                const argsNames_888: string[] = ["id", "groups"];
-                const argsValues_889: any[] = [id, groups];
-                sCtx_824.invokeRemoteMethodAfter("addItemsToAccessGroup", null, argsNames_888, argsValues_889);
-                dataOut_886.writeLong(id);
-                SerializerPackNumber.INSTANCE.put(dataOut_886, groups.length);
-                for (const el_890 of groups)  {
-                    FastMeta.META_UUID.serialize(sCtx_824, el_890, dataOut_886);
+                const dataOut_889 = new DataInOut();
+                dataOut_889.writeByte(14);
+                const argsNames_891: string[] = ["id", "groups"];
+                const argsValues_892: any[] = [id, groups];
+                sCtx_826.invokeRemoteMethodAfter("addItemsToAccessGroup", null, argsNames_891, argsValues_892);
+                dataOut_889.writeLong(id);
+                SerializerPackNumber.INSTANCE.put(dataOut_889, groups.length);
+                for (const el_893 of groups)  {
+                    FastMeta.META_UUID.serialize(sCtx_826, el_893, dataOut_889);
                     
                 }
-                sCtx_824.sendToRemote(dataOut_886.toArray());
+                sCtx_826.sendToRemote(dataOut_889.toArray());
                 
             }
             , removeItemsFromAccessGroup: (id: bigint, groups: UUID[]): void =>  {
-                const dataOut_892 = new DataInOut();
-                dataOut_892.writeByte(15);
-                const argsNames_894: string[] = ["id", "groups"];
-                const argsValues_895: any[] = [id, groups];
-                sCtx_824.invokeRemoteMethodAfter("removeItemsFromAccessGroup", null, argsNames_894, argsValues_895);
-                dataOut_892.writeLong(id);
-                SerializerPackNumber.INSTANCE.put(dataOut_892, groups.length);
-                for (const el_896 of groups)  {
-                    FastMeta.META_UUID.serialize(sCtx_824, el_896, dataOut_892);
+                const dataOut_895 = new DataInOut();
+                dataOut_895.writeByte(15);
+                const argsNames_897: string[] = ["id", "groups"];
+                const argsValues_898: any[] = [id, groups];
+                sCtx_826.invokeRemoteMethodAfter("removeItemsFromAccessGroup", null, argsNames_897, argsValues_898);
+                dataOut_895.writeLong(id);
+                SerializerPackNumber.INSTANCE.put(dataOut_895, groups.length);
+                for (const el_899 of groups)  {
+                    FastMeta.META_UUID.serialize(sCtx_826, el_899, dataOut_895);
                     
                 }
-                sCtx_824.sendToRemote(dataOut_892.toArray());
+                sCtx_826.sendToRemote(dataOut_895.toArray());
                 
             }
             , addAccessGroupsToClient: (uid: UUID, groups: bigint[]): void =>  {
-                const dataOut_898 = new DataInOut();
-                dataOut_898.writeByte(16);
-                const argsNames_900: string[] = ["uid", "groups"];
-                const argsValues_901: any[] = [uid, groups];
-                sCtx_824.invokeRemoteMethodAfter("addAccessGroupsToClient", null, argsNames_900, argsValues_901);
-                FastMeta.META_UUID.serialize(sCtx_824, uid, dataOut_898);
-                SerializerPackNumber.INSTANCE.put(dataOut_898, groups.length);
-                for (const el_902 of groups)  {
-                    dataOut_898.writeLong(el_902);
+                const dataOut_901 = new DataInOut();
+                dataOut_901.writeByte(16);
+                const argsNames_903: string[] = ["uid", "groups"];
+                const argsValues_904: any[] = [uid, groups];
+                sCtx_826.invokeRemoteMethodAfter("addAccessGroupsToClient", null, argsNames_903, argsValues_904);
+                FastMeta.META_UUID.serialize(sCtx_826, uid, dataOut_901);
+                SerializerPackNumber.INSTANCE.put(dataOut_901, groups.length);
+                for (const el_905 of groups)  {
+                    dataOut_901.writeLong(el_905);
                     
                 }
-                sCtx_824.sendToRemote(dataOut_898.toArray());
+                sCtx_826.sendToRemote(dataOut_901.toArray());
                 
             }
             , removeAccessGroupsFromClient: (uid: UUID, groups: bigint[]): void =>  {
-                const dataOut_904 = new DataInOut();
-                dataOut_904.writeByte(17);
-                const argsNames_906: string[] = ["uid", "groups"];
-                const argsValues_907: any[] = [uid, groups];
-                sCtx_824.invokeRemoteMethodAfter("removeAccessGroupsFromClient", null, argsNames_906, argsValues_907);
-                FastMeta.META_UUID.serialize(sCtx_824, uid, dataOut_904);
-                SerializerPackNumber.INSTANCE.put(dataOut_904, groups.length);
-                for (const el_908 of groups)  {
-                    dataOut_904.writeLong(el_908);
+                const dataOut_907 = new DataInOut();
+                dataOut_907.writeByte(17);
+                const argsNames_909: string[] = ["uid", "groups"];
+                const argsValues_910: any[] = [uid, groups];
+                sCtx_826.invokeRemoteMethodAfter("removeAccessGroupsFromClient", null, argsNames_909, argsValues_910);
+                FastMeta.META_UUID.serialize(sCtx_826, uid, dataOut_907);
+                SerializerPackNumber.INSTANCE.put(dataOut_907, groups.length);
+                for (const el_911 of groups)  {
+                    dataOut_907.writeLong(el_911);
                     
                 }
-                sCtx_824.sendToRemote(dataOut_904.toArray());
+                sCtx_826.sendToRemote(dataOut_907.toArray());
                 
             }
             , sendAllAccessedClients: (uid: UUID, accessedClients: UUID[]): void =>  {
-                const dataOut_910 = new DataInOut();
-                dataOut_910.writeByte(18);
-                const argsNames_912: string[] = ["uid", "accessedClients"];
-                const argsValues_913: any[] = [uid, accessedClients];
-                sCtx_824.invokeRemoteMethodAfter("sendAllAccessedClients", null, argsNames_912, argsValues_913);
-                FastMeta.META_UUID.serialize(sCtx_824, uid, dataOut_910);
-                SerializerPackNumber.INSTANCE.put(dataOut_910, accessedClients.length);
-                for (const el_914 of accessedClients)  {
-                    FastMeta.META_UUID.serialize(sCtx_824, el_914, dataOut_910);
+                const dataOut_913 = new DataInOut();
+                dataOut_913.writeByte(18);
+                const argsNames_915: string[] = ["uid", "accessedClients"];
+                const argsValues_916: any[] = [uid, accessedClients];
+                sCtx_826.invokeRemoteMethodAfter("sendAllAccessedClients", null, argsNames_915, argsValues_916);
+                FastMeta.META_UUID.serialize(sCtx_826, uid, dataOut_913);
+                SerializerPackNumber.INSTANCE.put(dataOut_913, accessedClients.length);
+                for (const el_917 of accessedClients)  {
+                    FastMeta.META_UUID.serialize(sCtx_826, el_917, dataOut_913);
                     
                 }
-                sCtx_824.sendToRemote(dataOut_910.toArray());
+                sCtx_826.sendToRemote(dataOut_913.toArray());
                 
             }
             , sendAccessCheckResults: (results: AccessCheckResult[]): void =>  {
-                const dataOut_916 = new DataInOut();
-                dataOut_916.writeByte(19);
-                const argsNames_918: string[] = ["results"];
-                const argsValues_919: any[] = [results];
-                sCtx_824.invokeRemoteMethodAfter("sendAccessCheckResults", null, argsNames_918, argsValues_919);
-                SerializerPackNumber.INSTANCE.put(dataOut_916, results.length);
-                for (const el_920 of results)  {
-                    AccessCheckResult.META.serialize(sCtx_824, el_920, dataOut_916);
+                const dataOut_919 = new DataInOut();
+                dataOut_919.writeByte(19);
+                const argsNames_921: string[] = ["results"];
+                const argsValues_922: any[] = [results];
+                sCtx_826.invokeRemoteMethodAfter("sendAccessCheckResults", null, argsNames_921, argsValues_922);
+                SerializerPackNumber.INSTANCE.put(dataOut_919, results.length);
+                for (const el_923 of results)  {
+                    AccessCheckResult.META.serialize(sCtx_826, el_923, dataOut_919);
                     
                 }
-                sCtx_824.sendToRemote(dataOut_916.toArray());
+                sCtx_826.sendToRemote(dataOut_919.toArray());
                 
             }
             , 
@@ -10005,28 +10012,28 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 3:  {
-                    let id_922: number;
-                    id_922 = dataIn.readByte();
-                    const argsNames_923: string[] = ["id"];
-                    const argsValues_924: any[] = [id_922];
-                    ctx.invokeLocalMethodBefore("backId", argsNames_923, argsValues_924);
-                    localApi.backId(id_922);
-                    ctx.invokeLocalMethodAfter("backId", null, argsNames_923, argsValues_924);
+                    let id_925: number;
+                    id_925 = dataIn.readByte();
+                    const argsNames_926: string[] = ["id"];
+                    const argsValues_927: any[] = [id_925];
+                    ctx.invokeLocalMethodBefore("backId", argsNames_926, argsValues_927);
+                    localApi.backId(id_925);
+                    ctx.invokeLocalMethodAfter("backId", null, argsNames_926, argsValues_927);
                     break;
                     
                 }
                 case 4:  {
-                    const reqId_925 = dataIn.readInt();
-                    let nextConnectMsDuration_926: bigint;
-                    nextConnectMsDuration_926 = dataIn.readLong();
-                    const argsNames_927: string[] = ["nextConnectMsDuration"];
-                    const argsValues_928: any[] = [nextConnectMsDuration_926];
-                    ctx.invokeLocalMethodBefore("ping", argsNames_927, argsValues_928);
+                    const reqId_928 = dataIn.readInt();
+                    let nextConnectMsDuration_929: bigint;
+                    nextConnectMsDuration_929 = dataIn.readLong();
+                    const argsNames_930: string[] = ["nextConnectMsDuration"];
+                    const argsValues_931: any[] = [nextConnectMsDuration_929];
+                    ctx.invokeLocalMethodBefore("ping", argsNames_930, argsValues_931);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.ping(nextConnectMsDuration_926);
-                    ctx.invokeLocalMethodAfter("ping", resultFuture, argsNames_927, argsValues_928);
+                    const resultFuture = localApi.ping(nextConnectMsDuration_929);
+                    ctx.invokeLocalMethodAfter("ping", resultFuture, argsNames_930, argsValues_931);
                     resultFuture.to(() =>  {
-                        ctx.sendResultToRemoteNoData(reqId_925);
+                        ctx.sendResultToRemoteNoData(reqId_928);
                         
                     }
                     );
@@ -10034,70 +10041,70 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 5:  {
-                    let uid_930: UUID;
-                    let stream_931: ClientApiStream;
-                    uid_930 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    stream_931 = ClientApiStream.META.deserialize(ctx, dataIn);
-                    const argsNames_932: string[] = ["uid", "stream"];
-                    const argsValues_933: any[] = [uid_930, stream_931];
-                    ctx.invokeLocalMethodBefore("client", argsNames_932, argsValues_933);
-                    localApi.client(uid_930, stream_931);
-                    ctx.invokeLocalMethodAfter("client", null, argsNames_932, argsValues_933);
+                    let uid_933: UUID;
+                    let stream_934: ClientApiStream;
+                    uid_933 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    stream_934 = ClientApiStream.META.deserialize(ctx, dataIn);
+                    const argsNames_935: string[] = ["uid", "stream"];
+                    const argsValues_936: any[] = [uid_933, stream_934];
+                    ctx.invokeLocalMethodBefore("client", argsNames_935, argsValues_936);
+                    localApi.client(uid_933, stream_934);
+                    ctx.invokeLocalMethodAfter("client", null, argsNames_935, argsValues_936);
                     break;
                     
                 }
                 case 6:  {
-                    let msg_935: Message;
-                    msg_935 = Message.META.deserialize(ctx, dataIn);
-                    const argsNames_936: string[] = ["msg"];
-                    const argsValues_937: any[] = [msg_935];
-                    ctx.invokeLocalMethodBefore("sendMessage", argsNames_936, argsValues_937);
-                    localApi.sendMessage(msg_935);
-                    ctx.invokeLocalMethodAfter("sendMessage", null, argsNames_936, argsValues_937);
+                    let msg_938: Message;
+                    msg_938 = Message.META.deserialize(ctx, dataIn);
+                    const argsNames_939: string[] = ["msg"];
+                    const argsValues_940: any[] = [msg_938];
+                    ctx.invokeLocalMethodBefore("sendMessage", argsNames_939, argsValues_940);
+                    localApi.sendMessage(msg_938);
+                    ctx.invokeLocalMethodAfter("sendMessage", null, argsNames_939, argsValues_940);
                     break;
                     
                 }
                 case 7:  {
-                    let msg_939: Message[];
-                    const len_941 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    msg_939 = new Array<Message>(len_941);
-                    for (let idx_940 = 0;
-                    idx_940 < len_941;
-                    idx_940++)  {
-                        msg_939[idx_940] = Message.META.deserialize(ctx, dataIn);
+                    let msg_942: Message[];
+                    const len_944 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    msg_942 = new Array<Message>(len_944);
+                    for (let idx_943 = 0;
+                    idx_943 < len_944;
+                    idx_943++)  {
+                        msg_942[idx_943] = Message.META.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_942: string[] = ["msg"];
-                    const argsValues_943: any[] = [msg_939];
-                    ctx.invokeLocalMethodBefore("sendMessages", argsNames_942, argsValues_943);
-                    localApi.sendMessages(msg_939);
-                    ctx.invokeLocalMethodAfter("sendMessages", null, argsNames_942, argsValues_943);
+                    const argsNames_945: string[] = ["msg"];
+                    const argsValues_946: any[] = [msg_942];
+                    ctx.invokeLocalMethodBefore("sendMessages", argsNames_945, argsValues_946);
+                    localApi.sendMessages(msg_942);
+                    ctx.invokeLocalMethodAfter("sendMessages", null, argsNames_945, argsValues_946);
                     break;
                     
                 }
                 case 8:  {
-                    const reqId_944 = dataIn.readInt();
-                    let owner_945: UUID;
-                    let uids_946: UUID[];
-                    owner_945 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const len_948 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    uids_946 = new Array<UUID>(len_948);
-                    for (let idx_947 = 0;
-                    idx_947 < len_948;
-                    idx_947++)  {
-                        uids_946[idx_947] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const reqId_947 = dataIn.readInt();
+                    let owner_948: UUID;
+                    let uids_949: UUID[];
+                    owner_948 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const len_951 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    uids_949 = new Array<UUID>(len_951);
+                    for (let idx_950 = 0;
+                    idx_950 < len_951;
+                    idx_950++)  {
+                        uids_949[idx_950] = FastMeta.META_UUID.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_949: string[] = ["owner", "uids"];
-                    const argsValues_950: any[] = [owner_945, uids_946];
-                    ctx.invokeLocalMethodBefore("createAccessGroup", argsNames_949, argsValues_950);
+                    const argsNames_952: string[] = ["owner", "uids"];
+                    const argsValues_953: any[] = [owner_948, uids_949];
+                    ctx.invokeLocalMethodBefore("createAccessGroup", argsNames_952, argsValues_953);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.createAccessGroup(owner_945, uids_946);
-                    ctx.invokeLocalMethodAfter("createAccessGroup", resultFuture, argsNames_949, argsValues_950);
-                    resultFuture.to((v_952: bigint) =>  {
-                        const data_951 = new DataInOut();
-                        data_951.writeLong(v_952);
-                        ctx.sendResultToRemote(reqId_944, data_951.toArray());
+                    const resultFuture = localApi.createAccessGroup(owner_948, uids_949);
+                    ctx.invokeLocalMethodAfter("createAccessGroup", resultFuture, argsNames_952, argsValues_953);
+                    resultFuture.to((v_955: bigint) =>  {
+                        const data_954 = new DataInOut();
+                        data_954.writeLong(v_955);
+                        ctx.sendResultToRemote(reqId_947, data_954.toArray());
                         
                     }
                     );
@@ -10105,21 +10112,21 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 9:  {
-                    const reqId_953 = dataIn.readInt();
-                    let groupId_954: bigint;
-                    let uid_955: UUID;
-                    groupId_954 = dataIn.readLong();
-                    uid_955 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const argsNames_956: string[] = ["groupId", "uid"];
-                    const argsValues_957: any[] = [groupId_954, uid_955];
-                    ctx.invokeLocalMethodBefore("addToAccessGroup", argsNames_956, argsValues_957);
+                    const reqId_956 = dataIn.readInt();
+                    let groupId_957: bigint;
+                    let uid_958: UUID;
+                    groupId_957 = dataIn.readLong();
+                    uid_958 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const argsNames_959: string[] = ["groupId", "uid"];
+                    const argsValues_960: any[] = [groupId_957, uid_958];
+                    ctx.invokeLocalMethodBefore("addToAccessGroup", argsNames_959, argsValues_960);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.addToAccessGroup(groupId_954, uid_955);
-                    ctx.invokeLocalMethodAfter("addToAccessGroup", resultFuture, argsNames_956, argsValues_957);
-                    resultFuture.to((v_959: boolean) =>  {
-                        const data_958 = new DataInOut();
-                        data_958.writeBoolean(v_959);
-                        ctx.sendResultToRemote(reqId_953, data_958.toArray());
+                    const resultFuture = localApi.addToAccessGroup(groupId_957, uid_958);
+                    ctx.invokeLocalMethodAfter("addToAccessGroup", resultFuture, argsNames_959, argsValues_960);
+                    resultFuture.to((v_962: boolean) =>  {
+                        const data_961 = new DataInOut();
+                        data_961.writeBoolean(v_962);
+                        ctx.sendResultToRemote(reqId_956, data_961.toArray());
                         
                     }
                     );
@@ -10127,21 +10134,21 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 10:  {
-                    const reqId_960 = dataIn.readInt();
-                    let groupId_961: bigint;
-                    let uid_962: UUID;
-                    groupId_961 = dataIn.readLong();
-                    uid_962 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const argsNames_963: string[] = ["groupId", "uid"];
-                    const argsValues_964: any[] = [groupId_961, uid_962];
-                    ctx.invokeLocalMethodBefore("removeFromAccessGroup", argsNames_963, argsValues_964);
+                    const reqId_963 = dataIn.readInt();
+                    let groupId_964: bigint;
+                    let uid_965: UUID;
+                    groupId_964 = dataIn.readLong();
+                    uid_965 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const argsNames_966: string[] = ["groupId", "uid"];
+                    const argsValues_967: any[] = [groupId_964, uid_965];
+                    ctx.invokeLocalMethodBefore("removeFromAccessGroup", argsNames_966, argsValues_967);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.removeFromAccessGroup(groupId_961, uid_962);
-                    ctx.invokeLocalMethodAfter("removeFromAccessGroup", resultFuture, argsNames_963, argsValues_964);
-                    resultFuture.to((v_966: boolean) =>  {
-                        const data_965 = new DataInOut();
-                        data_965.writeBoolean(v_966);
-                        ctx.sendResultToRemote(reqId_960, data_965.toArray());
+                    const resultFuture = localApi.removeFromAccessGroup(groupId_964, uid_965);
+                    ctx.invokeLocalMethodAfter("removeFromAccessGroup", resultFuture, argsNames_966, argsValues_967);
+                    resultFuture.to((v_969: boolean) =>  {
+                        const data_968 = new DataInOut();
+                        data_968.writeBoolean(v_969);
+                        ctx.sendResultToRemote(reqId_963, data_968.toArray());
                         
                     }
                     );
@@ -10149,17 +10156,17 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 11:  {
-                    const reqId_967 = dataIn.readInt();
-                    let uid_968: UUID;
-                    uid_968 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const argsNames_969: string[] = ["uid"];
-                    const argsValues_970: any[] = [uid_968];
-                    ctx.invokeLocalMethodBefore("checkAccessForSendMessage", argsNames_969, argsValues_970);
+                    const reqId_970 = dataIn.readInt();
+                    let uid_971: UUID;
+                    uid_971 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const argsNames_972: string[] = ["uid"];
+                    const argsValues_973: any[] = [uid_971];
+                    ctx.invokeLocalMethodBefore("checkAccessForSendMessage", argsNames_972, argsValues_973);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.checkAccessForSendMessage(uid_968);
-                    ctx.invokeLocalMethodAfter("checkAccessForSendMessage", resultFuture, argsNames_969, argsValues_970);
+                    const resultFuture = localApi.checkAccessForSendMessage(uid_971);
+                    ctx.invokeLocalMethodAfter("checkAccessForSendMessage", resultFuture, argsNames_972, argsValues_973);
                     resultFuture.to(() =>  {
-                        ctx.sendResultToRemoteNoData(reqId_967);
+                        ctx.sendResultToRemoteNoData(reqId_970);
                         
                     }
                     );
@@ -10167,59 +10174,59 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 12:  {
-                    let sid_972: number[];
-                    const len_974 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    sid_972 = new Array<number>(len_974);
-                    for (let idx_973 = 0;
-                    idx_973 < len_974;
-                    idx_973++)  {
-                        sid_972[idx_973] = dataIn.readShort();
+                    let sid_975: number[];
+                    const len_977 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    sid_975 = new Array<number>(len_977);
+                    for (let idx_976 = 0;
+                    idx_976 < len_977;
+                    idx_976++)  {
+                        sid_975[idx_976] = dataIn.readShort();
                         
                     }
-                    const argsNames_975: string[] = ["sid"];
-                    const argsValues_976: any[] = [sid_972];
-                    ctx.invokeLocalMethodBefore("resolverServers", argsNames_975, argsValues_976);
-                    localApi.resolverServers(sid_972);
-                    ctx.invokeLocalMethodAfter("resolverServers", null, argsNames_975, argsValues_976);
+                    const argsNames_978: string[] = ["sid"];
+                    const argsValues_979: any[] = [sid_975];
+                    ctx.invokeLocalMethodBefore("resolverServers", argsNames_978, argsValues_979);
+                    localApi.resolverServers(sid_975);
+                    ctx.invokeLocalMethodAfter("resolverServers", null, argsNames_978, argsValues_979);
                     break;
                     
                 }
                 case 13:  {
-                    let uids_978: UUID[];
-                    const len_980 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    uids_978 = new Array<UUID>(len_980);
-                    for (let idx_979 = 0;
-                    idx_979 < len_980;
-                    idx_979++)  {
-                        uids_978[idx_979] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    let uids_981: UUID[];
+                    const len_983 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    uids_981 = new Array<UUID>(len_983);
+                    for (let idx_982 = 0;
+                    idx_982 < len_983;
+                    idx_982++)  {
+                        uids_981[idx_982] = FastMeta.META_UUID.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_981: string[] = ["uids"];
-                    const argsValues_982: any[] = [uids_978];
-                    ctx.invokeLocalMethodBefore("resolveClouds", argsNames_981, argsValues_982);
-                    localApi.resolveClouds(uids_978);
-                    ctx.invokeLocalMethodAfter("resolveClouds", null, argsNames_981, argsValues_982);
+                    const argsNames_984: string[] = ["uids"];
+                    const argsValues_985: any[] = [uids_981];
+                    ctx.invokeLocalMethodBefore("resolveClouds", argsNames_984, argsValues_985);
+                    localApi.resolveClouds(uids_981);
+                    ctx.invokeLocalMethodAfter("resolveClouds", null, argsNames_984, argsValues_985);
                     break;
                     
                 }
                 case 14:  {
-                    const reqId_983 = dataIn.readInt();
-                    let uid_984: UUID;
-                    uid_984 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const argsNames_985: string[] = ["uid"];
-                    const argsValues_986: any[] = [uid_984];
-                    ctx.invokeLocalMethodBefore("getAccessGroups", argsNames_985, argsValues_986);
+                    const reqId_986 = dataIn.readInt();
+                    let uid_987: UUID;
+                    uid_987 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const argsNames_988: string[] = ["uid"];
+                    const argsValues_989: any[] = [uid_987];
+                    ctx.invokeLocalMethodBefore("getAccessGroups", argsNames_988, argsValues_989);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.getAccessGroups(uid_984);
-                    ctx.invokeLocalMethodAfter("getAccessGroups", resultFuture, argsNames_985, argsValues_986);
-                    resultFuture.to((v_988: bigint[]) =>  {
-                        const data_987 = new DataInOut();
-                        SerializerPackNumber.INSTANCE.put(data_987, v_988.length);
-                        for (const el_989 of v_988)  {
-                            data_987.writeLong(el_989);
+                    const resultFuture = localApi.getAccessGroups(uid_987);
+                    ctx.invokeLocalMethodAfter("getAccessGroups", resultFuture, argsNames_988, argsValues_989);
+                    resultFuture.to((v_991: bigint[]) =>  {
+                        const data_990 = new DataInOut();
+                        SerializerPackNumber.INSTANCE.put(data_990, v_991.length);
+                        for (const el_992 of v_991)  {
+                            data_990.writeLong(el_992);
                             
                         }
-                        ctx.sendResultToRemote(reqId_983, data_987.toArray());
+                        ctx.sendResultToRemote(reqId_986, data_990.toArray());
                         
                     }
                     );
@@ -10227,19 +10234,19 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 15:  {
-                    const reqId_990 = dataIn.readInt();
-                    let groupId_991: bigint;
-                    groupId_991 = dataIn.readLong();
-                    const argsNames_992: string[] = ["groupId"];
-                    const argsValues_993: any[] = [groupId_991];
-                    ctx.invokeLocalMethodBefore("getAccessGroup", argsNames_992, argsValues_993);
+                    const reqId_993 = dataIn.readInt();
+                    let groupId_994: bigint;
+                    groupId_994 = dataIn.readLong();
+                    const argsNames_995: string[] = ["groupId"];
+                    const argsValues_996: any[] = [groupId_994];
+                    ctx.invokeLocalMethodBefore("getAccessGroup", argsNames_995, argsValues_996);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.getAccessGroup(groupId_991);
-                    ctx.invokeLocalMethodAfter("getAccessGroup", resultFuture, argsNames_992, argsValues_993);
-                    resultFuture.to((v_995: AccessGroup) =>  {
-                        const data_994 = new DataInOut();
-                        AccessGroup.META.serialize(ctx, v_995, data_994);
-                        ctx.sendResultToRemote(reqId_990, data_994.toArray());
+                    const resultFuture = localApi.getAccessGroup(groupId_994);
+                    ctx.invokeLocalMethodAfter("getAccessGroup", resultFuture, argsNames_995, argsValues_996);
+                    resultFuture.to((v_998: AccessGroup) =>  {
+                        const data_997 = new DataInOut();
+                        AccessGroup.META.serialize(ctx, v_998, data_997);
+                        ctx.sendResultToRemote(reqId_993, data_997.toArray());
                         
                     }
                     );
@@ -10247,23 +10254,23 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 16:  {
-                    const reqId_996 = dataIn.readInt();
-                    let uid_997: UUID;
-                    uid_997 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const argsNames_998: string[] = ["uid"];
-                    const argsValues_999: any[] = [uid_997];
-                    ctx.invokeLocalMethodBefore("getAllAccessedClients", argsNames_998, argsValues_999);
+                    const reqId_999 = dataIn.readInt();
+                    let uid_1000: UUID;
+                    uid_1000 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const argsNames_1001: string[] = ["uid"];
+                    const argsValues_1002: any[] = [uid_1000];
+                    ctx.invokeLocalMethodBefore("getAllAccessedClients", argsNames_1001, argsValues_1002);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.getAllAccessedClients(uid_997);
-                    ctx.invokeLocalMethodAfter("getAllAccessedClients", resultFuture, argsNames_998, argsValues_999);
-                    resultFuture.to((v_1001: UUID[]) =>  {
-                        const data_1000 = new DataInOut();
-                        SerializerPackNumber.INSTANCE.put(data_1000, v_1001.length);
-                        for (const el_1002 of v_1001)  {
-                            FastMeta.META_UUID.serialize(ctx, el_1002, data_1000);
+                    const resultFuture = localApi.getAllAccessedClients(uid_1000);
+                    ctx.invokeLocalMethodAfter("getAllAccessedClients", resultFuture, argsNames_1001, argsValues_1002);
+                    resultFuture.to((v_1004: UUID[]) =>  {
+                        const data_1003 = new DataInOut();
+                        SerializerPackNumber.INSTANCE.put(data_1003, v_1004.length);
+                        for (const el_1005 of v_1004)  {
+                            FastMeta.META_UUID.serialize(ctx, el_1005, data_1003);
                             
                         }
-                        ctx.sendResultToRemote(reqId_996, data_1000.toArray());
+                        ctx.sendResultToRemote(reqId_999, data_1003.toArray());
                         
                     }
                     );
@@ -10271,21 +10278,21 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 17:  {
-                    const reqId_1003 = dataIn.readInt();
-                    let uid1_1004: UUID;
-                    let uid2_1005: UUID;
-                    uid1_1004 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    uid2_1005 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const argsNames_1006: string[] = ["uid1", "uid2"];
-                    const argsValues_1007: any[] = [uid1_1004, uid2_1005];
-                    ctx.invokeLocalMethodBefore("checkAccessForSendMessage2", argsNames_1006, argsValues_1007);
+                    const reqId_1006 = dataIn.readInt();
+                    let uid1_1007: UUID;
+                    let uid2_1008: UUID;
+                    uid1_1007 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    uid2_1008 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const argsNames_1009: string[] = ["uid1", "uid2"];
+                    const argsValues_1010: any[] = [uid1_1007, uid2_1008];
+                    ctx.invokeLocalMethodBefore("checkAccessForSendMessage2", argsNames_1009, argsValues_1010);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.checkAccessForSendMessage2(uid1_1004, uid2_1005);
-                    ctx.invokeLocalMethodAfter("checkAccessForSendMessage2", resultFuture, argsNames_1006, argsValues_1007);
-                    resultFuture.to((v_1009: boolean) =>  {
-                        const data_1008 = new DataInOut();
-                        data_1008.writeBoolean(v_1009);
-                        ctx.sendResultToRemote(reqId_1003, data_1008.toArray());
+                    const resultFuture = localApi.checkAccessForSendMessage2(uid1_1007, uid2_1008);
+                    ctx.invokeLocalMethodAfter("checkAccessForSendMessage2", resultFuture, argsNames_1009, argsValues_1010);
+                    resultFuture.to((v_1012: boolean) =>  {
+                        const data_1011 = new DataInOut();
+                        data_1011.writeBoolean(v_1012);
+                        ctx.sendResultToRemote(reqId_1006, data_1011.toArray());
                         
                     }
                     );
@@ -10293,212 +10300,212 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 18:  {
-                    let telemetry_1011: Telemetry;
-                    telemetry_1011 = Telemetry.META.deserialize(ctx, dataIn);
-                    const argsNames_1012: string[] = ["telemetry"];
-                    const argsValues_1013: any[] = [telemetry_1011];
-                    ctx.invokeLocalMethodBefore("sendTelemetry", argsNames_1012, argsValues_1013);
-                    localApi.sendTelemetry(telemetry_1011);
-                    ctx.invokeLocalMethodAfter("sendTelemetry", null, argsNames_1012, argsValues_1013);
+                    let telemetry_1014: Telemetry;
+                    telemetry_1014 = Telemetry.META.deserialize(ctx, dataIn);
+                    const argsNames_1015: string[] = ["telemetry"];
+                    const argsValues_1016: any[] = [telemetry_1014];
+                    ctx.invokeLocalMethodBefore("sendTelemetry", argsNames_1015, argsValues_1016);
+                    localApi.sendTelemetry(telemetry_1014);
+                    ctx.invokeLocalMethodAfter("sendTelemetry", null, argsNames_1015, argsValues_1016);
                     break;
                     
                 }
                 case 19:  {
-                    let uids_1015: UUID[];
-                    const len_1017 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    uids_1015 = new Array<UUID>(len_1017);
-                    for (let idx_1016 = 0;
-                    idx_1016 < len_1017;
-                    idx_1016++)  {
-                        uids_1015[idx_1016] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    let uids_1018: UUID[];
+                    const len_1020 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    uids_1018 = new Array<UUID>(len_1020);
+                    for (let idx_1019 = 0;
+                    idx_1019 < len_1020;
+                    idx_1019++)  {
+                        uids_1018[idx_1019] = FastMeta.META_UUID.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_1018: string[] = ["uids"];
-                    const argsValues_1019: any[] = [uids_1015];
-                    ctx.invokeLocalMethodBefore("requestAccessGroupsForClients", argsNames_1018, argsValues_1019);
-                    localApi.requestAccessGroupsForClients(uids_1015);
-                    ctx.invokeLocalMethodAfter("requestAccessGroupsForClients", null, argsNames_1018, argsValues_1019);
+                    const argsNames_1021: string[] = ["uids"];
+                    const argsValues_1022: any[] = [uids_1018];
+                    ctx.invokeLocalMethodBefore("requestAccessGroupsForClients", argsNames_1021, argsValues_1022);
+                    localApi.requestAccessGroupsForClients(uids_1018);
+                    ctx.invokeLocalMethodAfter("requestAccessGroupsForClients", null, argsNames_1021, argsValues_1022);
                     break;
                     
                 }
                 case 20:  {
-                    let ids_1021: bigint[];
-                    const len_1023 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    ids_1021 = new Array<bigint>(len_1023);
-                    for (let idx_1022 = 0;
-                    idx_1022 < len_1023;
-                    idx_1022++)  {
-                        ids_1021[idx_1022] = dataIn.readLong();
+                    let ids_1024: bigint[];
+                    const len_1026 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    ids_1024 = new Array<bigint>(len_1026);
+                    for (let idx_1025 = 0;
+                    idx_1025 < len_1026;
+                    idx_1025++)  {
+                        ids_1024[idx_1025] = dataIn.readLong();
                         
                     }
-                    const argsNames_1024: string[] = ["ids"];
-                    const argsValues_1025: any[] = [ids_1021];
-                    ctx.invokeLocalMethodBefore("requestAccessGroupsItems", argsNames_1024, argsValues_1025);
-                    localApi.requestAccessGroupsItems(ids_1021);
-                    ctx.invokeLocalMethodAfter("requestAccessGroupsItems", null, argsNames_1024, argsValues_1025);
+                    const argsNames_1027: string[] = ["ids"];
+                    const argsValues_1028: any[] = [ids_1024];
+                    ctx.invokeLocalMethodBefore("requestAccessGroupsItems", argsNames_1027, argsValues_1028);
+                    localApi.requestAccessGroupsItems(ids_1024);
+                    ctx.invokeLocalMethodAfter("requestAccessGroupsItems", null, argsNames_1027, argsValues_1028);
                     break;
                     
                 }
                 case 22:  {
-                    let uid_1027: UUID;
-                    let groups_1028: bigint[];
-                    uid_1027 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const len_1030 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    groups_1028 = new Array<bigint>(len_1030);
-                    for (let idx_1029 = 0;
-                    idx_1029 < len_1030;
-                    idx_1029++)  {
-                        groups_1028[idx_1029] = dataIn.readLong();
+                    let uid_1030: UUID;
+                    let groups_1031: bigint[];
+                    uid_1030 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const len_1033 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    groups_1031 = new Array<bigint>(len_1033);
+                    for (let idx_1032 = 0;
+                    idx_1032 < len_1033;
+                    idx_1032++)  {
+                        groups_1031[idx_1032] = dataIn.readLong();
                         
                     }
-                    const argsNames_1031: string[] = ["uid", "groups"];
-                    const argsValues_1032: any[] = [uid_1027, groups_1028];
-                    ctx.invokeLocalMethodBefore("sendAccessGroupForClient", argsNames_1031, argsValues_1032);
-                    localApi.sendAccessGroupForClient(uid_1027, groups_1028);
-                    ctx.invokeLocalMethodAfter("sendAccessGroupForClient", null, argsNames_1031, argsValues_1032);
+                    const argsNames_1034: string[] = ["uid", "groups"];
+                    const argsValues_1035: any[] = [uid_1030, groups_1031];
+                    ctx.invokeLocalMethodBefore("sendAccessGroupForClient", argsNames_1034, argsValues_1035);
+                    localApi.sendAccessGroupForClient(uid_1030, groups_1031);
+                    ctx.invokeLocalMethodAfter("sendAccessGroupForClient", null, argsNames_1034, argsValues_1035);
                     break;
                     
                 }
                 case 23:  {
-                    let id_1034: bigint;
-                    let groups_1035: UUID[];
-                    id_1034 = dataIn.readLong();
-                    const len_1037 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    groups_1035 = new Array<UUID>(len_1037);
-                    for (let idx_1036 = 0;
-                    idx_1036 < len_1037;
-                    idx_1036++)  {
-                        groups_1035[idx_1036] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    let id_1037: bigint;
+                    let groups_1038: UUID[];
+                    id_1037 = dataIn.readLong();
+                    const len_1040 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    groups_1038 = new Array<UUID>(len_1040);
+                    for (let idx_1039 = 0;
+                    idx_1039 < len_1040;
+                    idx_1039++)  {
+                        groups_1038[idx_1039] = FastMeta.META_UUID.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_1038: string[] = ["id", "groups"];
-                    const argsValues_1039: any[] = [id_1034, groups_1035];
-                    ctx.invokeLocalMethodBefore("addItemsToAccessGroup", argsNames_1038, argsValues_1039);
-                    localApi.addItemsToAccessGroup(id_1034, groups_1035);
-                    ctx.invokeLocalMethodAfter("addItemsToAccessGroup", null, argsNames_1038, argsValues_1039);
+                    const argsNames_1041: string[] = ["id", "groups"];
+                    const argsValues_1042: any[] = [id_1037, groups_1038];
+                    ctx.invokeLocalMethodBefore("addItemsToAccessGroup", argsNames_1041, argsValues_1042);
+                    localApi.addItemsToAccessGroup(id_1037, groups_1038);
+                    ctx.invokeLocalMethodAfter("addItemsToAccessGroup", null, argsNames_1041, argsValues_1042);
                     break;
                     
                 }
                 case 24:  {
-                    let id_1041: bigint;
-                    let groups_1042: UUID[];
-                    id_1041 = dataIn.readLong();
-                    const len_1044 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    groups_1042 = new Array<UUID>(len_1044);
-                    for (let idx_1043 = 0;
-                    idx_1043 < len_1044;
-                    idx_1043++)  {
-                        groups_1042[idx_1043] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    let id_1044: bigint;
+                    let groups_1045: UUID[];
+                    id_1044 = dataIn.readLong();
+                    const len_1047 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    groups_1045 = new Array<UUID>(len_1047);
+                    for (let idx_1046 = 0;
+                    idx_1046 < len_1047;
+                    idx_1046++)  {
+                        groups_1045[idx_1046] = FastMeta.META_UUID.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_1045: string[] = ["id", "groups"];
-                    const argsValues_1046: any[] = [id_1041, groups_1042];
-                    ctx.invokeLocalMethodBefore("removeItemsFromAccessGroup", argsNames_1045, argsValues_1046);
-                    localApi.removeItemsFromAccessGroup(id_1041, groups_1042);
-                    ctx.invokeLocalMethodAfter("removeItemsFromAccessGroup", null, argsNames_1045, argsValues_1046);
+                    const argsNames_1048: string[] = ["id", "groups"];
+                    const argsValues_1049: any[] = [id_1044, groups_1045];
+                    ctx.invokeLocalMethodBefore("removeItemsFromAccessGroup", argsNames_1048, argsValues_1049);
+                    localApi.removeItemsFromAccessGroup(id_1044, groups_1045);
+                    ctx.invokeLocalMethodAfter("removeItemsFromAccessGroup", null, argsNames_1048, argsValues_1049);
                     break;
                     
                 }
                 case 25:  {
-                    let uid_1048: UUID;
-                    let groups_1049: bigint[];
-                    uid_1048 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const len_1051 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    groups_1049 = new Array<bigint>(len_1051);
-                    for (let idx_1050 = 0;
-                    idx_1050 < len_1051;
-                    idx_1050++)  {
-                        groups_1049[idx_1050] = dataIn.readLong();
+                    let uid_1051: UUID;
+                    let groups_1052: bigint[];
+                    uid_1051 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const len_1054 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    groups_1052 = new Array<bigint>(len_1054);
+                    for (let idx_1053 = 0;
+                    idx_1053 < len_1054;
+                    idx_1053++)  {
+                        groups_1052[idx_1053] = dataIn.readLong();
                         
                     }
-                    const argsNames_1052: string[] = ["uid", "groups"];
-                    const argsValues_1053: any[] = [uid_1048, groups_1049];
-                    ctx.invokeLocalMethodBefore("addAccessGroupsToClient", argsNames_1052, argsValues_1053);
-                    localApi.addAccessGroupsToClient(uid_1048, groups_1049);
-                    ctx.invokeLocalMethodAfter("addAccessGroupsToClient", null, argsNames_1052, argsValues_1053);
+                    const argsNames_1055: string[] = ["uid", "groups"];
+                    const argsValues_1056: any[] = [uid_1051, groups_1052];
+                    ctx.invokeLocalMethodBefore("addAccessGroupsToClient", argsNames_1055, argsValues_1056);
+                    localApi.addAccessGroupsToClient(uid_1051, groups_1052);
+                    ctx.invokeLocalMethodAfter("addAccessGroupsToClient", null, argsNames_1055, argsValues_1056);
                     break;
                     
                 }
                 case 26:  {
-                    let uid_1055: UUID;
-                    let groups_1056: bigint[];
-                    uid_1055 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const len_1058 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    groups_1056 = new Array<bigint>(len_1058);
-                    for (let idx_1057 = 0;
-                    idx_1057 < len_1058;
-                    idx_1057++)  {
-                        groups_1056[idx_1057] = dataIn.readLong();
+                    let uid_1058: UUID;
+                    let groups_1059: bigint[];
+                    uid_1058 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const len_1061 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    groups_1059 = new Array<bigint>(len_1061);
+                    for (let idx_1060 = 0;
+                    idx_1060 < len_1061;
+                    idx_1060++)  {
+                        groups_1059[idx_1060] = dataIn.readLong();
                         
                     }
-                    const argsNames_1059: string[] = ["uid", "groups"];
-                    const argsValues_1060: any[] = [uid_1055, groups_1056];
-                    ctx.invokeLocalMethodBefore("removeAccessGroupsFromClient", argsNames_1059, argsValues_1060);
-                    localApi.removeAccessGroupsFromClient(uid_1055, groups_1056);
-                    ctx.invokeLocalMethodAfter("removeAccessGroupsFromClient", null, argsNames_1059, argsValues_1060);
+                    const argsNames_1062: string[] = ["uid", "groups"];
+                    const argsValues_1063: any[] = [uid_1058, groups_1059];
+                    ctx.invokeLocalMethodBefore("removeAccessGroupsFromClient", argsNames_1062, argsValues_1063);
+                    localApi.removeAccessGroupsFromClient(uid_1058, groups_1059);
+                    ctx.invokeLocalMethodAfter("removeAccessGroupsFromClient", null, argsNames_1062, argsValues_1063);
                     break;
                     
                 }
                 case 27:  {
-                    let uids_1062: UUID[];
-                    const len_1064 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    uids_1062 = new Array<UUID>(len_1064);
-                    for (let idx_1063 = 0;
-                    idx_1063 < len_1064;
-                    idx_1063++)  {
-                        uids_1062[idx_1063] = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    let uids_1065: UUID[];
+                    const len_1067 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    uids_1065 = new Array<UUID>(len_1067);
+                    for (let idx_1066 = 0;
+                    idx_1066 < len_1067;
+                    idx_1066++)  {
+                        uids_1065[idx_1066] = FastMeta.META_UUID.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_1065: string[] = ["uids"];
-                    const argsValues_1066: any[] = [uids_1062];
-                    ctx.invokeLocalMethodBefore("requestAllAccessedClients", argsNames_1065, argsValues_1066);
-                    localApi.requestAllAccessedClients(uids_1062);
-                    ctx.invokeLocalMethodAfter("requestAllAccessedClients", null, argsNames_1065, argsValues_1066);
+                    const argsNames_1068: string[] = ["uids"];
+                    const argsValues_1069: any[] = [uids_1065];
+                    ctx.invokeLocalMethodBefore("requestAllAccessedClients", argsNames_1068, argsValues_1069);
+                    localApi.requestAllAccessedClients(uids_1065);
+                    ctx.invokeLocalMethodAfter("requestAllAccessedClients", null, argsNames_1068, argsValues_1069);
                     break;
                     
                 }
                 case 28:  {
-                    let requests_1068: AccessCheckPair[];
-                    const len_1070 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    requests_1068 = new Array<AccessCheckPair>(len_1070);
-                    for (let idx_1069 = 0;
-                    idx_1069 < len_1070;
-                    idx_1069++)  {
-                        requests_1068[idx_1069] = AccessCheckPair.META.deserialize(ctx, dataIn);
+                    let requests_1071: AccessCheckPair[];
+                    const len_1073 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    requests_1071 = new Array<AccessCheckPair>(len_1073);
+                    for (let idx_1072 = 0;
+                    idx_1072 < len_1073;
+                    idx_1072++)  {
+                        requests_1071[idx_1072] = AccessCheckPair.META.deserialize(ctx, dataIn);
                         
                     }
-                    const argsNames_1071: string[] = ["requests"];
-                    const argsValues_1072: any[] = [requests_1068];
-                    ctx.invokeLocalMethodBefore("requestAccessCheck", argsNames_1071, argsValues_1072);
-                    localApi.requestAccessCheck(requests_1068);
-                    ctx.invokeLocalMethodAfter("requestAccessCheck", null, argsNames_1071, argsValues_1072);
+                    const argsNames_1074: string[] = ["requests"];
+                    const argsValues_1075: any[] = [requests_1071];
+                    ctx.invokeLocalMethodBefore("requestAccessCheck", argsNames_1074, argsValues_1075);
+                    localApi.requestAccessCheck(requests_1071);
+                    ctx.invokeLocalMethodAfter("requestAccessCheck", null, argsNames_1074, argsValues_1075);
                     break;
                     
                 }
                 case 29:  {
-                    const reqId_1073 = dataIn.readInt();
-                    let uid_1074: UUID;
-                    let fromTime_1075: bigint;
-                    let toTime_1076: bigint;
-                    let limit_1077: number;
-                    uid_1074 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    fromTime_1075 = dataIn.readLong();
-                    toTime_1076 = dataIn.readLong();
-                    limit_1077 = dataIn.readInt();
-                    const argsNames_1078: string[] = ["uid", "fromTime", "toTime", "limit"];
-                    const argsValues_1079: any[] = [uid_1074, fromTime_1075, toTime_1076, limit_1077];
-                    ctx.invokeLocalMethodBefore("getClientActivity", argsNames_1078, argsValues_1079);
+                    const reqId_1076 = dataIn.readInt();
+                    let uid_1077: UUID;
+                    let fromTime_1078: bigint;
+                    let toTime_1079: bigint;
+                    let limit_1080: number;
+                    uid_1077 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    fromTime_1078 = dataIn.readLong();
+                    toTime_1079 = dataIn.readLong();
+                    limit_1080 = dataIn.readInt();
+                    const argsNames_1081: string[] = ["uid", "fromTime", "toTime", "limit"];
+                    const argsValues_1082: any[] = [uid_1077, fromTime_1078, toTime_1079, limit_1080];
+                    ctx.invokeLocalMethodBefore("getClientActivity", argsNames_1081, argsValues_1082);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.getClientActivity(uid_1074, fromTime_1075, toTime_1076, limit_1077);
-                    ctx.invokeLocalMethodAfter("getClientActivity", resultFuture, argsNames_1078, argsValues_1079);
-                    resultFuture.to((v_1081: ClientActivity[]) =>  {
-                        const data_1080 = new DataInOut();
-                        SerializerPackNumber.INSTANCE.put(data_1080, v_1081.length);
-                        for (const el_1082 of v_1081)  {
-                            ClientActivity.META.serialize(ctx, el_1082, data_1080);
+                    const resultFuture = localApi.getClientActivity(uid_1077, fromTime_1078, toTime_1079, limit_1080);
+                    ctx.invokeLocalMethodAfter("getClientActivity", resultFuture, argsNames_1081, argsValues_1082);
+                    resultFuture.to((v_1084: ClientActivity[]) =>  {
+                        const data_1083 = new DataInOut();
+                        SerializerPackNumber.INSTANCE.put(data_1083, v_1084.length);
+                        for (const el_1085 of v_1084)  {
+                            ClientActivity.META.serialize(ctx, el_1085, data_1083);
                             
                         }
-                        ctx.sendResultToRemote(reqId_1073, data_1080.toArray());
+                        ctx.sendResultToRemote(reqId_1076, data_1083.toArray());
                         
                     }
                     );
@@ -10506,31 +10513,31 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 30:  {
-                    const reqId_1083 = dataIn.readInt();
-                    let uid_1084: UUID;
-                    let query_1085: string;
-                    let limit_1086: number;
-                    uid_1084 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    let stringBytes_1087: Uint8Array;
-                    const len_1089 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    const bytes_1090 = dataIn.readBytes(len_1089);
-                    stringBytes_1087 = bytes_1090;
-                    query_1085 = new TextDecoder('utf-8').decode(stringBytes_1087);
-                    limit_1086 = dataIn.readInt();
-                    const argsNames_1091: string[] = ["uid", "query", "limit"];
-                    const argsValues_1092: any[] = [uid_1084, query_1085, limit_1086];
-                    ctx.invokeLocalMethodBefore("searchClientLogs", argsNames_1091, argsValues_1092);
+                    const reqId_1086 = dataIn.readInt();
+                    let uid_1087: UUID;
+                    let query_1088: string;
+                    let limit_1089: number;
+                    uid_1087 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    let stringBytes_1090: Uint8Array;
+                    const len_1092 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    const bytes_1093 = dataIn.readBytes(len_1092);
+                    stringBytes_1090 = bytes_1093;
+                    query_1088 = new TextDecoder('utf-8').decode(stringBytes_1090);
+                    limit_1089 = dataIn.readInt();
+                    const argsNames_1094: string[] = ["uid", "query", "limit"];
+                    const argsValues_1095: any[] = [uid_1087, query_1088, limit_1089];
+                    ctx.invokeLocalMethodBefore("searchClientLogs", argsNames_1094, argsValues_1095);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.searchClientLogs(uid_1084, query_1085, limit_1086);
-                    ctx.invokeLocalMethodAfter("searchClientLogs", resultFuture, argsNames_1091, argsValues_1092);
-                    resultFuture.to((v_1094: ClientLogEntry[]) =>  {
-                        const data_1093 = new DataInOut();
-                        SerializerPackNumber.INSTANCE.put(data_1093, v_1094.length);
-                        for (const el_1095 of v_1094)  {
-                            ClientLogEntry.META.serialize(ctx, el_1095, data_1093);
+                    const resultFuture = localApi.searchClientLogs(uid_1087, query_1088, limit_1089);
+                    ctx.invokeLocalMethodAfter("searchClientLogs", resultFuture, argsNames_1094, argsValues_1095);
+                    resultFuture.to((v_1097: ClientLogEntry[]) =>  {
+                        const data_1096 = new DataInOut();
+                        SerializerPackNumber.INSTANCE.put(data_1096, v_1097.length);
+                        for (const el_1098 of v_1097)  {
+                            ClientLogEntry.META.serialize(ctx, el_1098, data_1096);
                             
                         }
-                        ctx.sendResultToRemote(reqId_1083, data_1093.toArray());
+                        ctx.sendResultToRemote(reqId_1086, data_1096.toArray());
                         
                     }
                     );
@@ -10538,25 +10545,25 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 31:  {
-                    const reqId_1096 = dataIn.readInt();
-                    let uid_1097: UUID;
-                    let limit_1098: number;
-                    uid_1097 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    limit_1098 = dataIn.readInt();
-                    const argsNames_1099: string[] = ["uid", "limit"];
-                    const argsValues_1100: any[] = [uid_1097, limit_1098];
-                    ctx.invokeLocalMethodBefore("getClientConnections", argsNames_1099, argsValues_1100);
+                    const reqId_1099 = dataIn.readInt();
+                    let uid_1100: UUID;
+                    let limit_1101: number;
+                    uid_1100 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    limit_1101 = dataIn.readInt();
+                    const argsNames_1102: string[] = ["uid", "limit"];
+                    const argsValues_1103: any[] = [uid_1100, limit_1101];
+                    ctx.invokeLocalMethodBefore("getClientConnections", argsNames_1102, argsValues_1103);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.getClientConnections(uid_1097, limit_1098);
-                    ctx.invokeLocalMethodAfter("getClientConnections", resultFuture, argsNames_1099, argsValues_1100);
-                    resultFuture.to((v_1102: ClientConnectionInfo[]) =>  {
-                        const data_1101 = new DataInOut();
-                        SerializerPackNumber.INSTANCE.put(data_1101, v_1102.length);
-                        for (const el_1103 of v_1102)  {
-                            ClientConnectionInfo.META.serialize(ctx, el_1103, data_1101);
+                    const resultFuture = localApi.getClientConnections(uid_1100, limit_1101);
+                    ctx.invokeLocalMethodAfter("getClientConnections", resultFuture, argsNames_1102, argsValues_1103);
+                    resultFuture.to((v_1105: ClientConnectionInfo[]) =>  {
+                        const data_1104 = new DataInOut();
+                        SerializerPackNumber.INSTANCE.put(data_1104, v_1105.length);
+                        for (const el_1106 of v_1105)  {
+                            ClientConnectionInfo.META.serialize(ctx, el_1106, data_1104);
                             
                         }
-                        ctx.sendResultToRemote(reqId_1096, data_1101.toArray());
+                        ctx.sendResultToRemote(reqId_1099, data_1104.toArray());
                         
                     }
                     );
@@ -10564,29 +10571,29 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
                     
                 }
                 case 32:  {
-                    const reqId_1104 = dataIn.readInt();
-                    let uid_1105: UUID;
-                    let fromTime_1106: bigint;
-                    let toTime_1107: bigint;
-                    let limit_1108: number;
-                    uid_1105 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    fromTime_1106 = dataIn.readLong();
-                    toTime_1107 = dataIn.readLong();
-                    limit_1108 = dataIn.readInt();
-                    const argsNames_1109: string[] = ["uid", "fromTime", "toTime", "limit"];
-                    const argsValues_1110: any[] = [uid_1105, fromTime_1106, toTime_1107, limit_1108];
-                    ctx.invokeLocalMethodBefore("getClientMessages", argsNames_1109, argsValues_1110);
+                    const reqId_1107 = dataIn.readInt();
+                    let uid_1108: UUID;
+                    let fromTime_1109: bigint;
+                    let toTime_1110: bigint;
+                    let limit_1111: number;
+                    uid_1108 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    fromTime_1109 = dataIn.readLong();
+                    toTime_1110 = dataIn.readLong();
+                    limit_1111 = dataIn.readInt();
+                    const argsNames_1112: string[] = ["uid", "fromTime", "toTime", "limit"];
+                    const argsValues_1113: any[] = [uid_1108, fromTime_1109, toTime_1110, limit_1111];
+                    ctx.invokeLocalMethodBefore("getClientMessages", argsNames_1112, argsValues_1113);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.getClientMessages(uid_1105, fromTime_1106, toTime_1107, limit_1108);
-                    ctx.invokeLocalMethodAfter("getClientMessages", resultFuture, argsNames_1109, argsValues_1110);
-                    resultFuture.to((v_1112: MessageInfo[]) =>  {
-                        const data_1111 = new DataInOut();
-                        SerializerPackNumber.INSTANCE.put(data_1111, v_1112.length);
-                        for (const el_1113 of v_1112)  {
-                            MessageInfo.META.serialize(ctx, el_1113, data_1111);
+                    const resultFuture = localApi.getClientMessages(uid_1108, fromTime_1109, toTime_1110, limit_1111);
+                    ctx.invokeLocalMethodAfter("getClientMessages", resultFuture, argsNames_1112, argsValues_1113);
+                    resultFuture.to((v_1115: MessageInfo[]) =>  {
+                        const data_1114 = new DataInOut();
+                        SerializerPackNumber.INSTANCE.put(data_1114, v_1115.length);
+                        for (const el_1116 of v_1115)  {
+                            MessageInfo.META.serialize(ctx, el_1116, data_1114);
                             
                         }
-                        ctx.sendResultToRemote(reqId_1104, data_1111.toArray());
+                        ctx.sendResultToRemote(reqId_1107, data_1114.toArray());
                         
                     }
                     );
@@ -10610,570 +10617,568 @@ export class AuthorizedApiMetaImpl implements FastMetaApi<AuthorizedApi, Authori
         this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
         
     }
-    makeRemote(sCtx_1114: FastFutureContext): AuthorizedApiRemote  {
+    makeRemote(sCtx_1117: FastFutureContext): AuthorizedApiRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_1114.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_1117.flush(sendFuture);
                 
             }
-            , getFastMetaContext: () => sCtx_1114, backId: (id: number): void =>  {
-                const dataOut_1116 = new DataInOut();
-                dataOut_1116.writeByte(3);
-                const argsNames_1118: string[] = ["id"];
-                const argsValues_1119: any[] = [id];
-                sCtx_1114.invokeRemoteMethodAfter("backId", null, argsNames_1118, argsValues_1119);
-                dataOut_1116.writeByte(id);
-                sCtx_1114.sendToRemote(dataOut_1116.toArray());
+            , getFastMetaContext: () => sCtx_1117, backId: (id: number): void =>  {
+                const dataOut_1119 = new DataInOut();
+                dataOut_1119.writeByte(3);
+                const argsNames_1121: string[] = ["id"];
+                const argsValues_1122: any[] = [id];
+                sCtx_1117.invokeRemoteMethodAfter("backId", null, argsNames_1121, argsValues_1122);
+                dataOut_1119.writeByte(id);
+                sCtx_1117.sendToRemote(dataOut_1119.toArray());
                 
             }
             , ping: (nextConnectMsDuration: bigint): AFuture =>  {
-                const dataOut_1121 = new DataInOut();
-                dataOut_1121.writeByte(4);
-                const argsNames_1123: string[] = ["nextConnectMsDuration"];
-                const argsValues_1124: any[] = [nextConnectMsDuration];
-                const result_1122 = AFuture.make();
-                sCtx_1114.invokeRemoteMethodAfter("ping", result_1122, argsNames_1123, argsValues_1124);
-                const reqId_1120 = sCtx_1114.regFuture( {
+                const dataOut_1124 = new DataInOut();
+                dataOut_1124.writeByte(4);
+                const argsNames_1126: string[] = ["nextConnectMsDuration"];
+                const argsValues_1127: any[] = [nextConnectMsDuration];
+                const result_1125 = AFuture.make();
+                sCtx_1117.invokeRemoteMethodAfter("ping", result_1125, argsNames_1126, argsValues_1127);
+                const reqId_1123 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1122 as AFuture).tryDone();
+                        (result_1125 as AFuture).tryDone();
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1122.error(new Error("Remote call failed without a typed exception"));
+                        result_1125.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1121.writeInt(reqId_1120);
-                dataOut_1121.writeLong(nextConnectMsDuration);
-                sCtx_1114.sendToRemote(dataOut_1121.toArray());
-                return result_1122;
+                dataOut_1124.writeInt(reqId_1123);
+                dataOut_1124.writeLong(nextConnectMsDuration);
+                sCtx_1117.sendToRemote(dataOut_1124.toArray());
+                return result_1125;
                 
             }
             , client: (uid: UUID, stream: ClientApiStream): void =>  {
-                const dataOut_1126 = new DataInOut();
-                dataOut_1126.writeByte(5);
-                const argsNames_1128: string[] = ["uid", "stream"];
-                const argsValues_1129: any[] = [uid, stream];
-                sCtx_1114.invokeRemoteMethodAfter("client", null, argsNames_1128, argsValues_1129);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1126);
-                ClientApiStream.META.serialize(sCtx_1114, stream, dataOut_1126);
-                sCtx_1114.sendToRemote(dataOut_1126.toArray());
+                const dataOut_1129 = new DataInOut();
+                dataOut_1129.writeByte(5);
+                const argsNames_1131: string[] = ["uid", "stream"];
+                const argsValues_1132: any[] = [uid, stream];
+                sCtx_1117.invokeRemoteMethodAfter("client", null, argsNames_1131, argsValues_1132);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1129);
+                ClientApiStream.META.serialize(sCtx_1117, stream, dataOut_1129);
+                sCtx_1117.sendToRemote(dataOut_1129.toArray());
                 
             }
             , sendMessage: (msg: Message): void =>  {
-                const dataOut_1131 = new DataInOut();
-                dataOut_1131.writeByte(6);
-                const argsNames_1133: string[] = ["msg"];
-                const argsValues_1134: any[] = [msg];
-                sCtx_1114.invokeRemoteMethodAfter("sendMessage", null, argsNames_1133, argsValues_1134);
-                Message.META.serialize(sCtx_1114, msg, dataOut_1131);
-                sCtx_1114.sendToRemote(dataOut_1131.toArray());
+                const dataOut_1134 = new DataInOut();
+                dataOut_1134.writeByte(6);
+                const argsNames_1136: string[] = ["msg"];
+                const argsValues_1137: any[] = [msg];
+                sCtx_1117.invokeRemoteMethodAfter("sendMessage", null, argsNames_1136, argsValues_1137);
+                Message.META.serialize(sCtx_1117, msg, dataOut_1134);
+                sCtx_1117.sendToRemote(dataOut_1134.toArray());
                 
             }
             , sendMessages: (msg: Message[]): void =>  {
-                const dataOut_1136 = new DataInOut();
-                dataOut_1136.writeByte(7);
-                const argsNames_1138: string[] = ["msg"];
-                const argsValues_1139: any[] = [msg];
-                sCtx_1114.invokeRemoteMethodAfter("sendMessages", null, argsNames_1138, argsValues_1139);
-                SerializerPackNumber.INSTANCE.put(dataOut_1136, msg.length);
-                for (const el_1140 of msg)  {
-                    Message.META.serialize(sCtx_1114, el_1140, dataOut_1136);
+                const dataOut_1139 = new DataInOut();
+                dataOut_1139.writeByte(7);
+                const argsNames_1141: string[] = ["msg"];
+                const argsValues_1142: any[] = [msg];
+                sCtx_1117.invokeRemoteMethodAfter("sendMessages", null, argsNames_1141, argsValues_1142);
+                SerializerPackNumber.INSTANCE.put(dataOut_1139, msg.length);
+                for (const el_1143 of msg)  {
+                    Message.META.serialize(sCtx_1117, el_1143, dataOut_1139);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1136.toArray());
+                sCtx_1117.sendToRemote(dataOut_1139.toArray());
                 
             }
             , createAccessGroup: (owner: UUID, uids: UUID[]): ARFuture<bigint> =>  {
-                const dataOut_1142 = new DataInOut();
-                dataOut_1142.writeByte(8);
-                const argsNames_1144: string[] = ["owner", "uids"];
-                const argsValues_1145: any[] = [owner, uids];
-                const result_1143 = ARFuture.of<bigint>();
-                sCtx_1114.invokeRemoteMethodAfter("createAccessGroup", result_1143, argsNames_1144, argsValues_1145);
-                const reqId_1141 = sCtx_1114.regFuture( {
+                const dataOut_1145 = new DataInOut();
+                dataOut_1145.writeByte(8);
+                const argsNames_1147: string[] = ["owner", "uids"];
+                const argsValues_1148: any[] = [owner, uids];
+                const result_1146 = ARFuture.of<bigint>();
+                sCtx_1117.invokeRemoteMethodAfter("createAccessGroup", result_1146, argsNames_1147, argsValues_1148);
+                const reqId_1144 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1143 as ARFuture<bigint>).tryDone(FastMeta.META_LONG.deserialize(sCtx_1114, in_));
+                        (result_1146 as ARFuture<bigint>).tryDone(FastMeta.META_LONG.deserialize(sCtx_1117, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1143.error(new Error("Remote call failed without a typed exception"));
+                        result_1146.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1142.writeInt(reqId_1141);
-                FastMeta.META_UUID.serialize(sCtx_1114, owner, dataOut_1142);
-                SerializerPackNumber.INSTANCE.put(dataOut_1142, uids.length);
-                for (const el_1146 of uids)  {
-                    FastMeta.META_UUID.serialize(sCtx_1114, el_1146, dataOut_1142);
+                dataOut_1145.writeInt(reqId_1144);
+                FastMeta.META_UUID.serialize(sCtx_1117, owner, dataOut_1145);
+                SerializerPackNumber.INSTANCE.put(dataOut_1145, uids.length);
+                for (const el_1149 of uids)  {
+                    FastMeta.META_UUID.serialize(sCtx_1117, el_1149, dataOut_1145);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1142.toArray());
-                return result_1143;
+                sCtx_1117.sendToRemote(dataOut_1145.toArray());
+                return result_1146;
                 
             }
             , addToAccessGroup: (groupId: bigint, uid: UUID): ARFuture<boolean> =>  {
-                const dataOut_1148 = new DataInOut();
-                dataOut_1148.writeByte(9);
-                const argsNames_1150: string[] = ["groupId", "uid"];
-                const argsValues_1151: any[] = [groupId, uid];
-                const result_1149 = ARFuture.of<boolean>();
-                sCtx_1114.invokeRemoteMethodAfter("addToAccessGroup", result_1149, argsNames_1150, argsValues_1151);
-                const reqId_1147 = sCtx_1114.regFuture( {
+                const dataOut_1151 = new DataInOut();
+                dataOut_1151.writeByte(9);
+                const argsNames_1153: string[] = ["groupId", "uid"];
+                const argsValues_1154: any[] = [groupId, uid];
+                const result_1152 = ARFuture.of<boolean>();
+                sCtx_1117.invokeRemoteMethodAfter("addToAccessGroup", result_1152, argsNames_1153, argsValues_1154);
+                const reqId_1150 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1149 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1114, in_));
+                        (result_1152 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1117, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1149.error(new Error("Remote call failed without a typed exception"));
+                        result_1152.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1148.writeInt(reqId_1147);
-                dataOut_1148.writeLong(groupId);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1148);
-                sCtx_1114.sendToRemote(dataOut_1148.toArray());
-                return result_1149;
+                dataOut_1151.writeInt(reqId_1150);
+                dataOut_1151.writeLong(groupId);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1151);
+                sCtx_1117.sendToRemote(dataOut_1151.toArray());
+                return result_1152;
                 
             }
             , removeFromAccessGroup: (groupId: bigint, uid: UUID): ARFuture<boolean> =>  {
-                const dataOut_1153 = new DataInOut();
-                dataOut_1153.writeByte(10);
-                const argsNames_1155: string[] = ["groupId", "uid"];
-                const argsValues_1156: any[] = [groupId, uid];
-                const result_1154 = ARFuture.of<boolean>();
-                sCtx_1114.invokeRemoteMethodAfter("removeFromAccessGroup", result_1154, argsNames_1155, argsValues_1156);
-                const reqId_1152 = sCtx_1114.regFuture( {
+                const dataOut_1156 = new DataInOut();
+                dataOut_1156.writeByte(10);
+                const argsNames_1158: string[] = ["groupId", "uid"];
+                const argsValues_1159: any[] = [groupId, uid];
+                const result_1157 = ARFuture.of<boolean>();
+                sCtx_1117.invokeRemoteMethodAfter("removeFromAccessGroup", result_1157, argsNames_1158, argsValues_1159);
+                const reqId_1155 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1154 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1114, in_));
+                        (result_1157 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1117, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1154.error(new Error("Remote call failed without a typed exception"));
+                        result_1157.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1153.writeInt(reqId_1152);
-                dataOut_1153.writeLong(groupId);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1153);
-                sCtx_1114.sendToRemote(dataOut_1153.toArray());
-                return result_1154;
+                dataOut_1156.writeInt(reqId_1155);
+                dataOut_1156.writeLong(groupId);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1156);
+                sCtx_1117.sendToRemote(dataOut_1156.toArray());
+                return result_1157;
                 
             }
             , checkAccessForSendMessage: (uid: UUID): AFuture =>  {
-                const dataOut_1158 = new DataInOut();
-                dataOut_1158.writeByte(11);
-                const argsNames_1160: string[] = ["uid"];
-                const argsValues_1161: any[] = [uid];
-                const result_1159 = AFuture.make();
-                sCtx_1114.invokeRemoteMethodAfter("checkAccessForSendMessage", result_1159, argsNames_1160, argsValues_1161);
-                const reqId_1157 = sCtx_1114.regFuture( {
+                const dataOut_1161 = new DataInOut();
+                dataOut_1161.writeByte(11);
+                const argsNames_1163: string[] = ["uid"];
+                const argsValues_1164: any[] = [uid];
+                const result_1162 = AFuture.make();
+                sCtx_1117.invokeRemoteMethodAfter("checkAccessForSendMessage", result_1162, argsNames_1163, argsValues_1164);
+                const reqId_1160 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1159 as AFuture).tryDone();
+                        (result_1162 as AFuture).tryDone();
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1159.error(new Error("Remote call failed without a typed exception"));
+                        result_1162.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1158.writeInt(reqId_1157);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1158);
-                sCtx_1114.sendToRemote(dataOut_1158.toArray());
-                return result_1159;
+                dataOut_1161.writeInt(reqId_1160);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1161);
+                sCtx_1117.sendToRemote(dataOut_1161.toArray());
+                return result_1162;
                 
             }
             , resolverServers: (sid: number[]): void =>  {
-                const dataOut_1163 = new DataInOut();
-                dataOut_1163.writeByte(12);
-                const argsNames_1165: string[] = ["sid"];
-                const argsValues_1166: any[] = [sid];
-                sCtx_1114.invokeRemoteMethodAfter("resolverServers", null, argsNames_1165, argsValues_1166);
-                SerializerPackNumber.INSTANCE.put(dataOut_1163, sid.length);
-                for (const el_1167 of sid)  {
-                    dataOut_1163.writeShort(el_1167);
+                const dataOut_1166 = new DataInOut();
+                dataOut_1166.writeByte(12);
+                const argsNames_1168: string[] = ["sid"];
+                const argsValues_1169: any[] = [sid];
+                sCtx_1117.invokeRemoteMethodAfter("resolverServers", null, argsNames_1168, argsValues_1169);
+                SerializerPackNumber.INSTANCE.put(dataOut_1166, sid.length);
+                for (const el_1170 of sid)  {
+                    dataOut_1166.writeShort(el_1170);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1163.toArray());
+                sCtx_1117.sendToRemote(dataOut_1166.toArray());
                 
             }
             , resolveClouds: (uids: UUID[]): void =>  {
-                const dataOut_1169 = new DataInOut();
-                dataOut_1169.writeByte(13);
-                const argsNames_1171: string[] = ["uids"];
-                const argsValues_1172: any[] = [uids];
-                sCtx_1114.invokeRemoteMethodAfter("resolveClouds", null, argsNames_1171, argsValues_1172);
-                SerializerPackNumber.INSTANCE.put(dataOut_1169, uids.length);
-                for (const el_1173 of uids)  {
-                    FastMeta.META_UUID.serialize(sCtx_1114, el_1173, dataOut_1169);
+                const dataOut_1172 = new DataInOut();
+                dataOut_1172.writeByte(13);
+                const argsNames_1174: string[] = ["uids"];
+                const argsValues_1175: any[] = [uids];
+                sCtx_1117.invokeRemoteMethodAfter("resolveClouds", null, argsNames_1174, argsValues_1175);
+                SerializerPackNumber.INSTANCE.put(dataOut_1172, uids.length);
+                for (const el_1176 of uids)  {
+                    FastMeta.META_UUID.serialize(sCtx_1117, el_1176, dataOut_1172);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1169.toArray());
+                sCtx_1117.sendToRemote(dataOut_1172.toArray());
                 
             }
             , getAccessGroups: (uid: UUID): ARFuture<bigint[]> =>  {
-                const dataOut_1175 = new DataInOut();
-                dataOut_1175.writeByte(14);
-                const argsNames_1177: string[] = ["uid"];
-                const argsValues_1178: any[] = [uid];
-                const result_1176 = ARFuture.of<bigint[]>();
-                sCtx_1114.invokeRemoteMethodAfter("getAccessGroups", result_1176, argsNames_1177, argsValues_1178);
-                const reqId_1174 = sCtx_1114.regFuture( {
+                const dataOut_1178 = new DataInOut();
+                dataOut_1178.writeByte(14);
+                const argsNames_1180: string[] = ["uid"];
+                const argsValues_1181: any[] = [uid];
+                const result_1179 = ARFuture.of<bigint[]>();
+                sCtx_1117.invokeRemoteMethodAfter("getAccessGroups", result_1179, argsNames_1180, argsValues_1181);
+                const reqId_1177 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1176 as ARFuture<bigint[]>).tryDone(FastMeta.getMetaArray(FastMeta.META_LONG).deserialize(sCtx_1114, in_));
+                        (result_1179 as ARFuture<bigint[]>).tryDone(FastMeta.getMetaArray(FastMeta.META_LONG).deserialize(sCtx_1117, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1176.error(new Error("Remote call failed without a typed exception"));
+                        result_1179.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1175.writeInt(reqId_1174);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1175);
-                sCtx_1114.sendToRemote(dataOut_1175.toArray());
-                return result_1176;
+                dataOut_1178.writeInt(reqId_1177);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1178);
+                sCtx_1117.sendToRemote(dataOut_1178.toArray());
+                return result_1179;
                 
             }
             , getAccessGroup: (groupId: bigint): ARFuture<AccessGroup> =>  {
-                const dataOut_1180 = new DataInOut();
-                dataOut_1180.writeByte(15);
-                const argsNames_1182: string[] = ["groupId"];
-                const argsValues_1183: any[] = [groupId];
-                const result_1181 = ARFuture.of<AccessGroup>();
-                sCtx_1114.invokeRemoteMethodAfter("getAccessGroup", result_1181, argsNames_1182, argsValues_1183);
-                const reqId_1179 = sCtx_1114.regFuture( {
+                const dataOut_1183 = new DataInOut();
+                dataOut_1183.writeByte(15);
+                const argsNames_1185: string[] = ["groupId"];
+                const argsValues_1186: any[] = [groupId];
+                const result_1184 = ARFuture.of<AccessGroup>();
+                sCtx_1117.invokeRemoteMethodAfter("getAccessGroup", result_1184, argsNames_1185, argsValues_1186);
+                const reqId_1182 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1181 as ARFuture<AccessGroup>).tryDone(AccessGroup.META.deserialize(sCtx_1114, in_));
+                        (result_1184 as ARFuture<AccessGroup>).tryDone(AccessGroup.META.deserialize(sCtx_1117, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1181.error(new Error("Remote call failed without a typed exception"));
+                        result_1184.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1180.writeInt(reqId_1179);
-                dataOut_1180.writeLong(groupId);
-                sCtx_1114.sendToRemote(dataOut_1180.toArray());
-                return result_1181;
+                dataOut_1183.writeInt(reqId_1182);
+                dataOut_1183.writeLong(groupId);
+                sCtx_1117.sendToRemote(dataOut_1183.toArray());
+                return result_1184;
                 
             }
             , getAllAccessedClients: (uid: UUID): ARFuture<UUID[]> =>  {
-                const dataOut_1185 = new DataInOut();
-                dataOut_1185.writeByte(16);
-                const argsNames_1187: string[] = ["uid"];
-                const argsValues_1188: any[] = [uid];
-                const result_1186 = ARFuture.of<UUID[]>();
-                sCtx_1114.invokeRemoteMethodAfter("getAllAccessedClients", result_1186, argsNames_1187, argsValues_1188);
-                const reqId_1184 = sCtx_1114.regFuture( {
+                const dataOut_1188 = new DataInOut();
+                dataOut_1188.writeByte(16);
+                const argsNames_1190: string[] = ["uid"];
+                const argsValues_1191: any[] = [uid];
+                const result_1189 = ARFuture.of<UUID[]>();
+                sCtx_1117.invokeRemoteMethodAfter("getAllAccessedClients", result_1189, argsNames_1190, argsValues_1191);
+                const reqId_1187 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1186 as ARFuture<UUID[]>).tryDone(FastMeta.getMetaArray(FastMeta.META_UUID).deserialize(sCtx_1114, in_));
+                        (result_1189 as ARFuture<UUID[]>).tryDone(FastMeta.getMetaArray(FastMeta.META_UUID).deserialize(sCtx_1117, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1186.error(new Error("Remote call failed without a typed exception"));
+                        result_1189.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1185.writeInt(reqId_1184);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1185);
-                sCtx_1114.sendToRemote(dataOut_1185.toArray());
-                return result_1186;
+                dataOut_1188.writeInt(reqId_1187);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1188);
+                sCtx_1117.sendToRemote(dataOut_1188.toArray());
+                return result_1189;
                 
             }
             , checkAccessForSendMessage2: (uid1: UUID, uid2: UUID): ARFuture<boolean> =>  {
-                const dataOut_1190 = new DataInOut();
-                dataOut_1190.writeByte(17);
-                const argsNames_1192: string[] = ["uid1", "uid2"];
-                const argsValues_1193: any[] = [uid1, uid2];
-                const result_1191 = ARFuture.of<boolean>();
-                sCtx_1114.invokeRemoteMethodAfter("checkAccessForSendMessage2", result_1191, argsNames_1192, argsValues_1193);
-                const reqId_1189 = sCtx_1114.regFuture( {
+                const dataOut_1193 = new DataInOut();
+                dataOut_1193.writeByte(17);
+                const argsNames_1195: string[] = ["uid1", "uid2"];
+                const argsValues_1196: any[] = [uid1, uid2];
+                const result_1194 = ARFuture.of<boolean>();
+                sCtx_1117.invokeRemoteMethodAfter("checkAccessForSendMessage2", result_1194, argsNames_1195, argsValues_1196);
+                const reqId_1192 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1191 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1114, in_));
+                        (result_1194 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1117, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1191.error(new Error("Remote call failed without a typed exception"));
+                        result_1194.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1190.writeInt(reqId_1189);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid1, dataOut_1190);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid2, dataOut_1190);
-                sCtx_1114.sendToRemote(dataOut_1190.toArray());
-                return result_1191;
+                dataOut_1193.writeInt(reqId_1192);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid1, dataOut_1193);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid2, dataOut_1193);
+                sCtx_1117.sendToRemote(dataOut_1193.toArray());
+                return result_1194;
                 
             }
             , sendTelemetry: (telemetry: Telemetry): void =>  {
-                const dataOut_1195 = new DataInOut();
-                dataOut_1195.writeByte(18);
-                const argsNames_1197: string[] = ["telemetry"];
-                const argsValues_1198: any[] = [telemetry];
-                sCtx_1114.invokeRemoteMethodAfter("sendTelemetry", null, argsNames_1197, argsValues_1198);
-                Telemetry.META.serialize(sCtx_1114, telemetry, dataOut_1195);
-                sCtx_1114.sendToRemote(dataOut_1195.toArray());
+                const dataOut_1198 = new DataInOut();
+                dataOut_1198.writeByte(18);
+                const argsNames_1200: string[] = ["telemetry"];
+                const argsValues_1201: any[] = [telemetry];
+                sCtx_1117.invokeRemoteMethodAfter("sendTelemetry", null, argsNames_1200, argsValues_1201);
+                Telemetry.META.serialize(sCtx_1117, telemetry, dataOut_1198);
+                sCtx_1117.sendToRemote(dataOut_1198.toArray());
                 
             }
             , requestAccessGroupsForClients: (uids: UUID[]): void =>  {
-                const dataOut_1200 = new DataInOut();
-                dataOut_1200.writeByte(19);
-                const argsNames_1202: string[] = ["uids"];
-                const argsValues_1203: any[] = [uids];
-                sCtx_1114.invokeRemoteMethodAfter("requestAccessGroupsForClients", null, argsNames_1202, argsValues_1203);
-                SerializerPackNumber.INSTANCE.put(dataOut_1200, uids.length);
-                for (const el_1204 of uids)  {
-                    FastMeta.META_UUID.serialize(sCtx_1114, el_1204, dataOut_1200);
+                const dataOut_1203 = new DataInOut();
+                dataOut_1203.writeByte(19);
+                const argsNames_1205: string[] = ["uids"];
+                const argsValues_1206: any[] = [uids];
+                sCtx_1117.invokeRemoteMethodAfter("requestAccessGroupsForClients", null, argsNames_1205, argsValues_1206);
+                SerializerPackNumber.INSTANCE.put(dataOut_1203, uids.length);
+                for (const el_1207 of uids)  {
+                    FastMeta.META_UUID.serialize(sCtx_1117, el_1207, dataOut_1203);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1200.toArray());
+                sCtx_1117.sendToRemote(dataOut_1203.toArray());
                 
             }
             , requestAccessGroupsItems: (ids: bigint[]): void =>  {
-                const dataOut_1206 = new DataInOut();
-                dataOut_1206.writeByte(20);
-                const argsNames_1208: string[] = ["ids"];
-                const argsValues_1209: any[] = [ids];
-                sCtx_1114.invokeRemoteMethodAfter("requestAccessGroupsItems", null, argsNames_1208, argsValues_1209);
-                SerializerPackNumber.INSTANCE.put(dataOut_1206, ids.length);
-                for (const el_1210 of ids)  {
-                    dataOut_1206.writeLong(el_1210);
+                const dataOut_1209 = new DataInOut();
+                dataOut_1209.writeByte(20);
+                const argsNames_1211: string[] = ["ids"];
+                const argsValues_1212: any[] = [ids];
+                sCtx_1117.invokeRemoteMethodAfter("requestAccessGroupsItems", null, argsNames_1211, argsValues_1212);
+                SerializerPackNumber.INSTANCE.put(dataOut_1209, ids.length);
+                for (const el_1213 of ids)  {
+                    dataOut_1209.writeLong(el_1213);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1206.toArray());
+                sCtx_1117.sendToRemote(dataOut_1209.toArray());
                 
             }
             , sendAccessGroupForClient: (uid: UUID, groups: bigint[]): void =>  {
-                const dataOut_1212 = new DataInOut();
-                dataOut_1212.writeByte(22);
-                const argsNames_1214: string[] = ["uid", "groups"];
-                const argsValues_1215: any[] = [uid, groups];
-                sCtx_1114.invokeRemoteMethodAfter("sendAccessGroupForClient", null, argsNames_1214, argsValues_1215);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1212);
-                SerializerPackNumber.INSTANCE.put(dataOut_1212, groups.length);
-                for (const el_1216 of groups)  {
-                    dataOut_1212.writeLong(el_1216);
+                const dataOut_1215 = new DataInOut();
+                dataOut_1215.writeByte(22);
+                const argsNames_1217: string[] = ["uid", "groups"];
+                const argsValues_1218: any[] = [uid, groups];
+                sCtx_1117.invokeRemoteMethodAfter("sendAccessGroupForClient", null, argsNames_1217, argsValues_1218);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1215);
+                SerializerPackNumber.INSTANCE.put(dataOut_1215, groups.length);
+                for (const el_1219 of groups)  {
+                    dataOut_1215.writeLong(el_1219);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1212.toArray());
+                sCtx_1117.sendToRemote(dataOut_1215.toArray());
                 
             }
             , addItemsToAccessGroup: (id: bigint, groups: UUID[]): void =>  {
-                const dataOut_1218 = new DataInOut();
-                dataOut_1218.writeByte(23);
-                const argsNames_1220: string[] = ["id", "groups"];
-                const argsValues_1221: any[] = [id, groups];
-                sCtx_1114.invokeRemoteMethodAfter("addItemsToAccessGroup", null, argsNames_1220, argsValues_1221);
-                dataOut_1218.writeLong(id);
-                SerializerPackNumber.INSTANCE.put(dataOut_1218, groups.length);
-                for (const el_1222 of groups)  {
-                    FastMeta.META_UUID.serialize(sCtx_1114, el_1222, dataOut_1218);
+                const dataOut_1221 = new DataInOut();
+                dataOut_1221.writeByte(23);
+                const argsNames_1223: string[] = ["id", "groups"];
+                const argsValues_1224: any[] = [id, groups];
+                sCtx_1117.invokeRemoteMethodAfter("addItemsToAccessGroup", null, argsNames_1223, argsValues_1224);
+                dataOut_1221.writeLong(id);
+                SerializerPackNumber.INSTANCE.put(dataOut_1221, groups.length);
+                for (const el_1225 of groups)  {
+                    FastMeta.META_UUID.serialize(sCtx_1117, el_1225, dataOut_1221);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1218.toArray());
+                sCtx_1117.sendToRemote(dataOut_1221.toArray());
                 
             }
             , removeItemsFromAccessGroup: (id: bigint, groups: UUID[]): void =>  {
-                const dataOut_1224 = new DataInOut();
-                dataOut_1224.writeByte(24);
-                const argsNames_1226: string[] = ["id", "groups"];
-                const argsValues_1227: any[] = [id, groups];
-                sCtx_1114.invokeRemoteMethodAfter("removeItemsFromAccessGroup", null, argsNames_1226, argsValues_1227);
-                dataOut_1224.writeLong(id);
-                SerializerPackNumber.INSTANCE.put(dataOut_1224, groups.length);
-                for (const el_1228 of groups)  {
-                    FastMeta.META_UUID.serialize(sCtx_1114, el_1228, dataOut_1224);
+                const dataOut_1227 = new DataInOut();
+                dataOut_1227.writeByte(24);
+                const argsNames_1229: string[] = ["id", "groups"];
+                const argsValues_1230: any[] = [id, groups];
+                sCtx_1117.invokeRemoteMethodAfter("removeItemsFromAccessGroup", null, argsNames_1229, argsValues_1230);
+                dataOut_1227.writeLong(id);
+                SerializerPackNumber.INSTANCE.put(dataOut_1227, groups.length);
+                for (const el_1231 of groups)  {
+                    FastMeta.META_UUID.serialize(sCtx_1117, el_1231, dataOut_1227);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1224.toArray());
+                sCtx_1117.sendToRemote(dataOut_1227.toArray());
                 
             }
             , addAccessGroupsToClient: (uid: UUID, groups: bigint[]): void =>  {
-                const dataOut_1230 = new DataInOut();
-                dataOut_1230.writeByte(25);
-                const argsNames_1232: string[] = ["uid", "groups"];
-                const argsValues_1233: any[] = [uid, groups];
-                sCtx_1114.invokeRemoteMethodAfter("addAccessGroupsToClient", null, argsNames_1232, argsValues_1233);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1230);
-                SerializerPackNumber.INSTANCE.put(dataOut_1230, groups.length);
-                for (const el_1234 of groups)  {
-                    dataOut_1230.writeLong(el_1234);
+                const dataOut_1233 = new DataInOut();
+                dataOut_1233.writeByte(25);
+                const argsNames_1235: string[] = ["uid", "groups"];
+                const argsValues_1236: any[] = [uid, groups];
+                sCtx_1117.invokeRemoteMethodAfter("addAccessGroupsToClient", null, argsNames_1235, argsValues_1236);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1233);
+                SerializerPackNumber.INSTANCE.put(dataOut_1233, groups.length);
+                for (const el_1237 of groups)  {
+                    dataOut_1233.writeLong(el_1237);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1230.toArray());
+                sCtx_1117.sendToRemote(dataOut_1233.toArray());
                 
             }
             , removeAccessGroupsFromClient: (uid: UUID, groups: bigint[]): void =>  {
-                const dataOut_1236 = new DataInOut();
-                dataOut_1236.writeByte(26);
-                const argsNames_1238: string[] = ["uid", "groups"];
-                const argsValues_1239: any[] = [uid, groups];
-                sCtx_1114.invokeRemoteMethodAfter("removeAccessGroupsFromClient", null, argsNames_1238, argsValues_1239);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1236);
-                SerializerPackNumber.INSTANCE.put(dataOut_1236, groups.length);
-                for (const el_1240 of groups)  {
-                    dataOut_1236.writeLong(el_1240);
+                const dataOut_1239 = new DataInOut();
+                dataOut_1239.writeByte(26);
+                const argsNames_1241: string[] = ["uid", "groups"];
+                const argsValues_1242: any[] = [uid, groups];
+                sCtx_1117.invokeRemoteMethodAfter("removeAccessGroupsFromClient", null, argsNames_1241, argsValues_1242);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1239);
+                SerializerPackNumber.INSTANCE.put(dataOut_1239, groups.length);
+                for (const el_1243 of groups)  {
+                    dataOut_1239.writeLong(el_1243);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1236.toArray());
+                sCtx_1117.sendToRemote(dataOut_1239.toArray());
                 
             }
             , requestAllAccessedClients: (uids: UUID[]): void =>  {
-                const dataOut_1242 = new DataInOut();
-                dataOut_1242.writeByte(27);
-                const argsNames_1244: string[] = ["uids"];
-                const argsValues_1245: any[] = [uids];
-                sCtx_1114.invokeRemoteMethodAfter("requestAllAccessedClients", null, argsNames_1244, argsValues_1245);
-                SerializerPackNumber.INSTANCE.put(dataOut_1242, uids.length);
-                for (const el_1246 of uids)  {
-                    FastMeta.META_UUID.serialize(sCtx_1114, el_1246, dataOut_1242);
+                const dataOut_1245 = new DataInOut();
+                dataOut_1245.writeByte(27);
+                const argsNames_1247: string[] = ["uids"];
+                const argsValues_1248: any[] = [uids];
+                sCtx_1117.invokeRemoteMethodAfter("requestAllAccessedClients", null, argsNames_1247, argsValues_1248);
+                SerializerPackNumber.INSTANCE.put(dataOut_1245, uids.length);
+                for (const el_1249 of uids)  {
+                    FastMeta.META_UUID.serialize(sCtx_1117, el_1249, dataOut_1245);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1242.toArray());
+                sCtx_1117.sendToRemote(dataOut_1245.toArray());
                 
             }
             , requestAccessCheck: (requests: AccessCheckPair[]): void =>  {
-                const dataOut_1248 = new DataInOut();
-                dataOut_1248.writeByte(28);
-                const argsNames_1250: string[] = ["requests"];
-                const argsValues_1251: any[] = [requests];
-                sCtx_1114.invokeRemoteMethodAfter("requestAccessCheck", null, argsNames_1250, argsValues_1251);
-                SerializerPackNumber.INSTANCE.put(dataOut_1248, requests.length);
-                for (const el_1252 of requests)  {
-                    AccessCheckPair.META.serialize(sCtx_1114, el_1252, dataOut_1248);
+                const dataOut_1251 = new DataInOut();
+                dataOut_1251.writeByte(28);
+                const argsNames_1253: string[] = ["requests"];
+                const argsValues_1254: any[] = [requests];
+                sCtx_1117.invokeRemoteMethodAfter("requestAccessCheck", null, argsNames_1253, argsValues_1254);
+                SerializerPackNumber.INSTANCE.put(dataOut_1251, requests.length);
+                for (const el_1255 of requests)  {
+                    AccessCheckPair.META.serialize(sCtx_1117, el_1255, dataOut_1251);
                     
                 }
-                sCtx_1114.sendToRemote(dataOut_1248.toArray());
+                sCtx_1117.sendToRemote(dataOut_1251.toArray());
                 
             }
             , getClientActivity: (uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<ClientActivity[]> =>  {
-                const dataOut_1254 = new DataInOut();
-                dataOut_1254.writeByte(29);
-                const argsNames_1256: string[] = ["uid", "fromTime", "toTime", "limit"];
-                const argsValues_1257: any[] = [uid, fromTime, toTime, limit];
-                const result_1255 = ARFuture.of<ClientActivity[]>();
-                sCtx_1114.invokeRemoteMethodAfter("getClientActivity", result_1255, argsNames_1256, argsValues_1257);
-                const reqId_1253 = sCtx_1114.regFuture( {
+                const dataOut_1257 = new DataInOut();
+                dataOut_1257.writeByte(29);
+                const argsNames_1259: string[] = ["uid", "fromTime", "toTime", "limit"];
+                const argsValues_1260: any[] = [uid, fromTime, toTime, limit];
+                const result_1258 = ARFuture.of<ClientActivity[]>();
+                sCtx_1117.invokeRemoteMethodAfter("getClientActivity", result_1258, argsNames_1259, argsValues_1260);
+                const reqId_1256 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1255 as ARFuture<ClientActivity[]>).tryDone(FastMeta.getMetaArray(ClientActivity.META).deserialize(sCtx_1114, in_));
+                        (result_1258 as ARFuture<ClientActivity[]>).tryDone(FastMeta.getMetaArray(ClientActivity.META).deserialize(sCtx_1117, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1255.error(new Error("Remote call failed without a typed exception"));
+                        result_1258.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1254.writeInt(reqId_1253);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1254);
-                dataOut_1254.writeLong(fromTime);
-                dataOut_1254.writeLong(toTime);
-                dataOut_1254.writeInt(limit);
-                sCtx_1114.sendToRemote(dataOut_1254.toArray());
-                return result_1255;
+                dataOut_1257.writeInt(reqId_1256);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1257);
+                dataOut_1257.writeLong(fromTime);
+                dataOut_1257.writeLong(toTime);
+                dataOut_1257.writeInt(limit);
+                sCtx_1117.sendToRemote(dataOut_1257.toArray());
+                return result_1258;
                 
             }
             , searchClientLogs: (uid: UUID, query: string, limit: number): ARFuture<ClientLogEntry[]> =>  {
-                const dataOut_1259 = new DataInOut();
-                dataOut_1259.writeByte(30);
-                const argsNames_1261: string[] = ["uid", "query", "limit"];
-                const argsValues_1262: any[] = [uid, query, limit];
-                const result_1260 = ARFuture.of<ClientLogEntry[]>();
-                sCtx_1114.invokeRemoteMethodAfter("searchClientLogs", result_1260, argsNames_1261, argsValues_1262);
-                const reqId_1258 = sCtx_1114.regFuture( {
+                const dataOut_1262 = new DataInOut();
+                dataOut_1262.writeByte(30);
+                const argsNames_1264: string[] = ["uid", "query", "limit"];
+                const argsValues_1265: any[] = [uid, query, limit];
+                const result_1263 = ARFuture.of<ClientLogEntry[]>();
+                sCtx_1117.invokeRemoteMethodAfter("searchClientLogs", result_1263, argsNames_1264, argsValues_1265);
+                const reqId_1261 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1260 as ARFuture<ClientLogEntry[]>).tryDone(FastMeta.getMetaArray(ClientLogEntry.META).deserialize(sCtx_1114, in_));
+                        (result_1263 as ARFuture<ClientLogEntry[]>).tryDone(FastMeta.getMetaArray(ClientLogEntry.META).deserialize(sCtx_1117, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1260.error(new Error("Remote call failed without a typed exception"));
+                        result_1263.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1259.writeInt(reqId_1258);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1259);
-                const stringBytes_1263 = new TextEncoder().encode(query);
-                SerializerPackNumber.INSTANCE.put(dataOut_1259, stringBytes_1263.length);
-                dataOut_1259.write(stringBytes_1263);
-                dataOut_1259.writeInt(limit);
-                sCtx_1114.sendToRemote(dataOut_1259.toArray());
-                return result_1260;
+                dataOut_1262.writeInt(reqId_1261);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1262);
+                const stringBytes_1266 = new TextEncoder().encode(query);
+                SerializerPackNumber.INSTANCE.put(dataOut_1262, stringBytes_1266.length);
+                dataOut_1262.write(stringBytes_1266);
+                dataOut_1262.writeInt(limit);
+                sCtx_1117.sendToRemote(dataOut_1262.toArray());
+                return result_1263;
                 
             }
             , getClientConnections: (uid: UUID, limit: number): ARFuture<ClientConnectionInfo[]> =>  {
-                const dataOut_1266 = new DataInOut();
-                dataOut_1266.writeByte(31);
-                const argsNames_1268: string[] = ["uid", "limit"];
-                const argsValues_1269: any[] = [uid, limit];
-                const result_1267 = ARFuture.of<ClientConnectionInfo[]>();
-                sCtx_1114.invokeRemoteMethodAfter("getClientConnections", result_1267, argsNames_1268, argsValues_1269);
-                const reqId_1265 = sCtx_1114.regFuture( {
+                const dataOut_1269 = new DataInOut();
+                dataOut_1269.writeByte(31);
+                const argsNames_1271: string[] = ["uid", "limit"];
+                const argsValues_1272: any[] = [uid, limit];
+                const result_1270 = ARFuture.of<ClientConnectionInfo[]>();
+                sCtx_1117.invokeRemoteMethodAfter("getClientConnections", result_1270, argsNames_1271, argsValues_1272);
+                const reqId_1268 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1267 as ARFuture<ClientConnectionInfo[]>).tryDone(FastMeta.getMetaArray(ClientConnectionInfo.META).deserialize(sCtx_1114, in_));
+                        (result_1270 as ARFuture<ClientConnectionInfo[]>).tryDone(FastMeta.getMetaArray(ClientConnectionInfo.META).deserialize(sCtx_1117, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1267.error(new Error("Remote call failed without a typed exception"));
+                        result_1270.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1266.writeInt(reqId_1265);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1266);
-                dataOut_1266.writeInt(limit);
-                sCtx_1114.sendToRemote(dataOut_1266.toArray());
-                return result_1267;
+                dataOut_1269.writeInt(reqId_1268);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1269);
+                dataOut_1269.writeInt(limit);
+                sCtx_1117.sendToRemote(dataOut_1269.toArray());
+                return result_1270;
                 
             }
             , getClientMessages: (uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<MessageInfo[]> =>  {
-                const dataOut_1271 = new DataInOut();
-                dataOut_1271.writeByte(32);
-                const argsNames_1273: string[] = ["uid", "fromTime", "toTime", "limit"];
-                const argsValues_1274: any[] = [uid, fromTime, toTime, limit];
-                const result_1272 = ARFuture.of<MessageInfo[]>();
-                sCtx_1114.invokeRemoteMethodAfter("getClientMessages", result_1272, argsNames_1273, argsValues_1274);
-                const reqId_1270 = sCtx_1114.regFuture( {
+                const dataOut_1274 = new DataInOut();
+                dataOut_1274.writeByte(32);
+                const argsNames_1276: string[] = ["uid", "fromTime", "toTime", "limit"];
+                const argsValues_1277: any[] = [uid, fromTime, toTime, limit];
+                const result_1275 = ARFuture.of<MessageInfo[]>();
+                sCtx_1117.invokeRemoteMethodAfter("getClientMessages", result_1275, argsNames_1276, argsValues_1277);
+                const reqId_1273 = sCtx_1117.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1272 as ARFuture<MessageInfo[]>).tryDone(FastMeta.getMetaArray(MessageInfo.META).deserialize(sCtx_1114, in_));
+                        (result_1275 as ARFuture<MessageInfo[]>).tryDone(FastMeta.getMetaArray(MessageInfo.META).deserialize(sCtx_1117, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1272.error(new Error("Remote call failed without a typed exception"));
+                        result_1275.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1271.writeInt(reqId_1270);
-                FastMeta.META_UUID.serialize(sCtx_1114, uid, dataOut_1271);
-                dataOut_1271.writeLong(fromTime);
-                dataOut_1271.writeLong(toTime);
-                dataOut_1271.writeInt(limit);
-                sCtx_1114.sendToRemote(dataOut_1271.toArray());
-                return result_1272;
+                dataOut_1274.writeInt(reqId_1273);
+                FastMeta.META_UUID.serialize(sCtx_1117, uid, dataOut_1274);
+                dataOut_1274.writeLong(fromTime);
+                dataOut_1274.writeLong(toTime);
+                dataOut_1274.writeInt(limit);
+                sCtx_1117.sendToRemote(dataOut_1274.toArray());
+                return result_1275;
                 
             }
             , 
@@ -11203,17 +11208,17 @@ export class LoginApiMetaImpl implements FastMetaApi<LoginApi, LoginApiRemote>  
                     
                 }
                 case 3:  {
-                    const reqId_1275 = dataIn.readInt();
-                    const argsNames_1276: string[] = [];
-                    const argsValues_1277: any[] = [];
-                    ctx.invokeLocalMethodBefore("getTimeUTC", argsNames_1276, argsValues_1277);
+                    const reqId_1278 = dataIn.readInt();
+                    const argsNames_1279: string[] = [];
+                    const argsValues_1280: any[] = [];
+                    ctx.invokeLocalMethodBefore("getTimeUTC", argsNames_1279, argsValues_1280);
                     ctx.regLocalFuture();
                     const resultFuture = localApi.getTimeUTC();
-                    ctx.invokeLocalMethodAfter("getTimeUTC", resultFuture, argsNames_1276, argsValues_1277);
-                    resultFuture.to((v_1279: bigint) =>  {
-                        const data_1278 = new DataInOut();
-                        data_1278.writeLong(v_1279);
-                        ctx.sendResultToRemote(reqId_1275, data_1278.toArray());
+                    ctx.invokeLocalMethodAfter("getTimeUTC", resultFuture, argsNames_1279, argsValues_1280);
+                    resultFuture.to((v_1282: bigint) =>  {
+                        const data_1281 = new DataInOut();
+                        data_1281.writeLong(v_1282);
+                        ctx.sendResultToRemote(reqId_1278, data_1281.toArray());
                         
                     }
                     );
@@ -11221,28 +11226,28 @@ export class LoginApiMetaImpl implements FastMetaApi<LoginApi, LoginApiRemote>  
                     
                 }
                 case 4:  {
-                    let uid_1281: UUID;
-                    let data_1282: LoginStream;
-                    uid_1281 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    data_1282 = LoginStream.META.deserialize(ctx, dataIn);
-                    const argsNames_1283: string[] = ["uid", "data"];
-                    const argsValues_1284: any[] = [uid_1281, data_1282];
-                    ctx.invokeLocalMethodBefore("loginByUID", argsNames_1283, argsValues_1284);
-                    localApi.loginByUID(uid_1281, data_1282);
-                    ctx.invokeLocalMethodAfter("loginByUID", null, argsNames_1283, argsValues_1284);
+                    let uid_1284: UUID;
+                    let data_1285: LoginStream;
+                    uid_1284 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    data_1285 = LoginStream.META.deserialize(ctx, dataIn);
+                    const argsNames_1286: string[] = ["uid", "data"];
+                    const argsValues_1287: any[] = [uid_1284, data_1285];
+                    ctx.invokeLocalMethodBefore("loginByUID", argsNames_1286, argsValues_1287);
+                    localApi.loginByUID(uid_1284, data_1285);
+                    ctx.invokeLocalMethodAfter("loginByUID", null, argsNames_1286, argsValues_1287);
                     break;
                     
                 }
                 case 5:  {
-                    let alias_1286: UUID;
-                    let data_1287: LoginStream;
-                    alias_1286 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    data_1287 = LoginStream.META.deserialize(ctx, dataIn);
-                    const argsNames_1288: string[] = ["alias", "data"];
-                    const argsValues_1289: any[] = [alias_1286, data_1287];
-                    ctx.invokeLocalMethodBefore("loginByAlias", argsNames_1288, argsValues_1289);
-                    localApi.loginByAlias(alias_1286, data_1287);
-                    ctx.invokeLocalMethodAfter("loginByAlias", null, argsNames_1288, argsValues_1289);
+                    let alias_1289: UUID;
+                    let data_1290: LoginStream;
+                    alias_1289 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    data_1290 = LoginStream.META.deserialize(ctx, dataIn);
+                    const argsNames_1291: string[] = ["alias", "data"];
+                    const argsValues_1292: any[] = [alias_1289, data_1290];
+                    ctx.invokeLocalMethodBefore("loginByAlias", argsNames_1291, argsValues_1292);
+                    localApi.loginByAlias(alias_1289, data_1290);
+                    ctx.invokeLocalMethodAfter("loginByAlias", null, argsNames_1291, argsValues_1292);
                     break;
                     
                 }
@@ -11263,58 +11268,56 @@ export class LoginApiMetaImpl implements FastMetaApi<LoginApi, LoginApiRemote>  
         this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
         
     }
-    makeRemote(sCtx_1290: FastFutureContext): LoginApiRemote  {
+    makeRemote(sCtx_1293: FastFutureContext): LoginApiRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_1290.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_1293.flush(sendFuture);
                 
             }
-            , getFastMetaContext: () => sCtx_1290, getTimeUTC: (): ARFuture<bigint> =>  {
-                const dataOut_1292 = new DataInOut();
-                dataOut_1292.writeByte(3);
-                const argsNames_1294: string[] = [];
-                const argsValues_1295: any[] = [];
-                const result_1293 = ARFuture.of<bigint>();
-                sCtx_1290.invokeRemoteMethodAfter("getTimeUTC", result_1293, argsNames_1294, argsValues_1295);
-                const reqId_1291 = sCtx_1290.regFuture( {
+            , getFastMetaContext: () => sCtx_1293, getTimeUTC: (): ARFuture<bigint> =>  {
+                const dataOut_1295 = new DataInOut();
+                dataOut_1295.writeByte(3);
+                const argsNames_1297: string[] = [];
+                const argsValues_1298: any[] = [];
+                const result_1296 = ARFuture.of<bigint>();
+                sCtx_1293.invokeRemoteMethodAfter("getTimeUTC", result_1296, argsNames_1297, argsValues_1298);
+                const reqId_1294 = sCtx_1293.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1293 as ARFuture<bigint>).tryDone(FastMeta.META_LONG.deserialize(sCtx_1290, in_));
+                        (result_1296 as ARFuture<bigint>).tryDone(FastMeta.META_LONG.deserialize(sCtx_1293, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1293.error(new Error("Remote call failed without a typed exception"));
+                        result_1296.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1292.writeInt(reqId_1291);
-                sCtx_1290.sendToRemote(dataOut_1292.toArray());
-                return result_1293;
+                dataOut_1295.writeInt(reqId_1294);
+                sCtx_1293.sendToRemote(dataOut_1295.toArray());
+                return result_1296;
                 
             }
             , loginByUID: (uid: UUID, data: LoginStream): void =>  {
-                const dataOut_1297 = new DataInOut();
-                dataOut_1297.writeByte(4);
-                const argsNames_1299: string[] = ["uid", "data"];
-                const argsValues_1300: any[] = [uid, data];
-                sCtx_1290.invokeRemoteMethodAfter("loginByUID", null, argsNames_1299, argsValues_1300);
-                FastMeta.META_UUID.serialize(sCtx_1290, uid, dataOut_1297);
-                LoginStream.META.serialize(sCtx_1290, data, dataOut_1297);
-                sCtx_1290.sendToRemote(dataOut_1297.toArray());
+                const dataOut_1300 = new DataInOut();
+                dataOut_1300.writeByte(4);
+                const argsNames_1302: string[] = ["uid", "data"];
+                const argsValues_1303: any[] = [uid, data];
+                sCtx_1293.invokeRemoteMethodAfter("loginByUID", null, argsNames_1302, argsValues_1303);
+                FastMeta.META_UUID.serialize(sCtx_1293, uid, dataOut_1300);
+                LoginStream.META.serialize(sCtx_1293, data, dataOut_1300);
+                sCtx_1293.sendToRemote(dataOut_1300.toArray());
                 
             }
             , loginByAlias: (alias: UUID, data: LoginStream): void =>  {
-                const dataOut_1302 = new DataInOut();
-                dataOut_1302.writeByte(5);
-                const argsNames_1304: string[] = ["alias", "data"];
-                const argsValues_1305: any[] = [alias, data];
-                sCtx_1290.invokeRemoteMethodAfter("loginByAlias", null, argsNames_1304, argsValues_1305);
-                FastMeta.META_UUID.serialize(sCtx_1290, alias, dataOut_1302);
-                LoginStream.META.serialize(sCtx_1290, data, dataOut_1302);
-                sCtx_1290.sendToRemote(dataOut_1302.toArray());
+                const dataOut_1305 = new DataInOut();
+                dataOut_1305.writeByte(5);
+                const argsNames_1307: string[] = ["alias", "data"];
+                const argsValues_1308: any[] = [alias, data];
+                sCtx_1293.invokeRemoteMethodAfter("loginByAlias", null, argsNames_1307, argsValues_1308);
+                FastMeta.META_UUID.serialize(sCtx_1293, alias, dataOut_1305);
+                LoginStream.META.serialize(sCtx_1293, data, dataOut_1305);
+                sCtx_1293.sendToRemote(dataOut_1305.toArray());
                 
             }
             , 
@@ -11360,15 +11363,13 @@ export class ServerApiByUidClientMetaImpl implements FastMetaApi<ServerApiByUidC
         this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
         
     }
-    makeRemote(sCtx_1306: FastFutureContext): ServerApiByUidClientRemote  {
+    makeRemote(sCtx_1309: FastFutureContext): ServerApiByUidClientRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_1306.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_1309.flush(sendFuture);
                 
             }
-            , getFastMetaContext: () => sCtx_1306, 
+            , getFastMetaContext: () => sCtx_1309, 
         };
         return remoteApiImpl as ServerApiByUidClientRemote;
         
@@ -11395,17 +11396,17 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 3:  {
-                    const reqId_1307 = dataIn.readInt();
-                    const argsNames_1308: string[] = [];
-                    const argsValues_1309: any[] = [];
-                    ctx.invokeLocalMethodBefore("getBalance", argsNames_1308, argsValues_1309);
+                    const reqId_1310 = dataIn.readInt();
+                    const argsNames_1311: string[] = [];
+                    const argsValues_1312: any[] = [];
+                    ctx.invokeLocalMethodBefore("getBalance", argsNames_1311, argsValues_1312);
                     ctx.regLocalFuture();
                     const resultFuture = localApi.getBalance();
-                    ctx.invokeLocalMethodAfter("getBalance", resultFuture, argsNames_1308, argsValues_1309);
-                    resultFuture.to((v_1311: bigint) =>  {
-                        const data_1310 = new DataInOut();
-                        data_1310.writeLong(v_1311);
-                        ctx.sendResultToRemote(reqId_1307, data_1310.toArray());
+                    ctx.invokeLocalMethodAfter("getBalance", resultFuture, argsNames_1311, argsValues_1312);
+                    resultFuture.to((v_1314: bigint) =>  {
+                        const data_1313 = new DataInOut();
+                        data_1313.writeLong(v_1314);
+                        ctx.sendResultToRemote(reqId_1310, data_1313.toArray());
                         
                     }
                     );
@@ -11413,17 +11414,17 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 4:  {
-                    const reqId_1312 = dataIn.readInt();
-                    let uid_1313: UUID;
-                    uid_1313 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const argsNames_1314: string[] = ["uid"];
-                    const argsValues_1315: any[] = [uid_1313];
-                    ctx.invokeLocalMethodBefore("setParent", argsNames_1314, argsValues_1315);
+                    const reqId_1315 = dataIn.readInt();
+                    let uid_1316: UUID;
+                    uid_1316 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const argsNames_1317: string[] = ["uid"];
+                    const argsValues_1318: any[] = [uid_1316];
+                    ctx.invokeLocalMethodBefore("setParent", argsNames_1317, argsValues_1318);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.setParent(uid_1313);
-                    ctx.invokeLocalMethodAfter("setParent", resultFuture, argsNames_1314, argsValues_1315);
+                    const resultFuture = localApi.setParent(uid_1316);
+                    ctx.invokeLocalMethodAfter("setParent", resultFuture, argsNames_1317, argsValues_1318);
                     resultFuture.to(() =>  {
-                        ctx.sendResultToRemoteNoData(reqId_1312);
+                        ctx.sendResultToRemoteNoData(reqId_1315);
                         
                     }
                     );
@@ -11431,15 +11432,15 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 5:  {
-                    const reqId_1316 = dataIn.readInt();
-                    const argsNames_1317: string[] = [];
-                    const argsValues_1318: any[] = [];
-                    ctx.invokeLocalMethodBefore("block", argsNames_1317, argsValues_1318);
+                    const reqId_1319 = dataIn.readInt();
+                    const argsNames_1320: string[] = [];
+                    const argsValues_1321: any[] = [];
+                    ctx.invokeLocalMethodBefore("block", argsNames_1320, argsValues_1321);
                     ctx.regLocalFuture();
                     const resultFuture = localApi.block();
-                    ctx.invokeLocalMethodAfter("block", resultFuture, argsNames_1317, argsValues_1318);
+                    ctx.invokeLocalMethodAfter("block", resultFuture, argsNames_1320, argsValues_1321);
                     resultFuture.to(() =>  {
-                        ctx.sendResultToRemoteNoData(reqId_1316);
+                        ctx.sendResultToRemoteNoData(reqId_1319);
                         
                     }
                     );
@@ -11447,17 +11448,17 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 6:  {
-                    const reqId_1319 = dataIn.readInt();
-                    const argsNames_1320: string[] = [];
-                    const argsValues_1321: any[] = [];
-                    ctx.invokeLocalMethodBefore("getPosition", argsNames_1320, argsValues_1321);
+                    const reqId_1322 = dataIn.readInt();
+                    const argsNames_1323: string[] = [];
+                    const argsValues_1324: any[] = [];
+                    ctx.invokeLocalMethodBefore("getPosition", argsNames_1323, argsValues_1324);
                     ctx.regLocalFuture();
                     const resultFuture = localApi.getPosition();
-                    ctx.invokeLocalMethodAfter("getPosition", resultFuture, argsNames_1320, argsValues_1321);
-                    resultFuture.to((v_1323: Cloud) =>  {
-                        const data_1322 = new DataInOut();
-                        Cloud.META.serialize(ctx, v_1323, data_1322);
-                        ctx.sendResultToRemote(reqId_1319, data_1322.toArray());
+                    ctx.invokeLocalMethodAfter("getPosition", resultFuture, argsNames_1323, argsValues_1324);
+                    resultFuture.to((v_1326: Cloud) =>  {
+                        const data_1325 = new DataInOut();
+                        Cloud.META.serialize(ctx, v_1326, data_1325);
+                        ctx.sendResultToRemote(reqId_1322, data_1325.toArray());
                         
                     }
                     );
@@ -11465,17 +11466,17 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 7:  {
-                    const reqId_1324 = dataIn.readInt();
-                    const argsNames_1325: string[] = [];
-                    const argsValues_1326: any[] = [];
-                    ctx.invokeLocalMethodBefore("getParent", argsNames_1325, argsValues_1326);
+                    const reqId_1327 = dataIn.readInt();
+                    const argsNames_1328: string[] = [];
+                    const argsValues_1329: any[] = [];
+                    ctx.invokeLocalMethodBefore("getParent", argsNames_1328, argsValues_1329);
                     ctx.regLocalFuture();
                     const resultFuture = localApi.getParent();
-                    ctx.invokeLocalMethodAfter("getParent", resultFuture, argsNames_1325, argsValues_1326);
-                    resultFuture.to((v_1328: UUID) =>  {
-                        const data_1327 = new DataInOut();
-                        FastMeta.META_UUID.serialize(ctx, v_1328, data_1327);
-                        ctx.sendResultToRemote(reqId_1324, data_1327.toArray());
+                    ctx.invokeLocalMethodAfter("getParent", resultFuture, argsNames_1328, argsValues_1329);
+                    resultFuture.to((v_1331: UUID) =>  {
+                        const data_1330 = new DataInOut();
+                        FastMeta.META_UUID.serialize(ctx, v_1331, data_1330);
+                        ctx.sendResultToRemote(reqId_1327, data_1330.toArray());
                         
                     }
                     );
@@ -11483,17 +11484,17 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 8:  {
-                    const reqId_1329 = dataIn.readInt();
-                    const argsNames_1330: string[] = [];
-                    const argsValues_1331: any[] = [];
-                    ctx.invokeLocalMethodBefore("getBeneficiary", argsNames_1330, argsValues_1331);
+                    const reqId_1332 = dataIn.readInt();
+                    const argsNames_1333: string[] = [];
+                    const argsValues_1334: any[] = [];
+                    ctx.invokeLocalMethodBefore("getBeneficiary", argsNames_1333, argsValues_1334);
                     ctx.regLocalFuture();
                     const resultFuture = localApi.getBeneficiary();
-                    ctx.invokeLocalMethodAfter("getBeneficiary", resultFuture, argsNames_1330, argsValues_1331);
-                    resultFuture.to((v_1333: UUID) =>  {
-                        const data_1332 = new DataInOut();
-                        FastMeta.META_UUID.serialize(ctx, v_1333, data_1332);
-                        ctx.sendResultToRemote(reqId_1329, data_1332.toArray());
+                    ctx.invokeLocalMethodAfter("getBeneficiary", resultFuture, argsNames_1333, argsValues_1334);
+                    resultFuture.to((v_1336: UUID) =>  {
+                        const data_1335 = new DataInOut();
+                        FastMeta.META_UUID.serialize(ctx, v_1336, data_1335);
+                        ctx.sendResultToRemote(reqId_1332, data_1335.toArray());
                         
                     }
                     );
@@ -11501,17 +11502,17 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 9:  {
-                    const reqId_1334 = dataIn.readInt();
-                    let uid_1335: UUID;
-                    uid_1335 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    const argsNames_1336: string[] = ["uid"];
-                    const argsValues_1337: any[] = [uid_1335];
-                    ctx.invokeLocalMethodBefore("setBeneficiary", argsNames_1336, argsValues_1337);
+                    const reqId_1337 = dataIn.readInt();
+                    let uid_1338: UUID;
+                    uid_1338 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    const argsNames_1339: string[] = ["uid"];
+                    const argsValues_1340: any[] = [uid_1338];
+                    ctx.invokeLocalMethodBefore("setBeneficiary", argsNames_1339, argsValues_1340);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.setBeneficiary(uid_1335);
-                    ctx.invokeLocalMethodAfter("setBeneficiary", resultFuture, argsNames_1336, argsValues_1337);
+                    const resultFuture = localApi.setBeneficiary(uid_1338);
+                    ctx.invokeLocalMethodAfter("setBeneficiary", resultFuture, argsNames_1339, argsValues_1340);
                     resultFuture.to(() =>  {
-                        ctx.sendResultToRemoteNoData(reqId_1334);
+                        ctx.sendResultToRemoteNoData(reqId_1337);
                         
                     }
                     );
@@ -11519,17 +11520,17 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 10:  {
-                    const reqId_1338 = dataIn.readInt();
-                    const argsNames_1339: string[] = [];
-                    const argsValues_1340: any[] = [];
-                    ctx.invokeLocalMethodBefore("getBlockTime", argsNames_1339, argsValues_1340);
+                    const reqId_1341 = dataIn.readInt();
+                    const argsNames_1342: string[] = [];
+                    const argsValues_1343: any[] = [];
+                    ctx.invokeLocalMethodBefore("getBlockTime", argsNames_1342, argsValues_1343);
                     ctx.regLocalFuture();
                     const resultFuture = localApi.getBlockTime();
-                    ctx.invokeLocalMethodAfter("getBlockTime", resultFuture, argsNames_1339, argsValues_1340);
-                    resultFuture.to((v_1342: Date) =>  {
-                        const data_1341 = new DataInOut();
-                        data_1341.writeLong(v_1342.getTime());
-                        ctx.sendResultToRemote(reqId_1338, data_1341.toArray());
+                    ctx.invokeLocalMethodAfter("getBlockTime", resultFuture, argsNames_1342, argsValues_1343);
+                    resultFuture.to((v_1345: Date) =>  {
+                        const data_1344 = new DataInOut();
+                        data_1344.writeLong(v_1345.getTime());
+                        ctx.sendResultToRemote(reqId_1341, data_1344.toArray());
                         
                     }
                     );
@@ -11537,15 +11538,15 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 11:  {
-                    const reqId_1343 = dataIn.readInt();
-                    const argsNames_1344: string[] = [];
-                    const argsValues_1345: any[] = [];
-                    ctx.invokeLocalMethodBefore("unblock", argsNames_1344, argsValues_1345);
+                    const reqId_1346 = dataIn.readInt();
+                    const argsNames_1347: string[] = [];
+                    const argsValues_1348: any[] = [];
+                    ctx.invokeLocalMethodBefore("unblock", argsNames_1347, argsValues_1348);
                     ctx.regLocalFuture();
                     const resultFuture = localApi.unblock();
-                    ctx.invokeLocalMethodAfter("unblock", resultFuture, argsNames_1344, argsValues_1345);
+                    ctx.invokeLocalMethodAfter("unblock", resultFuture, argsNames_1347, argsValues_1348);
                     resultFuture.to(() =>  {
-                        ctx.sendResultToRemoteNoData(reqId_1343);
+                        ctx.sendResultToRemoteNoData(reqId_1346);
                         
                     }
                     );
@@ -11553,17 +11554,17 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 12:  {
-                    const reqId_1346 = dataIn.readInt();
-                    const argsNames_1347: string[] = [];
-                    const argsValues_1348: any[] = [];
-                    ctx.invokeLocalMethodBefore("createTime", argsNames_1347, argsValues_1348);
+                    const reqId_1349 = dataIn.readInt();
+                    const argsNames_1350: string[] = [];
+                    const argsValues_1351: any[] = [];
+                    ctx.invokeLocalMethodBefore("createTime", argsNames_1350, argsValues_1351);
                     ctx.regLocalFuture();
                     const resultFuture = localApi.createTime();
-                    ctx.invokeLocalMethodAfter("createTime", resultFuture, argsNames_1347, argsValues_1348);
-                    resultFuture.to((v_1350: Date) =>  {
-                        const data_1349 = new DataInOut();
-                        data_1349.writeLong(v_1350.getTime());
-                        ctx.sendResultToRemote(reqId_1346, data_1349.toArray());
+                    ctx.invokeLocalMethodAfter("createTime", resultFuture, argsNames_1350, argsValues_1351);
+                    resultFuture.to((v_1353: Date) =>  {
+                        const data_1352 = new DataInOut();
+                        data_1352.writeLong(v_1353.getTime());
+                        ctx.sendResultToRemote(reqId_1349, data_1352.toArray());
                         
                     }
                     );
@@ -11571,17 +11572,17 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 13:  {
-                    const reqId_1351 = dataIn.readInt();
-                    const argsNames_1352: string[] = [];
-                    const argsValues_1353: any[] = [];
-                    ctx.invokeLocalMethodBefore("onlineTime", argsNames_1352, argsValues_1353);
+                    const reqId_1354 = dataIn.readInt();
+                    const argsNames_1355: string[] = [];
+                    const argsValues_1356: any[] = [];
+                    ctx.invokeLocalMethodBefore("onlineTime", argsNames_1355, argsValues_1356);
                     ctx.regLocalFuture();
                     const resultFuture = localApi.onlineTime();
-                    ctx.invokeLocalMethodAfter("onlineTime", resultFuture, argsNames_1352, argsValues_1353);
-                    resultFuture.to((v_1355: Date) =>  {
-                        const data_1354 = new DataInOut();
-                        data_1354.writeLong(v_1355.getTime());
-                        ctx.sendResultToRemote(reqId_1351, data_1354.toArray());
+                    ctx.invokeLocalMethodAfter("onlineTime", resultFuture, argsNames_1355, argsValues_1356);
+                    resultFuture.to((v_1358: Date) =>  {
+                        const data_1357 = new DataInOut();
+                        data_1357.writeLong(v_1358.getTime());
+                        ctx.sendResultToRemote(reqId_1354, data_1357.toArray());
                         
                     }
                     );
@@ -11589,19 +11590,19 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 14:  {
-                    const reqId_1356 = dataIn.readInt();
-                    let groupId_1357: bigint;
-                    groupId_1357 = dataIn.readLong();
-                    const argsNames_1358: string[] = ["groupId"];
-                    const argsValues_1359: any[] = [groupId_1357];
-                    ctx.invokeLocalMethodBefore("addAccessGroup", argsNames_1358, argsValues_1359);
+                    const reqId_1359 = dataIn.readInt();
+                    let groupId_1360: bigint;
+                    groupId_1360 = dataIn.readLong();
+                    const argsNames_1361: string[] = ["groupId"];
+                    const argsValues_1362: any[] = [groupId_1360];
+                    ctx.invokeLocalMethodBefore("addAccessGroup", argsNames_1361, argsValues_1362);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.addAccessGroup(groupId_1357);
-                    ctx.invokeLocalMethodAfter("addAccessGroup", resultFuture, argsNames_1358, argsValues_1359);
-                    resultFuture.to((v_1361: boolean) =>  {
-                        const data_1360 = new DataInOut();
-                        data_1360.writeBoolean(v_1361);
-                        ctx.sendResultToRemote(reqId_1356, data_1360.toArray());
+                    const resultFuture = localApi.addAccessGroup(groupId_1360);
+                    ctx.invokeLocalMethodAfter("addAccessGroup", resultFuture, argsNames_1361, argsValues_1362);
+                    resultFuture.to((v_1364: boolean) =>  {
+                        const data_1363 = new DataInOut();
+                        data_1363.writeBoolean(v_1364);
+                        ctx.sendResultToRemote(reqId_1359, data_1363.toArray());
                         
                     }
                     );
@@ -11609,19 +11610,19 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
                     
                 }
                 case 15:  {
-                    const reqId_1362 = dataIn.readInt();
-                    let groupId_1363: bigint;
-                    groupId_1363 = dataIn.readLong();
-                    const argsNames_1364: string[] = ["groupId"];
-                    const argsValues_1365: any[] = [groupId_1363];
-                    ctx.invokeLocalMethodBefore("removeAccessGroup", argsNames_1364, argsValues_1365);
+                    const reqId_1365 = dataIn.readInt();
+                    let groupId_1366: bigint;
+                    groupId_1366 = dataIn.readLong();
+                    const argsNames_1367: string[] = ["groupId"];
+                    const argsValues_1368: any[] = [groupId_1366];
+                    ctx.invokeLocalMethodBefore("removeAccessGroup", argsNames_1367, argsValues_1368);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.removeAccessGroup(groupId_1363);
-                    ctx.invokeLocalMethodAfter("removeAccessGroup", resultFuture, argsNames_1364, argsValues_1365);
-                    resultFuture.to((v_1367: boolean) =>  {
-                        const data_1366 = new DataInOut();
-                        data_1366.writeBoolean(v_1367);
-                        ctx.sendResultToRemote(reqId_1362, data_1366.toArray());
+                    const resultFuture = localApi.removeAccessGroup(groupId_1366);
+                    ctx.invokeLocalMethodAfter("removeAccessGroup", resultFuture, argsNames_1367, argsValues_1368);
+                    resultFuture.to((v_1370: boolean) =>  {
+                        const data_1369 = new DataInOut();
+                        data_1369.writeBoolean(v_1370);
+                        ctx.sendResultToRemote(reqId_1365, data_1369.toArray());
                         
                     }
                     );
@@ -11645,328 +11646,326 @@ export class ServerApiByUidMetaImpl implements FastMetaApi<ServerApiByUid, Serve
         this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
         
     }
-    makeRemote(sCtx_1368: FastFutureContext): ServerApiByUidRemote  {
+    makeRemote(sCtx_1371: FastFutureContext): ServerApiByUidRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_1368.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_1371.flush(sendFuture);
                 
             }
-            , getFastMetaContext: () => sCtx_1368, getBalance: (): ARFuture<bigint> =>  {
-                const dataOut_1370 = new DataInOut();
-                dataOut_1370.writeByte(3);
-                const argsNames_1372: string[] = [];
-                const argsValues_1373: any[] = [];
-                const result_1371 = ARFuture.of<bigint>();
-                sCtx_1368.invokeRemoteMethodAfter("getBalance", result_1371, argsNames_1372, argsValues_1373);
-                const reqId_1369 = sCtx_1368.regFuture( {
+            , getFastMetaContext: () => sCtx_1371, getBalance: (): ARFuture<bigint> =>  {
+                const dataOut_1373 = new DataInOut();
+                dataOut_1373.writeByte(3);
+                const argsNames_1375: string[] = [];
+                const argsValues_1376: any[] = [];
+                const result_1374 = ARFuture.of<bigint>();
+                sCtx_1371.invokeRemoteMethodAfter("getBalance", result_1374, argsNames_1375, argsValues_1376);
+                const reqId_1372 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1371 as ARFuture<bigint>).tryDone(FastMeta.META_LONG.deserialize(sCtx_1368, in_));
+                        (result_1374 as ARFuture<bigint>).tryDone(FastMeta.META_LONG.deserialize(sCtx_1371, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1371.error(new Error("Remote call failed without a typed exception"));
+                        result_1374.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1370.writeInt(reqId_1369);
-                sCtx_1368.sendToRemote(dataOut_1370.toArray());
-                return result_1371;
+                dataOut_1373.writeInt(reqId_1372);
+                sCtx_1371.sendToRemote(dataOut_1373.toArray());
+                return result_1374;
                 
             }
             , setParent: (uid: UUID): AFuture =>  {
-                const dataOut_1375 = new DataInOut();
-                dataOut_1375.writeByte(4);
-                const argsNames_1377: string[] = ["uid"];
-                const argsValues_1378: any[] = [uid];
-                const result_1376 = AFuture.make();
-                sCtx_1368.invokeRemoteMethodAfter("setParent", result_1376, argsNames_1377, argsValues_1378);
-                const reqId_1374 = sCtx_1368.regFuture( {
+                const dataOut_1378 = new DataInOut();
+                dataOut_1378.writeByte(4);
+                const argsNames_1380: string[] = ["uid"];
+                const argsValues_1381: any[] = [uid];
+                const result_1379 = AFuture.make();
+                sCtx_1371.invokeRemoteMethodAfter("setParent", result_1379, argsNames_1380, argsValues_1381);
+                const reqId_1377 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1376 as AFuture).tryDone();
+                        (result_1379 as AFuture).tryDone();
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1376.error(new Error("Remote call failed without a typed exception"));
+                        result_1379.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1375.writeInt(reqId_1374);
-                FastMeta.META_UUID.serialize(sCtx_1368, uid, dataOut_1375);
-                sCtx_1368.sendToRemote(dataOut_1375.toArray());
-                return result_1376;
+                dataOut_1378.writeInt(reqId_1377);
+                FastMeta.META_UUID.serialize(sCtx_1371, uid, dataOut_1378);
+                sCtx_1371.sendToRemote(dataOut_1378.toArray());
+                return result_1379;
                 
             }
             , block: (): AFuture =>  {
-                const dataOut_1380 = new DataInOut();
-                dataOut_1380.writeByte(5);
-                const argsNames_1382: string[] = [];
-                const argsValues_1383: any[] = [];
-                const result_1381 = AFuture.make();
-                sCtx_1368.invokeRemoteMethodAfter("block", result_1381, argsNames_1382, argsValues_1383);
-                const reqId_1379 = sCtx_1368.regFuture( {
+                const dataOut_1383 = new DataInOut();
+                dataOut_1383.writeByte(5);
+                const argsNames_1385: string[] = [];
+                const argsValues_1386: any[] = [];
+                const result_1384 = AFuture.make();
+                sCtx_1371.invokeRemoteMethodAfter("block", result_1384, argsNames_1385, argsValues_1386);
+                const reqId_1382 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1381 as AFuture).tryDone();
+                        (result_1384 as AFuture).tryDone();
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1381.error(new Error("Remote call failed without a typed exception"));
+                        result_1384.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1380.writeInt(reqId_1379);
-                sCtx_1368.sendToRemote(dataOut_1380.toArray());
-                return result_1381;
+                dataOut_1383.writeInt(reqId_1382);
+                sCtx_1371.sendToRemote(dataOut_1383.toArray());
+                return result_1384;
                 
             }
             , getPosition: (): ARFuture<Cloud> =>  {
-                const dataOut_1385 = new DataInOut();
-                dataOut_1385.writeByte(6);
-                const argsNames_1387: string[] = [];
-                const argsValues_1388: any[] = [];
-                const result_1386 = ARFuture.of<Cloud>();
-                sCtx_1368.invokeRemoteMethodAfter("getPosition", result_1386, argsNames_1387, argsValues_1388);
-                const reqId_1384 = sCtx_1368.regFuture( {
+                const dataOut_1388 = new DataInOut();
+                dataOut_1388.writeByte(6);
+                const argsNames_1390: string[] = [];
+                const argsValues_1391: any[] = [];
+                const result_1389 = ARFuture.of<Cloud>();
+                sCtx_1371.invokeRemoteMethodAfter("getPosition", result_1389, argsNames_1390, argsValues_1391);
+                const reqId_1387 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1386 as ARFuture<Cloud>).tryDone(Cloud.META.deserialize(sCtx_1368, in_));
+                        (result_1389 as ARFuture<Cloud>).tryDone(Cloud.META.deserialize(sCtx_1371, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1386.error(new Error("Remote call failed without a typed exception"));
+                        result_1389.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1385.writeInt(reqId_1384);
-                sCtx_1368.sendToRemote(dataOut_1385.toArray());
-                return result_1386;
+                dataOut_1388.writeInt(reqId_1387);
+                sCtx_1371.sendToRemote(dataOut_1388.toArray());
+                return result_1389;
                 
             }
             , getParent: (): ARFuture<UUID> =>  {
-                const dataOut_1390 = new DataInOut();
-                dataOut_1390.writeByte(7);
-                const argsNames_1392: string[] = [];
-                const argsValues_1393: any[] = [];
-                const result_1391 = ARFuture.of<UUID>();
-                sCtx_1368.invokeRemoteMethodAfter("getParent", result_1391, argsNames_1392, argsValues_1393);
-                const reqId_1389 = sCtx_1368.regFuture( {
+                const dataOut_1393 = new DataInOut();
+                dataOut_1393.writeByte(7);
+                const argsNames_1395: string[] = [];
+                const argsValues_1396: any[] = [];
+                const result_1394 = ARFuture.of<UUID>();
+                sCtx_1371.invokeRemoteMethodAfter("getParent", result_1394, argsNames_1395, argsValues_1396);
+                const reqId_1392 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1391 as ARFuture<UUID>).tryDone(FastMeta.META_UUID.deserialize(sCtx_1368, in_));
+                        (result_1394 as ARFuture<UUID>).tryDone(FastMeta.META_UUID.deserialize(sCtx_1371, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1391.error(new Error("Remote call failed without a typed exception"));
+                        result_1394.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1390.writeInt(reqId_1389);
-                sCtx_1368.sendToRemote(dataOut_1390.toArray());
-                return result_1391;
+                dataOut_1393.writeInt(reqId_1392);
+                sCtx_1371.sendToRemote(dataOut_1393.toArray());
+                return result_1394;
                 
             }
             , getBeneficiary: (): ARFuture<UUID> =>  {
-                const dataOut_1395 = new DataInOut();
-                dataOut_1395.writeByte(8);
-                const argsNames_1397: string[] = [];
-                const argsValues_1398: any[] = [];
-                const result_1396 = ARFuture.of<UUID>();
-                sCtx_1368.invokeRemoteMethodAfter("getBeneficiary", result_1396, argsNames_1397, argsValues_1398);
-                const reqId_1394 = sCtx_1368.regFuture( {
+                const dataOut_1398 = new DataInOut();
+                dataOut_1398.writeByte(8);
+                const argsNames_1400: string[] = [];
+                const argsValues_1401: any[] = [];
+                const result_1399 = ARFuture.of<UUID>();
+                sCtx_1371.invokeRemoteMethodAfter("getBeneficiary", result_1399, argsNames_1400, argsValues_1401);
+                const reqId_1397 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1396 as ARFuture<UUID>).tryDone(FastMeta.META_UUID.deserialize(sCtx_1368, in_));
+                        (result_1399 as ARFuture<UUID>).tryDone(FastMeta.META_UUID.deserialize(sCtx_1371, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1396.error(new Error("Remote call failed without a typed exception"));
+                        result_1399.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1395.writeInt(reqId_1394);
-                sCtx_1368.sendToRemote(dataOut_1395.toArray());
-                return result_1396;
+                dataOut_1398.writeInt(reqId_1397);
+                sCtx_1371.sendToRemote(dataOut_1398.toArray());
+                return result_1399;
                 
             }
             , setBeneficiary: (uid: UUID): AFuture =>  {
-                const dataOut_1400 = new DataInOut();
-                dataOut_1400.writeByte(9);
-                const argsNames_1402: string[] = ["uid"];
-                const argsValues_1403: any[] = [uid];
-                const result_1401 = AFuture.make();
-                sCtx_1368.invokeRemoteMethodAfter("setBeneficiary", result_1401, argsNames_1402, argsValues_1403);
-                const reqId_1399 = sCtx_1368.regFuture( {
+                const dataOut_1403 = new DataInOut();
+                dataOut_1403.writeByte(9);
+                const argsNames_1405: string[] = ["uid"];
+                const argsValues_1406: any[] = [uid];
+                const result_1404 = AFuture.make();
+                sCtx_1371.invokeRemoteMethodAfter("setBeneficiary", result_1404, argsNames_1405, argsValues_1406);
+                const reqId_1402 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1401 as AFuture).tryDone();
+                        (result_1404 as AFuture).tryDone();
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1401.error(new Error("Remote call failed without a typed exception"));
+                        result_1404.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1400.writeInt(reqId_1399);
-                FastMeta.META_UUID.serialize(sCtx_1368, uid, dataOut_1400);
-                sCtx_1368.sendToRemote(dataOut_1400.toArray());
-                return result_1401;
+                dataOut_1403.writeInt(reqId_1402);
+                FastMeta.META_UUID.serialize(sCtx_1371, uid, dataOut_1403);
+                sCtx_1371.sendToRemote(dataOut_1403.toArray());
+                return result_1404;
                 
             }
             , getBlockTime: (): ARFuture<Date> =>  {
-                const dataOut_1405 = new DataInOut();
-                dataOut_1405.writeByte(10);
-                const argsNames_1407: string[] = [];
-                const argsValues_1408: any[] = [];
-                const result_1406 = ARFuture.of<Date>();
-                sCtx_1368.invokeRemoteMethodAfter("getBlockTime", result_1406, argsNames_1407, argsValues_1408);
-                const reqId_1404 = sCtx_1368.regFuture( {
+                const dataOut_1408 = new DataInOut();
+                dataOut_1408.writeByte(10);
+                const argsNames_1410: string[] = [];
+                const argsValues_1411: any[] = [];
+                const result_1409 = ARFuture.of<Date>();
+                sCtx_1371.invokeRemoteMethodAfter("getBlockTime", result_1409, argsNames_1410, argsValues_1411);
+                const reqId_1407 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1406 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1368, in_));
+                        (result_1409 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1371, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1406.error(new Error("Remote call failed without a typed exception"));
+                        result_1409.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1405.writeInt(reqId_1404);
-                sCtx_1368.sendToRemote(dataOut_1405.toArray());
-                return result_1406;
+                dataOut_1408.writeInt(reqId_1407);
+                sCtx_1371.sendToRemote(dataOut_1408.toArray());
+                return result_1409;
                 
             }
             , unblock: (): AFuture =>  {
-                const dataOut_1410 = new DataInOut();
-                dataOut_1410.writeByte(11);
-                const argsNames_1412: string[] = [];
-                const argsValues_1413: any[] = [];
-                const result_1411 = AFuture.make();
-                sCtx_1368.invokeRemoteMethodAfter("unblock", result_1411, argsNames_1412, argsValues_1413);
-                const reqId_1409 = sCtx_1368.regFuture( {
+                const dataOut_1413 = new DataInOut();
+                dataOut_1413.writeByte(11);
+                const argsNames_1415: string[] = [];
+                const argsValues_1416: any[] = [];
+                const result_1414 = AFuture.make();
+                sCtx_1371.invokeRemoteMethodAfter("unblock", result_1414, argsNames_1415, argsValues_1416);
+                const reqId_1412 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1411 as AFuture).tryDone();
+                        (result_1414 as AFuture).tryDone();
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1411.error(new Error("Remote call failed without a typed exception"));
+                        result_1414.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1410.writeInt(reqId_1409);
-                sCtx_1368.sendToRemote(dataOut_1410.toArray());
-                return result_1411;
+                dataOut_1413.writeInt(reqId_1412);
+                sCtx_1371.sendToRemote(dataOut_1413.toArray());
+                return result_1414;
                 
             }
             , createTime: (): ARFuture<Date> =>  {
-                const dataOut_1415 = new DataInOut();
-                dataOut_1415.writeByte(12);
-                const argsNames_1417: string[] = [];
-                const argsValues_1418: any[] = [];
-                const result_1416 = ARFuture.of<Date>();
-                sCtx_1368.invokeRemoteMethodAfter("createTime", result_1416, argsNames_1417, argsValues_1418);
-                const reqId_1414 = sCtx_1368.regFuture( {
+                const dataOut_1418 = new DataInOut();
+                dataOut_1418.writeByte(12);
+                const argsNames_1420: string[] = [];
+                const argsValues_1421: any[] = [];
+                const result_1419 = ARFuture.of<Date>();
+                sCtx_1371.invokeRemoteMethodAfter("createTime", result_1419, argsNames_1420, argsValues_1421);
+                const reqId_1417 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1416 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1368, in_));
+                        (result_1419 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1371, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1416.error(new Error("Remote call failed without a typed exception"));
+                        result_1419.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1415.writeInt(reqId_1414);
-                sCtx_1368.sendToRemote(dataOut_1415.toArray());
-                return result_1416;
+                dataOut_1418.writeInt(reqId_1417);
+                sCtx_1371.sendToRemote(dataOut_1418.toArray());
+                return result_1419;
                 
             }
             , onlineTime: (): ARFuture<Date> =>  {
-                const dataOut_1420 = new DataInOut();
-                dataOut_1420.writeByte(13);
-                const argsNames_1422: string[] = [];
-                const argsValues_1423: any[] = [];
-                const result_1421 = ARFuture.of<Date>();
-                sCtx_1368.invokeRemoteMethodAfter("onlineTime", result_1421, argsNames_1422, argsValues_1423);
-                const reqId_1419 = sCtx_1368.regFuture( {
+                const dataOut_1423 = new DataInOut();
+                dataOut_1423.writeByte(13);
+                const argsNames_1425: string[] = [];
+                const argsValues_1426: any[] = [];
+                const result_1424 = ARFuture.of<Date>();
+                sCtx_1371.invokeRemoteMethodAfter("onlineTime", result_1424, argsNames_1425, argsValues_1426);
+                const reqId_1422 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1421 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1368, in_));
+                        (result_1424 as ARFuture<Date>).tryDone(FastMeta.META_DATE.deserialize(sCtx_1371, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1421.error(new Error("Remote call failed without a typed exception"));
+                        result_1424.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1420.writeInt(reqId_1419);
-                sCtx_1368.sendToRemote(dataOut_1420.toArray());
-                return result_1421;
+                dataOut_1423.writeInt(reqId_1422);
+                sCtx_1371.sendToRemote(dataOut_1423.toArray());
+                return result_1424;
                 
             }
             , addAccessGroup: (groupId: bigint): ARFuture<boolean> =>  {
-                const dataOut_1425 = new DataInOut();
-                dataOut_1425.writeByte(14);
-                const argsNames_1427: string[] = ["groupId"];
-                const argsValues_1428: any[] = [groupId];
-                const result_1426 = ARFuture.of<boolean>();
-                sCtx_1368.invokeRemoteMethodAfter("addAccessGroup", result_1426, argsNames_1427, argsValues_1428);
-                const reqId_1424 = sCtx_1368.regFuture( {
+                const dataOut_1428 = new DataInOut();
+                dataOut_1428.writeByte(14);
+                const argsNames_1430: string[] = ["groupId"];
+                const argsValues_1431: any[] = [groupId];
+                const result_1429 = ARFuture.of<boolean>();
+                sCtx_1371.invokeRemoteMethodAfter("addAccessGroup", result_1429, argsNames_1430, argsValues_1431);
+                const reqId_1427 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1426 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1368, in_));
+                        (result_1429 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1371, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1426.error(new Error("Remote call failed without a typed exception"));
+                        result_1429.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1425.writeInt(reqId_1424);
-                dataOut_1425.writeLong(groupId);
-                sCtx_1368.sendToRemote(dataOut_1425.toArray());
-                return result_1426;
+                dataOut_1428.writeInt(reqId_1427);
+                dataOut_1428.writeLong(groupId);
+                sCtx_1371.sendToRemote(dataOut_1428.toArray());
+                return result_1429;
                 
             }
             , removeAccessGroup: (groupId: bigint): ARFuture<boolean> =>  {
-                const dataOut_1430 = new DataInOut();
-                dataOut_1430.writeByte(15);
-                const argsNames_1432: string[] = ["groupId"];
-                const argsValues_1433: any[] = [groupId];
-                const result_1431 = ARFuture.of<boolean>();
-                sCtx_1368.invokeRemoteMethodAfter("removeAccessGroup", result_1431, argsNames_1432, argsValues_1433);
-                const reqId_1429 = sCtx_1368.regFuture( {
+                const dataOut_1433 = new DataInOut();
+                dataOut_1433.writeByte(15);
+                const argsNames_1435: string[] = ["groupId"];
+                const argsValues_1436: any[] = [groupId];
+                const result_1434 = ARFuture.of<boolean>();
+                sCtx_1371.invokeRemoteMethodAfter("removeAccessGroup", result_1434, argsNames_1435, argsValues_1436);
+                const reqId_1432 = sCtx_1371.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1431 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1368, in_));
+                        (result_1434 as ARFuture<boolean>).tryDone(FastMeta.META_BOOLEAN.deserialize(sCtx_1371, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1431.error(new Error("Remote call failed without a typed exception"));
+                        result_1434.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1430.writeInt(reqId_1429);
-                dataOut_1430.writeLong(groupId);
-                sCtx_1368.sendToRemote(dataOut_1430.toArray());
-                return result_1431;
+                dataOut_1433.writeInt(reqId_1432);
+                dataOut_1433.writeLong(groupId);
+                sCtx_1371.sendToRemote(dataOut_1433.toArray());
+                return result_1434;
                 
             }
             , 
@@ -12012,15 +12011,13 @@ export class ClientApiRegSafeMetaImpl implements FastMetaApi<ClientApiRegSafe, C
         this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
         
     }
-    makeRemote(sCtx_1434: FastFutureContext): ClientApiRegSafeRemote  {
+    makeRemote(sCtx_1437: FastFutureContext): ClientApiRegSafeRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_1434.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_1437.flush(sendFuture);
                 
             }
-            , getFastMetaContext: () => sCtx_1434, 
+            , getFastMetaContext: () => sCtx_1437, 
         };
         return remoteApiImpl as ClientApiRegSafeRemote;
         
@@ -12063,15 +12060,13 @@ export class GlobalRegClientApiMetaImpl implements FastMetaApi<GlobalRegClientAp
         this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
         
     }
-    makeRemote(sCtx_1435: FastFutureContext): GlobalRegClientApiRemote  {
+    makeRemote(sCtx_1438: FastFutureContext): GlobalRegClientApiRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_1435.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_1438.flush(sendFuture);
                 
             }
-            , getFastMetaContext: () => sCtx_1435, 
+            , getFastMetaContext: () => sCtx_1438, 
         };
         return remoteApiImpl as GlobalRegClientApiRemote;
         
@@ -12098,24 +12093,24 @@ export class ClientApiRegUnsafeMetaImpl implements FastMetaApi<ClientApiRegUnsaf
                     
                 }
                 case 3:  {
-                    let stream_1437: ClientApiRegSafeStream;
-                    stream_1437 = ClientApiRegSafeStream.META.deserialize(ctx, dataIn);
-                    const argsNames_1438: string[] = ["stream"];
-                    const argsValues_1439: any[] = [stream_1437];
-                    ctx.invokeLocalMethodBefore("enter", argsNames_1438, argsValues_1439);
-                    localApi.enter(stream_1437);
-                    ctx.invokeLocalMethodAfter("enter", null, argsNames_1438, argsValues_1439);
+                    let stream_1440: ClientApiRegSafeStream;
+                    stream_1440 = ClientApiRegSafeStream.META.deserialize(ctx, dataIn);
+                    const argsNames_1441: string[] = ["stream"];
+                    const argsValues_1442: any[] = [stream_1440];
+                    ctx.invokeLocalMethodBefore("enter", argsNames_1441, argsValues_1442);
+                    localApi.enter(stream_1440);
+                    ctx.invokeLocalMethodAfter("enter", null, argsNames_1441, argsValues_1442);
                     break;
                     
                 }
                 case 4:  {
-                    let stream_1441: GlobalRegClientApiStream;
-                    stream_1441 = GlobalRegClientApiStream.META.deserialize(ctx, dataIn);
-                    const argsNames_1442: string[] = ["stream"];
-                    const argsValues_1443: any[] = [stream_1441];
-                    ctx.invokeLocalMethodBefore("enterGlobal", argsNames_1442, argsValues_1443);
-                    localApi.enterGlobal(stream_1441);
-                    ctx.invokeLocalMethodAfter("enterGlobal", null, argsNames_1442, argsValues_1443);
+                    let stream_1444: GlobalRegClientApiStream;
+                    stream_1444 = GlobalRegClientApiStream.META.deserialize(ctx, dataIn);
+                    const argsNames_1445: string[] = ["stream"];
+                    const argsValues_1446: any[] = [stream_1444];
+                    ctx.invokeLocalMethodBefore("enterGlobal", argsNames_1445, argsValues_1446);
+                    localApi.enterGlobal(stream_1444);
+                    ctx.invokeLocalMethodAfter("enterGlobal", null, argsNames_1445, argsValues_1446);
                     break;
                     
                 }
@@ -12136,32 +12131,30 @@ export class ClientApiRegUnsafeMetaImpl implements FastMetaApi<ClientApiRegUnsaf
         this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
         
     }
-    makeRemote(sCtx_1444: FastFutureContext): ClientApiRegUnsafeRemote  {
+    makeRemote(sCtx_1447: FastFutureContext): ClientApiRegUnsafeRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_1444.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_1447.flush(sendFuture);
                 
             }
-            , getFastMetaContext: () => sCtx_1444, enter: (stream: ClientApiRegSafeStream): void =>  {
-                const dataOut_1446 = new DataInOut();
-                dataOut_1446.writeByte(3);
-                const argsNames_1448: string[] = ["stream"];
-                const argsValues_1449: any[] = [stream];
-                sCtx_1444.invokeRemoteMethodAfter("enter", null, argsNames_1448, argsValues_1449);
-                ClientApiRegSafeStream.META.serialize(sCtx_1444, stream, dataOut_1446);
-                sCtx_1444.sendToRemote(dataOut_1446.toArray());
+            , getFastMetaContext: () => sCtx_1447, enter: (stream: ClientApiRegSafeStream): void =>  {
+                const dataOut_1449 = new DataInOut();
+                dataOut_1449.writeByte(3);
+                const argsNames_1451: string[] = ["stream"];
+                const argsValues_1452: any[] = [stream];
+                sCtx_1447.invokeRemoteMethodAfter("enter", null, argsNames_1451, argsValues_1452);
+                ClientApiRegSafeStream.META.serialize(sCtx_1447, stream, dataOut_1449);
+                sCtx_1447.sendToRemote(dataOut_1449.toArray());
                 
             }
             , enterGlobal: (stream: GlobalRegClientApiStream): void =>  {
-                const dataOut_1451 = new DataInOut();
-                dataOut_1451.writeByte(4);
-                const argsNames_1453: string[] = ["stream"];
-                const argsValues_1454: any[] = [stream];
-                sCtx_1444.invokeRemoteMethodAfter("enterGlobal", null, argsNames_1453, argsValues_1454);
-                GlobalRegClientApiStream.META.serialize(sCtx_1444, stream, dataOut_1451);
-                sCtx_1444.sendToRemote(dataOut_1451.toArray());
+                const dataOut_1454 = new DataInOut();
+                dataOut_1454.writeByte(4);
+                const argsNames_1456: string[] = ["stream"];
+                const argsValues_1457: any[] = [stream];
+                sCtx_1447.invokeRemoteMethodAfter("enterGlobal", null, argsNames_1456, argsValues_1457);
+                GlobalRegClientApiStream.META.serialize(sCtx_1447, stream, dataOut_1454);
+                sCtx_1447.sendToRemote(dataOut_1454.toArray());
                 
             }
             , 
@@ -12191,28 +12184,28 @@ export class GlobalRegServerApiMetaImpl implements FastMetaApi<GlobalRegServerAp
                     
                 }
                 case 3:  {
-                    let _key_1456: Key;
-                    _key_1456 = Key.META.deserialize(ctx, dataIn);
-                    const argsNames_1457: string[] = ["key"];
-                    const argsValues_1458: any[] = [_key_1456];
-                    ctx.invokeLocalMethodBefore("setMasterKey", argsNames_1457, argsValues_1458);
-                    localApi.setMasterKey(_key_1456);
-                    ctx.invokeLocalMethodAfter("setMasterKey", null, argsNames_1457, argsValues_1458);
+                    let _key_1459: Key;
+                    _key_1459 = Key.META.deserialize(ctx, dataIn);
+                    const argsNames_1460: string[] = ["key"];
+                    const argsValues_1461: any[] = [_key_1459];
+                    ctx.invokeLocalMethodBefore("setMasterKey", argsNames_1460, argsValues_1461);
+                    localApi.setMasterKey(_key_1459);
+                    ctx.invokeLocalMethodAfter("setMasterKey", null, argsNames_1460, argsValues_1461);
                     break;
                     
                 }
                 case 4:  {
-                    const reqId_1459 = dataIn.readInt();
-                    const argsNames_1460: string[] = [];
-                    const argsValues_1461: any[] = [];
-                    ctx.invokeLocalMethodBefore("finish", argsNames_1460, argsValues_1461);
+                    const reqId_1462 = dataIn.readInt();
+                    const argsNames_1463: string[] = [];
+                    const argsValues_1464: any[] = [];
+                    ctx.invokeLocalMethodBefore("finish", argsNames_1463, argsValues_1464);
                     ctx.regLocalFuture();
                     const resultFuture = localApi.finish();
-                    ctx.invokeLocalMethodAfter("finish", resultFuture, argsNames_1460, argsValues_1461);
-                    resultFuture.to((v_1463: FinishResult) =>  {
-                        const data_1462 = new DataInOut();
-                        FinishResult.META.serialize(ctx, v_1463, data_1462);
-                        ctx.sendResultToRemote(reqId_1459, data_1462.toArray());
+                    ctx.invokeLocalMethodAfter("finish", resultFuture, argsNames_1463, argsValues_1464);
+                    resultFuture.to((v_1466: FinishResult) =>  {
+                        const data_1465 = new DataInOut();
+                        FinishResult.META.serialize(ctx, v_1466, data_1465);
+                        ctx.sendResultToRemote(reqId_1462, data_1465.toArray());
                         
                     }
                     );
@@ -12236,46 +12229,44 @@ export class GlobalRegServerApiMetaImpl implements FastMetaApi<GlobalRegServerAp
         this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
         
     }
-    makeRemote(sCtx_1464: FastFutureContext): GlobalRegServerApiRemote  {
+    makeRemote(sCtx_1467: FastFutureContext): GlobalRegServerApiRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_1464.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_1467.flush(sendFuture);
                 
             }
-            , getFastMetaContext: () => sCtx_1464, setMasterKey: (key: Key): void =>  {
-                const dataOut_1466 = new DataInOut();
-                dataOut_1466.writeByte(3);
-                const argsNames_1468: string[] = ["key"];
-                const argsValues_1469: any[] = [key];
-                sCtx_1464.invokeRemoteMethodAfter("setMasterKey", null, argsNames_1468, argsValues_1469);
-                Key.META.serialize(sCtx_1464, key, dataOut_1466);
-                sCtx_1464.sendToRemote(dataOut_1466.toArray());
+            , getFastMetaContext: () => sCtx_1467, setMasterKey: (key: Key): void =>  {
+                const dataOut_1469 = new DataInOut();
+                dataOut_1469.writeByte(3);
+                const argsNames_1471: string[] = ["key"];
+                const argsValues_1472: any[] = [key];
+                sCtx_1467.invokeRemoteMethodAfter("setMasterKey", null, argsNames_1471, argsValues_1472);
+                Key.META.serialize(sCtx_1467, key, dataOut_1469);
+                sCtx_1467.sendToRemote(dataOut_1469.toArray());
                 
             }
             , finish: (): ARFuture<FinishResult> =>  {
-                const dataOut_1471 = new DataInOut();
-                dataOut_1471.writeByte(4);
-                const argsNames_1473: string[] = [];
-                const argsValues_1474: any[] = [];
-                const result_1472 = ARFuture.of<FinishResult>();
-                sCtx_1464.invokeRemoteMethodAfter("finish", result_1472, argsNames_1473, argsValues_1474);
-                const reqId_1470 = sCtx_1464.regFuture( {
+                const dataOut_1474 = new DataInOut();
+                dataOut_1474.writeByte(4);
+                const argsNames_1476: string[] = [];
+                const argsValues_1477: any[] = [];
+                const result_1475 = ARFuture.of<FinishResult>();
+                sCtx_1467.invokeRemoteMethodAfter("finish", result_1475, argsNames_1476, argsValues_1477);
+                const reqId_1473 = sCtx_1467.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1472 as ARFuture<FinishResult>).tryDone(FinishResult.META.deserialize(sCtx_1464, in_));
+                        (result_1475 as ARFuture<FinishResult>).tryDone(FinishResult.META.deserialize(sCtx_1467, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1472.error(new Error("Remote call failed without a typed exception"));
+                        result_1475.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1471.writeInt(reqId_1470);
-                sCtx_1464.sendToRemote(dataOut_1471.toArray());
-                return result_1472;
+                dataOut_1474.writeInt(reqId_1473);
+                sCtx_1467.sendToRemote(dataOut_1474.toArray());
+                return result_1475;
                 
             }
             , 
@@ -12305,55 +12296,55 @@ export class ServerRegistrationApiMetaImpl implements FastMetaApi<ServerRegistra
                     
                 }
                 case 3:  {
-                    let salt_1476: string;
-                    let suffix_1477: string;
-                    let passwords_1478: number[];
-                    let parent_1479: UUID;
-                    let globalApi_1480: GlobalApi;
-                    let stringBytes_1481: Uint8Array;
-                    const len_1483 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    const bytes_1484 = dataIn.readBytes(len_1483);
-                    stringBytes_1481 = bytes_1484;
-                    salt_1476 = new TextDecoder('utf-8').decode(stringBytes_1481);
-                    let stringBytes_1485: Uint8Array;
-                    const len_1487 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    const bytes_1488 = dataIn.readBytes(len_1487);
-                    stringBytes_1485 = bytes_1488;
-                    suffix_1477 = new TextDecoder('utf-8').decode(stringBytes_1485);
+                    let salt_1479: string;
+                    let suffix_1480: string;
+                    let passwords_1481: number[];
+                    let parent_1482: UUID;
+                    let globalApi_1483: GlobalApiStream;
+                    let stringBytes_1484: Uint8Array;
+                    const len_1486 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    const bytes_1487 = dataIn.readBytes(len_1486);
+                    stringBytes_1484 = bytes_1487;
+                    salt_1479 = new TextDecoder('utf-8').decode(stringBytes_1484);
+                    let stringBytes_1488: Uint8Array;
                     const len_1490 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
-                    passwords_1478 = new Array<number>(len_1490);
-                    for (let idx_1489 = 0;
-                    idx_1489 < len_1490;
-                    idx_1489++)  {
-                        passwords_1478[idx_1489] = dataIn.readInt();
+                    const bytes_1491 = dataIn.readBytes(len_1490);
+                    stringBytes_1488 = bytes_1491;
+                    suffix_1480 = new TextDecoder('utf-8').decode(stringBytes_1488);
+                    const len_1493 = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
+                    passwords_1481 = new Array<number>(len_1493);
+                    for (let idx_1492 = 0;
+                    idx_1492 < len_1493;
+                    idx_1492++)  {
+                        passwords_1481[idx_1492] = dataIn.readInt();
                         
                     }
-                    parent_1479 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    globalApi_1480 = GlobalApi.META.deserialize(ctx, dataIn);
-                    const argsNames_1491: string[] = ["salt", "suffix", "passwords", "parent", "globalApi"];
-                    const argsValues_1492: any[] = [salt_1476, suffix_1477, passwords_1478, parent_1479, globalApi_1480];
-                    ctx.invokeLocalMethodBefore("registration", argsNames_1491, argsValues_1492);
-                    localApi.registration(salt_1476, suffix_1477, passwords_1478, parent_1479, globalApi_1480);
-                    ctx.invokeLocalMethodAfter("registration", null, argsNames_1491, argsValues_1492);
+                    parent_1482 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    globalApi_1483 = GlobalApiStream.META.deserialize(ctx, dataIn);
+                    const argsNames_1494: string[] = ["salt", "suffix", "passwords", "parent", "globalApi"];
+                    const argsValues_1495: any[] = [salt_1479, suffix_1480, passwords_1481, parent_1482, globalApi_1483];
+                    ctx.invokeLocalMethodBefore("registration", argsNames_1494, argsValues_1495);
+                    localApi.registration(salt_1479, suffix_1480, passwords_1481, parent_1482, globalApi_1483);
+                    ctx.invokeLocalMethodAfter("registration", null, argsNames_1494, argsValues_1495);
                     break;
                     
                 }
                 case 4:  {
-                    const reqId_1493 = dataIn.readInt();
-                    let parent_1494: UUID;
-                    let powMethods_1495: PowMethod;
-                    parent_1494 = FastMeta.META_UUID.deserialize(ctx, dataIn);
-                    powMethods_1495 = PowMethod.META.deserialize(ctx, dataIn);
-                    const argsNames_1496: string[] = ["parent", "powMethods"];
-                    const argsValues_1497: any[] = [parent_1494, powMethods_1495];
-                    ctx.invokeLocalMethodBefore("requestWorkProofData", argsNames_1496, argsValues_1497);
+                    const reqId_1496 = dataIn.readInt();
+                    let parent_1497: UUID;
+                    let powMethods_1498: PowMethod;
+                    parent_1497 = FastMeta.META_UUID.deserialize(ctx, dataIn);
+                    powMethods_1498 = PowMethod.META.deserialize(ctx, dataIn);
+                    const argsNames_1499: string[] = ["parent", "powMethods"];
+                    const argsValues_1500: any[] = [parent_1497, powMethods_1498];
+                    ctx.invokeLocalMethodBefore("requestWorkProofData", argsNames_1499, argsValues_1500);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.requestWorkProofData(parent_1494, powMethods_1495);
-                    ctx.invokeLocalMethodAfter("requestWorkProofData", resultFuture, argsNames_1496, argsValues_1497);
-                    resultFuture.to((v_1499: WorkProofDTO) =>  {
-                        const data_1498 = new DataInOut();
-                        WorkProofDTO.META.serialize(ctx, v_1499, data_1498);
-                        ctx.sendResultToRemote(reqId_1493, data_1498.toArray());
+                    const resultFuture = localApi.requestWorkProofData(parent_1497, powMethods_1498);
+                    ctx.invokeLocalMethodAfter("requestWorkProofData", resultFuture, argsNames_1499, argsValues_1500);
+                    resultFuture.to((v_1502: WorkProofDTO) =>  {
+                        const data_1501 = new DataInOut();
+                        WorkProofDTO.META.serialize(ctx, v_1502, data_1501);
+                        ctx.sendResultToRemote(reqId_1496, data_1501.toArray());
                         
                     }
                     );
@@ -12361,23 +12352,23 @@ export class ServerRegistrationApiMetaImpl implements FastMetaApi<ServerRegistra
                     
                 }
                 case 5:  {
-                    const reqId_1500 = dataIn.readInt();
-                    let serverIds_1501: Cloud;
-                    serverIds_1501 = Cloud.META.deserialize(ctx, dataIn);
-                    const argsNames_1502: string[] = ["serverIds"];
-                    const argsValues_1503: any[] = [serverIds_1501];
-                    ctx.invokeLocalMethodBefore("resolveServers", argsNames_1502, argsValues_1503);
+                    const reqId_1503 = dataIn.readInt();
+                    let serverIds_1504: Cloud;
+                    serverIds_1504 = Cloud.META.deserialize(ctx, dataIn);
+                    const argsNames_1505: string[] = ["serverIds"];
+                    const argsValues_1506: any[] = [serverIds_1504];
+                    ctx.invokeLocalMethodBefore("resolveServers", argsNames_1505, argsValues_1506);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.resolveServers(serverIds_1501);
-                    ctx.invokeLocalMethodAfter("resolveServers", resultFuture, argsNames_1502, argsValues_1503);
-                    resultFuture.to((v_1505: ServerDescriptor[]) =>  {
-                        const data_1504 = new DataInOut();
-                        SerializerPackNumber.INSTANCE.put(data_1504, v_1505.length);
-                        for (const el_1506 of v_1505)  {
-                            ServerDescriptor.META.serialize(ctx, el_1506, data_1504);
+                    const resultFuture = localApi.resolveServers(serverIds_1504);
+                    ctx.invokeLocalMethodAfter("resolveServers", resultFuture, argsNames_1505, argsValues_1506);
+                    resultFuture.to((v_1508: ServerDescriptor[]) =>  {
+                        const data_1507 = new DataInOut();
+                        SerializerPackNumber.INSTANCE.put(data_1507, v_1508.length);
+                        for (const el_1509 of v_1508)  {
+                            ServerDescriptor.META.serialize(ctx, el_1509, data_1507);
                             
                         }
-                        ctx.sendResultToRemote(reqId_1500, data_1504.toArray());
+                        ctx.sendResultToRemote(reqId_1503, data_1507.toArray());
                         
                     }
                     );
@@ -12385,13 +12376,13 @@ export class ServerRegistrationApiMetaImpl implements FastMetaApi<ServerRegistra
                     
                 }
                 case 6:  {
-                    let _key_1508: Key;
-                    _key_1508 = Key.META.deserialize(ctx, dataIn);
-                    const argsNames_1509: string[] = ["key"];
-                    const argsValues_1510: any[] = [_key_1508];
-                    ctx.invokeLocalMethodBefore("setReturnKey", argsNames_1509, argsValues_1510);
-                    localApi.setReturnKey(_key_1508);
-                    ctx.invokeLocalMethodAfter("setReturnKey", null, argsNames_1509, argsValues_1510);
+                    let _key_1511: Key;
+                    _key_1511 = Key.META.deserialize(ctx, dataIn);
+                    const argsNames_1512: string[] = ["key"];
+                    const argsValues_1513: any[] = [_key_1511];
+                    ctx.invokeLocalMethodBefore("setReturnKey", argsNames_1512, argsValues_1513);
+                    localApi.setReturnKey(_key_1511);
+                    ctx.invokeLocalMethodAfter("setReturnKey", null, argsNames_1512, argsValues_1513);
                     break;
                     
                 }
@@ -12412,95 +12403,93 @@ export class ServerRegistrationApiMetaImpl implements FastMetaApi<ServerRegistra
         this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
         
     }
-    makeRemote(sCtx_1511: FastFutureContext): ServerRegistrationApiRemote  {
+    makeRemote(sCtx_1514: FastFutureContext): ServerRegistrationApiRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_1511.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_1514.flush(sendFuture);
                 
             }
-            , getFastMetaContext: () => sCtx_1511, registration: (salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApi): void =>  {
-                const dataOut_1513 = new DataInOut();
-                dataOut_1513.writeByte(3);
-                const argsNames_1515: string[] = ["salt", "suffix", "passwords", "parent", "globalApi"];
-                const argsValues_1516: any[] = [salt, suffix, passwords, parent, globalApi];
-                sCtx_1511.invokeRemoteMethodAfter("registration", null, argsNames_1515, argsValues_1516);
-                const stringBytes_1517 = new TextEncoder().encode(salt);
-                SerializerPackNumber.INSTANCE.put(dataOut_1513, stringBytes_1517.length);
-                dataOut_1513.write(stringBytes_1517);
-                const stringBytes_1519 = new TextEncoder().encode(suffix);
-                SerializerPackNumber.INSTANCE.put(dataOut_1513, stringBytes_1519.length);
-                dataOut_1513.write(stringBytes_1519);
-                SerializerPackNumber.INSTANCE.put(dataOut_1513, passwords.length);
-                for (const el_1521 of passwords)  {
-                    dataOut_1513.writeInt(el_1521);
+            , getFastMetaContext: () => sCtx_1514, registration: (salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApiStream): void =>  {
+                const dataOut_1516 = new DataInOut();
+                dataOut_1516.writeByte(3);
+                const argsNames_1518: string[] = ["salt", "suffix", "passwords", "parent", "globalApi"];
+                const argsValues_1519: any[] = [salt, suffix, passwords, parent, globalApi];
+                sCtx_1514.invokeRemoteMethodAfter("registration", null, argsNames_1518, argsValues_1519);
+                const stringBytes_1520 = new TextEncoder().encode(salt);
+                SerializerPackNumber.INSTANCE.put(dataOut_1516, stringBytes_1520.length);
+                dataOut_1516.write(stringBytes_1520);
+                const stringBytes_1522 = new TextEncoder().encode(suffix);
+                SerializerPackNumber.INSTANCE.put(dataOut_1516, stringBytes_1522.length);
+                dataOut_1516.write(stringBytes_1522);
+                SerializerPackNumber.INSTANCE.put(dataOut_1516, passwords.length);
+                for (const el_1524 of passwords)  {
+                    dataOut_1516.writeInt(el_1524);
                     
                 }
-                FastMeta.META_UUID.serialize(sCtx_1511, parent, dataOut_1513);
-                GlobalApi.META.serialize(sCtx_1511, globalApi, dataOut_1513);
-                sCtx_1511.sendToRemote(dataOut_1513.toArray());
+                FastMeta.META_UUID.serialize(sCtx_1514, parent, dataOut_1516);
+                GlobalApiStream.META.serialize(sCtx_1514, globalApi, dataOut_1516);
+                sCtx_1514.sendToRemote(dataOut_1516.toArray());
                 
             }
             , requestWorkProofData: (parent: UUID, powMethods: PowMethod): ARFuture<WorkProofDTO> =>  {
-                const dataOut_1523 = new DataInOut();
-                dataOut_1523.writeByte(4);
-                const argsNames_1525: string[] = ["parent", "powMethods"];
-                const argsValues_1526: any[] = [parent, powMethods];
-                const result_1524 = ARFuture.of<WorkProofDTO>();
-                sCtx_1511.invokeRemoteMethodAfter("requestWorkProofData", result_1524, argsNames_1525, argsValues_1526);
-                const reqId_1522 = sCtx_1511.regFuture( {
+                const dataOut_1526 = new DataInOut();
+                dataOut_1526.writeByte(4);
+                const argsNames_1528: string[] = ["parent", "powMethods"];
+                const argsValues_1529: any[] = [parent, powMethods];
+                const result_1527 = ARFuture.of<WorkProofDTO>();
+                sCtx_1514.invokeRemoteMethodAfter("requestWorkProofData", result_1527, argsNames_1528, argsValues_1529);
+                const reqId_1525 = sCtx_1514.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1524 as ARFuture<WorkProofDTO>).tryDone(WorkProofDTO.META.deserialize(sCtx_1511, in_));
+                        (result_1527 as ARFuture<WorkProofDTO>).tryDone(WorkProofDTO.META.deserialize(sCtx_1514, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1524.error(new Error("Remote call failed without a typed exception"));
+                        result_1527.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1523.writeInt(reqId_1522);
-                FastMeta.META_UUID.serialize(sCtx_1511, parent, dataOut_1523);
-                PowMethod.META.serialize(sCtx_1511, powMethods, dataOut_1523);
-                sCtx_1511.sendToRemote(dataOut_1523.toArray());
-                return result_1524;
+                dataOut_1526.writeInt(reqId_1525);
+                FastMeta.META_UUID.serialize(sCtx_1514, parent, dataOut_1526);
+                PowMethod.META.serialize(sCtx_1514, powMethods, dataOut_1526);
+                sCtx_1514.sendToRemote(dataOut_1526.toArray());
+                return result_1527;
                 
             }
             , resolveServers: (serverIds: Cloud): ARFuture<ServerDescriptor[]> =>  {
-                const dataOut_1528 = new DataInOut();
-                dataOut_1528.writeByte(5);
-                const argsNames_1530: string[] = ["serverIds"];
-                const argsValues_1531: any[] = [serverIds];
-                const result_1529 = ARFuture.of<ServerDescriptor[]>();
-                sCtx_1511.invokeRemoteMethodAfter("resolveServers", result_1529, argsNames_1530, argsValues_1531);
-                const reqId_1527 = sCtx_1511.regFuture( {
+                const dataOut_1531 = new DataInOut();
+                dataOut_1531.writeByte(5);
+                const argsNames_1533: string[] = ["serverIds"];
+                const argsValues_1534: any[] = [serverIds];
+                const result_1532 = ARFuture.of<ServerDescriptor[]>();
+                sCtx_1514.invokeRemoteMethodAfter("resolveServers", result_1532, argsNames_1533, argsValues_1534);
+                const reqId_1530 = sCtx_1514.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1529 as ARFuture<ServerDescriptor[]>).tryDone(FastMeta.getMetaArray(ServerDescriptor.META).deserialize(sCtx_1511, in_));
+                        (result_1532 as ARFuture<ServerDescriptor[]>).tryDone(FastMeta.getMetaArray(ServerDescriptor.META).deserialize(sCtx_1514, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1529.error(new Error("Remote call failed without a typed exception"));
+                        result_1532.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1528.writeInt(reqId_1527);
-                Cloud.META.serialize(sCtx_1511, serverIds, dataOut_1528);
-                sCtx_1511.sendToRemote(dataOut_1528.toArray());
-                return result_1529;
+                dataOut_1531.writeInt(reqId_1530);
+                Cloud.META.serialize(sCtx_1514, serverIds, dataOut_1531);
+                sCtx_1514.sendToRemote(dataOut_1531.toArray());
+                return result_1532;
                 
             }
             , setReturnKey: (key: Key): void =>  {
-                const dataOut_1533 = new DataInOut();
-                dataOut_1533.writeByte(6);
-                const argsNames_1535: string[] = ["key"];
-                const argsValues_1536: any[] = [key];
-                sCtx_1511.invokeRemoteMethodAfter("setReturnKey", null, argsNames_1535, argsValues_1536);
-                Key.META.serialize(sCtx_1511, key, dataOut_1533);
-                sCtx_1511.sendToRemote(dataOut_1533.toArray());
+                const dataOut_1536 = new DataInOut();
+                dataOut_1536.writeByte(6);
+                const argsNames_1538: string[] = ["key"];
+                const argsValues_1539: any[] = [key];
+                sCtx_1514.invokeRemoteMethodAfter("setReturnKey", null, argsNames_1538, argsValues_1539);
+                Key.META.serialize(sCtx_1514, key, dataOut_1536);
+                sCtx_1514.sendToRemote(dataOut_1536.toArray());
                 
             }
             , 
@@ -12530,19 +12519,19 @@ export class RegistrationRootApiMetaImpl implements FastMetaApi<RegistrationRoot
                     
                 }
                 case 3:  {
-                    const reqId_1537 = dataIn.readInt();
-                    let cryptoLib_1538: CryptoLib;
-                    cryptoLib_1538 = CryptoLib.META.deserialize(ctx, dataIn);
-                    const argsNames_1539: string[] = ["cryptoLib"];
-                    const argsValues_1540: any[] = [cryptoLib_1538];
-                    ctx.invokeLocalMethodBefore("getAsymmetricPublicKey", argsNames_1539, argsValues_1540);
+                    const reqId_1540 = dataIn.readInt();
+                    let cryptoLib_1541: CryptoLib;
+                    cryptoLib_1541 = CryptoLib.META.deserialize(ctx, dataIn);
+                    const argsNames_1542: string[] = ["cryptoLib"];
+                    const argsValues_1543: any[] = [cryptoLib_1541];
+                    ctx.invokeLocalMethodBefore("getAsymmetricPublicKey", argsNames_1542, argsValues_1543);
                     ctx.regLocalFuture();
-                    const resultFuture = localApi.getAsymmetricPublicKey(cryptoLib_1538);
-                    ctx.invokeLocalMethodAfter("getAsymmetricPublicKey", resultFuture, argsNames_1539, argsValues_1540);
-                    resultFuture.to((v_1542: SignedKey) =>  {
-                        const data_1541 = new DataInOut();
-                        SignedKey.META.serialize(ctx, v_1542, data_1541);
-                        ctx.sendResultToRemote(reqId_1537, data_1541.toArray());
+                    const resultFuture = localApi.getAsymmetricPublicKey(cryptoLib_1541);
+                    ctx.invokeLocalMethodAfter("getAsymmetricPublicKey", resultFuture, argsNames_1542, argsValues_1543);
+                    resultFuture.to((v_1545: SignedKey) =>  {
+                        const data_1544 = new DataInOut();
+                        SignedKey.META.serialize(ctx, v_1545, data_1544);
+                        ctx.sendResultToRemote(reqId_1540, data_1544.toArray());
                         
                     }
                     );
@@ -12550,15 +12539,15 @@ export class RegistrationRootApiMetaImpl implements FastMetaApi<RegistrationRoot
                     
                 }
                 case 4:  {
-                    let cryptoLib_1544: CryptoLib;
-                    let stream_1545: ServerRegistrationApiStream;
-                    cryptoLib_1544 = CryptoLib.META.deserialize(ctx, dataIn);
-                    stream_1545 = ServerRegistrationApiStream.META.deserialize(ctx, dataIn);
-                    const argsNames_1546: string[] = ["cryptoLib", "stream"];
-                    const argsValues_1547: any[] = [cryptoLib_1544, stream_1545];
-                    ctx.invokeLocalMethodBefore("enter", argsNames_1546, argsValues_1547);
-                    localApi.enter(cryptoLib_1544, stream_1545);
-                    ctx.invokeLocalMethodAfter("enter", null, argsNames_1546, argsValues_1547);
+                    let cryptoLib_1547: CryptoLib;
+                    let stream_1548: ServerRegistrationApiStream;
+                    cryptoLib_1547 = CryptoLib.META.deserialize(ctx, dataIn);
+                    stream_1548 = ServerRegistrationApiStream.META.deserialize(ctx, dataIn);
+                    const argsNames_1549: string[] = ["cryptoLib", "stream"];
+                    const argsValues_1550: any[] = [cryptoLib_1547, stream_1548];
+                    ctx.invokeLocalMethodBefore("enter", argsNames_1549, argsValues_1550);
+                    localApi.enter(cryptoLib_1547, stream_1548);
+                    ctx.invokeLocalMethodAfter("enter", null, argsNames_1549, argsValues_1550);
                     break;
                     
                 }
@@ -12579,48 +12568,46 @@ export class RegistrationRootApiMetaImpl implements FastMetaApi<RegistrationRoot
         this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);
         
     }
-    makeRemote(sCtx_1548: FastFutureContext): RegistrationRootApiRemote  {
+    makeRemote(sCtx_1551: FastFutureContext): RegistrationRootApiRemote  {
         const remoteApiImpl =  {
-            flush: (sendFuture?: AFuture): AFuture =>  {
-                const futureToUse = sendFuture || AFuture.make();
-                sCtx_1548.flush(futureToUse);
-                return futureToUse;
+            flush: (sendFuture: FlushReport): void =>  {
+                sCtx_1551.flush(sendFuture);
                 
             }
-            , getFastMetaContext: () => sCtx_1548, getAsymmetricPublicKey: (cryptoLib: CryptoLib): ARFuture<SignedKey> =>  {
-                const dataOut_1550 = new DataInOut();
-                dataOut_1550.writeByte(3);
-                const argsNames_1552: string[] = ["cryptoLib"];
-                const argsValues_1553: any[] = [cryptoLib];
-                const result_1551 = ARFuture.of<SignedKey>();
-                sCtx_1548.invokeRemoteMethodAfter("getAsymmetricPublicKey", result_1551, argsNames_1552, argsValues_1553);
-                const reqId_1549 = sCtx_1548.regFuture( {
+            , getFastMetaContext: () => sCtx_1551, getAsymmetricPublicKey: (cryptoLib: CryptoLib): ARFuture<SignedKey> =>  {
+                const dataOut_1553 = new DataInOut();
+                dataOut_1553.writeByte(3);
+                const argsNames_1555: string[] = ["cryptoLib"];
+                const argsValues_1556: any[] = [cryptoLib];
+                const result_1554 = ARFuture.of<SignedKey>();
+                sCtx_1551.invokeRemoteMethodAfter("getAsymmetricPublicKey", result_1554, argsNames_1555, argsValues_1556);
+                const reqId_1552 = sCtx_1551.regFuture( {
                     onDone: (in_: DataIn) =>  {
-                        (result_1551 as ARFuture<SignedKey>).tryDone(SignedKey.META.deserialize(sCtx_1548, in_));
+                        (result_1554 as ARFuture<SignedKey>).tryDone(SignedKey.META.deserialize(sCtx_1551, in_));
                         
                     }
                     , onError: (_in_: DataIn) =>  {
-                        result_1551.error(new Error("Remote call failed without a typed exception"));
+                        result_1554.error(new Error("Remote call failed without a typed exception"));
                         
                     }
                     
                 }
                 );
-                dataOut_1550.writeInt(reqId_1549);
-                CryptoLib.META.serialize(sCtx_1548, cryptoLib, dataOut_1550);
-                sCtx_1548.sendToRemote(dataOut_1550.toArray());
-                return result_1551;
+                dataOut_1553.writeInt(reqId_1552);
+                CryptoLib.META.serialize(sCtx_1551, cryptoLib, dataOut_1553);
+                sCtx_1551.sendToRemote(dataOut_1553.toArray());
+                return result_1554;
                 
             }
             , enter: (cryptoLib: CryptoLib, stream: ServerRegistrationApiStream): void =>  {
-                const dataOut_1555 = new DataInOut();
-                dataOut_1555.writeByte(4);
-                const argsNames_1557: string[] = ["cryptoLib", "stream"];
-                const argsValues_1558: any[] = [cryptoLib, stream];
-                sCtx_1548.invokeRemoteMethodAfter("enter", null, argsNames_1557, argsValues_1558);
-                CryptoLib.META.serialize(sCtx_1548, cryptoLib, dataOut_1555);
-                ServerRegistrationApiStream.META.serialize(sCtx_1548, stream, dataOut_1555);
-                sCtx_1548.sendToRemote(dataOut_1555.toArray());
+                const dataOut_1558 = new DataInOut();
+                dataOut_1558.writeByte(4);
+                const argsNames_1560: string[] = ["cryptoLib", "stream"];
+                const argsValues_1561: any[] = [cryptoLib, stream];
+                sCtx_1551.invokeRemoteMethodAfter("enter", null, argsNames_1560, argsValues_1561);
+                CryptoLib.META.serialize(sCtx_1551, cryptoLib, dataOut_1558);
+                ServerRegistrationApiStream.META.serialize(sCtx_1551, stream, dataOut_1558);
+                sCtx_1551.sendToRemote(dataOut_1558.toArray());
                 
             }
             , 

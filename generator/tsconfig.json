@@ -3,9 +3,11 @@
     "outDir": "./build",
     "module": "CommonJS",
     "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
     "declaration": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "downlevelIteration": true,
     "moduleResolution": "node",
     "types": [
       "node"

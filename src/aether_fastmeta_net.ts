@@ -13,7 +13,8 @@ import {
     FastFutureContext,
     FastApiContextLocal,
     SerializerPackNumber,
-    DeserializerPackNumber
+    DeserializerPackNumber,
+    FlushReport
 } from './aether_fastmeta';
 import { Log, LNode } from './aether_logging';
 import { DataInOut } from './aether_datainout';
@@ -225,7 +226,7 @@ export namespace FastMetaNet {
     export interface Connection<LT, RT extends RemoteApi> extends Destroyable {
         read(): void;
         stopRead(): void;
-        write(data: Uint8Array): AFuture;
+        write(data: Uint8Array,report:FlushReport): void;
         getLocalApi(): LT;
         getRemoteApi(): RT;
         isWritable(): boolean;
@@ -296,13 +297,12 @@ export namespace FastMetaNet {
     }
     export const INSTANCE = Instance;
 }
-
 /**
  * @interface FastMetaClient
  * @description FastMeta client interface
  */
 export interface FastMetaClient<LT, RT extends RemoteApi> extends FastMetaNet.Connection<LT, RT> {
-    flush(sendFuture: AFuture): void;
+    flush(sendFuture: FlushReport): void;
 }
 
 /**
@@ -458,11 +458,11 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
      * @param {Uint8Array} data Data to write
      * @returns {AFuture} Future indicating write completion
      */
-    public write(data: Uint8Array): AFuture {
-        const sendFuture = AFuture.make();
+    public write(data: Uint8Array, report:FlushReport): void {
         try {
             if (!this.websocket || !this.isConnected()) {
-                return AFuture.ofThrow(new Error("WebSocket is not open"));
+                report.abort();
+                return ;
             }
             const frameBuffer = new DataInOut();
             SerializerPackNumber.INSTANCE.put(frameBuffer, data.length);
@@ -471,11 +471,10 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
 
             this.connectionStats.totalBytesSent += finalBytesToSend.length;
             this.connectionStats.totalMessagesSent++;
-            this.sendWebSocketData(finalBytesToSend, sendFuture);
+            this.sendWebSocketData(finalBytesToSend, report);
         } catch (e) {
-            sendFuture.error(e as Error);
+            report.abort();
         }
-        return sendFuture;
     }
 
     /**
@@ -649,9 +648,9 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
 
             this.context = context;
 
-            this.context.flush = (sendFuture?: AFuture): AFuture => {
+            this.context.flush = (sendFuture?: FlushReport) => {
                 if (!sendFuture) {
-                    sendFuture = AFuture.make();
+                    sendFuture = FlushReport.STUB;
                 }
                 try {
                     if (this.websocket && this.isConnected()) {
@@ -665,15 +664,14 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
                             this.connectionStats.totalMessagesSent++;
                             this.sendWebSocketData(finalBytesToSend, sendFuture);
                         } else {
-                            sendFuture.tryDone();
+                            sendFuture.done();
                         }
                     } else {
-                        sendFuture.error(new Error("WebSocket is not open"));
+                        sendFuture.abort();
                     }
                 } catch (e) {
-                    sendFuture.error(e as Error);
+                    sendFuture.abort();
                 }
-                return sendFuture;
             };
 
             this.connectFuture.tryDone(this.context);
@@ -691,16 +689,16 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
      * @param {Uint8Array} data Data to send
      * @param {AFuture} sendFuture Future to complete when sent
      */
-    private sendWebSocketData(data: Uint8Array, sendFuture: AFuture): void {
+    private sendWebSocketData(data: Uint8Array, sendFuture: FlushReport): void {
         if (!this.websocket) {
-            sendFuture.error(new Error("WebSocket not available"));
+            sendFuture.abort();
             return;
         }
         try {
             this.websocket.send(data);
-            sendFuture.tryDone();
+            sendFuture.done();
         } catch (e) {
-            sendFuture.error(e as Error);
+            sendFuture.abort();
         }
     }
 
@@ -1063,7 +1061,7 @@ class FastMetaClientAdapter<LT, RT extends RemoteApi> implements FastMetaClient<
         });
     }
 
-    public flush(sendFuture: AFuture): void {
+    public flush(sendFuture: FlushReport): void {
         this.context?.flush(sendFuture);
     }
 
@@ -1091,11 +1089,11 @@ class FastMetaClientAdapter<LT, RT extends RemoteApi> implements FastMetaClient<
         return this.wsClient.getConnectionState() === ConnectionState.CONNECTED;
     }
 
-    public read(): void {}
+    public read(): void { }
 
-    public stopRead(): void {}
+    public stopRead(): void { }
 
-    public write(data: Uint8Array): AFuture {
-        return this.wsClient.write(data);
+    public write(data: Uint8Array,report:FlushReport): void {
+        return this.wsClient.write(data,report);
     }
 }

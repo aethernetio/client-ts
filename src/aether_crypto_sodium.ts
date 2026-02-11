@@ -47,7 +47,7 @@ class SodiumSign implements Sign {
     getSignData(): Uint8Array { return this.data; }
     getProviderName(): string { return "SODIUM"; }
     getCryptoProvider(): CryptoProvider { return SodiumCryptoProvider.INSTANCE; }
-    toString(): string { return `${this.getProviderName()}:${HexUtils.toHexString(this.getSignData())}`; }
+    toAString(): string { return `${this.getProviderName()}:${HexUtils.toHexString(this.getSignData())}`; }
 }
 
 abstract class SodiumKeyBase implements AKey {
@@ -70,7 +70,7 @@ abstract class SodiumKeyBase implements AKey {
     keyToString(): string {
         return `${this.getProviderName()}:${KeyType[this.getKeyType()]}:${HexUtils.toHexString(this.getData())}`;
     }
-    toString(): string { return this.keyToString(); }
+    toAString(): string { return this.keyToString(); }
 
     equals(obj: any): boolean {
         if (obj instanceof SodiumKeyBase) {
@@ -104,7 +104,7 @@ abstract class SodiumKeyBase implements AKey {
             },
             getProviderName: () => akey.getProviderName(),
             getCryptoProvider: () => akey.getCryptoProvider(),
-            toString: () => `${akey.keyToString()}:${asign.toString()}`
+            toAString: () => `${akey.keyToString()}:${asign.toString()}`
         };
     }
 }
@@ -480,7 +480,7 @@ export class SodiumCryptoProvider implements CryptoProvider {
                 },
                 getProviderName: () => akey.getProviderName(),
                 getCryptoProvider: () => akey.getCryptoProvider(),
-                toString: () => `${akey.keyToString()}:${asign.toString()}`
+                toAString: () => `${akey.keyToString()}:${asign.toString()}`
             };
         }
         throw new Error("createSignedKey overload not implemented");

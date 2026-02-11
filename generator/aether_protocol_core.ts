@@ -113,6 +113,11 @@ export class TypeInfo {
      */
     constructor(type: string, isAbstract: boolean = false) {
         this.isAbstract = isAbstract;
+        if (typeof type !== 'string') {
+            this.javaType = "void"; this.javaTypeBoxed = "void"; this.arrayStaticSize = 0;
+            this.isNullable = false; this.isArray = false; this.isPack = false;
+            return;
+        }
         let t = type ? type.trim() : "";
 
         if (!t) {
@@ -334,8 +339,7 @@ export class GeneratorLogic {
      * @returns The canonical name (e.g., "string", "MyObject").
      */
     public resolveCanonicalTypeName(referencedName: string): string {
-            if (!referencedName) return referencedName;
-
+            if (!referencedName || typeof referencedName !== 'string') return referencedName;
             let t = referencedName.trim();
 
             // Логика суффиксов ( ? и [] )
@@ -930,7 +934,7 @@ export class GeneratorLogic {
      * @returns The generated unique name for the type.
      */
     declareAnonymType(nameParts: string[], typeDefinition: TypeDefinition): string {
-        let generatedName: string = typeDefinition.name || typeDefinition.stream?.name || "";
+        let generatedName: string = typeDefinition.name || (typeDefinition.stream ? typeDefinition.stream.name : "") || "";
 
         // 1. Если имя задано явно (например, { name: MyAnonStruct, fields: ... })
         if (generatedName) {

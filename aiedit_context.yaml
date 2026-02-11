@@ -1,7 +1,7 @@
-block:
+lines:
   roots:
-    MAIN: {path: /home/angel/IdeaProjects/client-ts/src}
-text:
+    MAIN: {path: /home/angel/IdeaProjects/client-ts}
+bash:
   roots:
-    MAIN: {path: /home/angel/IdeaProjects/client-ts/src}
-projectId: f75670d5
+    MAIN: { path: /home/angel/IdeaProjects/client-ts }
+projectId: 0e586af9

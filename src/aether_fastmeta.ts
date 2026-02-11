@@ -12,6 +12,21 @@ import { AString } from './aether_astring';
 
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER_UTF8 = new TextDecoder('utf-8');
+export abstract class FlushReport {
+    public static STUB= new class extends FlushReport{
+        report(ignore:boolean){
+
+        }
+    };
+    public abstract report(done: boolean): void;
+    public done() {
+        this.report(true);
+    }
+    public abort() {
+        this.report(false);
+    }
+
+}
 
 export class SerializerPackNumber {
     public static readonly INSTANCE = new SerializerPackNumber();
@@ -113,15 +128,15 @@ export interface FastFutureContext extends Destroyable {
 
     remoteDataToArray(out: DataOut): void;
     remoteDataToArrayAsArray(): Uint8Array;
+    flush(report: FlushReport): void;
 
-    flush(sendFuture?: AFuture): AFuture;
     isEmpty(): boolean;
     size(): number;
     close(): AFuture;
 
     invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void;
-    invokeLocalMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void;
-    invokeRemoteMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void;
+    invokeLocalMethodAfter(methodName: string, result: any, argsNames: string[], argsValues: any[]): void;
+    invokeRemoteMethodAfter(methodName: string, result: any, argsNames: string[], argsValues: any[]): void;
 }
 
 /**
@@ -134,7 +149,7 @@ export const FastFutureContextStub: FastFutureContext = {
     regFuture: (worker: FutureRec) => 0,
     regLocalFuture: () => { /* no-op */ },
     getFuture: (requestId: number) => { throw new Error("UnsupportedOperationException"); },
-    flush: (sendFuture?: AFuture) => { return AFuture.failed(new Error("UnsupportedOperationException")); },
+    flush: (report: FlushReport) => { report(true); },
     remoteDataToArray: (out: DataOut) => { /* no-op */ },
     remoteDataToArrayAsArray: () => new Uint8Array(0),
     isEmpty: () => true,
@@ -169,7 +184,7 @@ export interface FastMetaType<T> {
  * Interface for a remote API endpoint.
  */
 export interface RemoteApi {
-    flush(sendFuture?: AFuture): AFuture;
+    flush(report: FlushReport): void;
     getFastMetaContext(): FastFutureContext;
 }
 
@@ -605,7 +620,7 @@ export class FastMeta {
 
             return false;
         }
-        metaToString(obj: UUID | null | undefined, res: AString): void { res.add(obj ? obj.toString() : "null"); }
+        metaToString(obj: UUID | null | undefined, res: AString): void { res.add(obj ? obj.toAString() : "null"); }
         serializeToBytes(obj: UUID): Uint8Array {
             const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
         }
@@ -782,16 +797,17 @@ export class FastApiContext implements FastFutureContext {
         this.futures.set(r, worker);
         return r;
     }
-
-
-    public flush(sendFuture?: AFuture): AFuture {
-        const futureToUse = sendFuture || AFuture.make();
-        if (this.isEmpty()) {
-            return futureToUse;
+    public flush(report: FlushReport): void {
+        const data = this.remoteDataToArrayAsArray();
+        if (data.length === 0) {
+            report(true);
+            return;
         }
-        futureToUse.tryDone();
-        return futureToUse;
+        this.sendToRemote(data);
+        report(true);
     }
+
+
 
 
     public close(): AFuture {
@@ -939,3 +955,5 @@ export class RemoteApiFuture<T extends RemoteApi> {
         return this.queue.length + this.permanent.size;
     }
 }
+
+export * from './aether_datainout';

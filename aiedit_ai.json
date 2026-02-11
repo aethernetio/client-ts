@@ -1,0 +1,177 @@
+[
+  {
+    "id": "be462cfb",
+    "content": "[ARCH] [FAILOVER] Implement parallel connection strategy in AetherCloudClient.ts where all cloud SIDs are connected simultaneously to ensure delivery path redundancy.",
+    "timestamp": 1770321245158
+  },
+  {
+    "id": "8a2472b0",
+    "content": "[TASK] [BATCHING] Ported packet aggregation for clouds, servers, and access groups in ConnectionWork.ts to reduce network overhead.",
+    "timestamp": 1770321245166
+  },
+  {
+    "id": "982e0163",
+    "content": "[ARCH] [RECOVERY] ConnectionRegistration now exposes public resolveCloud method to support AetherCloudClient\u0027s recovery flow[cite: 120].",
+    "timestamp": 1770321414810
+  },
+  {
+    "id": "25f998b1",
+    "content": "[TASK] [SYNC] Synchronized makeFirstConnection in TS with Java\u0027s parallel connection strategy (Recipient Strategy).",
+    "timestamp": 1770321414815
+  },
+  {
+    "id": "fd41e0fd",
+    "content": "[TASK] [SYNC] Ported parallel connection strategy to TS AetherCloudClient.",
+    "timestamp": 1770321580773
+  },
+  {
+    "id": "0bd082e0",
+    "content": "[ARCH] [NETWORK] Implemented makeConnectionReg in TS to support multi-registry recovery flow via AFuture.any.",
+    "timestamp": 1770321665855
+  },
+  {
+    "id": "f4bfce8b",
+    "content": "[ARCH] [SYNC] Finalized Adaptive Cloud port: Implemented parallel connections, batched requests, and priority promotion on data receipt.",
+    "timestamp": 1770321787176
+  },
+  {
+    "id": "eed1e7c6",
+    "content": "[DEV] [CLEANUP] Removed duplicate method signatures in ConnectionWork to ensure clean API implementation.",
+    "timestamp": 1770321787176
+  },
+  {
+    "id": "fda5fac9",
+    "content": "[ARCH] [BATCHING] Finalized TS BMap integration: getCloud now triggers batched server-side resolution.",
+    "timestamp": 1770321827413
+  },
+  {
+    "id": "79d5c802",
+    "content": "[LOG] [REFACTOR] Cleaned up legacy Javadoc and method stubs in ConnectionWork.ts and AetherCloudClient.ts.",
+    "timestamp": 1770321827415
+  },
+  {
+    "id": "edea7944",
+    "content": "[ARCH] [PORT-COMPLETE] Aether Cloud TS client is now fully synchronized with Java version.",
+    "timestamp": 1770321886712
+  },
+  {
+    "id": "bfa3662c",
+    "content": "[ARCH] [STRATEGY] Recipient Strategy implemented: client maintains parallel connections to all servers in the cloud manifest.",
+    "timestamp": 1770321886715
+  },
+  {
+    "id": "0619093d",
+    "content": "[LOG] [BATCHING] Request batching for clouds, servers, and access groups is active in ConnectionWork.flushBackgroundRequests.",
+    "timestamp": 1770321886723
+  },
+  {
+    "id": "ed493377",
+    "content": "[TASK] [HOTFIX] Fixed unterminated Javadoc and reg-exp errors in ConnectionWork.ts caused by overlapping code blocks.",
+    "timestamp": 1770322095248
+  },
+  {
+    "id": "7ea54b50",
+    "content": "[TASK] [HOTFIX] Successfully removed hidden legacy code blocks (5fzxc-5g045) that were causing TSC syntax errors.",
+    "timestamp": 1770322164288
+  },
+  {
+    "id": "0d764206",
+    "content": "[ARCH] [REGISTRATION] ConnectionRegistration uses GlobalRegServerApi (globalCtx) wrapped in GlobalApiStream for the final registration step, matching Java implementation.",
+    "timestamp": 1770702680501
+  },
+  {
+    "id": "21068738",
+    "content": "[LOG] Fixed TypeError in resolveCanonicalTypeName by adding typeof check and resolved SyntaxError in declareAnonymType by removing duplicate declaration.",
+    "timestamp": 1770702839200
+  },
+  {
+    "id": "97cdc4f4",
+    "content": "[FIX] Added defensive checks to TypeInfo constructor and resolveCanonicalTypeName to handle non-string anonymous types during API generation pass.",
+    "timestamp": 1770702965397
+  },
+  {
+    "id": "f2df0f06",
+    "content": "[ARCH] TypeScript generator requires ALL anonymous objects (including streams in method returns/throws) to be registered and replaced by string names during the pre-pass in AetherDslMetaProcessor.",
+    "timestamp": 1770703137192
+  },
+  {
+    "id": "816365af",
+    "content": "[FIX] Synced anonymous type discovery in API methods with Java logic. All objects in params, returns, and throws are now correctly converted to string names before ApiGenerator runs.",
+    "timestamp": 1770703276404
+  },
+  {
+    "id": "61356e99",
+    "content": "[FIX] Ensuring string replacement of anonymous types in API method definitions. This prevents ApiGenerator from encountering raw objects in returns/throws/params.",
+    "timestamp": 1770703346251
+  },
+  {
+    "id": "a52bbeb5",
+    "content": "[FIX] Modified discoverAnonymousTypesInApi to force in-place replacement of objects with string names in the metadata structure, preventing ApiGenerator from failing on included DSL files.",
+    "timestamp": 1770703410405
+  },
+  {
+    "id": "5669ce9b",
+    "content": "[LOG] Added conditional generation of EMPTY constant for TypeScript APIs with no methods and no parents.",
+    "timestamp": 1770704876361
+  },
+  {
+    "id": "a433a4c0",
+    "content": "[ARCH] [TS-PORT] В TypeScript UUID должен приводиться к строке .toString() при использовании в качестве ключа Map, иначе сравнение идет по ссылке объекта.",
+    "timestamp": 1770724662859
+  },
+  {
+    "id": "f0294946",
+    "content": "[LOG] [TS-FIX] Восстановлен баланс скобок в ConnectionWork после неудачного рефакторинга flush.",
+    "timestamp": 1770725039690
+  },
+  {
+    "id": "803b1846",
+    "content": "[LOG] [REPAIR] Исправлен критический разбаланс скобок в ConnectionWork. Удален дублирующийся блок cancel.",
+    "timestamp": 1770725102406
+  },
+  {
+    "id": "580bac50",
+    "content": "[ARCH] [TS-PORT] Методы toApi в MessageNode разделены на toApiWithCtx и toApiWithFactory для избежания конфликтов перегрузки в TS.",
+    "timestamp": 1770727297881
+  },
+  {
+    "id": "1b43bbef",
+    "content": "[ARCH] [TS-PORT] Исправлено наслоение кода в ConnectionWork. Переменные flush теперь уникальны.",
+    "timestamp": 1770727428701
+  },
+  {
+    "id": "6114d90e",
+    "content": "[ARCH] [TS-PORT] Replaced overloaded toApi with named methods: toApiWithCtx and toApiWithFactory.",
+    "timestamp": 1770727477747
+  },
+  {
+    "id": "dd40a1c8",
+    "content": "[ARCH] [TS-PORT] Метод flush в ConnectionWork разделен на сбор фоновых запросов и выполнение задач AuthorizedApi.",
+    "timestamp": 1770727536085
+  },
+  {
+    "id": "4f9dd085",
+    "content": "[ARCH] [TS-PORT] FastApiContext.flush in TypeScript requires a FlushReport object (e.g., FlushReport.STUB) instead of a callback function.",
+    "timestamp": 1770727623786
+  },
+  {
+    "id": "5beca1c2",
+    "content": "[ARCH] [TS-PORT] Конструктор Connection использует client: any для обхода циклической зависимости Client-Connection.",
+    "timestamp": 1770760208701
+  },
+  {
+    "id": "9017d3e4",
+    "content": "[LOG] [REPAIR] IDs in ConnectionWork shifted to 5xc... prefix after manual sync. Re-aligned all pointers.",
+    "timestamp": 1770760243502
+  },
+  {
+    "id": "e582804f",
+    "content": "[ARCH] [TS-FIX] В TS-колбэках удаляйте только выражения, сохраняя структуру скобок }) для корректной валидации.",
+    "timestamp": 1770760308527
+  },
+  {
+    "id": "b937531f",
+    "content": "[ARCH] [TS-FIX] ConnectionWork успешно очищен от наслоений. Переменные flush и колбэки кэша приведены к единичному объявлению.",
+    "timestamp": 1770760400840
+  }
+]

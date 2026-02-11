@@ -85,7 +85,8 @@ export class AetherDslMetaProcessor {
     URI,
     AConsumer,
     ToString,
-    AString
+    AString,
+    FlushReport
 } from '${this.importPrefix}';
 import * as Impl from './aether_api_impl'; // This is always relative
 
@@ -127,7 +128,8 @@ import * as Impl from './aether_api_impl'; // This is always relative
     URI,
     AConsumer,
     ToString,
-    AString
+    AString,
+    FlushReport
 } from '${this.importPrefix}';
 import {
     ${allImports.join(',\n    ')}
@@ -201,11 +203,6 @@ import {
             .replace(/^( {16})/gm, '                ')
             .replace(/^( {20})/gm, '                    ');
     }
-
-    /**
-     * Iterates through all DSL data and discovers anonymous types in
-     * API definitions and DTO fields, registering them.
-     */
     private performAnonymousTypeDiscovery(): void {
         Object.values(this.globalProtocolData).forEach(dslMeta => {
             Object.entries(dslMeta.api || {}).forEach(([apiName, apiDef]) => {
@@ -217,14 +214,6 @@ import {
         });
     }
 
-    /**
-     * Generates code for all types in their sorted order.
-     * @param sortedTypeNames - A topologically sorted list of type names.
-     * @param enums - An output array for enum code.
-     * @param abstracts - An output array for abstract class code.
-     * @param concretes - An output array for concrete class code.
-     * @param streams - An output array for stream class code.
-     */
     private generateSortedTypes(sortedTypeNames: string[], enums: string[], abstracts: string[], concretes: string[], streams: string[]): void {
         sortedTypeNames.forEach(name => {
             const defn = this.generatorLogic.allTypes.get(name);
@@ -241,43 +230,19 @@ import {
         });
     }
 
-    /**
-         * Generates code for all API definitions.
-         * [ИСПРАВЛЕНИЕ] Итерируется по канонической карте API, чтобы предотвратить дублирование.
-         * @param apisCode - An output array for API code.
-         */
-        private generateApiCode(apisCode: string[]): void {
-
-            // Итерируемся по списку канонических имен API (гарантирует уникальность)
-            this.generatorLogic.canonicalApiMap.forEach((canonicalName, lowerName) => {
-
-                // Генерируем каждое каноническое API только один раз
-                if (!this.generatedApis.has(canonicalName)) {
-
-                    // Находим определение (оно уже загружено в allTypes)
-                    const defn = this.generatorLogic.allTypes.get(canonicalName);
-
-                    if (defn) {
-                        const apiOutput = this.apiGenerator.generateApi(canonicalName, defn as TypeDefinition);
-                        apisCode.push(apiOutput[canonicalName]);
-                        this.generatedApis.add(canonicalName);
-                    } else {
-                        // Эта ошибка не должна происходить, если конструктор LogicLogic отработал верно
-                        console.warn(`[Generator] Не удалось найти определение для канонического API: ${canonicalName} (из ключа ${lowerName})`);
-                    }
+    private generateApiCode(apisCode: string[]): void {
+        this.generatorLogic.canonicalApiMap.forEach((canonicalName, lowerName) => {
+            if (!this.generatedApis.has(canonicalName)) {
+                const defn = this.generatorLogic.allTypes.get(canonicalName);
+                if (defn) {
+                    const apiOutput = this.apiGenerator.generateApi(canonicalName, defn as TypeDefinition);
+                    apisCode.push(apiOutput[canonicalName]);
+                    this.generatedApis.add(canonicalName);
                 }
-            });
-        }
+            }
+        });
+    }
 
-    /**
-     * Assembles the final generated file from all its parts.
-     * @param enums - An array of enum code strings.
-     * @param abstracts - An array of abstract class code strings.
-     * @param concretes - An array of concrete class code strings.
-     * @param streams - An array of stream class code strings.
-     * @param apisCode - An array of API code strings.
-     * @returns The complete formatted file content.
-     */
     private assembleGeneratedFile(enums: string[], abstracts: string[], concretes: string[], streams: string[], apisCode: string[]): string {
         let code = this.getPreambleImports();
         code += enums.join('\n\n') + (enums.length ? '\n\n' : '');
@@ -285,25 +250,19 @@ import {
         code += concretes.join('\n\n') + (concretes.length ? '\n\n' : '');
         code += streams.join('\n\n') + (streams.length ? '\n\n' : '');
         code += apisCode.join('\n\n');
-
         return code;
     }
 
-    /**
-     * Discovers anonymous types within an API definition and registers them.
-     * @param apiName - The name of the API.
-     * @param apiDef - The TypeDefinition for the API.
-     */
     private discoverAnonymousTypesInApi(apiName: string, apiDef: TypeDefinition | null | undefined): void {
         if (!apiDef) return;
 
-        if (!this.generatorLogic || typeof this.generatorLogic.declareAnonymType !== 'function') {
-            throw new Error("Internal error: generatorLogic or declareAnonymType is not available.");
-        }
-
         const processPotentialAnon = (parts: string[], typeDef: any): string | any => {
             if (typeof typeDef === 'object' && typeDef !== null) {
-                const anonName = this.generatorLogic.declareAnonymType(parts, typeDef as TypeDefinition);
+                const nameParts = [...parts];
+                if (typeDef.stream && !nameParts.some(p => p.toLowerCase().includes("stream"))) {
+                    nameParts.push("Stream");
+                }
+                const anonName = this.generatorLogic.declareAnonymType(nameParts, typeDef as TypeDefinition);
                 if (!this.generatorLogic.allTypes.has(anonName)) {
                     this.generatorLogic.allTypes.set(anonName, typeDef as TypeDefinition);
                     this.generatorLogic.declaredTypeNames.add(anonName);
@@ -313,35 +272,28 @@ import {
             return typeDef;
         };
 
-        Object.entries(apiDef.methods || {}).forEach(([methodName, m]) => {
-            const mDef = m as TypeDefinition;
-            if (!mDef) return;
+        if (apiDef.methods) {
+            for (const methodName in apiDef.methods) {
+                const mDef = apiDef.methods[methodName];
+                if (!mDef) continue;
 
-            if (mDef.params) {
-                Object.entries(mDef.params).forEach(([paramName, paramType]) => {
-                    mDef.params[paramName] = processPotentialAnon([paramName, methodName, apiName], paramType);
-                });
+                if (mDef.params) {
+                    for (const paramName in mDef.params) {
+                        mDef.params[paramName] = processPotentialAnon([paramName, methodName, apiName], mDef.params[paramName]);
+                    }
+                }
+                if (mDef.returns) {
+                    apiDef.methods[methodName].returns = processPotentialAnon([methodName + "Result", apiName], mDef.returns);
+                }
+                if (mDef.throws) {
+                    apiDef.methods[methodName].throws = processPotentialAnon([methodName + "Exception", apiName], mDef.throws);
+                }
             }
-            if (mDef.returns) {
-                mDef.returns = processPotentialAnon([methodName + "Result", apiName], mDef.returns);
-            }
-            if (mDef.throws) {
-                mDef.throws = processPotentialAnon([methodName + "Exception", apiName], mDef.throws);
-            }
-        });
+        }
     }
 
-    /**
-     * Discovers anonymous types within a DTO's fields and registers them.
-     * @param dtoName - The name of the DTO.
-     * @param dtoDef - The TypeDefinition for the DTO.
-     */
     private discoverAnonymousTypesInDto(dtoName: string, dtoDef: TypeDefinition | null | undefined): void {
         if (!dtoDef || !dtoDef.fields) return;
-
-        if (!this.generatorLogic || typeof this.generatorLogic.declareAnonymType !== 'function') {
-            throw new Error("Internal error: generatorLogic or declareAnonymType is not available.");
-        }
 
         const processFieldType = (parts: string[], typeDef: any): string | any => {
             if (typeof typeDef === 'object' && typeDef !== null) {
@@ -361,6 +313,11 @@ import {
         });
     }
 }
+
+    /**
+     * Iterates through all DSL data and discovers anonymous types in
+     * API definitions and DTO fields, registering them.
+     */
 
 /**
  * Public entry point for generating Aether protocol code.

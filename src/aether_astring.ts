@@ -393,10 +393,10 @@ export class AString {
 
         // add(ToString val)
         // Check for our specific ToString interface (1 arg) vs. JS default (0 args)
-        if (typeof (val as ToString).toString === 'function' && (val as ToString).toString.length === 1) {
+        if (typeof (val as ToString).toAString === 'function' && (val as ToString).toAString.length === 1) {
              if (val.constructor !== String) {
                 try {
-                    (val as ToString).toString(this);
+                    (val as ToString).toAString(this);
                     return this;
                 } catch (e) {
                     // Fallback to default renderer
@@ -917,7 +917,7 @@ export class AString {
 }
 
 export interface ToString {
-    toString(s: AString):AString;
+    toAString(s: AString):AString;
 }
 // --- Internal Wrapper Classes ---
 

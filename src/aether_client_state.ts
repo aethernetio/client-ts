@@ -141,7 +141,7 @@ export class ClientStateInMemory implements ClientState {
         } else {
             if (
                 arg1 &&
-                typeof (arg1 as UUID).toString === "function" &&
+                typeof (arg1 as UUID).toAString === "function" &&
                 arg2 instanceof Array
             ) {
                 Log.warn(
@@ -261,7 +261,7 @@ export class ClientStateInMemory implements ClientState {
 
     /** @inheritDoc */
     getClientInfo(uid: UUID): ClientState.ClientInfoMutable {
-        const key = uid.toString().toString();
+        const key = uid.toAString().toString();
         if (!this.clients.has(key)) {
             this.clients.set(key, new ClientState.ClientInfoMutable(uid));
         }
@@ -421,14 +421,14 @@ export class ClientStateInMemory implements ClientState {
             dto.rootSigners.forEach((k: Key) => {
                 let keyStringForError = "unknown DTO Key";
                 try {
-                    if (typeof k.toString === "function" &&
-                        k.toString.length === 1) {
+                    if (typeof k.toAString === "function" &&
+                        k.toAString.length === 1) {
                         const sb = AString.of();
-                        k.toString(sb);
+                        k.toAString(sb);
                         keyStringForError = sb.toString();
-                    } else if (typeof k.toString === "function") {
+                    } else if (typeof k.toAString === "function") {
                         let sb = AString.of();
-                        (k.toString as (s: AString) => void)(sb);
+                        (k.toAString as (s: AString) => void)(sb);
 
                         keyStringForError = sb.toString();
                     }

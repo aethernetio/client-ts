@@ -206,6 +206,12 @@ export class ApiGenerator {
 
         sb.push(`}`);
         sb.push(`export namespace ${apiName} {`);
+        const hasMethods = methods.size > 0;
+        const hasParents = parents.length > 0;
+
+        if (!hasMethods && !hasParents) {
+            sb.push(`    export const EMPTY: ${apiName} = {};`);
+        }
         sb.push(`    export const META: FastMetaApi<${apiName}, ${apiName}Remote> = new Impl.${metaImplName}();`);
         sb.push(`}`);
         return sb.join('\n');
@@ -479,10 +485,8 @@ export class ApiGenerator {
 
         sb.push(`    makeRemote(${sCtx}: FastFutureContext): ${apiName}Remote {`);
         sb.push(`        const remoteApiImpl = {`);
-        sb.push(`            flush: (sendFuture?: AFuture): AFuture => {`);
-        sb.push(`                const futureToUse = sendFuture || AFuture.make();`);
-        sb.push(`                ${sCtx}.flush(futureToUse);`);
-        sb.push(`                return futureToUse;`);
+        sb.push(`            flush: (sendFuture: FlushReport): void => {`);
+        sb.push(`                ${sCtx}.flush(sendFuture);`);
         sb.push(`            },`);
         sb.push(`            getFastMetaContext: () => ${sCtx},`);
 

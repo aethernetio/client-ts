@@ -303,9 +303,9 @@ export class TypeGenerator {
      */
     private generateStructureToString(sb: string[], name: string, allFields: Map<string, TypeInfo>, allConstants: Map<string, ConstantInfo>, isAbstract: boolean): void {
         if (isAbstract) {
-            sb.push(`    public abstract toString(result: AString): AString;`);
+            sb.push(`    public abstract toAString(result: AString): AString;`);
         } else {
-            sb.push(`    public toString(result: AString): AString {`);
+            sb.push(`    public toAString(result: AString): AString {`);
             sb.push(`        ${name}.META.metaToString(this, result);`);
             sb.push(`        return result;`);
             sb.push(`    }`);
@@ -657,7 +657,7 @@ export class TypeGenerator {
 
         sb.push(`    public static readonly META: FastMetaType<${name}> = new Impl.${metaImplName}();\n`);
 
-        sb.push(`    public toString(result: AString): AString {`);
+        sb.push(`    public toAString(result: AString): AString {`);
         sb.push(`        ${name}.META.metaToString(this, result);`);
         sb.push(`        return result;`);
         sb.push(`    }`);
@@ -683,29 +683,20 @@ export class TypeGenerator {
         }
 
         if (apiType && hasCrypto) {
-            sb.push(`\n    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<${apiRemoteType}>, sendFuture: AFuture): ${name} {`);
-            sb.push(`        remote.executeAll(context, sendFuture);`);
-            sb.push(`        const encryptedData = provider(context.remoteDataToArrayAsArray());`);
-            sb.push(`        return new ${name}(encryptedData);`);
-            sb.push(`    }`);
-            sb.push(`\n    public static fromRemoteConsumer(context: FastFutureContext, provider: BytesConverter, remoteConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
+            sb.push(`\n    public static remoteApi(context: FastFutureContext, provider: BytesConverter, apiConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
             sb.push(`        const api = (${apiType} as any).META.makeRemote(context);`);
-            sb.push(`        remoteConsumer(api);`);
+            sb.push(`        apiConsumer(api);`);
             sb.push(`        const encryptedData = provider(context.remoteDataToArrayAsArray());`);
             sb.push(`        return new ${name}(encryptedData);`);
             sb.push(`    }`);
-            sb.push(`\n    public static fromRemoteBytes(provider: BytesConverter, remoteData: Uint8Array): ${name} {`);
+            sb.push(`\n    public static remoteBytes(provider: BytesConverter, remoteData: Uint8Array): ${name} {`);
             sb.push(`        const encryptedData = provider(remoteData);`);
             sb.push(`        return new ${name}(encryptedData);`);
             sb.push(`    }`);
         } else if (apiType) {
-            sb.push(`\n    public static fromRemote(context: FastFutureContext, remote: RemoteApiFuture<${apiRemoteType}>, sendFuture: AFuture): ${name} {`);
-            sb.push(`        remote.executeAll(context, sendFuture);`);
-            sb.push(`        return new ${name}(context.remoteDataToArrayAsArray());`);
-            sb.push(`    }`);
-            sb.push(`\n    public static fromRemoteConsumer(context: FastFutureContext, remoteConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
+            sb.push(`\n    public static remoteApi(context: FastFutureContext, apiConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
             sb.push(`        const api = (${apiType} as any).META.makeRemote(context);`);
-            sb.push(`        remoteConsumer(api);`);
+            sb.push(`        apiConsumer(api);`);
             sb.push(`        return new ${name}(context.remoteDataToArrayAsArray());`);
             sb.push(`    }`);
         } else if (hasCrypto) {

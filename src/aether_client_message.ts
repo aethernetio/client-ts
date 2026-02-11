@@ -14,7 +14,8 @@ import {
     FastApiContext,
     FastApiContextLocal,
     FastFutureContext,
-    FastMetaApi
+    FastMetaApi,
+    FlushReport,
 } from './aether_fastmeta';
 import { DataInOutStatic } from './aether_datainout';
 // -----------------------
@@ -36,7 +37,7 @@ export interface MessageEventListener {
 export const MessageEventListenerDefault: MessageEventListener = {
     setConsumerCloud: (messageNode: MessageNode, cloud: Cloud) => {
         // ... (логика без изменений) ...
-        Log.debug("Strategy: setConsumerCloud called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString() });
+        Log.debug("Strategy: setConsumerCloud called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toAString() });
         if (cloud?.data?.length > 0) {
             Log.debug("Strategy: Cloud has servers. Requesting server descriptor...", { component: "MsgEvListenerDefault", serverId: cloud.data[0] });
             messageNode.addConsumerServerOutById(cloud.data[0]);
@@ -50,12 +51,12 @@ export const MessageEventListenerDefault: MessageEventListener = {
     },
     onResolveConsumerServer: (messageNode: MessageNode, serverDescriptor: ServerDescriptor) => {
         // ... (логика без изменений) ...
-        Log.debug("Strategy: onResolveConsumerServer called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString(), serverId: serverDescriptor.id });
+        Log.debug("Strategy: onResolveConsumerServer called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toAString(), serverId: serverDescriptor.id });
         messageNode.addConsumerServerOutByDescriptor(serverDescriptor);
     },
     onResolveConsumerConnection: (messageNode: MessageNode, connection: ConnectionWork) => {
         // ... (логика без изменений) ...
-        Log.debug("Strategy: onResolveConsumerConnection called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toString(), uri: connection.uri });
+        Log.debug("Strategy: onResolveConsumerConnection called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toAString(), uri: connection.uri });
         messageNode.addConsumerConnectionOut(connection);
     },
 };
@@ -77,8 +78,8 @@ export class MessageNode {
         // ... (логика конструктора без изменений) ...
         Log.trace("Creating MessageNode", {
             component: "MessageNode",
-            uidFrom: client.getUid()?.toString() ?? "N/A",
-            uidTo: consumerId.toString()
+            uidFrom: client.getUid()?.toAString() ?? "N/A",
+            uidTo: consumerId.toAString()
         });
         this.client = client;
         this.consumerUUID = consumerId;
@@ -87,11 +88,11 @@ export class MessageNode {
         this.client.getCloud(consumerId).to(
             (c: Cloud | null) => {
                 if (c) {
-                    Log.debug("Cloud resolution SUCCESS", { component: "MessageNode", uidTo: this.consumerUUID.toString(), cloudData: c.data });
+                    Log.debug("Cloud resolution SUCCESS", { component: "MessageNode", uidTo: this.consumerUUID.toAString(), cloudData: c.data });
                     try { this.strategy.setConsumerCloud(this, c); }
                     catch (e) { Log.error("Error in strategy.setConsumerCloud", e as Error); }
                 } else {
-                    Log.warn("Cloud resolution FAILED (result was null)", { component: "MessageNode", uidTo: this.consumerUUID.toString() });
+                    Log.warn("Cloud resolution FAILED (result was null)", { component: "MessageNode", uidTo: this.consumerUUID.toAString() });
                     let msg;
                     while ((msg = this.bufferOut.poll())) {
                         msg.future.error(new Error(`Could not resolve cloud for consumer ${this.consumerUUID}`));
@@ -99,7 +100,7 @@ export class MessageNode {
                 }
             }).onError(
                 (err: Error) => {
-                    Log.error("Cloud resolution FAILED (exception thrown)", err, { component: "MessageNode", uidTo: this.consumerUUID.toString() });
+                    Log.error("Cloud resolution FAILED (exception thrown)", err, { component: "MessageNode", uidTo: this.consumerUUID.toAString() });
                     let msg;
                     while ((msg = this.bufferOut.poll())) {
                         msg.future.error(new Error(`Failed to get cloud for consumer ${this.consumerUUID}: ${err.message}`));
@@ -128,7 +129,7 @@ export class MessageNode {
         if (this.bufferOut.size() >= 50) {
             const oldest = this.bufferOut.poll();
             if (oldest) {
-                Log.warn("MessageNode: Buffer pressure, dropping oldest message", { uidTo: this.consumerUUID.toString() });
+                Log.warn("MessageNode: Buffer pressure, dropping oldest message", { uidTo: this.consumerUUID.toAString() });
                 oldest.future.error(new Error("Outgoing message queue overflow"));
             }
         }
@@ -170,17 +171,17 @@ export class MessageNode {
         }
     }
     public addConsumerConnectionOut(conn: ConnectionWork): void {
-            Log.debug("Attempting to add connection to connectionsOut", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri, currentSize: this.connectionsOut.size });
+            Log.debug("Attempting to add connection to connectionsOut", { component: "MessageNode", uidTo: this.consumerUUID.toAString(), server: conn.uri, currentSize: this.connectionsOut.size });
             if (this.connectionsOut.has(conn)) {
-                Log.trace("Connection already added, skipping.", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri });
+                Log.trace("Connection already added, skipping.", { component: "MessageNode", uidTo: this.consumerUUID.toAString(), server: conn.uri });
                 return;
             }
             this.connectionsOut.add(conn);
-            Log.info("SUCCESS: Added new outgoing connection", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri, newSize: this.connectionsOut.size });
+            Log.info("SUCCESS: Added new outgoing connection", { component: "MessageNode", uidTo: this.consumerUUID.toAString(), server: conn.uri, newSize: this.connectionsOut.size });
     }
     public removeConsumerConnectionOut(conn: ConnectionWork): void {
         if (this.connectionsOut.delete(conn)) {
-            Log.warn("Removing outgoing connection", { component: "MessageNode", uidTo: this.consumerUUID.toString(), server: conn.uri, newSize: this.connectionsOut.size });
+            Log.warn("Removing outgoing connection", { component: "MessageNode", uidTo: this.consumerUUID.toAString(), server: conn.uri, newSize: this.connectionsOut.size });
             if (this.connectionsOut.size === 0 && this.bufferOut.size() > 0) {
                 Log.warn("Last connection removed, triggering cloud resolution again for buffered messages.", { component: "MessageNode" });
                 this.client.getCloud(this.consumerUUID).to((c: Cloud | null) => { if (c) this.strategy.setConsumerCloud(this, c); });
@@ -188,7 +189,7 @@ export class MessageNode {
         }
     }
     public sendMessageFromServerToClient(data: Uint8Array): void {
-        Log.trace("Received message from server", { component: "MessageNode", uidTo: this.consumerUUID.toString() });
+        Log.trace("Received message from server", { component: "MessageNode", uidTo: this.consumerUUID.toAString() });
         this.bufferIn.fire({ data });
     }
     public toConsumer(o: AConsumer<Uint8Array>): void {
@@ -198,6 +199,51 @@ export class MessageNode {
 
 
     // --- [НОВЫЕ МЕТОДЫ] Портировано из MessageNode.java ---
+
+    /**
+     * @description Привязывает входящие данные (bufferIn) к локальной реализации API.
+     */
+    public toApiWithCtx<LT>(
+        ctx: FastFutureContext,
+        metaLt: FastMetaApi<LT, any>,
+        localApi: LT
+    ): void {
+        this.bufferIn.add((msg: { data: Uint8Array }) => {
+            (ctx as any).localDataIn?.(metaLt, localApi, msg.data);
+        });
+    }
+
+    /**
+     * @description Создает FastApiContext, который flushes данные через этот MessageNode.
+     */
+    public toApiWithFactory<LT>(
+        metaLt: FastMetaApi<LT, any>,
+        localApiFactory: AFunction<FastApiContextLocal<LT>, LT>
+    ): FastApiContextLocal<LT> {
+        const node = this;
+        const ctx = new class extends FastApiContextLocal<LT> {
+            constructor() {
+                super(localApiFactory);
+            }
+            public override flush(report: FlushReport): void {
+                const data = this.remoteDataToArrayAsArray();
+                if (data.length === 0) {
+                    report.done();
+                    return;
+                }
+                node.send(data).to(() => {
+                    report.done();
+                }).onError((err: Error) => {
+                    Log.error("MessageNode toApi flush error", err);
+                    report.abort();
+                });
+                node.client.flush();
+            }
+        }();
+        this.toApiWithCtx(ctx, metaLt, ctx.localApi);
+        return ctx;
+    }
+
 
     /**
      * @description Создает FastApiContext, который "промывает" (flushes) данные через этот MessageNode,
@@ -214,20 +260,18 @@ export class MessageNode {
             constructor() {
                 super(localApiFactory); // Передаем фабрику
             }
-            override flush(sendFuture?: AFuture): AFuture {
-                if(!sendFuture)sendFuture=AFuture.make();
+            override flush(sendFuture?: FlushReport): void {
                 const d = this.remoteDataToArrayAsArray();
                 if (d.length > 0) {
                     nodeSend(d).to(sendFuture); // Используем send(data)
                 } else {
-                    sendFuture.tryDone();
+                    sendFuture.done();
                 }
-                return sendFuture;
             }
         })();
 
         // ctx.localApi теперь засетапен
-        this.toApi(ctx, metaLt, ctx.localApi);
+        this.toApiWithCtx(ctx, metaLt, ctx.localApi);
         return ctx;
     }
 
@@ -235,76 +279,4 @@ export class MessageNode {
      * @description Привязывает входящие данные (bufferIn) к локальной реализации API.
      * (Портировано из MessageNode.java)
      */
-    public toApi<LT>(
-        ctx: FastFutureContext,
-        metaLt: FastMetaApi<LT, any>,
-        localApi: LT
-    ): void;
-    /**
-     * @description Создает FastApiContext, который "промывает" (flushes) данные через этот MessageNode,
-     * и привязывает входящие данные к локальной реализации API.
-     * (Портировано из MessageNode.java)
-     */
-    public toApi<LT>(
-        metaLt: FastMetaApi<LT, any>,
-        localApi: LT
-    ): FastApiContextLocal<LT>;
-
-    // Реализация
-    public toApi<LT>(
-        arg1: FastFutureContext | FastMetaApi<LT, any>,
-        arg2: FastMetaApi<LT, any> | LT,
-        arg3?: LT
-    ): void | FastApiContextLocal<LT> {
-
-        // --- Случай 1: toApi(ctx, meta, localApi) ---
-        // (Используется в SmartHomeService.java)
-        if (arg1 instanceof FastApiContext) {
-            const ctx = arg1 as FastFutureContext;
-            const metaLt = arg2 as FastMetaApi<LT, any>;
-            const localApi = arg3 as LT;
-
-            this.toConsumer((v: Uint8Array) => {
-                if (v.length === 0) return;
-                try {
-                    metaLt.makeLocal_fromDataIn(ctx, new DataInOutStatic(v), localApi);
-                } catch (e) {
-                    Log.error("Error in toApi.makeLocal", e as Error, { component: "MessageNode" });
-                }
-            });
-            return;
-        }
-
-        // --- Случай 2: toApi(meta, localApi) ---
-        // (Будет использоваться в SmartHomeController.ts)
-        if (arg3 === undefined) {
-            const metaLt = arg1 as FastMetaApi<LT, any>;
-            const localApi = arg2 as LT;
-            const nodeSend = this.send.bind(this); // bind 'this'
-
-            const ctx = new (class extends FastApiContextLocal<LT> {
-                constructor() {
-                    super(localApi);
-                }
-
-                override flush(sendFuture?: AFuture): AFuture {
-                    if (!sendFuture) sendFuture = AFuture.make();
-                    const d = this.remoteDataToArrayAsArray();
-                    if (d.length > 0) {
-                        nodeSend(d).to(sendFuture); // Используем send(data)
-                    } else {
-                        sendFuture.tryDone();
-                    }
-                    return sendFuture;
-                }
-            })();
-
-            // Вызываем Случай 1, чтобы привязать consumer
-            this.toApi(ctx, metaLt, localApi);
-            return ctx;
-        }
-
-        // Недостижимо
-        throw new Error("Invalid toApi overload");
-    }
 }

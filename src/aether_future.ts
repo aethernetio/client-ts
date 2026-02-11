@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @file aether_future.ts
  * @purpose Contains all Future (AFuture, ARFuture, AMFuture) implementations and EventConsumer.
@@ -406,7 +407,9 @@ class AMFutureBase<T> {
 
     public isDone(): boolean { return this.value !== null && this.value !== undefined; }
 }
+class CancelException extends Error{
 
+}
 /**
  * Factory function to create a new AMFuture instance.
  * @param initialValue An optional initial value.
@@ -489,10 +492,15 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
 
     /**
      * Checks if the future was canceled.
-     * @returns True if the status is CANCELED.
-     */
-    public isCanceled(): boolean { return this.status === FutureStatus.CANCELED; }
 
+    public cancel(): void {
+        this.tryError(new Error("CancellationException"));
+    }
+
+    public isCanceled(): boolean {
+        const err = this.getError();
+        return err !== null && err.message === "CancellationException";
+    }
     /**
      * Checks if the future is *not* successfully completed.
      * @returns True if PENDING, ERROR, or CANCELED.
@@ -535,7 +543,6 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
     /**
      * Cancels the future.
      */
-    public cancel(): void { this.resolve(FutureStatus.CANCELED); }
 
     /**
      * Resolves the future with a new status and notifies listeners.
@@ -550,7 +557,7 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
         this.listeners = []; /** Clear listeners *before* firing */
         currentListeners.forEach(l => {
             try { Log.wrap(l)(this as unknown as Self); }
-            catch (e) { console.error("Error executing future listener:", e); }
+            catch (e) { Log.error("Error executing future listener:", e); }
         });
         return true;
     }
@@ -564,23 +571,16 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
     public addListener(l: AConsumer<Self>): boolean {
         if (this.isFinalStatus()) {
             try { l(this as unknown as Self); }
-            catch (e) { console.error("Error executing immediate future listener:", e); }
+            catch (e) { Log.error("Error executing immediate future listener:", e); }
             return false;
         }
         this.listeners.push(l);
         return true;
     }
 
-    /**
-     * Adds a listener to be called only if the future is canceled.
-     * @param l The runnable to execute on cancellation.
-     * @returns This future instance.
-     */
-    public onCancel(l: ARunnable): Self {
-        this.addListener(f => { if (f.isCanceled()) l(); });
-        return this as unknown as Self;
+    public cancel() {
+        this.error(new CancelException());
     }
-
     /**
      * Adds a listener to be called only if the future errors.
      * @param l The consumer to accept the error.
@@ -630,6 +630,9 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
         return this as unknown as Self;
     }
 
+    public timeout(seconds: number, task: ARunnable): Self {
+        return this.timeoutMs(seconds * 1000, task);
+    }
     /**
      * Sets a timeout to execute a task and cancel the future.
      * @param ms The timeout duration in milliseconds.
@@ -674,7 +677,6 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
                 cleanUp();
                 if (this.isDone()) resolve(undefined); /** AFuture resolves with undefined */
                 else if (this.isError()) reject(this.getError() ?? new Error("Future failed"));
-                else if (this.isCanceled()) reject(new Error("Future was canceled"));
                 return;
             }
 
@@ -684,7 +686,6 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
                 cleanUp();
                 if (f.isDone()) resolve(undefined);
                 else if (f.isError()) reject(f.getError() ?? new Error("Future failed"));
-                else if (f.isCanceled()) reject(new Error("Future was canceled"));
             });
         });
     }
@@ -747,7 +748,7 @@ export class AFuture extends AFutureBaseImpl<AFuture> {
             () => { try { res.tryDone(t()); } catch (e) { res.error(e as Error); } }
         ).onError(
             (err: Error) => res.error(err)
-        ).onCancel(() => res.cancel());
+        );
         return res;
     }
 
@@ -779,9 +780,7 @@ export class AFuture extends AFutureBaseImpl<AFuture> {
             this.addListener(self => {
                 if (self.isDone()) f.tryDone();
                 else if (self.isError()) f.error(self.getError()!);
-                else if (self.isCanceled()) f.cancel();
             });
-            this.onCancel(() => f.cancel()); /** Propagate cancellation */
             return this;
         }
 
@@ -868,9 +867,10 @@ export class AFuture extends AFutureBaseImpl<AFuture> {
      */
     public static canceled(): AFuture {
         const f = new AFuture();
-        f.cancel();
+        f.error(new CancelException());
         return f;
     }
+
 
     /**
      * Returns an AFuture that completes when all provided futures complete.
@@ -882,7 +882,6 @@ export class AFuture extends AFutureBaseImpl<AFuture> {
         const result = new AFuture();
         let count = futures.length;
         let firstError: Error | null = null;
-        let canceled = false;
         if (count === 0) {
             result.tryDone();
             return result;
@@ -891,19 +890,15 @@ export class AFuture extends AFutureBaseImpl<AFuture> {
         const checkDone = (self: AFutureBaseImpl<any>) => {
             if (result.isFinalStatus()) return; /** Result already determined */
             if (self.isError()) firstError = firstError ?? self.getError();
-            if (self.isCanceled()) canceled = true;
 
             count--;
             if (count === 0) { /** All futures are finalized */
-                if (canceled) result.cancel();
-                else if (firstError) result.error(firstError);
+                if (firstError) result.error(firstError);
                 else result.tryDone();
             }
         };
 
         futures.forEach(f => f.addListener(checkDone));
-        /** Propagate cancellation */
-        result.onCancel(() => futures.forEach(f => f.cancel()));
         return result;
     }
 
@@ -913,10 +908,10 @@ export class AFuture extends AFutureBaseImpl<AFuture> {
      * @param futures The futures to wait for.
      * @returns A new AFuture.
      */
-    public static any(...futures: AFutureBaseImpl<any>[]): AFuture {
+    public static any(...futures: AFuture[]): AFuture {
         const result = AFuture.make();
         if (futures.length === 0) {
-            result.cancel(); /** No futures, so it can't complete */
+            result.cancel();
             return result;
         }
         let errorCount = 0;
@@ -925,7 +920,6 @@ export class AFuture extends AFutureBaseImpl<AFuture> {
         const onComplete = () => {
             if (!result.isFinalStatus()) {
                 result.tryDone();
-                /** Cancel all others */
                 futures.forEach(f => f.cancel());
             }
         };
@@ -933,22 +927,12 @@ export class AFuture extends AFutureBaseImpl<AFuture> {
             if (!result.isFinalStatus()) {
                 errorCount++;
                 if (errorCount + cancelCount === futures.length) {
-                    /** All futures have failed or been canceled */
-                    result.error(err); /** Complete with the last error */
-                }
-            }
-        };
-        const onCancel = () => {
-            if (!result.isFinalStatus()) {
-                cancelCount++;
-                if (errorCount + cancelCount === futures.length) {
-                    /** All futures have failed or been canceled */
-                    result.cancel();
+                    result.error(err);
                 }
             }
         };
 
-        futures.forEach(f => f.to(onComplete).onError(onError).onCancel(onCancel));
+        futures.forEach(f => f.to(onComplete).onError(onError));
         return result;
     }
 }
@@ -1001,7 +985,6 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
     public get(_timeout?: number): T {
         if (this.isDone() && this.value !== null) return this.value;
         if (this.isError()) throw this.errorValue ?? new Error("Future failed");
-        if (this.isCanceled()) throw new Error("Future was canceled");
         /** This differs from Java, which would block. */
         throw new Error("ARFuture.get() called on a pending future in JavaScript.");
     }
@@ -1055,8 +1038,7 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
                     res.error(new Error("Internal error in ARFuture.and"));
                 }
             }
-        ).onError((err: Error) => res.error(err)) /** Propagate error from all() */
-            .onCancel(() => res.cancel());       /** Propagate cancel from all() */
+        ).onError((err: Error) => res.error(err)); /** Propagate error from all() */
         return res;
     }
 
@@ -1074,7 +1056,7 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
                 catch (e) { res.error(e as Error); }
             },
             (error: Error) => res.error(error)
-        ).onCancel(() => res.cancel());
+        );
         return res;
     }
 
@@ -1095,7 +1077,7 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
                 catch (e) { res.error(e as Error); }
             },
             (error: Error) => res.error(error)
-        ).onCancel(() => res.cancel());
+        );
         return res;
     }
 
@@ -1141,8 +1123,6 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
                 }
             } else if (self.isError()) {
                 res.error(self.getError()!);
-            } else if (self.isCanceled()) {
-                res.cancel();
             }
         });
         return res;
@@ -1243,11 +1223,8 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
                     }
                 } else if (self.isError()) {
                     f.error(self.getError()!);
-                } else if (self.isCanceled()) {
-                    f.cancel();
                 }
             });
-            this.onCancel(() => f.cancel()); /** Propagate cancellation */
             return this;
         }
         /** 5. to(t: ARunnable) or to(executor: Executor, t: ARunnable) */
@@ -1298,7 +1275,6 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
                 cleanUp();
                 if (this.isDone()) resolve(this.getNow()!);
                 else if (this.isError()) reject(this.getError() ?? new Error("Future failed"));
-                else if (this.isCanceled()) reject(new Error("Future canceled"));
                 return;
             }
 
@@ -1308,7 +1284,6 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
                 cleanUp();
                 if (f.isDone()) resolve(f.getNow()!);
                 else if (f.isError()) reject(f.getError() ?? new Error("Future failed"));
-                else if (f.isCanceled()) reject(new Error("Future canceled"));
             });
         });
     }
@@ -1330,11 +1305,12 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
     /**
      * Returns a statically canceled ARFuture.
      * @returns A new, canceled ARFuture.
-     */
     public static canceled<T>(): ARFuture<T> {
         const f = new ARFuture<T>();
-        f.cancel();
+        f.tryError(new Error("CancellationException"));
         return f;
+    }
+
     }
 
     /**
@@ -1371,8 +1347,7 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
                 });
                 result.tryDone(results as T[]);
             }
-        ).onError((err: Error) => result.error(err)) /** Propagate error */
-            .onCancel(() => result.cancel());       /** Propagate cancel */
+        ).onError((err: Error) => result.error(err)); /** Propagate error */
         return result;
     }
 }
@@ -1417,5 +1392,22 @@ export class ARFutureWithFlag<T> extends ARFuture<T> {
             this.requested = false;
         }
         return success;
+    }
+}
+
+export interface Future<V> {
+    onResolved(value: V): void;
+    onError(time: number, error: Error): void;
+}
+
+export namespace Future {
+    /**
+     * Адаптер из ARFuture в Future
+     */
+    export function of<V>(arFuture: ARFuture<V>): Future<V> {
+        return {
+            onResolved: (value: V) => arFuture.done(value),
+            onError: (time: number, error: Error) => arFuture.tryError(error)
+        };
     }
 }

@@ -1,5 +1,5 @@
 import  {
-    AFuture, ARFuture, DataIn, DataOut, DataInOut, DataInOutStatic, FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, RemoteApiFuture, UUID, URI, AConsumer, ToString, AString
+    AFuture, ARFuture, DataIn, DataOut, DataInOut, DataInOutStatic, FastMetaType, FastFutureContext, RemoteApi, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, UUID, URI, AConsumer, ToString, AString, FlushReport
 }
 from './aether_client';
 import * as Impl from './aether_api_impl';
@@ -99,7 +99,7 @@ export abstract class AetherTypeDescriptor implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -147,7 +147,7 @@ export abstract class IPAddress implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -195,7 +195,7 @@ export abstract class Key implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -247,7 +247,7 @@ export abstract class KeyAsymmetric extends Key implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -299,7 +299,7 @@ export abstract class KeyAsymmetricPrivate extends KeyAsymmetric implements ToSt
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -351,7 +351,7 @@ export abstract class KeyAsymmetricPublic extends KeyAsymmetric implements ToStr
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -403,7 +403,7 @@ export abstract class KeySign extends Key implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -455,7 +455,7 @@ export abstract class KeySignPrivate extends KeySign implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -507,7 +507,7 @@ export abstract class KeySignPublic extends KeySign implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -559,7 +559,7 @@ export abstract class KeySymmetric extends Key implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -607,7 +607,7 @@ export abstract class PairKeys implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -655,7 +655,7 @@ export abstract class Sign implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -703,7 +703,7 @@ export abstract class Telemetry implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -751,7 +751,7 @@ export abstract class WorkProofConfig implements ToString  {
      * @returns {boolean} True if the objects are equal, false otherwise.
      */
     public abstract equals(other: any): boolean;
-    public abstract toString(result: AString): AString;
+    public abstract toAString(result: AString): AString;
     
 }
 /**
@@ -816,7 +816,7 @@ export class AccessCheckPair implements ToString  {
         return AccessCheckPair.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AccessCheckPair.META.metaToString(this, result);
         return result;
         
@@ -892,7 +892,7 @@ export class AccessCheckResult implements ToString  {
         return AccessCheckResult.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AccessCheckResult.META.metaToString(this, result);
         return result;
         
@@ -973,7 +973,7 @@ export class AccessGroup implements ToString  {
         return AccessGroup.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AccessGroup.META.metaToString(this, result);
         return result;
         
@@ -1061,7 +1061,7 @@ export class AetherApiDefinition implements ToString  {
         return AetherApiDefinition.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AetherApiDefinition.META.metaToString(this, result);
         return result;
         
@@ -1137,7 +1137,7 @@ export class AetherArgumentDescriptor implements ToString  {
         return AetherArgumentDescriptor.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AetherArgumentDescriptor.META.metaToString(this, result);
         return result;
         
@@ -1212,7 +1212,7 @@ export class AetherArrayType extends AetherTypeDescriptor implements ToString  {
         return AetherArrayType.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AetherArrayType.META.metaToString(this, result);
         return result;
         
@@ -1287,7 +1287,7 @@ export class AetherBaseType extends AetherTypeDescriptor implements ToString  {
         return AetherBaseType.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AetherBaseType.META.metaToString(this, result);
         return result;
         
@@ -1363,7 +1363,7 @@ export class AetherFieldDescriptor implements ToString  {
         return AetherFieldDescriptor.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AetherFieldDescriptor.META.metaToString(this, result);
         return result;
         
@@ -1451,7 +1451,7 @@ export class AetherMethodDescriptor implements ToString  {
         return AetherMethodDescriptor.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AetherMethodDescriptor.META.metaToString(this, result);
         return result;
         
@@ -1554,7 +1554,7 @@ export class AetherModuleDescriptor implements ToString  {
         return AetherModuleDescriptor.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AetherModuleDescriptor.META.metaToString(this, result);
         return result;
         
@@ -1629,7 +1629,7 @@ export class AetherNullableType extends AetherTypeDescriptor implements ToString
         return AetherNullableType.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AetherNullableType.META.metaToString(this, result);
         return result;
         
@@ -1711,7 +1711,7 @@ export class AetherStreamType extends AetherTypeDescriptor implements ToString  
         return AetherStreamType.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AetherStreamType.META.metaToString(this, result);
         return result;
         
@@ -1799,7 +1799,7 @@ export class AetherStructDescriptor implements ToString  {
         return AetherStructDescriptor.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         AetherStructDescriptor.META.metaToString(this, result);
         return result;
         
@@ -1890,7 +1890,7 @@ export class ClientActivity implements ToString  {
         return ClientActivity.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         ClientActivity.META.metaToString(this, result);
         return result;
         
@@ -1985,7 +1985,7 @@ export class ClientConnectionInfo implements ToString  {
         return ClientConnectionInfo.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         ClientConnectionInfo.META.metaToString(this, result);
         return result;
         
@@ -2067,7 +2067,7 @@ export class ClientInfo implements ToString  {
         return ClientInfo.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         ClientInfo.META.metaToString(this, result);
         return result;
         
@@ -2155,7 +2155,7 @@ export class ClientLogEntry implements ToString  {
         return ClientLogEntry.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         ClientLogEntry.META.metaToString(this, result);
         return result;
         
@@ -2316,7 +2316,7 @@ export class ClientStateForSave implements ToString  {
         return ClientStateForSave.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         ClientStateForSave.META.metaToString(this, result);
         return result;
         
@@ -2383,7 +2383,7 @@ export class Cloud implements ToString  {
         return Cloud.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         Cloud.META.metaToString(this, result);
         return result;
         
@@ -2452,7 +2452,7 @@ export class CloudWeight implements ToString  {
         return CloudWeight.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         CloudWeight.META.metaToString(this, result);
         return result;
         
@@ -2522,7 +2522,7 @@ export class CoderAndPort implements ToString  {
         return CoderAndPort.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         CoderAndPort.META.metaToString(this, result);
         return result;
         
@@ -2599,7 +2599,7 @@ export class FinishResult implements ToString  {
         return FinishResult.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         FinishResult.META.metaToString(this, result);
         return result;
         
@@ -2677,7 +2677,7 @@ export class HydrogenCurvePrivate extends KeyAsymmetricPrivate implements ToStri
         return HydrogenCurvePrivate.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         HydrogenCurvePrivate.META.metaToString(this, result);
         return result;
         
@@ -2755,7 +2755,7 @@ export class HydrogenCurvePublic extends KeyAsymmetricPublic implements ToString
         return HydrogenCurvePublic.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         HydrogenCurvePublic.META.metaToString(this, result);
         return result;
         
@@ -2833,7 +2833,7 @@ export class HydrogenSecretBox extends KeySymmetric implements ToString  {
         return HydrogenSecretBox.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         HydrogenSecretBox.META.metaToString(this, result);
         return result;
         
@@ -2911,7 +2911,7 @@ export class HydrogenSignPrivate extends KeySignPrivate implements ToString  {
         return HydrogenSignPrivate.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         HydrogenSignPrivate.META.metaToString(this, result);
         return result;
         
@@ -2989,7 +2989,7 @@ export class HydrogenSignPublic extends KeySignPublic implements ToString  {
         return HydrogenSignPublic.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         HydrogenSignPublic.META.metaToString(this, result);
         return result;
         
@@ -3064,7 +3064,7 @@ export class IPAddressAndPorts implements ToString  {
         return IPAddressAndPorts.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         IPAddressAndPorts.META.metaToString(this, result);
         return result;
         
@@ -3131,7 +3131,7 @@ export class IPAddressAndPortsList implements ToString  {
         return IPAddressAndPortsList.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         IPAddressAndPortsList.META.metaToString(this, result);
         return result;
         
@@ -3209,7 +3209,7 @@ export class IPAddressV4 extends IPAddress implements ToString  {
         return IPAddressV4.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         IPAddressV4.META.metaToString(this, result);
         return result;
         
@@ -3287,7 +3287,7 @@ export class IPAddressV6 extends IPAddress implements ToString  {
         return IPAddressV6.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         IPAddressV6.META.metaToString(this, result);
         return result;
         
@@ -3361,7 +3361,7 @@ export class IPAddressWeb extends IPAddress implements ToString  {
         return IPAddressWeb.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         IPAddressWeb.META.metaToString(this, result);
         return result;
         
@@ -3430,7 +3430,7 @@ export class KeyValuePair implements ToString  {
         return KeyValuePair.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         KeyValuePair.META.metaToString(this, result);
         return result;
         
@@ -3504,7 +3504,7 @@ export class Message implements ToString  {
         return Message.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         Message.META.metaToString(this, result);
         return result;
         
@@ -3594,7 +3594,7 @@ export class MessageInfo implements ToString  {
         return MessageInfo.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         MessageInfo.META.metaToString(this, result);
         return result;
         
@@ -3699,7 +3699,7 @@ export class MoneyOperation implements ToString  {
         return MoneyOperation.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         MoneyOperation.META.metaToString(this, result);
         return result;
         
@@ -3777,7 +3777,7 @@ export class PairKeysAsym extends PairKeys implements ToString  {
         return PairKeysAsym.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         PairKeysAsym.META.metaToString(this, result);
         return result;
         
@@ -3855,7 +3855,7 @@ export class PairKeysAsymSigned extends PairKeys implements ToString  {
         return PairKeysAsymSigned.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         PairKeysAsymSigned.META.metaToString(this, result);
         return result;
         
@@ -3933,7 +3933,7 @@ export class PairKeysSign extends PairKeys implements ToString  {
         return PairKeysSign.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         PairKeysSign.META.metaToString(this, result);
         return result;
         
@@ -4003,7 +4003,7 @@ export class ServerDescriptor implements ToString  {
         return ServerDescriptor.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         ServerDescriptor.META.metaToString(this, result);
         return result;
         
@@ -4087,7 +4087,7 @@ export class ServerDescriptorWithGeo implements ToString  {
         return ServerDescriptorWithGeo.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         ServerDescriptorWithGeo.META.metaToString(this, result);
         return result;
         
@@ -4165,7 +4165,7 @@ export class SignAE_ED25519 extends Sign implements ToString  {
         return SignAE_ED25519.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         SignAE_ED25519.META.metaToString(this, result);
         return result;
         
@@ -4236,7 +4236,7 @@ export class SignedKey implements ToString  {
         return SignedKey.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         SignedKey.META.metaToString(this, result);
         return result;
         
@@ -4314,7 +4314,7 @@ export class SignHYDROGEN extends Sign implements ToString  {
         return SignHYDROGEN.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         SignHYDROGEN.META.metaToString(this, result);
         return result;
         
@@ -4392,7 +4392,7 @@ export class SodiumChacha20Poly1305 extends KeySymmetric implements ToString  {
         return SodiumChacha20Poly1305.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         SodiumChacha20Poly1305.META.metaToString(this, result);
         return result;
         
@@ -4470,7 +4470,7 @@ export class SodiumCurvePrivate extends KeyAsymmetricPrivate implements ToString
         return SodiumCurvePrivate.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         SodiumCurvePrivate.META.metaToString(this, result);
         return result;
         
@@ -4548,7 +4548,7 @@ export class SodiumCurvePublic extends KeyAsymmetricPublic implements ToString  
         return SodiumCurvePublic.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         SodiumCurvePublic.META.metaToString(this, result);
         return result;
         
@@ -4626,7 +4626,7 @@ export class SodiumSignPrivate extends KeySignPrivate implements ToString  {
         return SodiumSignPrivate.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         SodiumSignPrivate.META.metaToString(this, result);
         return result;
         
@@ -4704,7 +4704,7 @@ export class SodiumSignPublic extends KeySignPublic implements ToString  {
         return SodiumSignPublic.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         SodiumSignPublic.META.metaToString(this, result);
         return result;
         
@@ -4806,7 +4806,7 @@ export class TelemetryCPP extends Telemetry implements ToString  {
         return TelemetryCPP.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         TelemetryCPP.META.metaToString(this, result);
         return result;
         
@@ -4876,7 +4876,7 @@ export class UUIDAndCloud implements ToString  {
         return UUIDAndCloud.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         UUIDAndCloud.META.metaToString(this, result);
         return result;
         
@@ -4959,7 +4959,7 @@ export class WorkProofBCrypt extends WorkProofConfig implements ToString  {
         return WorkProofBCrypt.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         WorkProofBCrypt.META.metaToString(this, result);
         return result;
         
@@ -5050,7 +5050,7 @@ export class WorkProofDTO implements ToString  {
         return WorkProofDTO.staticEquals(this, other);
         
     }
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         WorkProofDTO.META.metaToString(this, result);
         return result;
         
@@ -5068,7 +5068,7 @@ export class ClientApiRegSafeStream implements ToString  {
         
     }
     public static readonly META: FastMetaType<ClientApiRegSafeStream> = new Impl.ClientApiRegSafeStreamMetaImpl();
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         ClientApiRegSafeStream.META.metaToString(this, result);
         return result;
         
@@ -5080,20 +5080,14 @@ export class ClientApiRegSafeStream implements ToString  {
         (ClientApiRegSafe as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);
         
     }
-    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<ClientApiRegSafeRemote>, sendFuture: AFuture): ClientApiRegSafeStream  {
-        remote.executeAll(context, sendFuture);
-        const encryptedData = provider(context.remoteDataToArrayAsArray());
-        return new ClientApiRegSafeStream(encryptedData);
-        
-    }
-    public static fromRemoteConsumer(context: FastFutureContext, provider: BytesConverter, remoteConsumer: AConsumer<ClientApiRegSafeRemote>): ClientApiRegSafeStream  {
+    public static remoteApi(context: FastFutureContext, provider: BytesConverter, apiConsumer: AConsumer<ClientApiRegSafeRemote>): ClientApiRegSafeStream  {
         const api = (ClientApiRegSafe as any).META.makeRemote(context);
-        remoteConsumer(api);
+        apiConsumer(api);
         const encryptedData = provider(context.remoteDataToArrayAsArray());
         return new ClientApiRegSafeStream(encryptedData);
         
     }
-    public static fromRemoteBytes(provider: BytesConverter, remoteData: Uint8Array): ClientApiRegSafeStream  {
+    public static remoteBytes(provider: BytesConverter, remoteData: Uint8Array): ClientApiRegSafeStream  {
         const encryptedData = provider(remoteData);
         return new ClientApiRegSafeStream(encryptedData);
         
@@ -5111,7 +5105,7 @@ export class ClientApiStream implements ToString  {
         
     }
     public static readonly META: FastMetaType<ClientApiStream> = new Impl.ClientApiStreamMetaImpl();
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         ClientApiStream.META.metaToString(this, result);
         return result;
         
@@ -5122,14 +5116,9 @@ export class ClientApiStream implements ToString  {
         (ServerApiByUid as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);
         
     }
-    public static fromRemote(context: FastFutureContext, remote: RemoteApiFuture<ServerApiByUidRemote>, sendFuture: AFuture): ClientApiStream  {
-        remote.executeAll(context, sendFuture);
-        return new ClientApiStream(context.remoteDataToArrayAsArray());
-        
-    }
-    public static fromRemoteConsumer(context: FastFutureContext, remoteConsumer: AConsumer<ServerApiByUidRemote>): ClientApiStream  {
+    public static remoteApi(context: FastFutureContext, apiConsumer: AConsumer<ServerApiByUidRemote>): ClientApiStream  {
         const api = (ServerApiByUid as any).META.makeRemote(context);
-        remoteConsumer(api);
+        apiConsumer(api);
         return new ClientApiStream(context.remoteDataToArrayAsArray());
         
     }
@@ -5146,7 +5135,7 @@ export class ClientInteractionClientStream implements ToString  {
         
     }
     public static readonly META: FastMetaType<ClientInteractionClientStream> = new Impl.ClientInteractionClientStreamMetaImpl();
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         ClientInteractionClientStream.META.metaToString(this, result);
         return result;
         
@@ -5157,32 +5146,27 @@ export class ClientInteractionClientStream implements ToString  {
         (ServerApiByUidClient as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);
         
     }
-    public static fromRemote(context: FastFutureContext, remote: RemoteApiFuture<ServerApiByUidClientRemote>, sendFuture: AFuture): ClientInteractionClientStream  {
-        remote.executeAll(context, sendFuture);
-        return new ClientInteractionClientStream(context.remoteDataToArrayAsArray());
-        
-    }
-    public static fromRemoteConsumer(context: FastFutureContext, remoteConsumer: AConsumer<ServerApiByUidClientRemote>): ClientInteractionClientStream  {
+    public static remoteApi(context: FastFutureContext, apiConsumer: AConsumer<ServerApiByUidClientRemote>): ClientInteractionClientStream  {
         const api = (ServerApiByUidClient as any).META.makeRemote(context);
-        remoteConsumer(api);
+        apiConsumer(api);
         return new ClientInteractionClientStream(context.remoteDataToArrayAsArray());
         
     }
     
 }
-export class GlobalApi implements ToString  {
+export class GlobalApiStream implements ToString  {
     public readonly data: Uint8Array;
     /**
-     * Creates an instance of GlobalApi.
+     * Creates an instance of GlobalApiStream.
      * @param data - The raw byte data for this stream.
      */
     constructor(data: Uint8Array)  {
         this.data = data;
         
     }
-    public static readonly META: FastMetaType<GlobalApi> = new Impl.GlobalApiMetaImpl();
-    public toString(result: AString): AString  {
-        GlobalApi.META.metaToString(this, result);
+    public static readonly META: FastMetaType<GlobalApiStream> = new Impl.GlobalApiStreamMetaImpl();
+    public toAString(result: AString): AString  {
+        GlobalApiStream.META.metaToString(this, result);
         return result;
         
     }
@@ -5193,22 +5177,16 @@ export class GlobalApi implements ToString  {
         (GlobalRegServerApi as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);
         
     }
-    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<GlobalRegServerApiRemote>, sendFuture: AFuture): GlobalApi  {
-        remote.executeAll(context, sendFuture);
-        const encryptedData = provider(context.remoteDataToArrayAsArray());
-        return new GlobalApi(encryptedData);
-        
-    }
-    public static fromRemoteConsumer(context: FastFutureContext, provider: BytesConverter, remoteConsumer: AConsumer<GlobalRegServerApiRemote>): GlobalApi  {
+    public static remoteApi(context: FastFutureContext, provider: BytesConverter, apiConsumer: AConsumer<GlobalRegServerApiRemote>): GlobalApiStream  {
         const api = (GlobalRegServerApi as any).META.makeRemote(context);
-        remoteConsumer(api);
+        apiConsumer(api);
         const encryptedData = provider(context.remoteDataToArrayAsArray());
-        return new GlobalApi(encryptedData);
+        return new GlobalApiStream(encryptedData);
         
     }
-    public static fromRemoteBytes(provider: BytesConverter, remoteData: Uint8Array): GlobalApi  {
+    public static remoteBytes(provider: BytesConverter, remoteData: Uint8Array): GlobalApiStream  {
         const encryptedData = provider(remoteData);
-        return new GlobalApi(encryptedData);
+        return new GlobalApiStream(encryptedData);
         
     }
     
@@ -5224,7 +5202,7 @@ export class GlobalRegClientApiStream implements ToString  {
         
     }
     public static readonly META: FastMetaType<GlobalRegClientApiStream> = new Impl.GlobalRegClientApiStreamMetaImpl();
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         GlobalRegClientApiStream.META.metaToString(this, result);
         return result;
         
@@ -5236,20 +5214,14 @@ export class GlobalRegClientApiStream implements ToString  {
         (GlobalRegClientApi as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);
         
     }
-    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<GlobalRegClientApiRemote>, sendFuture: AFuture): GlobalRegClientApiStream  {
-        remote.executeAll(context, sendFuture);
-        const encryptedData = provider(context.remoteDataToArrayAsArray());
-        return new GlobalRegClientApiStream(encryptedData);
-        
-    }
-    public static fromRemoteConsumer(context: FastFutureContext, provider: BytesConverter, remoteConsumer: AConsumer<GlobalRegClientApiRemote>): GlobalRegClientApiStream  {
+    public static remoteApi(context: FastFutureContext, provider: BytesConverter, apiConsumer: AConsumer<GlobalRegClientApiRemote>): GlobalRegClientApiStream  {
         const api = (GlobalRegClientApi as any).META.makeRemote(context);
-        remoteConsumer(api);
+        apiConsumer(api);
         const encryptedData = provider(context.remoteDataToArrayAsArray());
         return new GlobalRegClientApiStream(encryptedData);
         
     }
-    public static fromRemoteBytes(provider: BytesConverter, remoteData: Uint8Array): GlobalRegClientApiStream  {
+    public static remoteBytes(provider: BytesConverter, remoteData: Uint8Array): GlobalRegClientApiStream  {
         const encryptedData = provider(remoteData);
         return new GlobalRegClientApiStream(encryptedData);
         
@@ -5267,7 +5239,7 @@ export class LoginClientStream implements ToString  {
         
     }
     public static readonly META: FastMetaType<LoginClientStream> = new Impl.LoginClientStreamMetaImpl();
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         LoginClientStream.META.metaToString(this, result);
         return result;
         
@@ -5279,20 +5251,14 @@ export class LoginClientStream implements ToString  {
         (ClientApiSafe as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);
         
     }
-    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<ClientApiSafeRemote>, sendFuture: AFuture): LoginClientStream  {
-        remote.executeAll(context, sendFuture);
-        const encryptedData = provider(context.remoteDataToArrayAsArray());
-        return new LoginClientStream(encryptedData);
-        
-    }
-    public static fromRemoteConsumer(context: FastFutureContext, provider: BytesConverter, remoteConsumer: AConsumer<ClientApiSafeRemote>): LoginClientStream  {
+    public static remoteApi(context: FastFutureContext, provider: BytesConverter, apiConsumer: AConsumer<ClientApiSafeRemote>): LoginClientStream  {
         const api = (ClientApiSafe as any).META.makeRemote(context);
-        remoteConsumer(api);
+        apiConsumer(api);
         const encryptedData = provider(context.remoteDataToArrayAsArray());
         return new LoginClientStream(encryptedData);
         
     }
-    public static fromRemoteBytes(provider: BytesConverter, remoteData: Uint8Array): LoginClientStream  {
+    public static remoteBytes(provider: BytesConverter, remoteData: Uint8Array): LoginClientStream  {
         const encryptedData = provider(remoteData);
         return new LoginClientStream(encryptedData);
         
@@ -5310,7 +5276,7 @@ export class LoginStream implements ToString  {
         
     }
     public static readonly META: FastMetaType<LoginStream> = new Impl.LoginStreamMetaImpl();
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         LoginStream.META.metaToString(this, result);
         return result;
         
@@ -5322,20 +5288,14 @@ export class LoginStream implements ToString  {
         (AuthorizedApi as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);
         
     }
-    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<AuthorizedApiRemote>, sendFuture: AFuture): LoginStream  {
-        remote.executeAll(context, sendFuture);
-        const encryptedData = provider(context.remoteDataToArrayAsArray());
-        return new LoginStream(encryptedData);
-        
-    }
-    public static fromRemoteConsumer(context: FastFutureContext, provider: BytesConverter, remoteConsumer: AConsumer<AuthorizedApiRemote>): LoginStream  {
+    public static remoteApi(context: FastFutureContext, provider: BytesConverter, apiConsumer: AConsumer<AuthorizedApiRemote>): LoginStream  {
         const api = (AuthorizedApi as any).META.makeRemote(context);
-        remoteConsumer(api);
+        apiConsumer(api);
         const encryptedData = provider(context.remoteDataToArrayAsArray());
         return new LoginStream(encryptedData);
         
     }
-    public static fromRemoteBytes(provider: BytesConverter, remoteData: Uint8Array): LoginStream  {
+    public static remoteBytes(provider: BytesConverter, remoteData: Uint8Array): LoginStream  {
         const encryptedData = provider(remoteData);
         return new LoginStream(encryptedData);
         
@@ -5353,7 +5313,7 @@ export class ServerRegistrationApiStream implements ToString  {
         
     }
     public static readonly META: FastMetaType<ServerRegistrationApiStream> = new Impl.ServerRegistrationApiStreamMetaImpl();
-    public toString(result: AString): AString  {
+    public toAString(result: AString): AString  {
         ServerRegistrationApiStream.META.metaToString(this, result);
         return result;
         
@@ -5365,20 +5325,14 @@ export class ServerRegistrationApiStream implements ToString  {
         (ServerRegistrationApi as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);
         
     }
-    public static fromRemote(context: FastFutureContext, provider: BytesConverter, remote: RemoteApiFuture<ServerRegistrationApiRemote>, sendFuture: AFuture): ServerRegistrationApiStream  {
-        remote.executeAll(context, sendFuture);
-        const encryptedData = provider(context.remoteDataToArrayAsArray());
-        return new ServerRegistrationApiStream(encryptedData);
-        
-    }
-    public static fromRemoteConsumer(context: FastFutureContext, provider: BytesConverter, remoteConsumer: AConsumer<ServerRegistrationApiRemote>): ServerRegistrationApiStream  {
+    public static remoteApi(context: FastFutureContext, provider: BytesConverter, apiConsumer: AConsumer<ServerRegistrationApiRemote>): ServerRegistrationApiStream  {
         const api = (ServerRegistrationApi as any).META.makeRemote(context);
-        remoteConsumer(api);
+        apiConsumer(api);
         const encryptedData = provider(context.remoteDataToArrayAsArray());
         return new ServerRegistrationApiStream(encryptedData);
         
     }
-    public static fromRemoteBytes(provider: BytesConverter, remoteData: Uint8Array): ServerRegistrationApiStream  {
+    public static remoteBytes(provider: BytesConverter, remoteData: Uint8Array): ServerRegistrationApiStream  {
         const encryptedData = provider(remoteData);
         return new ServerRegistrationApiStream(encryptedData);
         
@@ -5447,11 +5401,11 @@ export interface ClientApiSafe  {
      */
     changeAlias(alias: UUID): void;
     /**
-     * @param uid - UUID
+     * @param uids - UUID[]
      *
      * @aetherMethodId 5
      */
-    newChild(uid: UUID): void;
+    newChildren(uids: UUID[]): void;
     /**
      * @param msg - Message[]
      *
@@ -5573,11 +5527,11 @@ export abstract class ClientApiSafeLocal<RT extends ClientApiSafeRemote> impleme
      */
     public abstract changeAlias(alias: UUID): void;
     /**
-     * @param uid - UUID
+     * @param uids - UUID[]
      *
      * @aetherMethodId 5
      */
-    public abstract newChild(uid: UUID): void;
+    public abstract newChildren(uids: UUID[]): void;
     /**
      * @param msg - Message[]
      *
@@ -6165,6 +6119,9 @@ export interface ServerApiByUidClient  {
     
 }
 export namespace ServerApiByUidClient  {
+    export const EMPTY: ServerApiByUidClient =  {
+        
+    };
     export const META: FastMetaApi<ServerApiByUidClient, ServerApiByUidClientRemote> = new Impl.ServerApiByUidClientMetaImpl();
     
 }
@@ -6361,6 +6318,9 @@ export interface ClientApiRegSafe  {
     
 }
 export namespace ClientApiRegSafe  {
+    export const EMPTY: ClientApiRegSafe =  {
+        
+    };
     export const META: FastMetaApi<ClientApiRegSafe, ClientApiRegSafeRemote> = new Impl.ClientApiRegSafeMetaImpl();
     
 }
@@ -6383,6 +6343,9 @@ export interface GlobalRegClientApi  {
     
 }
 export namespace GlobalRegClientApi  {
+    export const EMPTY: GlobalRegClientApi =  {
+        
+    };
     export const META: FastMetaApi<GlobalRegClientApi, GlobalRegClientApiRemote> = new Impl.GlobalRegClientApiMetaImpl();
     
 }
@@ -6499,11 +6462,11 @@ export interface ServerRegistrationApi  {
      * @param suffix - string
      * @param passwords - number[]
      * @param parent - UUID
-     * @param globalApi - GlobalApi
+     * @param globalApi - GlobalApiStream
      *
      * @aetherMethodId 3
      */
-    registration(salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApi): void;
+    registration(salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApiStream): void;
     /**
      * @param parent - UUID
      * @param powMethods - PowMethod
@@ -6549,11 +6512,11 @@ export abstract class ServerRegistrationApiLocal<RT extends ServerRegistrationAp
      * @param suffix - string
      * @param passwords - number[]
      * @param parent - UUID
-     * @param globalApi - GlobalApi
+     * @param globalApi - GlobalApiStream
      *
      * @aetherMethodId 3
      */
-    public abstract registration(salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApi): void;
+    public abstract registration(salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApiStream): void;
     /**
      * @param parent - UUID
      * @param powMethods - PowMethod

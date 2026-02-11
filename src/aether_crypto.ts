@@ -114,6 +114,10 @@ export namespace AKey {
     export function of<T extends AKey>(v: string): T {
         return CryptoProviderFactory.createKey<T>(v);
     }
+
+    export function toCryptoEngine(): CryptoEngine {
+        throw new Error('Function not implemented.');
+    }
 }
 
 export interface PairKeys extends CryptoProviderUnit {
@@ -143,7 +147,7 @@ export interface SignedKey extends CryptoProviderUnit {
     readonly sign: Sign;
     check(signer: AKey.SignPublic): boolean;
     check(signChecker: SignChecker): boolean;
-    toString(): string;
+    toAString(): string;
 }
 
 export type DtoPairKeysAsymSigned = {

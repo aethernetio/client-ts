@@ -493,7 +493,7 @@ export class Log {
         if (typeof msg === 'string') return msg;
         try {
             const sb = AString.of();
-            (msg as ToString).toString(sb);
+            (msg as ToString).toAString(sb);
             return sb.toString();
         } catch (e) { return `[Error: ${e}]`; }
     }

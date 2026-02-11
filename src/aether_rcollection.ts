@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @file aether_rcollection.ts
  * @purpose Contains reactive collection implementations (RMap, RSet, RQueue, BMap).
@@ -12,18 +13,20 @@
  */
 
 import {
-    AConsumer,
     AFunction,
     ABiFunction,
-    JObj // Интерфейс JObj используется только для type-guard
+    Tuple2
 } from './aether_types';
 import {
-    EventConsumer
+    ARFuture,
+    EventConsumer,
+    Future,
 } from './aether_future';
 import {
     ARFutureWithFlag,
 } from './aether_future';
 import { Log } from './aether_logging';
+import { Queue, RU } from './aether_utils';
 
 // =============================================================================================
 // SECTION 0: CustomHashMap (Гибридная реализация HashMap)
@@ -36,7 +39,6 @@ import { Log } from './aether_logging';
  * @template V The value type.
  */
 class CustomHashMap<K, V> {
-    // Карта: hashCode -> "Бакет" (массив пар [ключ, значение])
     private buckets = new Map<number, Array<[K, V]>>();
     private _size = 0;
 
@@ -667,210 +669,6 @@ namespace RFMapImpl {
 
 
 // =============================================================================================
-// SECTION 3: BMap (Batching Map)
-// =============================================================================================
-
-/**
- * An asynchronous, throttling map for managing external data requests.
- * @template K The key type.
- * @template V The value type to be retrieved asynchronously.
- */
-export interface BMap<K, V> extends RFMap<K, V> {
-    getFuture(key: K): ARFutureWithFlag<V>;
-    getPendingRequests(): Set<K>; // Возвращает JS Set
-    putResolved(key: K, value: V): void;
-    putResolved(key: K, updater: AConsumer<V>, value: V): void;
-    putError(key: K, error: Error): void;
-    forValueUpdate(): EventConsumer<RMapUpdate<K, V>>;
-    getRequestsFor(sender: object): K[];
-    isRequests(): boolean;
-    isRequestsFor(sender: object): boolean;
-}
-
-/**
- * Represents a single network sender/flusher.
- * @template K The key type.
- * @internal
- */
-class BMapSender<K> {
-    /**
-     * **ИЗМЕНЕНО:** Используем CustomHashMap как HashSet
-     */
-    public readonly requests = new CustomHashMap<K, true>();
-
-    constructor(allRequests: CustomHashMap<K, true>) {
-        allRequests.forEach((_v, k) => this.requests.set(k, true));
-    }
-
-    public extract(): K[] {
-        const r = Array.from(this.requests.keys());
-        this.requests.clear();
-        return r;
-    }
-}
-
-/**
- * Implementation of the BMap interface.
- * @template K The key type.
- * @template V The value type.
- */
-export class BMapImpl<K, V> extends RMapBySrc<K, ARFutureWithFlag<V>> implements BMap<K, V> {
-
-    /**
-     * **ИЗМЕНЕНО:** Используем CustomHashMap как HashSet
-     */
-    private readonly allRequests = new CustomHashMap<K, true>();
-
-    private readonly valueUpdate = new EventConsumer<RMapUpdate<K, V>>();
-
-    /**
-     * **ОСТАВЛЕНО:** Используем стандартный `Map`.
-     * Ключи - это объекты `ConnectionWork` (sender), для них
-     * нам нужно равенство по ССЫЛКЕ (===).
-     */
-    private readonly senders = new Map<object, BMapSender<K>>();
-
-    constructor(
-        _initialCapacity: number,
-        _name: string,
-        _timeoutMs: number
-    ) {
-        super(new CustomHashMap<K, ARFutureWithFlag<V>>());
-    }
-
-    private getOrCreateFuture(key: K): ARFutureWithFlag<V> {
-        let future = this.src.get(key); // `get` из CustomHashMap
-        if (!future) {
-            future = new ARFutureWithFlag<V>();
-            this.src.set(key, future); // `set` из CustomHashMap
-
-            future.to(
-                (v: V) => {
-                    this.removeRequest(key);
-                    this.valueUpdate.fire(new RMapUpdate(key, v, null));
-                }
-            );
-
-            future.onError((_err: Error) => {
-                this.removeRequest(key);
-            });
-            future.onCancel(() => {
-                this.removeRequest(key);
-            });
-
-            this.addRequest(key);
-        }
-        return future;
-    }
-
-    private removeRequest(key: K): boolean {
-        // `delete` из CustomHashMap
-        const res = this.allRequests.delete(key);
-        for (const s of this.senders.values()) {
-            s.requests.delete(key);
-        }
-        return res;
-    }
-
-    private addRequest(key: K): void {
-        // `set` из CustomHashMap
-        this.allRequests.set(key, true);
-        for (const s of this.senders.values()) {
-            s.requests.set(key, true);
-        }
-    }
-
-    private getSender(k: object): BMapSender<K> {
-        // `get`/`set` для `senders` использует ===
-        let sender = this.senders.get(k);
-        if (!sender) {
-            sender = new BMapSender<K>(this.allRequests);
-            this.senders.set(k, sender);
-        }
-        return sender;
-    }
-
-    public getFuture(key: K): ARFutureWithFlag<V> {
-        return this.getOrCreateFuture(key);
-    }
-
-    public getPendingRequests(): Set<K> {
-        return new Set(this.allRequests.keys());
-    }
-
-    public putResolved(key: K, valueOrUpdater: V | AConsumer<V>, valueIfUpdater?: V): void {
-        if (arguments.length === 2) {
-            const value = valueOrUpdater as V;
-            this.getOrCreateFuture(key).tryDone(value);
-        } else {
-            const updater = valueOrUpdater as AConsumer<V>;
-            const value = valueIfUpdater as V;
-            const f = this.getOrCreateFuture(key);
-            if (!f.tryDone(value)) {
-                const v = f.getNow();
-                if (v !== null) {
-                    updater(v);
-                }
-            }
-        }
-    }
-
-    public putError(key: K, error: Error): void {
-        const future = this.getOrCreateFuture(key);
-        future.tryError(error);
-    }
-
-    public forValueUpdate(): EventConsumer<RMapUpdate<K, V>> {
-        return this.valueUpdate;
-    }
-
-    public getRequestsFor(sender: object): K[] {
-        return this.getSender(sender).extract();
-    }
-
-    public isRequests(): boolean {
-        return this.allRequests.size > 0;
-    }
-
-    public isRequestsFor(sender: object): boolean {
-        // Мы не можем просто проверить `this.senders.has(sender)`,
-        // т.к. sender мог быть создан, но очередь его пуста.
-        // `getSender` создаст его, если его нет, и мы проверим его .requests.size
-        return this.getSender(sender).requests.size > 0;
-    }
-
-    public get(key: K): ARFutureWithFlag<V> | undefined {
-        return this.getFuture(key);
-    }
-
-    public set(key: K, value: ARFutureWithFlag<V>): this {
-        throw new Error("Cannot .set() a future directly on BMap. Use putResolved() or putError().");
-    }
-
-    public delete(key: K): boolean {
-        this.removeRequest(key);
-        const future = this.src.get(key); // `get` из CustomHashMap
-        if (future) {
-            future.cancel();
-        }
-        return super.delete(key); // `delete` из RMapBySrc
-    }
-
-    // --- ADDED METHODS TO SATISFY RFMap INTERFACE ---
-
-    public mapValFuture<V2>(vToV2: AFunction<V, V2>, v2ToV: AFunction<V2, V>): RFMap<K, V2> {
-        return RFMapImpl.mapValFuture.bind(this)(vToV2, v2ToV);
-    }
-
-    public mapKeyFuture<K2>(vToK2: AFunction<V, K2>): RFMap<K2, V> {
-        return RFMapImpl.mapKeyFuture.bind(this)(vToK2);
-    }
-}
-
-
-// =============================================================================================
-// SECTION 4: RCollection (Reactive Collection)
-// =============================================================================================
 
 /**
  * A reactive Collection interface.
@@ -1186,7 +984,379 @@ export class RQueueBySrc<T> extends RCollectionBySrc<T, Array<T>> implements RQu
         return this.isEmpty() ? null : this.src[0];
     }
 }
+/**
+ * Высокопроизводительный асинхронный кеш.
+ * Портирован из Java версии io.aether.utils.rcollections.BMap
+ */
+export class BMap<K, V> {
+    private static readonly ERROR_ENTRY = new Error("Queue overflow");
+    private static readonly networkTimeout = new Error("Network timeout");
+    public static secondTimeout = 5;
 
+    private readonly map = new Map<K, BMap.BMapEntry<V>>();
+    private readonly toRequestQueue = new Queue<K>();
+    private readonly abandonedInRequestQueue: Error;
+
+    private readonly mapName: string;
+    private readonly globalTimeoutMs: number;
+    private readonly maxQueueSize: number;
+
+    // Статистика (аналог LongAdder)
+    private _hits = 0;
+    private _misses = 0;
+    private _timeouts = 0;
+    private _overflows = 0;
+    public has(key: K): boolean {
+        return this.map.has(key);
+    }
+    constructor(name: string, timeout: number, maxQueueSize: number) {
+        this.mapName = name;
+        this.globalTimeoutMs = timeout > 0 ? timeout : 10;
+        this.maxQueueSize = maxQueueSize > 0 ? maxQueueSize : 10000;
+        this.abandonedInRequestQueue = new Error(`Abandoned in request queue: ${name}`);
+    }
+
+    public putError(key: K, e: Error): void {
+        const entry = this.map.get(key);
+        if (entry) {
+            this.map.delete(key);
+            // В JS Queue нет эффективного удаления по значению,
+            // логика pollNextRequest сама пропустит удаленные из Map ключи.
+            entry.fail(RU.timeSeconds(), e);
+        }
+    }
+
+    public getFuture(key: K): ARFuture<V>;
+    public getFuture(timeout: number, key: K): ARFuture<V>;
+    public getFuture(arg1: any, arg2?: any): ARFuture<V> {
+        if (arg2 !== undefined) {
+            return this.get(arg2).toFuture(arg1);
+        }
+        return this.get(arg1).toFuture(BMap.secondTimeout);
+    }
+
+    public getAllAsFuture<E>(timeout: number, keys: K[], resultConverter: AFunction<V[], E>): ARFuture<E> {
+        const res = ARFuture.make<E>();
+        this.getAll(timeout, keys, {
+            onResolved: (value: V[]) => {
+                try {
+                    res.done(resultConverter(value));
+                } catch (e) {
+                    res.tryError(e as Error);
+                }
+            },
+            onError: (time: number, error: Error) => res.tryError(error)
+        });
+        return res;
+    }
+
+    public getAll(timeout: number, keys: K[], result: Future<V[]>): void {
+        if (!keys || keys.length === 0) {
+            result.onResolved([]);
+            return;
+        }
+
+        const size = keys.length;
+        const data: V[] = new Array(size);
+        let firstError: Error | null = null;
+        let remaining = size;
+
+        for (let i = 0; i < size && firstError === null; i++) {
+            const index = i;
+            const entry = this.get(keys[i]);
+
+            if (entry.isResolved()) {
+                data[index] = entry.value!;
+                if (--remaining === 0 && firstError === null) {
+                    result.onResolved(data);
+                }
+                continue;
+            }
+
+            if (entry.isError()) {
+                firstError = entry.getError()!;
+                remaining = 0;
+                result.onError(0, firstError);
+                return;
+            }
+
+            entry.listen(timeout, {
+                onResolved: (value: V) => {
+                    if (firstError !== null) return;
+                    data[index] = value;
+                    if (--remaining === 0) {
+                        result.onResolved(data);
+                    }
+                },
+                onError: (time: number, error: Error) => {
+                    if (firstError === null) {
+                        firstError = error;
+                        remaining = 0;
+                        result.onError(time, error);
+                    }
+                }
+            });
+        }
+    }
+
+    public getTryAll(timeout: number, keys: K[], result: Future<Tuple2<V[], Error[]>>): void {
+        if (!keys || keys.length === 0) {
+            result.onResolved([[], []]);
+            return;
+        }
+
+        const size = keys.length;
+        const values: V[] = new Array(size);
+        const errors: Error[] = new Array(size);
+        let remaining = size;
+
+        const checkComplete = () => {
+            if (--remaining === 0) {
+                result.onResolved([values, errors]);
+            }
+        };
+
+        for (let i = 0; i < size; i++) {
+            const index = i;
+            const entry = this.get(keys[i]);
+
+            if (entry.isResolved()) {
+                values[index] = entry.value!;
+                checkComplete();
+                continue;
+            }
+
+            if (entry.isError()) {
+                errors[index] = entry.getError()!;
+                checkComplete();
+                continue;
+            }
+
+            entry.listen(timeout, {
+                onResolved: (value: V) => {
+                    values[index] = value;
+                    checkComplete();
+                },
+                onError: (time: number, error: Error) => {
+                    errors[index] = error;
+                    checkComplete();
+                }
+            });
+        }
+    }
+
+    public get(key: K): BMap.BMapEntry<V> {
+        let entry = this.map.get(key);
+        if (entry) {
+            if (entry.value !== null) this._hits++;
+            return entry;
+        }
+
+        this._misses++;
+        if (this.toRequestQueue.size() >= this.maxQueueSize) {
+            this._overflows++;
+            const errEntry = new BMap.BMapEntry<V>(BMap.ERROR_ENTRY);
+            // Не сохраняем ошибку переполнения в мапу, чтобы была возможность повторить позже
+            return errEntry;
+        }
+
+        const newEntry = new BMap.BMapEntry<V>(null);
+        this.map.set(key, newEntry);
+        this.toRequestQueue.add(key);
+        return newEntry;
+    }
+
+    public pollAllRequests(): K[] {
+        const res: K[] = [];
+        while (!this.toRequestQueue.isEmpty()) {
+            const req = this.pollNextRequest();
+            if (req !== null) res.push(req);
+        }
+        return res;
+    }
+
+    public pollNextRequest(): K | null {
+        const key = this.toRequestQueue.poll();
+        if (key === undefined || key === null) return null;
+
+        const entry = this.map.get(key);
+        if (entry) {
+            if (entry.value !== null) return this.pollNextRequest();
+            entry.sentAt = Date.now();
+            return key;
+        }
+        return this.pollNextRequest();
+    }
+
+    public put(key: K, value: V): void {
+        let entry = this.map.get(key);
+        if (!entry) {
+            entry = new BMap.BMapEntry<V>(null);
+            this.map.set(key, entry);
+        }
+        entry.resolve(value);
+    }
+    public checkTimeouts(): void {
+            const now = Date.now();
+            const t = RU.timeSeconds();
+
+            for (const [key, entry] of this.map.entries()) {
+
+                if (entry.value !== null || entry.isError()) {
+                    continue;
+                }
+
+                if (entry.sentAt > 0) {
+                    if (now - entry.sentAt > this.globalTimeoutMs) {
+                        if (this.map.has(key) && this.map.get(key) === entry) {
+                            this.map.delete(key);
+                            this._timeouts++;
+                            entry.fail(t, BMap.networkTimeout);
+                        }
+                    }
+                } else if (now - entry.requestedAt > this.globalTimeoutMs * 4) {
+                    if (this.map.has(key) && this.map.get(key) === entry) {
+                        this.map.delete(key);
+                        entry.fail(t, this.abandonedInRequestQueue);
+                    }
+                }
+            }
+        }
+
+    public size(): number {
+        return this.map.size;
+    }
+    public printStats(): void {
+        let pendingInMap = 0;
+        for (const e of this.map.values()) {
+            if (e.value === null && !e.isError()) pendingInMap++;
+        }
+
+        const inQueue = this.toRequestQueue.size();
+        Log.info(`BMap Stats [${this.mapName}]`, {
+            total_cache: this.map.size,
+            queue_pending: inQueue,
+            network_waiting: (pendingInMap - inQueue),
+            hits: this._hits,
+            misses: this._misses,
+            overflows: this._overflows,
+            timeouts: this._timeouts
+        });
+
+        // Сброс счетчиков как в java sumThenReset()
+        this._hits = 0; this._misses = 0; this._overflows = 0; this._timeouts = 0;
+    }
+
+    public values(): Iterable<V> {
+        const self = this;
+        return {
+            *[Symbol.iterator]() {
+                for (const entry of self.map.values()) {
+                    if (entry.value !== null) yield entry.value;
+                }
+            }
+        };
+    }
+}
+
+/**
+ * Внутренние компоненты BMap
+ */
+export namespace BMap {
+
+    export class BMapEntry<V> {
+        public readonly requestedAt: number;
+        public value: V | null = null;
+        public sentAt: number = 0;
+
+        private readonly listeners: Future<V>[] = [];
+        private readonly errorMessage: Error | null;
+
+        constructor(error: Error | null) {
+            this.requestedAt = Date.now();
+            this.errorMessage = error;
+        }
+
+        public isError(): boolean {
+            return this.errorMessage !== null;
+        }
+
+        public getError(): Error | null {
+            return this.errorMessage;
+        }
+
+        public isResolved(): boolean {
+            return this.value !== null;
+        }
+
+        public toFuture(timeout: number = BMap.secondTimeout): ARFuture<V> {
+            if (this.isResolved()) return ARFuture.of(this.value!);
+            const res = ARFuture.make<V>();
+            this.listen(timeout, Future.of(res));
+            return res;
+        }
+
+        public listen(timeout: number, listener: Future<V>): void {
+            if (this.isError()) {
+                listener.onError(0, this.errorMessage!);
+                return;
+            }
+            if (this.value !== null) {
+                listener.onResolved(this.value);
+                return;
+            }
+
+            const deadline = RU.timeSeconds() + timeout;
+            let finalized = false;
+
+            const internalListener: Future<V> = {
+                onResolved: (v: V) => {
+                    if (!finalized) {
+                        finalized = true;
+                        listener.onResolved(v);
+                    }
+                },
+                onError: (time: number, err: Error) => {
+                    if (!finalized) {
+                        if (RU.timeSeconds() > deadline) {
+                            finalized = true;
+                            listener.onError(time, err);
+                        } else {
+                            // Если не вышли за дедлайн, остаемся в очереди (логика Java)
+                            this.listeners.push(internalListener);
+                        }
+                    }
+                }
+            };
+
+            this.listeners.push(internalListener);
+
+            // Double check
+            if (this.value !== null) {
+                this.resolve(this.value);
+            }
+        }
+
+        resolve(val: V): void {
+            this.value = val;
+            let l: Future<V> | undefined;
+            while ((l = this.listeners.shift())) {
+                l.onResolved(val);
+            }
+        }
+
+        fail(time: number, error: Error): void {
+            let l: Future<V> | undefined;
+            while ((l = this.listeners.shift())) {
+                l.onError(time, error);
+            }
+        }
+
+        public getNow(): V | null {
+            return this.value;
+        }
+    }
+}
 // =============================================================================================
 // SECTION 7: RCol (Static Factory)
 // =============================================================================================
@@ -1254,6 +1424,6 @@ export namespace RCol {
     export function bMap<K, V>(timeoutMs?: number, name?: string): BMap<K, V> {
         const finalTimeout = timeoutMs ?? 4000;
         const finalName = name ?? "GenericBMap";
-        return new BMapImpl<K, V>(10, finalName, finalTimeout);
+        return new BMap<K, V>(finalName,10, finalTimeout);
     }
 }
