@@ -68,25 +68,17 @@ export class AetherDslMetaProcessor {
         return `import {
     AFuture,
     ARFuture,
-    DataIn,
-    DataOut,
-    DataInOut,
     DataInOutStatic,
     FastMetaType,
     FastFutureContext,
     RemoteApi,
-    FastMeta,
-    SerializerPackNumber,
-    DeserializerPackNumber,
-    FastApiContextLocal,
     FastMetaApi,
     BytesConverter,
     UUID,
     URI,
     AConsumer,
     ToString,
-    AString,
-    FlushReport
+    AString
 } from '${this.importPrefix}';
 import * as Impl from './aether_api_impl'; // This is always relative
 
@@ -115,19 +107,14 @@ import * as Impl from './aether_api_impl'; // This is always relative
     DataInOutStatic,
     FastMetaType,
     FastFutureContext,
-    RemoteApi,
     FastMeta,
     SerializerPackNumber,
     DeserializerPackNumber,
     FastApiContextLocal,
     FastMetaApi,
-    BytesConverter,
-    RemoteApiFuture,
     FastFutureContextStub,
     UUID,
     URI,
-    AConsumer,
-    ToString,
     AString,
     FlushReport
 } from '${this.importPrefix}';

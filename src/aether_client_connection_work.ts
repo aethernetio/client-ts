@@ -413,7 +413,7 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
 
         this.apiSafeCtx.flush = (report: any): void => {
             const loginApi = this.getRootApi();
-            if (!loginApi) {
+            if (!loginApi || !this.connectFuture.isDone()) {
                 report.abort();
                 return;
             }
@@ -422,8 +422,12 @@ export class ConnectionWork extends Connection<ClientApiUnsafe, LoginApiRemote> 
             // Сначала собираем все фоновые запросы (clouds, servers, groups) как в Java
             this.flushBackgroundRequests(this.apiSafeCtx.makeRemote(AuthorizedApi.META), sendFuture);
             
-            // Выполняем все накопленные задачи AuthorizedApi
-            this.remoteApiFutureAuth.executeAll(this.apiSafeCtx, sendFuture);
+            // Выполняем все накопленные задачи AuthorizedApi (Java parity)
+            while (true) {
+                const task = this.client.authTasks.poll();
+                if (!task) break;
+                task(this.apiSafeCtx.makeRemote(AuthorizedApi.META));
+            }
             
             const dataToSend = this.apiSafeCtx.remoteDataToArrayAsArray();
 

@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+export { MessageNode, MessageEventListener } from './aether_client_message';
+import { ClientState, ClientStateInMemory } from './aether_client_state';
 import {
     AKey,
     CryptoEngine,
     CryptoProviderFactory,
     SignedKey,
-    PairSymKeys,
+    PairSymKeys
 } from './aether_crypto';
 import {
     ConnectionWork
@@ -14,19 +16,11 @@ import {
     ConnectionRegistration
 } from './aether_client_connection_reg';
 import {
-    MessageNode,
-    MessageEventListener,
-    MessageEventListenerDefault
-} from './aether_client_message';
-import {
-    ClientState
-} from './aether_client_state';
-import {
     LNode,
     Log
 } from './aether_logging';
 import { AConsumer, ClientApiException, ClientStartException, Destroyable, URI, UUID } from './aether_types';
-import { Destroyer, RU, Queue} from './aether_utils';
+import { Destroyer, RU, Queue } from './aether_utils';
 import { AFuture, ARFuture, EventBiConsumer, EventConsumer } from './aether_future';
 import {
     Cloud,
@@ -40,6 +34,8 @@ import {
 } from './aether_api';
 import { BMap, RCol } from './aether_rcollection';
 import { ClientCloud, CloudPriorityManager } from "./aether_client_cloud_priority";
+import { MessageEventListener, MessageEventListenerDefault, MessageNode } from './aether_client_message';
+import { CryptoUtils } from './aether_crypto_utils';
 
 export enum RegStatus { NO, BEGIN, CONFIRM }
 
@@ -104,9 +100,9 @@ export class AetherCloudClient implements Destroyable {
     public readonly logClientContext: LNode;
 
     private readonly connections = new Map<number, ConnectionWork>();
-    public readonly clouds: BMap<UUID, Cloud>;
     private readonly regStatus = { value: RegStatus.NO };
     public readonly servers: BMap<number, ServerDescriptor>;
+    public readonly clouds: BMap<UUID, ClientCloud>;
     public readonly clientGroups: BMap<UUID, Set<bigint>>;
     public readonly accessGroups: BMap<bigint, AccessGroup | null>;
     public readonly allAccessedClients: BMap<UUID, Set<UUID>>;
@@ -119,6 +115,10 @@ export class AetherCloudClient implements Destroyable {
     public readonly onNewChildApi = new EventBiConsumer<UUID, ServerApiByUid>();
     public readonly onClientStreamCreated = new EventConsumer<MessageNode>();
 
+    public readonly onMessage = new EventBiConsumer<UUID, Uint8Array>();
+
+
+
     public readonly accessOperationsAdd = new Map<bigint, Map<string, ARFuture<boolean>>>();
     public readonly accessOperationsRemove = new Map<bigint, Map<string, ARFuture<boolean>>>();
     public readonly clientTasks = new Queue<ClientTask>();
@@ -129,7 +129,7 @@ export class AetherCloudClient implements Destroyable {
     private readonly connectionRegistrations = new Set<ConnectionRegistration>();
     private beginConnect = false;
     private name: string | null;
-    public getCryptoLib():CryptoLib{
+    public getCryptoLib(): CryptoLib {
         return CryptoLib.SODIUM
     }
     constructor(state: ClientState, name: string | null = null) {
@@ -137,14 +137,14 @@ export class AetherCloudClient implements Destroyable {
         this.name = name;
         this.logClientContext = Log.of({ component: "Client", clientName: name });
 
-        this.clouds = RCol.bMap<UUID, Cloud>(30000, "CloudCache");
+        this.clouds = RCol.bMap<UUID, ClientCloud>(30000, "CloudCache");
         this.servers = RCol.bMap<number, ServerDescriptor>(30000, "ServerCache");
         this.clientGroups = RCol.bMap<UUID, Set<bigint>>(30000, "ClientGroupsCache");
         this.accessGroups = RCol.bMap<bigint, AccessGroup | null>(30000, "AccessGroupsCache");
         this.allAccessedClients = RCol.bMap<UUID, Set<UUID>>(30000, "AllAccessedClientsCache");
         this.accessCheckCache = RCol.bMap<AccessCheckPair, boolean>(30000, "AccessCheckCache");
 
-        this.destroyer.add((_:boolean) => this.closeConnections());
+        this.destroyer.add((_: boolean) => this.closeConnections());
         this.populateCachesFromState();
 
         this.onNewChild.add((u: UUID) => {
@@ -168,7 +168,7 @@ export class AetherCloudClient implements Destroyable {
             if (c.getCloud()) {
                 const cloud: Cloud = c.getCloud()!.toCloud();
                 this.priorityManager.updateCloudFromWork(c.getUid(), cloud);
-                this.clouds.put(c.getUid(), cloud);
+                this.clouds.put(c.getUid(), new ClientCloud(c.getUid(), cloud));
                 this.state.setCloud(c.getUid(), c.getCloud()!);
             }
         }
@@ -290,7 +290,7 @@ export class AetherCloudClient implements Destroyable {
         const uid: UUID | null = this.getUid();
         const cloudData = uid ? this.state.getCloud(uid) : null;
         const cloud: Cloud | null = cloudData ? cloudData.toCloud() : null;
-        let aaa=regs.map((c: ConnectionRegistration) => c.resolveCloudPublic(cloud));
+        let aaa = regs.map((c: ConnectionRegistration) => c.resolveCloudPublic(cloud));
         const recoveryFutureLocal: AFuture = AFuture.any(...aaa);
         recoveryFutureLocal.to(() => {
             Log.info("Recovery successful.");
@@ -332,8 +332,8 @@ export class AetherCloudClient implements Destroyable {
         if (r) return ARFuture.of(r.toCloud());
 
         const res = ARFuture.make<Cloud>();
-        this.clouds.getFuture(uid).to((v: Cloud) => {
-            if (v) res.done(v);
+        this.clouds.getFuture(uid).to((v: ClientCloud) => {
+            if (v) res.done(v.toCloud());
         }).onError((e: Error) => {
             Log.error("timeout get cloud", { uid });
             res.error(e);
@@ -358,7 +358,7 @@ export class AetherCloudClient implements Destroyable {
      * @param cloud The cloud configuration.
      */
     public setCloud(uid: UUID, cloud: Cloud): void {
-        this.clouds.put(uid, cloud);
+        this.clouds.put(uid, new ClientCloud(uid, cloud));
     }
 
     /**
@@ -462,7 +462,7 @@ export class AetherCloudClient implements Destroyable {
         }
         this.regStatus.value = RegStatus.CONFIRM;
 
-        this.clouds.put(regResp.getUid(), regResp.getCloud());
+        this.clouds.put(regResp.getUid(), new ClientCloud(regResp.getUid(), regResp.getCloud()!));
         this.state.setUid(regResp.getUid());
         this.state.setAlias(regResp.getAlias());
 
@@ -471,31 +471,27 @@ export class AetherCloudClient implements Destroyable {
             cloud.data.forEach((sid: number) => this.getServer(sid).to((d: ServerDescriptor | null) => {
                 if (d) this.getConnection(d);
             }));
-        }
+        };
+
+        this.onMessage.fire(regResp.getUid(), new Uint8Array());
         this.startFuture.tryDone();
+    }
+
+    public verifySign(signedKey: SignedKey): boolean {
+        return CryptoUtils.verifySignInternal(signedKey, this.state.getRootSigners());
     }
 
     public sendMessage(uid: UUID, data: Uint8Array): AFuture {
         return this.getMessageNode(uid, MessageEventListenerDefault).send(data);
     }
 
-    public verifySign(signedKey: SignedKey): boolean {
-        const signers = this.state.getRootSigners();
-        for (const s of signers) {
-            if (signedKey.check(s)) return true;
-        }
-        return false;
+    public destroy(force: boolean): AFuture {
+        return this.destroyer.destroy(force);
     }
-
-    public static of(state: ClientState): AetherCloudClient {
-        return new AetherCloudClient(state);
-    }
-
-    public destroy(force: boolean): AFuture { return this.destroyer.destroy(force); }
 }
-
-export * from './aether_utils';
-export * from './aether_future';
-export * from './aether_types';
+export * from './aether_client_state';
+export * from './aether_client_message';
 export * from './aether_fastmeta';
 export * from './aether_astring';
+export * from './aether_types';
+export * from './aether_future';

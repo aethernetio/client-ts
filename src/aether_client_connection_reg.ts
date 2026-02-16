@@ -147,8 +147,7 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
 
                     // Setup Global Crypto Engine (GCP)
                     const globalAsymKey = CryptoUtils.dtoKeyToAKey<AKey.AsymmetricPublic>(wpd.getGlobalKey().key);
-                    this.gcp = CryptoProviderFactory.getProvider(this.client.getCryptoLib())
-                        .createAsymmetricEngine(globalAsymKey, this.client.getMasterKey().asAsymmetric());
+                    this.gcp = CryptoEngine.of(globalAsymKey.toCryptoEngine(), this.client.getMasterKey().toCryptoEngine());
 
                     // Step 2: Registration with PoW
                     const finalRegStream = ServerRegistrationApiStream.remoteApi(this.ctxSafe, (data) => asymCE.encrypt(data), (a2) => {

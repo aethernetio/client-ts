@@ -220,6 +220,7 @@ export class Connection<LT, RT extends RemoteApi> implements Destroyable {
 
         if (client.destroyer.isDestroyed()) {
             this.connectFuture.tryError(new Error("Client is destroyed"));
+            this.rootApi = null;
             this.fastMetaClient = null;
             return;
         }

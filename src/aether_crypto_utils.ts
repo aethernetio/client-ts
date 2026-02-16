@@ -6,6 +6,7 @@ import {
     SignedKey as InternalSignedKey,
     SignChecker,
     CryptoEngine,
+    SignedKey
 } from './aether_crypto';
 import {
     Key as DtoKey,
@@ -170,6 +171,14 @@ export namespace CryptoUtils {
         const s = dtoSignToInternal(key.getSign());
         for (const c of checkers) {
             if (c.getCryptoProvider() == k.getCryptoProvider() && c.checkSign(k.getData(), s)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    export function verifySignInternal(k: SignedKey, checkers: Iterable<SignChecker>): boolean {
+        for (const c of checkers) {
+            if (k.check(c)) {
                 return true;
             }
         }
