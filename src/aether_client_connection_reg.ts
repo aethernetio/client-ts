@@ -1,4 +1,4 @@
-import { Connection, getUriFromServerDescriptor } from './aether_client_connection_base';
+import { ConnectionBase} from './aether_client_connection_base';
 // FILE: aether_client_connection_reg.ts (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // =============================================================================================
 
@@ -7,21 +7,20 @@ import {
 } from './aether_client';
 import { WorkProofUtil } from './aether_work_proof';
 import { CryptoUtils } from './aether_crypto_utils';
-import { AString } from './aether_astring';
 import { AKey, CryptoEngine, CryptoProviderFactory } from './aether_crypto';
-import { FastApiContext, FlushReport } from './aether_fastmeta';
+import { FastApiContext, FastApiContextLocal, FlushReport } from './aether_fastmeta';
 import { URI } from './aether_types';
 import { AFuture, ARFuture } from './aether_future';
 import { Log } from './aether_logging';
-import { ClientApiRegSafe, ClientApiRegSafeStream, ClientApiRegUnsafe, Cloud, FinishResult, GlobalApiStream, GlobalRegClientApi, GlobalRegClientApiStream, GlobalRegServerApi, GlobalRegServerApiRemote, Key, KeyAsymmetric, PowMethod, RegistrationRootApi, RegistrationRootApiRemote, ServerDescriptor, ServerRegistrationApiRemote, ServerRegistrationApiStream, SignedKey, WorkProofDTO } from './aether_api';
+import { ClientApiRegSafe, ClientApiRegSafeLocal, ClientApiRegSafeRemote, ClientApiRegSafeStream, ClientApiRegUnsafe, Cloud, FinishResult, GlobalApiStream, GlobalRegClientApi, GlobalRegClientApiStream, GlobalRegServerApi, GlobalRegServerApiRemote, Key, KeyAsymmetric, PowMethod, RegistrationRootApi, RegistrationRootApiRemote, ServerDescriptor, ServerRegistrationApiRemote, ServerRegistrationApiStream, SignedKey, WorkProofDTO } from './aether_api';
 
 /**
  * @class ConnectionRegistration
- * @extends {Connection<ClientApiRegUnsafe, RegistrationRootApiRemote>}
+ * @extends {ConnectionBase<ClientApiRegUnsafe, RegistrationRootApiRemote>}
  * @implements {ClientApiRegUnsafe}
  * @description Manages the initial connection and registration process with the Aether cloud.
  */
-export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, RegistrationRootApiRemote> implements ClientApiRegUnsafe {
+export class ConnectionRegistration extends ConnectionBase<ClientApiRegUnsafe, RegistrationRootApiRemote> implements ClientApiRegUnsafe {
 
     /**
      * @private
@@ -58,17 +57,26 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
      */
     private readonly globalCtx: FastApiContext;
 
+
+
     /**
      * @private
      * @type {(CryptoEngine | null)}
      */
     private gcp: CryptoEngine | null = null;
 
+    
+
+
     /**
      * @constructor
      * @param {AetherCloudClient} client The main client instance.
      * @param {URI} uri The registration server URI.
      */
+
+
+
+
     constructor(client: AetherCloudClient, uri: URI) {
         super(client, uri, ClientApiRegUnsafe.META, RegistrationRootApi.META);
 
@@ -79,11 +87,31 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
         this.tempKeyNative = CryptoUtils.aKeyToDtoKey(this.tempKey);
         this.tempKeyCp = this.tempKey.toCryptoEngine();
 
-        this.ctxSafe = new FastApiContext();
+
+
+        // Create local API to handle incoming calls from server during registration
+        const sendServerDescriptor = (server: ServerDescriptor) => {
+            this.client.putServerDescriptor(server);
+            Log.info("RegConn: Server descriptor received via local API.");
+        };
+        const localApi = {
+            sendServerDescriptor,
+            sendServerDescriptors: (servers: ServerDescriptor[]) => {
+                for (const s of servers) {
+                    sendServerDescriptor(s);
+                }
+            }
+        };
+
+
+        this.ctxSafe = new FastApiContextLocal(localApi);
         this.globalCtx = new FastApiContext();
-
-
     }
+
+
+
+
+
 
     private getAsymmetricPublicKey(): ARFuture<CryptoEngine> {
         const result = ARFuture.make<CryptoEngine>();
@@ -174,28 +202,43 @@ export class ConnectionRegistration extends Connection<ClientApiRegUnsafe, Regis
         });
     }
 
+
+
+
     private resolveCloud(cloud: Cloud, asymCE: CryptoEngine): AFuture {
         if (!this.client.isRecoveryInProgress.value) {
-             this.client.isRecoveryInProgress.value = true;
+            this.client.isRecoveryInProgress.value = true;
         }
-        const result = this.client.recoveryFuture;
+        const result = AFuture.make();
         Log.debug("Resolving cloud servers: " + cloud.data);
 
         this.getRootApiFuture().to((api: RegistrationRootApiRemote) => {
-            const stream = ServerRegistrationApiStream.remoteApi(this.ctxSafe, (data) => asymCE.encrypt(data), (a3) => {
-                a3.resolveServers(cloud).to((ss: ServerDescriptor[]) => {
-                    for (const s of ss) {
+            const stream = ServerRegistrationApiStream.remoteApi(this.ctxSafe, (data) => asymCE.encrypt(data), (remote) => {
+                remote.resolveServers(cloud).to((servers: ServerDescriptor[]) => {
+                    Log.debug("Received server descriptors: " + servers.map(s => s.id).join(','));
+                    for (const s of servers) {
                         this.client.putServerDescriptor(s);
                     }
                     result.tryDone();
-                    Log.info("RegConn: Server descriptors resolved.");
-                }).onError(e => result.tryError(e));
+                }).onError((e: Error) => {
+                    Log.error("Failed to resolve servers", e);
+                    result.tryError(e);
+                });
             });
             api.enter(this.client.getCryptoLib(), stream);
             api.flush(FlushReport.STUB);
+        }).onError((e: Error) => result.tryError(e));
+
+        // Timeout protection
+        result.timeout(5000, () => {
+            Log.warn("RegConn: Timeout waiting for server descriptors.");
         });
+
         return result;
     }
+
+
+
 
     public enterGlobal(stream: GlobalRegClientApiStream): void {
         stream.accept(this.globalCtx, (data) => this.gcp!.decrypt(data), GlobalRegClientApi.EMPTY);

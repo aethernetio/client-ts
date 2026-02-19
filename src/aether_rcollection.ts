@@ -993,7 +993,7 @@ export class BMap<K, V> {
     private static readonly networkTimeout = new Error("Network timeout");
     public static secondTimeout = 5;
 
-    private readonly map = new Map<K, BMap.BMapEntry<V>>();
+    private readonly map = new CustomHashMap<K, BMap.BMapEntry<V>>();
     private readonly toRequestQueue = new Queue<K>();
     private readonly abandonedInRequestQueue: Error;
 
@@ -1146,11 +1146,13 @@ export class BMap<K, V> {
     }
 
     public get(key: K): BMap.BMapEntry<V> {
+        Log.debug("BMap.get($key)",{key:key});
         let entry = this.map.get(key);
         if (entry) {
             if (entry.value !== null) this._hits++;
             return entry;
         }
+        Log.debug("BMap.get($key) request",{key:key});
 
         this._misses++;
         if (this.toRequestQueue.size() >= this.maxQueueSize) {
@@ -1189,12 +1191,14 @@ export class BMap<K, V> {
     }
 
     public put(key: K, value: V): void {
+        Log.debug("BMap.put($key,$value)",{key:key,value:value});
         let entry = this.map.get(key);
         if (!entry) {
             entry = new BMap.BMapEntry<V>(null);
             this.map.set(key, entry);
         }
         entry.resolve(value);
+        this.toRequestQueue.removeValue(key);
     }
     public checkTimeouts(): void {
             const now = Date.now();

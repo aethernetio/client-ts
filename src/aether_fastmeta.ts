@@ -822,6 +822,12 @@ export class FastApiContext implements FastFutureContext {
         return meta.makeRemote(this);
     }
 
+    public localDataIn<T>(meta: FastMetaApi<T, any>, localApi: T, dataIn: DataIn): void {
+        Log.info("localDataIn called", { meta: meta?.constructor?.name });
+        meta.makeLocal(this, dataIn, localApi);
+    }
+
+
     public invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void {
         const logData: LogData = {
             "methodName": methodName

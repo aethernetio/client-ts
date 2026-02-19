@@ -96,6 +96,7 @@ export class AetherCloudClient implements Destroyable {
     public readonly startFuture = AFuture.make();
     public readonly destroyer = new Destroyer("AetherCloudClient");
     public readonly isRecoveryInProgress = { value: false };
+    private isConnecting = false;
     public readonly recoveryFuture = AFuture.make();
     public readonly logClientContext: LNode;
 
@@ -155,6 +156,26 @@ export class AetherCloudClient implements Destroyable {
 
         this.startFuture.to(() => this.startScheduledTask());
         this.connect();
+
+    
+
+    
+        // Forward incoming messages from all MessageNodes to the onMessage event
+
+        this.onClientStreamCreated.add((node: MessageNode) => {
+            Log.info("MessageNode created", { uid: node.consumerUUID.toString() });
+            node.bufferIn.add((msg: { data: Uint8Array }) => {
+                try {
+                    Log.info("Forwarding message to onMessage", { from: node.consumerUUID.toString() });
+                    this.onMessage.fire(node.consumerUUID, msg.data);
+                } catch (e) {
+                    Log.error("Error forwarding message to onMessage", e as Error, { from: node.consumerUUID.toString() });
+                }
+            });
+        });
+
+
+
     }
 
     private closeConnections(): void {
@@ -249,6 +270,7 @@ export class AetherCloudClient implements Destroyable {
             const uris: URI[] = this.state.getRegistrationUri();
             uris.slice(0, 3).forEach((uri: URI) => {
                 const reg = new ConnectionRegistration(this, uri);
+
                 this.connectionRegistrations.add(reg);
             });
         }
@@ -257,8 +279,11 @@ export class AetherCloudClient implements Destroyable {
 
     public makeFirstConnection(): void {
         if (this.destroyer.isDestroyed()) return;
+        if (this.destroyer.isDestroyed()) return;
         const uid: UUID | null = this.getUid();
         if (!uid) return;
+        Log.info("makeFirstConnection called for uid: $uid", {uid: uid});
+
 
         this.getCloud(uid).to((cloud: Cloud) => {
             if (!cloud || !cloud.data.length) {
@@ -282,6 +307,7 @@ export class AetherCloudClient implements Destroyable {
     }
 
     public triggerRecovery(): AFuture {
+        if (this.destroyer.isDestroyed()) return;
         if (this.isRecoveryInProgress.value) return this.recoveryFuture;
         this.isRecoveryInProgress.value = true;
         Log.info("Starting recovery process...");
@@ -290,19 +316,35 @@ export class AetherCloudClient implements Destroyable {
         const uid: UUID | null = this.getUid();
         const cloudData = uid ? this.state.getCloud(uid) : null;
         const cloud: Cloud | null = cloudData ? cloudData.toCloud() : null;
-        let aaa = regs.map((c: ConnectionRegistration) => c.resolveCloudPublic(cloud));
-        const recoveryFutureLocal: AFuture = AFuture.any(...aaa);
+        let recoveryFutureLocal: AFuture;
+        const uidLocal = uid;
+        if (cloud != null) {
+            // Есть облако в кэше - пытаемся разрешить сервера
+            recoveryFutureLocal = AFuture.any(...regs.map(c => c.resolveCloudPublic(cloud)));
+        } else {
+            // Нет облака - выполняем полную регистрацию заново
+            Log.info("Cloud missing from cache, performing full re-registration.");
+            if (!uidLocal) {
+                recoveryFutureLocal = AFuture.ofThrow(new Error("No UID, cannot register"));
+            } else {
+                // Сбрасываем статус регистрации, чтобы confirmRegistration могла выполниться
+                this.regStatus.value = RegStatus.BEGIN;
+                const regDone = AFuture.any(...regs.map(c => c.registration()));
+                recoveryFutureLocal = regDone.to(this.clouds.getFuture(uidLocal).toFuture());
+            }
+        }
         recoveryFutureLocal.to(() => {
             Log.info("Recovery successful.");
             this.isRecoveryInProgress.value = false;
             this.recoveryFuture.tryDone();
         }).onError((e: Error) => {
             Log.error("Recovery attempt failed.", e);
-            RU.schedule(AetherCloudClient.RECOVERY_RETRY_DELAY_MS, () => { this.isRecoveryInProgress.value = false; });
+            RU.schedule(AetherCloudClient.RECOVERY_RETRY_DELAY_MS, () => {
+                this.isRecoveryInProgress.value = false;
+            });
         });
         return recoveryFutureLocal;
     }
-
     public getConnection(serverDescriptor: ServerDescriptor): ConnectionWork {
         if (!serverDescriptor) throw new ClientApiException("Descriptor is null");
         const sid: number = serverDescriptor.id;
@@ -312,17 +354,24 @@ export class AetherCloudClient implements Destroyable {
         if (!conn) {
             conn = new ConnectionWork(this, serverDescriptor);
             conn.stateListeners.add((isWritable: boolean) => {
-                if (!isWritable) {
-                    const uid: UUID | null = this.getUid();
-                    if (uid) {
-                        Log.info("Connection lost. Demoting SID.", { sid });
-                        this.priorityManager.demote(uid, sid);
-                        this.makeFirstConnection();
+                if (isWritable) {
+                        conn.flush(); // отправляем всё, что накопилось
+                    } else {
+                        const uid: UUID | null = this.getUid();
+                        if (uid) {
+                            Log.info("Connection lost. Demoting SID.", { sid });
+                            this.priorityManager.demote(uid, sid);
+                            this.makeFirstConnection();
+                        }
                     }
-                }
             });
             this.connections.set(sid, conn);
             this.destroyer.add(conn);
+
+        for (const node of this.messageNodeMap.values()) {
+            node.connectionsOut.add(conn);
+        }
+
         }
         return conn;
     }
@@ -343,7 +392,7 @@ export class AetherCloudClient implements Destroyable {
 
     public getServer(id: number): ARFuture<ServerDescriptor> {
         const res: ARFuture<ServerDescriptor> = this.servers.getFuture(id);
-        res.timeoutMs(7, () => Log.warn("Timeout waiting for server description", { id }));
+        res.timeoutMs(7000, () => Log.warn("Timeout waiting for server description", { id }));
         return res;
     }
 
@@ -351,6 +400,7 @@ export class AetherCloudClient implements Destroyable {
         this.servers.put(s.id, s);
         this.state.getServerInfo(s.id).setDescriptor(s);
     }
+
 
     /**
      * Updates the cloud configuration for a specific UID.
@@ -360,6 +410,7 @@ export class AetherCloudClient implements Destroyable {
     public setCloud(uid: UUID, cloud: Cloud): void {
         this.clouds.put(uid, new ClientCloud(uid, cloud));
     }
+
 
     /**
      * Retrieves the current client alias from state.
@@ -389,16 +440,24 @@ export class AetherCloudClient implements Destroyable {
 
     public getPingTime(): number { return this.state.getPingDuration().getNow() ?? 1000; }
 
+
     public getMessageNode(uid: UUID, strategy: MessageEventListener = MessageEventListenerDefault): MessageNode {
         const key: string = uid.toString();
+        Log.info("getMessageNode called for uid: $uid", {uid: uid});
         let node = this.messageNodeMap.get(key);
         if (!node) {
+            Log.info("getMessageNode: creating new node for uid: $uid", {uid: uid});
             node = new MessageNode(this, uid, strategy);
             this.messageNodeMap.set(key, node);
             this.onClientStreamCreated.fire(node);
+            this.flush();
+
+        } else {
+            Log.info("getMessageNode: returning existing node for uid: $uid", {uid: uid});
         }
         return node;
     }
+
 
     public getClientApi(uid: UUID, c: AConsumer<ServerApiByUid>): void {
         this.clientTasks.add(new ClientTask(uid, c));
@@ -412,6 +471,7 @@ export class AetherCloudClient implements Destroyable {
     }
 
     public flush(): void {
+        if (this.destroyer.isDestroyed()) return;
         if (this.connections.size === 0 && this.getUid()) {
             const cloud = this.state.getCloud(this.getUid()!);
             if (cloud) this.makeFirstConnection();
@@ -463,6 +523,8 @@ export class AetherCloudClient implements Destroyable {
         this.regStatus.value = RegStatus.CONFIRM;
 
         this.clouds.put(regResp.getUid(), new ClientCloud(regResp.getUid(), regResp.getCloud()!));
+        this.state.setCloud(regResp.getUid(), new ClientCloud(regResp.getUid(), regResp.getCloud()!));
+
         this.state.setUid(regResp.getUid());
         this.state.setAlias(regResp.getAlias());
 
@@ -472,6 +534,8 @@ export class AetherCloudClient implements Destroyable {
                 if (d) this.getConnection(d);
             }));
         };
+        this.flush();
+
 
         this.onMessage.fire(regResp.getUid(), new Uint8Array());
         this.startFuture.tryDone();

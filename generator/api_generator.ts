@@ -281,7 +281,7 @@ export class ApiGenerator {
         const sb: string[] = [];
         const remoteType = `${apiName}Remote`;
 
-        sb.push(`export abstract class ${apiName}Local<RT extends ${remoteType}> implements ${apiName} {`);
+        sb.push(`export abstract class ${apiName}Local<RT extends RemoteApi> implements ${apiName} {`);
         sb.push(`    protected readonly remoteApi: RT;`);
         sb.push(`    public getRemoteApi(): RT { return this.remoteApi; }`);
         sb.push(`    protected constructor(remoteApi: RT) { this.remoteApi = remoteApi; }`);

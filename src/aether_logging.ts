@@ -413,14 +413,14 @@ export class Log {
     private static consolePrinter: LogPrinter | null = null;
 
     // --- Public Configuration ---
-    public static TRACE = true;
+//     public static TRACE = true;
     public static IS_ENABLED = true;
     public static readonly filter = new LogFilter();
 
     // --- Constants Aliases ---
-    public static readonly LEVEL = LogKeys.LEVEL;
-    public static readonly MSG = LogKeys.MSG;
-    public static readonly EXCEPTION_STR = LogKeys.EXCEPTION_STR;
+//     public static readonly LEVEL = LogKeys.LEVEL;
+//     public static readonly MSG = LogKeys.MSG;
+//     public static readonly EXCEPTION_STR = LogKeys.EXCEPTION_STR;
 
     // Prevent instantiation
     private constructor() { }

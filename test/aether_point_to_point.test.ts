@@ -27,7 +27,7 @@ import {
 } from '../src/aether_crypto_sodium';
 import { MessageNode } from '../src/aether_client_message';
 
-Log.printConsolePlain(new LogFilter().notLevel(LogLevel.TRACE));
+Log.printConsolePlain(new LogFilter());
 
 
 describe('PointToPointCommunication', () => {
@@ -92,9 +92,16 @@ describe('PointToPointCommunication', () => {
         const checkReceiveMessage = AFuture.make();
         const message = new Uint8Array([1, 2, 3, 4]);
 
+        Log.info("Test P2P_01: onMessage listener added", {});
         let receiveCount = 0;
         // Client 2: Регистрируем слушателя onMessage
         client2.onMessage.add((senderUid: UUID, msg: Uint8Array) => {
+            Log.info("Test P2P_01: onMessage fired", { 
+                sender: senderUid.toString(), 
+                msg: Array.from(msg),
+                expectedSender: uid1.toString(),
+                expectedMsg: Array.from(message)
+            });
             expect(senderUid.equals(uid1)).toBe(true);
             expect(msg).toEqual(message);
 
@@ -106,6 +113,7 @@ describe('PointToPointCommunication', () => {
                 Log.warn("Second message confirm");
             }
         });
+
 
         Log.info("START two clients! Sending message.");
 

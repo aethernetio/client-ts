@@ -369,6 +369,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
     public reconnectConfig: ReconnectConfig;
     public reconnectAttempts: number = 0;
     public reconnectTimeout: NodeJS.Timeout | null = null;
+    private connectTimeout: NodeJS.Timeout | null = null;
     public isManualClose: boolean = false;
     public isReconnecting: boolean = false;
     public connectionState: ConnectionState = ConnectionState.DISCONNECTED;
@@ -412,6 +413,23 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         Log.info("FastMetaClientWebSocket initialized with infinite reconnection strategy");
     }
 
+    private startConnectTimeout(): void {
+        this.clearConnectTimeout();
+        this.connectTimeout = setTimeout(() => {
+            if (!this.connectFuture.isFinalStatus()) {
+                this.connectFuture.error(new Error("Connection timeout"));
+            }
+        }, 10000);
+    }
+
+    private clearConnectTimeout(): void {
+        if (this.connectTimeout) {
+            clearTimeout(this.connectTimeout);
+            this.connectTimeout = null;
+        }
+    }
+
+
     /**
      * @method connect
      * @description Establish WebSocket connection
@@ -444,6 +462,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
 
             this.setConnectionState(ConnectionState.CONNECTING);
             this.createWebSocketConnection();
+        this.startConnectTimeout();
 
             return this.connectFuture;
         } catch (e) {
@@ -482,6 +501,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
      * @description Create new WebSocket connection
      */
     private createWebSocketConnection(): void {
+        if (this.isManualClose) return;
         try {
             Log.debug("Creating WebSocket");
             this.websocket = WebSocketFactory.create(this.uri);
@@ -680,6 +700,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
             Log.error("Error during connection setup", e as Error);
             this.connectFuture.error(new ClientStartException("Failed to setup context", e as Error));
             this.scheduleReconnect();
+        this.clearConnectTimeout();
         }
     }
 
@@ -960,6 +981,15 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         }
 
         this.connectionStats.connected = false;
+        // Safety timeout to prevent hanging close future
+        const closeTimeout = setTimeout(() => {
+            if (this.closeFuture && !this.closeFuture.isFinalStatus()) {
+                Log.warn("Close future timed out, forcing completion");
+                this.closeFuture.tryDone();
+            }
+        }, 5000);
+        this.closeFuture.to(() => clearTimeout(closeTimeout)).onError(() => clearTimeout(closeTimeout));
+
         this.reconnectAttempts = 0;
         this.setConnectionState(ConnectionState.DISCONNECTED);
 

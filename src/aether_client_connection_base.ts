@@ -166,7 +166,7 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
  * @implements {Destroyable}
  * @description Base class for client connections (Registration and Work).
  */
-export class Connection<LT, RT extends RemoteApi> implements Destroyable {
+export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
 
     /**
      * @description Reference to the main client instance.
@@ -258,7 +258,7 @@ export class Connection<LT, RT extends RemoteApi> implements Destroyable {
      */
     public getRootApi(): RT | null {
         if (!this.connectFuture.isDone()) {
-            Log.warn("Accessing rootApi before connection attempt is complete (may be null).", this.logCtxData);
+//             Log.warn("Accessing rootApi before connection attempt is complete (may be null).", this.logCtxData);
         }
         return this.rootApi;
     }
@@ -298,8 +298,8 @@ export class Connection<LT, RT extends RemoteApi> implements Destroyable {
      */
     public equals(other: unknown): boolean {
         if (this === other) return true;
-        if (other == null || !(other instanceof Connection)) return false;
-        return this.uri === (other as Connection<any, any>).uri;
+        if (other == null || !(other instanceof ConnectionBase)) return false;
+        return this.uri === (other as ConnectionBase<any, any>).uri;
     }
 
     /** * @description Calculates hash code based on the connection URI.

@@ -385,6 +385,21 @@ export class Queue<T> implements IQueue<T> {
         }
         return item;
     }
+    
+    /**
+     * Удаляет первое вхождение указанного элемента из очереди.
+     * @param value Элемент для удаления.
+     * @returns true если элемент был найден и удалён, иначе false.
+     */
+    removeValue(value: T): boolean {
+        const index = this.storage.indexOf(value);
+        if (index !== -1) {
+            this.storage.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+
 
     /**
      * Извлекает и удаляет элемент из начала очереди.

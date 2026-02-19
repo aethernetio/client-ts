@@ -1,6 +1,5 @@
 import  {
-    AFuture, ARFuture, DataIn, DataOut, DataInOut, DataInOutStatic, FastMetaType, FastFutureContext, RemoteApi,
-     FastMeta, SerializerPackNumber, DeserializerPackNumber, FastApiContextLocal, FastMetaApi, BytesConverter, UUID, URI, AConsumer, ToString, AString, FlushReport
+    AFuture, ARFuture, DataInOutStatic, FastMetaType, FastFutureContext, RemoteApi, FastMetaApi, BytesConverter, UUID, URI, AConsumer, ToString, AString
 }
 from './aether_client';
 import * as Impl from './aether_api_impl';
@@ -5363,7 +5362,7 @@ export namespace ClientApiUnsafe  {
 export interface ClientApiUnsafeRemote extends ClientApiUnsafe, RemoteApi  {
     
 }
-export abstract class ClientApiUnsafeLocal<RT extends ClientApiUnsafeRemote> implements ClientApiUnsafe  {
+export abstract class ClientApiUnsafeLocal<RT extends RemoteApi> implements ClientApiUnsafe  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;
@@ -5505,7 +5504,7 @@ export namespace ClientApiSafe  {
 export interface ClientApiSafeRemote extends ClientApiSafe, RemoteApi  {
     
 }
-export abstract class ClientApiSafeLocal<RT extends ClientApiSafeRemote> implements ClientApiSafe  {
+export abstract class ClientApiSafeLocal<RT extends RemoteApi> implements ClientApiSafe  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;
@@ -5838,7 +5837,7 @@ export namespace AuthorizedApi  {
 export interface AuthorizedApiRemote extends AuthorizedApi, RemoteApi  {
     
 }
-export abstract class AuthorizedApiLocal<RT extends AuthorizedApiRemote> implements AuthorizedApi  {
+export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements AuthorizedApi  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;
@@ -6084,7 +6083,7 @@ export namespace LoginApi  {
 export interface LoginApiRemote extends LoginApi, RemoteApi  {
     
 }
-export abstract class LoginApiLocal<RT extends LoginApiRemote> implements LoginApi  {
+export abstract class LoginApiLocal<RT extends RemoteApi> implements LoginApi  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;
@@ -6129,7 +6128,7 @@ export namespace ServerApiByUidClient  {
 export interface ServerApiByUidClientRemote extends ServerApiByUidClient, RemoteApi  {
     
 }
-export abstract class ServerApiByUidClientLocal<RT extends ServerApiByUidClientRemote> implements ServerApiByUidClient  {
+export abstract class ServerApiByUidClientLocal<RT extends RemoteApi> implements ServerApiByUidClient  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;
@@ -6227,7 +6226,7 @@ export namespace ServerApiByUid  {
 export interface ServerApiByUidRemote extends ServerApiByUid, RemoteApi  {
     
 }
-export abstract class ServerApiByUidLocal<RT extends ServerApiByUidRemote> implements ServerApiByUid  {
+export abstract class ServerApiByUidLocal<RT extends RemoteApi> implements ServerApiByUid  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;
@@ -6328,7 +6327,7 @@ export namespace ClientApiRegSafe  {
 export interface ClientApiRegSafeRemote extends ClientApiRegSafe, RemoteApi  {
     
 }
-export abstract class ClientApiRegSafeLocal<RT extends ClientApiRegSafeRemote> implements ClientApiRegSafe  {
+export abstract class ClientApiRegSafeLocal<RT extends RemoteApi> implements ClientApiRegSafe  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;
@@ -6353,7 +6352,7 @@ export namespace GlobalRegClientApi  {
 export interface GlobalRegClientApiRemote extends GlobalRegClientApi, RemoteApi  {
     
 }
-export abstract class GlobalRegClientApiLocal<RT extends GlobalRegClientApiRemote> implements GlobalRegClientApi  {
+export abstract class GlobalRegClientApiLocal<RT extends RemoteApi> implements GlobalRegClientApi  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;
@@ -6387,7 +6386,7 @@ export namespace ClientApiRegUnsafe  {
 export interface ClientApiRegUnsafeRemote extends ClientApiRegUnsafe, RemoteApi  {
     
 }
-export abstract class ClientApiRegUnsafeLocal<RT extends ClientApiRegUnsafeRemote> implements ClientApiRegUnsafe  {
+export abstract class ClientApiRegUnsafeLocal<RT extends RemoteApi> implements ClientApiRegUnsafe  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;
@@ -6433,7 +6432,7 @@ export namespace GlobalRegServerApi  {
 export interface GlobalRegServerApiRemote extends GlobalRegServerApi, RemoteApi  {
     
 }
-export abstract class GlobalRegServerApiLocal<RT extends GlobalRegServerApiRemote> implements GlobalRegServerApi  {
+export abstract class GlobalRegServerApiLocal<RT extends RemoteApi> implements GlobalRegServerApi  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;
@@ -6498,7 +6497,7 @@ export namespace ServerRegistrationApi  {
 export interface ServerRegistrationApiRemote extends ServerRegistrationApi, RemoteApi  {
     
 }
-export abstract class ServerRegistrationApiLocal<RT extends ServerRegistrationApiRemote> implements ServerRegistrationApi  {
+export abstract class ServerRegistrationApiLocal<RT extends RemoteApi> implements ServerRegistrationApi  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;
@@ -6565,7 +6564,7 @@ export namespace RegistrationRootApi  {
 export interface RegistrationRootApiRemote extends RegistrationRootApi, RemoteApi  {
     
 }
-export abstract class RegistrationRootApiLocal<RT extends RegistrationRootApiRemote> implements RegistrationRootApi  {
+export abstract class RegistrationRootApiLocal<RT extends RemoteApi> implements RegistrationRootApi  {
     protected readonly remoteApi: RT;
     public getRemoteApi(): RT  {
         return this.remoteApi;

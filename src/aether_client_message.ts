@@ -34,12 +34,19 @@ export interface MessageEventListener {
  * @description Default implementation of the connection resolution strategy.
  * (Без изменений)
  */
+
 export const MessageEventListenerDefault: MessageEventListener = {
     setConsumerCloud: (messageNode: MessageNode, cloud: Cloud) => {
-        // ... (логика без изменений) ...
-        Log.debug("Strategy: setConsumerCloud called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toAString() });
+        Log.info("Strategy: setConsumerCloud called", { 
+            component: "MsgEvListenerDefault", 
+            uidTo: messageNode.consumerUUID.toAString(),
+            cloud: cloud.data 
+        });
         if (cloud?.data?.length > 0) {
-            Log.debug("Strategy: Cloud has servers. Requesting server descriptor...", { component: "MsgEvListenerDefault", serverId: cloud.data[0] });
+            Log.info("Strategy: Cloud has servers. Requesting server descriptor...", { 
+                component: "MsgEvListenerDefault", 
+                serverId: cloud.data[0] 
+            });
             messageNode.addConsumerServerOutById(cloud.data[0]);
         } else {
             Log.warn("Received null or empty cloud, cannot establish connection.", { cloud });
@@ -50,16 +57,23 @@ export const MessageEventListenerDefault: MessageEventListener = {
         }
     },
     onResolveConsumerServer: (messageNode: MessageNode, serverDescriptor: ServerDescriptor) => {
-        // ... (логика без изменений) ...
-        Log.debug("Strategy: onResolveConsumerServer called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toAString(), serverId: serverDescriptor.id });
+        Log.info("Strategy: onResolveConsumerServer called", { 
+            component: "MsgEvListenerDefault", 
+            uidTo: messageNode.consumerUUID.toAString(), 
+            serverId: serverDescriptor.id 
+        });
         messageNode.addConsumerServerOutByDescriptor(serverDescriptor);
     },
     onResolveConsumerConnection: (messageNode: MessageNode, connection: ConnectionWork) => {
-        // ... (логика без изменений) ...
-        Log.debug("Strategy: onResolveConsumerConnection called", { component: "MsgEvListenerDefault", uidTo: messageNode.consumerUUID.toAString(), uri: connection.uri });
+        Log.info("Strategy: onResolveConsumerConnection called", { 
+            component: "MsgEvListenerDefault", 
+            uidTo: messageNode.consumerUUID.toAString(), 
+            uri: connection.uri 
+        });
         messageNode.addConsumerConnectionOut(connection);
     },
 };
+
 
 /**
  * @class MessageNode
@@ -146,6 +160,7 @@ export class MessageNode {
 
         if (this.connectionsOut.size === 0) {
             Log.trace("MessageNode: Message buffered, no connections yet.");
+            this.client.flush();
         }
         return sendFuture;
     }
@@ -177,6 +192,7 @@ export class MessageNode {
                 return;
             }
             this.connectionsOut.add(conn);
+            this.client.flush();
             Log.info("SUCCESS: Added new outgoing connection", { component: "MessageNode", uidTo: this.consumerUUID.toAString(), server: conn.uri, newSize: this.connectionsOut.size });
     }
     public removeConsumerConnectionOut(conn: ConnectionWork): void {
@@ -188,10 +204,17 @@ export class MessageNode {
             }
         }
     }
+
     public sendMessageFromServerToClient(data: Uint8Array): void {
-        Log.trace("Received message from server", { component: "MessageNode", uidTo: this.consumerUUID.toAString() });
-        this.bufferIn.fire({ data });
+        try {
+            Log.info("sendMessageFromServerToClient: entered for " + (this.consumerUUID?.toAString?.() ?? this.consumerUUID?.toString?.() ?? 'unknown'));
+            this.bufferIn.fire({ data });
+            Log.info("sendMessageFromServerToClient: bufferIn fired");
+        } catch (e) {
+            Log.error("sendMessageFromServerToClient: exception", e as Error, { uid: this.consumerUUID?.toString() });
+        }
     }
+
     public toConsumer(o: AConsumer<Uint8Array>): void {
         this.bufferIn.add((msg: { data: Uint8Array }) => o(msg.data));
     }
