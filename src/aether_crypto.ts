@@ -6,7 +6,7 @@ import {
     Uint8Array,
 } from './aether_types';
 import { Log } from './aether_logging';
-import { HexUtils, RU } from './aether_utils';
+import { HexUtils } from './aether_utils';
 import type { Key as DtoKey } from './aether_api';
 
 // =============================================================================================

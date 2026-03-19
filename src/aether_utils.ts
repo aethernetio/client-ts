@@ -136,14 +136,18 @@ export const RU = {
     ConcurrentHashSet: Set,
     time: () => Date.now(),
     timeSeconds: () => Date.now() / 1000,
-    schedule: (ms: number, task: ARunnable): Destroyable => {
+    schedule: (resTo: Destroyable | null, ms: number, task: ARunnable): Destroyable => {
         const timer = setTimeout(Log.wrap(task), ms);
-        return {
+        const d: Destroyable = {
             destroy: (f: boolean) => {
                 clearTimeout(timer);
                 return AFuture.completed();
             }
         };
+        if (resTo && typeof (resTo as Destroyer).add === 'function') {
+            (resTo as Destroyer).add(d);
+        }
+        return d;
     },
 
     scheduleAtFixedRate: (resTo: Destroyable, period: number, timeUnit: "MILLISECONDS" | "SECONDS", t: ARunnable): Destroyable => {

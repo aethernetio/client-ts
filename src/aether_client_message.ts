@@ -99,7 +99,7 @@ export class MessageNode {
         this.consumerUUID = consumerId;
         this.strategy = strategy;
 
-        this.client.getCloud(consumerId).to(
+        this.client.getCloud(consumerId).toConsumer(
             (c: Cloud | null) => {
                 if (c) {
                     Log.debug("Cloud resolution SUCCESS", { component: "MessageNode", uidTo: this.consumerUUID.toAString(), cloudData: c.data });
@@ -167,7 +167,7 @@ export class MessageNode {
 
     // --- (Методы addConsumer... без изменений) ---
     public addConsumerServerOutById(serverId: number): void {
-        this.client.getServer(serverId).to(
+        this.client.getServer(serverId).toConsumer(
             (sd: ServerDescriptor | null) => {
                 if (sd) {
                     try { this.strategy.onResolveConsumerServer(this, sd); }
@@ -200,7 +200,7 @@ export class MessageNode {
             Log.warn("Removing outgoing connection", { component: "MessageNode", uidTo: this.consumerUUID.toAString(), server: conn.uri, newSize: this.connectionsOut.size });
             if (this.connectionsOut.size === 0 && this.bufferOut.size() > 0) {
                 Log.warn("Last connection removed, triggering cloud resolution again for buffered messages.", { component: "MessageNode" });
-                this.client.getCloud(this.consumerUUID).to((c: Cloud | null) => { if (c) this.strategy.setConsumerCloud(this, c); });
+            this.client.getCloud(this.consumerUUID).toConsumer((c: Cloud | null) => { if (c) this.strategy.setConsumerCloud(this, c); });
             }
         }
     }
@@ -232,7 +232,7 @@ export class MessageNode {
         localApi: LT
     ): void {
         this.bufferIn.add((msg: { data: Uint8Array }) => {
-            (ctx as any).localDataIn?.(metaLt, localApi, msg.data);
+            metaLt.makeLocal_fromDataIn(ctx, new DataInOutStatic(msg.data),localApi );
         });
     }
 
@@ -254,7 +254,7 @@ export class MessageNode {
                     report.done();
                     return;
                 }
-                node.send(data).to(() => {
+                node.send(data).toRunnable(() => {
                     report.done();
                 }).onError((err: Error) => {
                     Log.error("MessageNode toApi flush error", err);
@@ -286,7 +286,7 @@ export class MessageNode {
             override flush(sendFuture?: FlushReport): void {
                 const d = this.remoteDataToArrayAsArray();
                 if (d.length > 0) {
-                    nodeSend(d).to(sendFuture); // Используем send(data)
+                    if (sendFuture) nodeSend(d).pipeTo(sendFuture); else nodeSend(d);
                 } else {
                     sendFuture.done();
                 }

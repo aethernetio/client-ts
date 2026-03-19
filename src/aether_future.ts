@@ -10,7 +10,7 @@ import {
     Executor, Tuple2,
     WeakConsumer_T, /** <-- IMPORTED */
 } from './aether_types';
-import { RU } from './aether_utils';
+import { Destroyer, RU } from './aether_utils';
 import { Log } from './aether_logging';
 
 // =============================================================================================
@@ -338,7 +338,7 @@ class AMFutureBase<T> {
             (wrappedTask as any)['_onceFlag'] = true;
             const removeListener = () => this.eventConsumer.remove(wrappedTask);
 
-            timerDisposer = RU.schedule(ms, () => {
+            timerDisposer = RU.schedule(null, ms, () => {
                 timerDisposer = null;
                 if (!executed) {
                     executed = true;
@@ -596,6 +596,38 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
      */
     public abstract to(...args: any[]): Self;
 
+    /** Explicitly pipe completion/error to another future */
+    public pipeTo(f: AFutureBaseImpl<any>): Self {
+        if (!f) return this as unknown as Self;
+        this.addListener(self => {
+
+            if (self.isDone()) {
+                if (self instanceof ARFuture && f instanceof ARFuture) (f as ARFuture<any>).tryDone((self as ARFuture<any>).getNow());
+                else (f as any).tryDone();
+            } else if (self.isError()) {
+                f.tryError(self.getError()!);
+            }
+        });
+        return this as unknown as Self;
+    }
+
+    /** Explicitly execute a runnable task when this future is done */
+    public toRunnable(task: ARunnable, executor?: Executor): Self {
+        const taskToRun: ARunnable = () => {
+            if (this.isDone()) {
+                try { task(); } catch (e) { Log.error("Error in future ARunnable task", e as Error); }
+            }
+        };
+        this.addListener(_f => {
+            if (executor) {
+                try { executor(taskToRun); } catch (e) { Log.error("Error submitting task to executor", e as Error); }
+            } else {
+                taskToRun();
+            }
+        });
+        return this as unknown as Self;
+    }
+
     /**
      * @deprecated Synchronous waiting is not supported in JavaScript. Use .toPromise() with async/await.
      */
@@ -620,7 +652,7 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
      */
     public timeoutError(seconds: number, text: string): Self {
         const ms = seconds * 1000;
-        const timerDisposer = RU.schedule(ms, () => {
+        const timerDisposer = RU.schedule(null, ms, () => {
             if (!this.isFinalStatus()) {
                 this.error(new Error(`Timeout: ${text} after ${seconds}s`));
             }
@@ -639,8 +671,8 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
      * @param task The task to run on timeout.
      * @returns This future instance.
      */
-    public timeoutMs(ms: number, task: ARunnable): Self {
-        const timerDisposer = RU.schedule(ms, () => {
+    public timeoutMs(ms: number, task: ARunnable, destroyer:Destroyer =null): Self {
+        const timerDisposer = RU.schedule(destroyer, ms, () => {
             if (!this.isFinalStatus()) {
                 try { task(); } catch (e) { Log.error("Error in future timeout task", e as Error); }
                 this.cancel(); /** Cancel after task */
@@ -663,7 +695,7 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
             const cleanUp = () => { if (timerDisposer) { timerDisposer.destroy(true); timerDisposer = undefined; } };
 
             if (timeoutMs !== undefined && timeoutMs > 0) {
-                timerDisposer = RU.schedule(timeoutMs, () => {
+                timerDisposer = RU.schedule(null, timeoutMs, () => {
                     timedOut = true;
                     if (!this.isFinalStatus()) {
                         /** Reject the promise, but don't cancel the underlying future */
@@ -688,6 +720,17 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
                 else if (f.isError()) reject(f.getError() ?? new Error("Future failed"));
             });
         });
+    }
+
+    /**
+     * Implementation of the "Thenable" interface.
+     * This allows using 'await' directly with any AFuture or ARFuture instance.
+     */
+    public then<TResult1 = any, TResult2 = never>(
+        onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | undefined | null,
+        onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null
+    ): Promise<TResult1 | TResult2> {
+        return this.toPromise().then(onfulfilled, onrejected);
     }
 
     /**
@@ -752,60 +795,22 @@ export class AFuture extends AFutureBaseImpl<AFuture> {
         return res;
     }
 
-    /**
-     * Executes a runnable task on a given executor upon successful completion.
-     * @param executor The executor to run the task on.
-     * @param t The runnable task.
-     * @returns This future instance.
-     */
-    public to(executor: Executor, t: ARunnable): AFuture;
-    /**
-     * Executes a runnable task upon successful completion.
-     * @param t The runnable task.
-     * @returns This future instance.
-     */
-    public to(t: ARunnable): AFuture;
-    /**
-     * Propagates the result of this future to another future.
-     * @param f The target future.
-     * @returns This future instance.
-     */
-    public to(f: AFuture): AFuture;
+
     public to(...args: any[]): AFuture {
-        const first = args[0]; const second = args[1];
+        const first = args[0];
+        // Используем проверку наличия метода вместо instanceof для надежности в Jest
+        if (args.length === 1 && first && typeof first.addListener === 'function') return this.pipeTo(first as AFuture);
 
-        /** Overload: to(f: AFuture) */
-        if (args.length === 1 && first instanceof AFutureBaseImpl) {
-            const f = first as AFuture;
-            this.addListener(self => {
-                if (self.isDone()) f.tryDone();
-                else if (self.isError()) f.error(self.getError()!);
-            });
-            return this;
-        }
-
-        /** Overload: to(t: ARunnable) or to(executor: Executor, t: ARunnable) */
-        const taskRunnable = (typeof first === 'function' ? first : second) as ARunnable;
+        if (args.length === 1 && first instanceof AFutureBaseImpl) return this.pipeTo(first as AFuture);
+        
+        const taskRunnable = (typeof first === 'function' ? first : args[1]) as ARunnable;
         const executor = (typeof first !== 'function' ? first : undefined) as Executor | undefined;
-
-        if (!taskRunnable || typeof taskRunnable !== 'function' || (taskRunnable.length !== 0 && taskRunnable.length !== undefined)) {
-            /** Check for developer error. AConsumer<T> has length 1. */
-            throw new Error("Invalid arguments for AFuture.to (runnable variant)");
+        
+        // В Node.js/Jest .length может быть недостоверным, проверяем тип функции
+        if (typeof taskRunnable === 'function') {
+            return this.toRunnable(taskRunnable, executor);
         }
-        const taskToRun: ARunnable = () => {
-            if (this.isDone()) {
-                try { taskRunnable(); } catch (e) { Log.error("Error in future ARunnable task", e as Error); }
-            }
-        };
-
-        this.addListener(_f => {
-            if (executor) {
-                try { executor(taskToRun); } catch (e) { Log.error("Error submitting task to executor", e as Error); }
-            } else {
-                taskToRun();
-            }
-        });
-        return this;
+        throw new Error("Invalid arguments for AFuture.to (runnable variant)");
     }
 
     /**
@@ -1128,126 +1133,52 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
         return res;
     }
 
-    /**
-     * Executes a runnable task on a given executor upon successful completion.
-     * @param executor The executor to run the task on.
-     * @param t The runnable task.
-     * @returns This future instance.
-     */
-    public to(executor: Executor, t: ARunnable): ARFuture<T>;
-    /**
-     * Executes a runnable task upon successful completion.
-     * @param t The runnable task.
-     * @returns This future instance.
-     */
-    public to(t: ARunnable): ARFuture<T>;
-    /**
-     * Adds a listener for successful completion.
-     * @param onDone The consumer that accepts the result.
-     * @returns This future instance.
-     */
-    public to(onDone: AConsumer<T>): ARFuture<T>;
-    /**
-     * Adds listeners for successful completion and error.
-     * @param onDone The consumer that accepts the result.
-     * @param onError The consumer that accepts the error.
-     * @returns This future instance.
-     */
-    public to(onDone: AConsumer<T>, onError: AConsumer<Error>): ARFuture<T>;
-    /**
-     * Propagates the result (value, error, or cancel) to another ARFuture.
-     * @param f The target ARFuture.
-     * @returns This future instance.
-     */
-    public to(f: ARFuture<T>): ARFuture<T>;
-    /**
-     * Propagates the result (done, error, or cancel) to an AFuture.
-     * @param f The target AFuture.
-     * @returns This future instance.
-     */
-    public to(f: AFuture): ARFuture<T>;
-    /**
-     * Adds a listener for success with a timeout.
-     * @param task The consumer that accepts the result.
-     * @param timeout The timeout (seconds or ms > 1000000).
-     * @param onTimeout The runnable to execute on timeout.
-     * @returns This future instance.
-     */
-    public to(task: AConsumer<T>, timeout: number, onTimeout: ARunnable): ARFuture<T>;
+
+    /** Explicitly handle result or error */
+    public toConsumer(onDone: AConsumer<T>, onError?: AConsumer<Error>): ARFuture<T> {
+        this.addListener(f => {
+            if (f.isDone()) onDone(f.getNow()!);
+            else if (f.isError() && onError) onError(f.getError()!);
+        });
+        return this;
+    }
+
+    /** Explicitly handle result with a timeout */
+    public toTimeout(task: AConsumer<T>, timeout: number, onTimeout: ARunnable): ARFuture<T> {
+        const timeoutMs = timeout > 1000000 ? timeout : timeout * 1000;
+        let timedOut = false;
+        const timerDisposer = RU.schedule(null, timeoutMs, () => {
+            timedOut = true;
+            try { onTimeout(); } catch (e) { Log.error("Error in .to() timeout task", e as Error); }
+        });
+        this.addListener(f => {
+            timerDisposer.destroy(true);
+            if (!timedOut && f.isDone()) task(f.getNow()!);
+        });
+        return this;
+    }
+
+
     public to(...args: any[]): ARFuture<T> {
         const first = args[0]; const second = args[1]; const third = args[2];
+        
+        // Используем проверку наличия addListener вместо instanceof для надежности в Jest
+        if (args.length === 1 && first && typeof first.addListener === 'function') return this.pipeTo(first as AFutureBaseImpl<any>);
 
-        /** 1. to(onDone: AConsumer<T>) */
-        if (typeof first === 'function' && first.length === 1 && args.length === 1) {
-            this.addListener(f => { if (f.isDone()) (first as AConsumer<T>)(f.getNow()!); });
-            return this;
+        
+        if (args.length === 1 && typeof first === 'function') return this.toConsumer(first as AConsumer<T>);
+        if (args.length === 2 && typeof first === 'function' && typeof second === 'function') return this.toConsumer(first as AConsumer<T>, second as AConsumer<Error>);
+        if (args.length === 3 && typeof first === 'function' && typeof second === 'number' && typeof third === 'function') {
+            return this.toTimeout(first as AConsumer<T>, second, third as ARunnable);
         }
-        /** 2. to(onDone: AConsumer<T>, onError: AConsumer<Error>) */
-        else if (typeof first === 'function' && first.length === 1 && typeof second === 'function' && second.length === 1 && args.length === 2) {
-            this.addListener(f => {
-                if (f.isDone()) (first as AConsumer<T>)(f.getNow()!);
-                else if (f.isError() && f.getError()) (second as AConsumer<Error>)(f.getError()!);
-            });
-            return this;
-        }
-        /** 3. to(task: AConsumer<T>, timeout: number, onTimeout: ARunnable) */
-        else if (typeof first === 'function' && first.length === 1 && typeof second === 'number' && typeof third === 'function' && args.length === 3) {
-            const task = first as AConsumer<T>;
-            const timeoutMs = second > 1000000 ? second : second * 1000;
-            const onTimeout = third as ARunnable;
-            let timedOut = false;
-            const timerDisposer = RU.schedule(timeoutMs, () => {
-                timedOut = true;
-                try { onTimeout(); } catch (e) { Log.error("Error in .to() timeout task", e as Error); }
-            });
-            this.addListener(f => {
-                timerDisposer.destroy(true); /** Clean up timer */
-                if (!timedOut && f.isDone()) {
-                    task(f.getNow()!);
-                }
-            });
-            return this;
-        }
-        /** 4. to(f: ARFuture<T> | AFuture) */
-        else if (first instanceof AFutureBaseImpl && args.length === 1) {
-            const f = first as AFuture;
-            this.addListener(self => {
-                if (self.isDone()) {
-                    /** Check if f is an ARFuture by checking for tryDone(value) */
-                    const fAsArFuture = f as unknown as ARFuture<T>;
-                    if (fAsArFuture.tryDone && fAsArFuture.tryDone.length === 1) {
-                        fAsArFuture.tryDone(self.getNow()!);
-                    } else {
-                        /** It's a plain AFuture */
-                        f.tryDone();
-                    }
-                } else if (self.isError()) {
-                    f.error(self.getError()!);
-                }
-            });
-            return this;
-        }
-        /** 5. to(t: ARunnable) or to(executor: Executor, t: ARunnable) */
-        else {
+        if (args.length === 1 && first instanceof AFutureBaseImpl) return this.pipeTo(first as AFutureBaseImpl<any>);
+        
+        if (typeof first === 'function' || typeof second === 'function') {
             const taskRunnable = (typeof first === 'function' ? first : second) as ARunnable;
             const executor = (typeof first !== 'function' ? first : undefined) as Executor | undefined;
-            if (!taskRunnable || typeof taskRunnable !== 'function' || (taskRunnable.length !== 0 && taskRunnable.length !== undefined)) {
-                throw new Error("Invalid arguments for ARFuture.to (runnable)");
-            }
-            const taskToRun = () => {
-                if (this.isDone()) { /** Only run if 'done' */
-                    try { taskRunnable(); } catch (e) { Log.error("Error in future ARunnable task", e as Error); }
-                }
-            };
-            this.addListener(_f => {
-                if (executor) {
-                    try { executor(taskToRun); } catch (e) { Log.error("Error submitting task to executor", e as Error); }
-                } else {
-                    taskToRun();
-                }
-            });
-            return this;
+            return this.toRunnable(taskRunnable, executor);
         }
+        throw new Error("Invalid arguments for ARFuture.to (runnable variant fallback)");
     }
 
     /**
@@ -1262,7 +1193,7 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
             const cleanUp = () => { if (timerDisposer) { timerDisposer.destroy(true); timerDisposer = undefined; } };
 
             if (timeoutMs !== undefined && timeoutMs > 0) {
-                timerDisposer = RU.schedule(timeoutMs, () => {
+                timerDisposer = RU.schedule(null, timeoutMs, () => {
                     timedOut = true;
                     if (!this.isFinalStatus()) {
                         reject(new Error(`Future timed out after ${timeoutMs}ms`));

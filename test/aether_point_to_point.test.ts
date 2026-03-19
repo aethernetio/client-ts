@@ -27,7 +27,10 @@ import {
 } from '../src/aether_crypto_sodium';
 import { MessageNode } from '../src/aether_client_message';
 
-Log.printConsolePlain(new LogFilter());
+Log.printConsolePlain(new LogFilter()
+.not(n => n.containsMessages('encrypt','decrypt','cmd local after'))
+
+);
 
 
 describe('PointToPointCommunication', () => {

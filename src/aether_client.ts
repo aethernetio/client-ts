@@ -154,12 +154,12 @@ export class AetherCloudClient implements Destroyable {
             }
         });
 
-        this.startFuture.to(() => this.startScheduledTask());
+        this.startFuture.toRunnable(() => this.startScheduledTask());
         this.connect();
 
-    
 
-    
+
+
         // Forward incoming messages from all MessageNodes to the onMessage event
 
         this.onClientStreamCreated.add((node: MessageNode) => {
@@ -224,11 +224,11 @@ export class AetherCloudClient implements Destroyable {
                 const timeout: number = this.state.getTimeoutForConnectToRegistrationServer();
 
                 const anyFuture: AFuture = AFuture.any(...regs.map((r: ConnectionRegistration) => r.registration()));
-                anyFuture.to(() => this.startScheduledTask()).onError((e: Error) => this.startFuture.tryError(e));
+                anyFuture.toRunnable(() => this.startScheduledTask()).onError((e: Error) => this.startFuture.tryError(e));
                 anyFuture.timeoutMs(timeout, () => {
                     Log.warn("Failed to connect to registration server", { uris: this.state.getRegistrationUri() });
-                    RU.schedule(5000, () => this.connectStep(step));
-                });
+                    RU.schedule(this.destroyer, 5000, () => this.connectStep(step));
+                },this.destroyer);
             }
         } else {
             try {
@@ -238,7 +238,7 @@ export class AetherCloudClient implements Destroyable {
 
                 if (!cloud) {
                     Log.info("Recovery required: Cloud missing from cache.");
-                    this.triggerRecovery().to(this.startFuture);
+        this.triggerRecovery().pipeTo(this.startFuture);
                     return;
                 }
 
@@ -252,7 +252,7 @@ export class AetherCloudClient implements Destroyable {
 
                 if (isCacheMissingDescriptors) {
                     Log.info("Recovery required: ServerDescriptors missing.");
-                    this.triggerRecovery().to(this.startFuture);
+                    this.triggerRecovery().pipeTo(this.startFuture);
                     return;
                 }
 
@@ -282,21 +282,21 @@ export class AetherCloudClient implements Destroyable {
         if (this.destroyer.isDestroyed()) return;
         const uid: UUID | null = this.getUid();
         if (!uid) return;
-        Log.info("makeFirstConnection called for uid: $uid", {uid: uid});
+        Log.info("makeFirstConnection called for uid: $uid", { uid: uid });
 
 
-        this.getCloud(uid).to((cloud: Cloud) => {
+        this.getCloud(uid).toConsumer((cloud: Cloud) => {
             if (!cloud || !cloud.data.length) {
                 this.triggerRecovery();
                 return;
             }
             const orderedSids: number[] = this.priorityManager.getOrderedSids(uid, cloud);
             for (const sid of orderedSids) {
-                this.getServer(sid).to((descriptor: ServerDescriptor | null) => {
+                this.getServer(sid).toConsumer((descriptor: ServerDescriptor | null) => {
                     if (!descriptor) return;
                     const conn: ConnectionWork = this.getConnection(descriptor);
                     if (sid === orderedSids[0]) {
-                        conn.connectFuture.to(() => this.startFuture.tryDone());
+                        conn.connectFuture.toRunnable(() => this.startFuture.tryDone());
                     }
                 }).onError(() => {
                     this.priorityManager.demote(uid, sid);
@@ -330,16 +330,16 @@ export class AetherCloudClient implements Destroyable {
                 // Сбрасываем статус регистрации, чтобы confirmRegistration могла выполниться
                 this.regStatus.value = RegStatus.BEGIN;
                 const regDone = AFuture.any(...regs.map(c => c.registration()));
-                recoveryFutureLocal = regDone.to(this.clouds.getFuture(uidLocal).toFuture());
+                recoveryFutureLocal = regDone.pipeTo(this.clouds.getFuture(uidLocal).toFuture());
             }
         }
-        recoveryFutureLocal.to(() => {
+        recoveryFutureLocal.toRunnable(() => {
             Log.info("Recovery successful.");
             this.isRecoveryInProgress.value = false;
             this.recoveryFuture.tryDone();
         }).onError((e: Error) => {
             Log.error("Recovery attempt failed.", e);
-            RU.schedule(AetherCloudClient.RECOVERY_RETRY_DELAY_MS, () => {
+            RU.schedule(this.destroyer, AetherCloudClient.RECOVERY_RETRY_DELAY_MS, () => {
                 this.isRecoveryInProgress.value = false;
             });
         });
@@ -355,22 +355,22 @@ export class AetherCloudClient implements Destroyable {
             conn = new ConnectionWork(this, serverDescriptor);
             conn.stateListeners.add((isWritable: boolean) => {
                 if (isWritable) {
-                        conn.flush(); // отправляем всё, что накопилось
-                    } else {
-                        const uid: UUID | null = this.getUid();
-                        if (uid) {
-                            Log.info("Connection lost. Demoting SID.", { sid });
-                            this.priorityManager.demote(uid, sid);
-                            this.makeFirstConnection();
-                        }
+                    conn.flush(); // отправляем всё, что накопилось
+                } else {
+                    const uid: UUID | null = this.getUid();
+                    if (uid) {
+                        Log.info("Connection lost. Demoting SID.", { sid });
+                        this.priorityManager.demote(uid, sid);
+                        this.makeFirstConnection();
                     }
+                }
             });
             this.connections.set(sid, conn);
             this.destroyer.add(conn);
 
-        for (const node of this.messageNodeMap.values()) {
-            node.connectionsOut.add(conn);
-        }
+            for (const node of this.messageNodeMap.values()) {
+                node.connectionsOut.add(conn);
+            }
 
         }
         return conn;
@@ -392,7 +392,7 @@ export class AetherCloudClient implements Destroyable {
 
     public getServer(id: number): ARFuture<ServerDescriptor> {
         const res: ARFuture<ServerDescriptor> = this.servers.getFuture(id);
-        res.timeoutMs(7000, () => Log.warn("Timeout waiting for server description", { id }));
+        res.timeoutMs(7000, () => Log.warn("Timeout waiting for server description", { id }), this.destroyer);
         return res;
     }
 
@@ -443,17 +443,17 @@ export class AetherCloudClient implements Destroyable {
 
     public getMessageNode(uid: UUID, strategy: MessageEventListener = MessageEventListenerDefault): MessageNode {
         const key: string = uid.toString();
-        Log.info("getMessageNode called for uid: $uid", {uid: uid});
+        Log.info("getMessageNode called for uid: $uid", { uid: uid });
         let node = this.messageNodeMap.get(key);
         if (!node) {
-            Log.info("getMessageNode: creating new node for uid: $uid", {uid: uid});
+            Log.info("getMessageNode: creating new node for uid: $uid", { uid: uid });
             node = new MessageNode(this, uid, strategy);
             this.messageNodeMap.set(key, node);
             this.onClientStreamCreated.fire(node);
             this.flush();
 
         } else {
-            Log.info("getMessageNode: returning existing node for uid: $uid", {uid: uid});
+            Log.info("getMessageNode: returning existing node for uid: $uid", { uid: uid });
         }
         return node;
     }
@@ -559,3 +559,9 @@ export * from './aether_fastmeta';
 export * from './aether_astring';
 export * from './aether_types';
 export * from './aether_future';
+export * from './aether_utils';
+export * from './aether_logging';
+export * from './aether_rcollection';
+export * as aetherApi from './aether_api';
+export * from './aether_crypto';
+export * from './aether_crypto_sodium';

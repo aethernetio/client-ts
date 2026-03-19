@@ -102,6 +102,19 @@ export abstract class LNode {
     public isEmpty(): boolean { return this.count() === 0; }
 
     public check(key: string, value: any): boolean { return this.get(key) === value; }
+    public containsMsg(text: string): boolean {
+        let m = this.get(LogKeys.MSG);
+        if (!m) return false;
+        return m.indexOf(text) >= 0;
+    }
+    public containsMessages(...text: string[]): boolean {
+        let m = this.get(LogKeys.MSG);
+        if (!m) return false;
+        for (let v of text) {
+            if (m.indexOf(v) >= 0) return true;
+        }
+        return false;
+    }
 
     public getLevel(): LogLevel | undefined { return this.get(LogKeys.LEVEL) as LogLevel; }
 
@@ -272,6 +285,12 @@ export class LogFilter {
         this.predicate = () => true;
         this.fieldDropper = () => false;
     }
+
+    public aggregate(matchKeys: string[], diffKeys: string[], windowMs: number): this {
+        const aggregator = new LogAggregator(matchKeys, diffKeys, windowMs);
+        return this.filter(n => aggregator.test(n));
+    }
+
 }
 
 // =============================================================================================
@@ -400,6 +419,19 @@ export class LogPrinter implements Destroyable {
             }
         }();
     }
+    public static colMsg(): Column {
+        return new class extends ColumnBase {
+            getKey(): string | null { return LogKeys.MSG; }
+            print(_p: LogPrinter, out: AString, node: LNode, workKeys: Set<string>) {
+                const msg = node.get(LogKeys.MSG) as string;
+                if (msg) {
+                    out.addVars(msg, (key: string) => node.get(key));
+                }
+                workKeys.add(LogKeys.MSG);
+            }
+        }();
+    }
+
 }
 
 // =============================================================================================
@@ -413,14 +445,16 @@ export class Log {
     private static consolePrinter: LogPrinter | null = null;
 
     // --- Public Configuration ---
-//     public static TRACE = true;
+    //     public static TRACE = true;
     public static IS_ENABLED = true;
     public static readonly filter = new LogFilter();
+    public static readonly LOG_COUNT = 'logCount';
+
 
     // --- Constants Aliases ---
-//     public static readonly LEVEL = LogKeys.LEVEL;
-//     public static readonly MSG = LogKeys.MSG;
-//     public static readonly EXCEPTION_STR = LogKeys.EXCEPTION_STR;
+    //     public static readonly LEVEL = LogKeys.LEVEL;
+    //     public static readonly MSG = LogKeys.MSG;
+    //     public static readonly EXCEPTION_STR = LogKeys.EXCEPTION_STR;
 
     // Prevent instantiation
     private constructor() { }
@@ -547,7 +581,7 @@ export class Log {
             LogPrinter.splitter(" "),
             LogPrinter.col(LogKeys.LEVEL).min(5),
             LogPrinter.splitter(" | "),
-            LogPrinter.col(LogKeys.MSG).min(60),
+            LogPrinter.colMsg().min(60),
             LogPrinter.splitter("  "),
             LogPrinter.colAll()
         ];
@@ -578,11 +612,80 @@ export class Log {
             LogPrinter.splitter(" "),
             coloredLevel,
             LogPrinter.splitter(" | "),
-            LogPrinter.col(LogKeys.MSG).min(60),
+            LogPrinter.colMsg().min(60),
             LogPrinter.splitter("  "),
             LogPrinter.colAll()
         ];
         this.consolePrinter = new LogPrinter(columns, filter);
         return this.consolePrinter;
+    }
+}
+
+
+// =============================================================================================
+// --- 6. LogAggregator ---
+// =============================================================================================
+
+export class LogAggregator {
+    private readonly matchKeys: string[];
+    private readonly diffKeys: string[];
+    private readonly windowMs: number;
+    private readonly cache = new Map<string, { sample: LNode; startTime: number; count: number; flushed: boolean }>();
+    private timer: any;
+
+    constructor(matchKeys: string[], diffKeys: string[], windowMs: number) {
+        this.matchKeys = matchKeys;
+        this.diffKeys = diffKeys;
+        this.windowMs = windowMs;
+        this.timer = setInterval(() => this.flushExpired(), windowMs);
+    }
+
+    test(node: LNode): boolean {
+        if (node.get(Log.LOG_COUNT) !== undefined) return true;
+        const key = this.calculateKey(node);
+        const now = Date.now();
+        const entry = this.cache.get(key);
+        if (entry) {
+            if (this.isSame(entry.sample, node) && (now - entry.startTime < this.windowMs)) {
+                entry.count++;
+                return false;
+            }
+            this.flush(entry);
+        }
+        this.cache.set(key, { sample: node, startTime: now, count: 0, flushed: false });
+        return false;
+    }
+
+    private calculateKey(node: LNode): string {
+        return this.matchKeys.map(k => String(node.get(k) ?? 'null')).join('|');
+    }
+
+    private isSame(n1: LNode, n2: LNode): boolean {
+        for (const key of this.diffKeys) {
+            if (n1.get(key) !== n2.get(key)) return false;
+        }
+        return true;
+    }
+
+    private flush(entry: { sample: LNode; startTime: number; count: number; flushed: boolean }): void {
+        if (entry.flushed) return;
+        entry.flushed = true;
+        const c = entry.count;
+        if (c > 0) {
+            const flushNode = entry.sample.add({ [Log.LOG_COUNT]: c + 1 });
+            Log.fire(flushNode);
+        } else {
+            Log.fire(entry.sample);
+        }
+    }
+
+    private flushExpired(): void {
+        const now = Date.now();
+        for (const [key, entry] of this.cache.entries()) {
+            if (now - entry.startTime >= this.windowMs) {
+                this.flush(entry);
+                this.cache.delete(key);
+            }
+        }
     }
 }

@@ -160,9 +160,11 @@ abstract class DataIOBase implements DataIO {
         throw new Error("Invalid arguments for read()");
     }
 
-
     isEmpty(): boolean { return this.getSizeForRead() === 0; }
+
     isReadable(): boolean { return this.getSizeForRead() !== 0; }
+
+
     skipAllBytes(): void { this.skipBytes(this.getSizeForRead()); }
 
     readBoolean(): boolean { return this.readUByte() !== 0; }

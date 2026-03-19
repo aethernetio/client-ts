@@ -1,7 +1,8 @@
 import { UUID } from './aether_types';
 import { Cloud } from './aether_api';
+import { ToString, AString } from './aether_astring';
 
-export class ClientCloud {
+export class ClientCloud implements ToString {
     private readonly uid: UUID;
     private sids: number[];
     private weights: Map<number, number> = new Map();
@@ -95,6 +96,18 @@ export class ClientCloud {
         return this.uid.equals(other.uid);
     }
 
+
+    public toAString(sb: AString): AString {
+        sb.add('ClientCloud(uid:').add(this.uid).add(', sids:').add(this.sids).add(', weights:[');
+        let first = true;
+        for (const [sid, weight] of this.weights.entries()) {
+            if (!first) sb.add(', ');
+            sb.add(sid).add('=').add(weight);
+            first = false;
+        }
+        sb.add('])');
+        return sb;
+    }
 
 }
 

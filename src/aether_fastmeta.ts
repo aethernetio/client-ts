@@ -824,7 +824,7 @@ export class FastApiContext implements FastFutureContext {
 
     public localDataIn<T>(meta: FastMetaApi<T, any>, localApi: T, dataIn: DataIn): void {
         Log.info("localDataIn called", { meta: meta?.constructor?.name });
-        meta.makeLocal(this, dataIn, localApi);
+        meta.makeLocal_fromDataIn(this, dataIn, localApi);
     }
 
 
