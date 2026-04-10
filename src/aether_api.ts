@@ -6217,6 +6217,18 @@ export interface ServerApiByUid  {
      * @aetherMethodId 15
      */
     removeAccessGroup(groupId: bigint): ARFuture<boolean>;
+    /**
+     * @param limit - number
+     *
+     * @aetherMethodId 16
+     */
+    setMsgQueueLimit(limit: number): AFuture;
+    /**
+     * @param seconds - number
+     *
+     * @aetherMethodId 17
+     */
+    setMsgTimeLimit(seconds: number): AFuture;
     
 }
 export namespace ServerApiByUid  {
@@ -6312,6 +6324,18 @@ export abstract class ServerApiByUidLocal<RT extends RemoteApi> implements Serve
      * @aetherMethodId 15
      */
     public abstract removeAccessGroup(groupId: bigint): ARFuture<boolean>;
+    /**
+     * @param limit - number
+     *
+     * @aetherMethodId 16
+     */
+    public abstract setMsgQueueLimit(limit: number): AFuture;
+    /**
+     * @param seconds - number
+     *
+     * @aetherMethodId 17
+     */
+    public abstract setMsgTimeLimit(seconds: number): AFuture;
     
 }
 export interface ClientApiRegSafe  {
