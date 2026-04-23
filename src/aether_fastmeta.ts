@@ -12,21 +12,18 @@ import { AString } from './aether_astring';
 
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER_UTF8 = new TextDecoder('utf-8');
-export abstract class FlushReport {
-    public static STUB= new class extends FlushReport{
-        report(ignore:boolean){
 
-        }
+export abstract class FlushReport {
+    public static STUB = new class extends FlushReport {
+        report(ignore: boolean) { }
+        done() { }
+        abort() { }
     };
     public abstract report(done: boolean): void;
-    public done() {
-        this.report(true);
-    }
-    public abort() {
-        this.report(false);
-    }
-
+    public done() { this.report(true); }
+    public abort() { this.report(false); }
 }
+
 
 export class SerializerPackNumber {
     public static readonly INSTANCE = new SerializerPackNumber();
@@ -149,7 +146,7 @@ export const FastFutureContextStub: FastFutureContext = {
     regFuture: (worker: FutureRec) => 0,
     regLocalFuture: () => { /* no-op */ },
     getFuture: (requestId: number) => { throw new Error("UnsupportedOperationException"); },
-    flush: (report: FlushReport) => { report(true); },
+    flush: (report: FlushReport) => { report.done(); },
     remoteDataToArray: (out: DataOut) => { /* no-op */ },
     remoteDataToArrayAsArray: () => new Uint8Array(0),
     isEmpty: () => true,
@@ -800,11 +797,11 @@ export class FastApiContext implements FastFutureContext {
     public flush(report: FlushReport): void {
         const data = this.remoteDataToArrayAsArray();
         if (data.length === 0) {
-            report(true);
+            report.done();
             return;
         }
         this.sendToRemote(data);
-        report(true);
+        report.done();
     }
 
 
