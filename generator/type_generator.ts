@@ -265,7 +265,7 @@ export class TypeGenerator {
      * @param parent - The name of the parent class, if any.
      */
     private generateStructureConstructor(sb: string[], name: string, allFields: Map<string, TypeInfo>, currentFields: Map<string, TypeInfo>, superFields: string[], parent: string | undefined): void {
-        const constructorParams = Array.from(allFields.entries()).map(([fn, ti]) => `${fn}: ${ti.getArgumentType()}`).join(', ');
+const constructorParams = Array.from(allFields.entries()).map(([fn, ti]) => `${fn}: ${ti.getFieldType()}`).join(', ');
 
         sb.push(`\n    /**`);
         sb.push(`     * Creates an instance of ${name}.`);
@@ -378,7 +378,7 @@ export class TypeGenerator {
             const constructorParams: string[] = [];
             fields.forEach((typeInfo, fieldName) => {
                 const localVar = g.getUniqueVarName(fieldName);
-                deserializeLines.push(`let ${localVar}: ${typeInfo.getLocalVarType()};`);
+deserializeLines.push(`let ${localVar}: ${typeInfo.getFieldType()};`);
                 fieldsForDeserialize.set(localVar, typeInfo);
                 constructorParams.push(localVar);
             });

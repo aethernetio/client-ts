@@ -228,7 +228,7 @@ export class ApiGenerator {
                 ? (pt as TypeDefinition).stream!.name!
                 : pt as string;
             const typeStr = this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
-            return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
+return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
         }).join(', ');
 
         const hasReturns = m.returns != null;
@@ -306,7 +306,7 @@ export class ApiGenerator {
                 ? (pt as TypeDefinition).stream!.name!
                 : pt as string;
             const typeStr = this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
-            return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
+return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
         }).join(', ');
 
         const hasReturns = m.returns != null;
@@ -395,7 +395,7 @@ export class ApiGenerator {
             const typeInfo = new TypeInfo(typeStr);
             const localVar = g.getUniqueVarName(paramName);
 
-            sb.push(`                let ${localVar}: ${typeInfo.getLocalVarType()};`);
+sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
             fieldsForDeserialize.set(localVar, typeInfo);
             paramVars.push(localVar);
             paramNames.push(paramName);
@@ -525,7 +525,7 @@ export class ApiGenerator {
                 ? (pt as TypeDefinition).stream!.name!
                 : pt as string;
             const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
-            return `${pn}: ${new TypeInfo(typeStr).getArgumentType()}`;
+return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
         }).join(', ');
 
         const hasReturns_sig = m.returns != null;
