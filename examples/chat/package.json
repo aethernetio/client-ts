@@ -1,6 +1,6 @@
 {
   "name": "aether-client",
-  "version": "1.0.0",
+   "version": "1.0.2",
   "main": "src/aether.js",
   "dependencies": {
     "assert": "^2.0.0",

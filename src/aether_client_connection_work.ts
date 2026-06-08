@@ -1,5 +1,5 @@
 import { ConnectionBase, getUriFromServerDescriptor } from './aether_client_connection_base';
-import { AetherCloudClient } from './aether_client';
+import { AetherCloudClient, ClientTask } from './aether_client';
 import {
     AccessGroup,
     AccessCheckResult,
@@ -25,6 +25,7 @@ import { FastApiContext, FlushReport, RemoteApiFuture } from './aether_fastmeta'
 import { CryptoEngine } from './aether_crypto';
 import { RU } from './aether_utils';
 import { MessageNode } from './aether_client_message';
+import { MessageBatcher } from './MessageBatcher';
 
 /**
  * @class MyClientApiSafe
@@ -350,14 +351,21 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
     readonly cryptoEngine: CryptoEngine;
     readonly remoteApiFutureAuth = new RemoteApiFuture<AuthorizedApiRemote>(AuthorizedApi.META);
     private readonly serverDescriptor: ServerDescriptor;
-    readonly inProcess = new AtomicReference<boolean>(false);
-    basicStatus: boolean = false;
+    private readonly inProcess = new AtomicReference<boolean>(false);
+    basicStatus: boolean;
     lastWorkTime: number = 0;
     firstAuth: boolean = false;
     private _errorTimestamp: number = 0;
 
+
     protected override onConnectionStateChanged(isWritable: boolean): void {
+        if (this.cryptoEngine == null) {
+            Log.warn("onConnectionStateChanged called before cryptoEngine initialized, deferring flush");
+            this.stateListeners.fire(isWritable);
+            return;
+        }
         if (isWritable) {
+            Log.info("Network restored. Resetting auth state and forcing flush.", { uri: this.uri });
             this.firstAuth = false;
             this.flush();
         } else {
@@ -365,6 +373,7 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
         }
         this.stateListeners.fire(isWritable);
     }
+
 
 
 
@@ -477,14 +486,12 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
     };
 
 
-        this.connectFuture.to(
-            () => { }
-        ).onError((err: Error) => {
+        this.connectFuture.onError((err: Error) => {
             this._errorTimestamp = RU.time();
             this.ready.error(err);
-        }).cancel();
-        this.ready.cancel();
+        });
     }
+
 
 
 
@@ -501,27 +508,68 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
         const requestAccessGroups = this.client.accessGroups.pollAllRequests();
         if (requestAccessGroups.length > 0) a.requestAccessGroupsItems(Array.from(requestAccessGroups));
 
-        const messagesForSend2: Array<{msg: Message, future: AFuture}> = [];
-        const MAX_BATCH_BYTES = 512 * 1024;
-        let currentBatchSize = 0;
+        const requestAllAccessed = this.client.allAccessedClients.pollAllRequests();
+        if (requestAllAccessed.length > 0) a.requestAllAccessedClients(Array.from(requestAllAccessed));
+
+        const requestAccessCheck = this.client.accessCheckCache.pollAllRequests();
+        if (requestAccessCheck.length > 0) a.requestAccessCheck(Array.from(requestAccessCheck));
+
+
+        for (const [groupId, uidsMap] of this.client.accessOperationsAdd) {
+            const uidsToAdd = Array.from(uidsMap.keys()).map(k => UUID.fromString(k));
+            if (uidsToAdd.length > 0) {
+                a.addItemsToAccessGroup(groupId, uidsToAdd);
+            }
+        }
+
+        for (const [groupId, uidsMap] of this.client.accessOperationsRemove) {
+            const uidsToRemove = Array.from(uidsMap.keys()).map(k => UUID.fromString(k));
+            if (uidsToRemove.length > 0) {
+                a.removeItemsFromAccessGroup(groupId, uidsToRemove);
+            }
+        }
+
+
+        while (true) {
+            const t = this.client.authTasks.poll();
+            if (!t) break;
+            t(a);
+        }
+
+        let task: ClientTask | undefined | null;
+        while ((task = this.client.clientTasks.poll()) != null) {
+            a.client(task.uid, (task.task as any));
+        }
+
+        const batcher = new MessageBatcher();
+        const nodeMessages: Array<{ data: Uint8Array; future: AFuture }> = [];
+        const cancelTasks: Array<() => void> = [];
 
         for (const m of this.client.messageNodeMap.values()) {
             if (m.connectionsOut.has(this)) {
+                const msgs: Array<{ data: Uint8Array; future: AFuture }> = [];
                 while (true) {
                     const entry = m.bufferOut.peekFirst();
-                    if (!entry || (currentBatchSize + entry.data.length > MAX_BATCH_BYTES)) break;
+                    if (!entry) break;
                     const polled = m.bufferOut.pollFirst();
                     if (polled) {
-                        const msg = new Message(m.consumerUUID, polled.data);
-                        messagesForSend2.push({msg, future: polled.future});
-                        currentBatchSize += polled.data.length;
+                        msgs.push(polled);
+                        batcher.add(m.consumerUUID, polled.data);
                     }
+                }
+                if (msgs.length > 0) {
+                    nodeMessages.push(...msgs);
+                    cancelTasks.push(() => {
+                        for (let i = msgs.length - 1; i >= 0; i--) {
+                            m.bufferOut.addFirst(msgs[i]);
+                        }
+                    });
                 }
             }
         }
 
-        if (messagesForSend2.length > 0) {
-            a.sendMessages(messagesForSend2.map(v => v.msg));
+        if (!batcher.isEmpty()) {
+            batcher.flush(a);
         }
 
         if (!this.firstAuth) {
@@ -534,24 +582,20 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
             });
         }
 
-
         f.to(() => {
             const uid = this.client.getUid();
             if (uid) this.client.priorityManager.promote(uid, this.getServerDescriptor().id);
-            messagesForSend2.forEach(v => v.future.done());
+            for (const v of nodeMessages) {
+                v.future.done();
+            }
         }).onError(() => {
-            // Rollback messages in reverse order to maintain sequence
-            for (let i = messagesForSend2.length - 1; i >= 0; i--) {
-                const item = messagesForSend2[i];
-                for (const node of this.client.messageNodeMap.values()) {
-                    if (node.consumerUUID.equals(item.msg.uid)) {
-                        node.bufferOut.addFirst({data: item.msg.data, future: item.future});
-                        break;
-                    }
-                }
+            for (const cancel of cancelTasks) {
+                cancel();
             }
         });
     }
+
+
 
     /**
      * Aggregates pending requests into batches and sends them via AuthorizedApi.

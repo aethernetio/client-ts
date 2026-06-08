@@ -12,8 +12,8 @@ import { Queue } from './aether_utils';
 // Эти импорты нужны для методов toApi
 import {
     FastApiContext,
-    FastApiContextLocal,
-    FastFutureContext,
+    MetaContextLocal,
+    MetaContext,
     FastMetaApi,
     FlushReport,
 } from './aether_fastmeta';
@@ -216,6 +216,7 @@ export class MessageNode {
     }
 
     public toConsumer(o: AConsumer<Uint8Array>): void {
+        if (this.bufferIn.hasListener()) throw new Error("Already add listener");
         this.bufferIn.add((msg: { data: Uint8Array }) => o(msg.data));
     }
     public getConsumerUUID(): UUID { return this.consumerUUID; }
@@ -227,7 +228,7 @@ export class MessageNode {
      * @description Привязывает входящие данные (bufferIn) к локальной реализации API.
      */
     public toApiWithCtx<LT>(
-        ctx: FastFutureContext,
+        ctx: MetaContext,
         metaLt: FastMetaApi<LT, any>,
         localApi: LT
     ): void {
@@ -241,10 +242,10 @@ export class MessageNode {
      */
     public toApiWithFactory<LT>(
         metaLt: FastMetaApi<LT, any>,
-        localApiFactory: AFunction<FastApiContextLocal<LT>, LT>
-    ): FastApiContextLocal<LT> {
+        localApiFactory: AFunction<MetaContextLocal<LT>, LT>
+    ): MetaContextLocal<LT> {
         const node = this;
-        const ctx = new class extends FastApiContextLocal<LT> {
+        const ctx = new class extends MetaContextLocal<LT> {
             constructor() {
                 super(localApiFactory);
             }
@@ -275,18 +276,18 @@ export class MessageNode {
      */
     public toApiR<LT>(
         metaLt: FastMetaApi<LT, any>,
-        localApiFactory: AFunction<FastApiContextLocal<LT>, LT>
-    ): FastApiContextLocal<LT> {
+        localApiFactory: AFunction<MetaContextLocal<LT>, LT>
+    ): MetaContextLocal<LT> {
         const nodeSend = this.send.bind(this);
 
-        const ctx = new (class extends FastApiContextLocal<LT> {
+        const ctx = new (class extends MetaContextLocal<LT> {
             constructor() {
                 super(localApiFactory); // Передаем фабрику
             }
             override flush(sendFuture?: FlushReport): void {
                 const d = this.remoteDataToArrayAsArray();
                 if (d.length > 0) {
-                    if (sendFuture) nodeSend(d).pipeTo(sendFuture); else nodeSend(d);
+                    if (sendFuture) nodeSend(d).to(() => sendFuture.done()).onError(() => sendFuture.abort()); else nodeSend(d);
                 } else {
                     sendFuture.done();
                 }

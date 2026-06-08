@@ -10,8 +10,8 @@ import {
 import {
     FastMetaApi,
     RemoteApi,
-    FastFutureContext,
-    FastApiContextLocal,
+    MetaContext,
+    MetaContextLocal,
     SerializerPackNumber,
     DeserializerPackNumber,
     FlushReport
@@ -231,7 +231,7 @@ export namespace FastMetaNet {
         getLocalApi(): LT;
         getRemoteApi(): RT;
         isWritable(): boolean;
-        getMetaContext(): FastFutureContext;
+        getMetaContext(): MetaContext;
     }
 
     /**
@@ -359,8 +359,8 @@ export enum ConnectionState {
  */
 class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
     public websocket: IUniversalWebSocket | null = null;
-    public context: FastApiContextLocal<LT> | null = null;
-    public connectFuture: ARFuture<FastApiContextLocal<LT>>;
+    public context: MetaContextLocal<LT> | null = null;
+    public connectFuture: ARFuture<MetaContextLocal<LT>>;
     public destroyer: Destroyer = new Destroyer("FastMetaClientWebSocket");
     public log: LNode;
     public uri: URI = "";
@@ -399,7 +399,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
      */
     constructor(reconnectConfig?: Partial<ReconnectConfig>) {
         this.log = Log.of({ component: 'FastMetaClientWebSocket' });
-        this.connectFuture = ARFuture.of<FastApiContextLocal<LT>>();
+        this.connectFuture = ARFuture.of<MetaContextLocal<LT>>();
         this.reconnectConfig = {
             maxAttempts: 0,
             baseDelay: 500,
@@ -446,14 +446,14 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
      * @param {FastMetaApi<LT, any>} localApiMeta Local API metadata
      * @param {FastMetaApi<any, RT>} remoteApiMeta Remote API metadata
      * @param {AFunction<RT, LT>} localApiProvider Local API provider function
-     * @returns {ARFuture<FastApiContextLocal<LT>>} Future resolving to connection context
+     * @returns {ARFuture<MetaContextLocal<LT>>} Future resolving to connection context
      */
     public connect(
         uri: URI,
         localApiMeta: FastMetaApi<LT, any>,
         remoteApiMeta: FastMetaApi<any, RT>,
         localApiProvider: AFunction<RT, LT>
-    ): ARFuture<FastApiContextLocal<LT>> {
+    ): ARFuture<MetaContextLocal<LT>> {
         Log.info("connect() called", { uri });
 
         try {
@@ -670,7 +670,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         }
 
         try {
-            const context = new FastApiContextLocal<LT>((self: FastApiContextLocal<LT>) => {
+            const context = new MetaContextLocal<LT>((self: MetaContextLocal<LT>) => {
                 const remoteApi = this.remoteApiMeta!.makeRemote(self);
                 return this.localApiProvider!(remoteApi);
             });
@@ -884,7 +884,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         }
 
         if (this.connectFuture.isFinalStatus()) {
-            this.connectFuture = ARFuture.of<FastApiContextLocal<LT>>();
+            this.connectFuture = ARFuture.of<MetaContextLocal<LT>>();
         }
 
         if (this.websocket) {
@@ -1032,9 +1032,9 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
     /**
      * @method getContext
      * @description Get connection context
-     * @returns {FastApiContextLocal<LT> | null} Connection context or null
+     * @returns {MetaContextLocal<LT> | null} Connection context or null
      */
-    public getContext(): FastApiContextLocal<LT> | null {
+    public getContext(): MetaContextLocal<LT> | null {
         return this.context;
     }
 
@@ -1084,9 +1084,9 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
 class FastMetaClientAdapter<LT, RT extends RemoteApi> implements FastMetaClient<LT, RT> {
     public wsClient: FastMetaClientWebSocket<LT, RT>;
     public writableConsumer: AConsumer<boolean>;
-    public context: FastApiContextLocal<LT> | null = null;
+    public context: MetaContextLocal<LT> | null = null;
     public log: LNode;
-    public contextFuture: ARFuture<FastApiContextLocal<LT>>;
+    public contextFuture: ARFuture<MetaContextLocal<LT>>;
 
     /**
      * @constructor
@@ -1117,7 +1117,7 @@ class FastMetaClientAdapter<LT, RT extends RemoteApi> implements FastMetaClient<
         Log.info("Calling wsClient.connect");
         this.contextFuture = this.wsClient.connect(uri, lt, rt, localApiProvider);
 
-        this.contextFuture.to((ctx: FastApiContextLocal<LT>) => {
+        this.contextFuture.to((ctx: MetaContextLocal<LT>) => {
             this.context = ctx;
         }).onError((error) => {
             Log.error("Failed to establish connection context", error);
@@ -1144,7 +1144,7 @@ class FastMetaClientAdapter<LT, RT extends RemoteApi> implements FastMetaClient<
         return this.wsClient.getRemoteApi();
     }
 
-    public getMetaContext(): FastFutureContext {
+    public getMetaContext(): MetaContext {
         return this.context!;
     }
 

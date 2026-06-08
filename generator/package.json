@@ -1,4 +1,4 @@
-{
+ {
   "name": "aether-protocol-generator",
   "version": "1.0.0",
   "description": "Generates TypeScript API from Aether ADSL files",

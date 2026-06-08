@@ -113,7 +113,7 @@ export interface FutureRec {
 /**
  * Interface for the Aether protocol context, managing futures and serialization.
  */
-export interface FastFutureContext extends Destroyable {
+export interface MetaContext extends Destroyable {
     sendToRemote(data: Uint8Array): void;
 
     regFuture(worker: FutureRec): number;
@@ -137,9 +137,9 @@ export interface FastFutureContext extends Destroyable {
 }
 
 /**
- * A stub implementation of FastFutureContext for synchronous operations.
+ * A stub implementation of MetaContext for synchronous operations.
  */
-export const FastFutureContextStub: FastFutureContext = {
+export const FastFutureContextStub: MetaContext = {
     sendToRemote: (data: Uint8Array) => { throw new Error("Context is a stub and cannot send data."); },
     sendResultToRemote: (requestId: number, data: Uint8Array) => { throw new Error("Context is a stub and cannot send result."); },
     sendResultToRemoteNoData: (requestId: number) => { throw new Error("Context is a stub and cannot send result."); },
@@ -163,8 +163,8 @@ export const FastFutureContextStub: FastFutureContext = {
  * The main interface for all Aether protocol type metadata.
  */
 export interface FastMetaType<T> {
-    serialize(ctx: FastFutureContext, obj: T, out: DataOut): void;
-    deserialize(ctx: FastFutureContext, dataIn: DataIn): T;
+    serialize(ctx: MetaContext, obj: T, out: DataOut): void;
+    deserialize(ctx: MetaContext, dataIn: DataIn): T;
 
     serializeToBytes(obj: T): Uint8Array;
     deserializeFromBytes(data: Uint8Array): T;
@@ -182,17 +182,17 @@ export interface FastMetaType<T> {
  */
 export interface RemoteApi {
     flush(report: FlushReport): void;
-    getFastMetaContext(): FastFutureContext;
+    getFastMetaContext(): MetaContext;
 }
 
 /**
  * Interface for API metadata, handling remote/local creation.
  */
 export interface FastMetaApi<T, R extends RemoteApi> {
-    makeRemote(localApi: FastFutureContext): R;
-    makeLocal_fromDataIn(ctx: FastFutureContext, dataIn: DataIn, localApi: T): void;
-    makeLocal_fromBytes_ctxLocal(ctx: FastApiContextLocal<T>, data: Uint8Array): void;
-    makeLocal_fromBytes_ctx(ctx: FastFutureContext, data: Uint8Array, localApi: T): void;
+    makeRemote(localApi: MetaContext): R;
+    makeLocal_fromDataIn(ctx: MetaContext, dataIn: DataIn, localApi: T): void;
+    makeLocal_fromBytes_ctxLocal(ctx: MetaContextLocal<T>, data: Uint8Array): void;
+    makeLocal_fromBytes_ctx(ctx: MetaContext, data: Uint8Array, localApi: T): void;
 }
 
 /**
@@ -212,14 +212,14 @@ class UniversalMetaArrayImpl<T> implements FastMetaType<T[]> {
         this.elementMeta = elementMeta;
     }
 
-    serialize(ctx: FastFutureContext, obj: T[], out: DataOut): void {
+    serialize(ctx: MetaContext, obj: T[], out: DataOut): void {
         SerializerPackNumber.INSTANCE.put(out, obj.length);
         for (const el of obj) {
             this.elementMeta.serialize(ctx, el, out);
         }
     }
 
-    deserialize(ctx: FastFutureContext, dataIn: DataIn): T[] {
+    deserialize(ctx: MetaContext, dataIn: DataIn): T[] {
         const len = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
 
         if (this.elementMeta === FastMeta.META_BYTE) {
@@ -317,8 +317,8 @@ class UniversalMetaArrayImpl<T> implements FastMetaType<T[]> {
 export class FastMeta {
 
     public static readonly META_BOOLEAN: FastMetaType<boolean> = new class implements FastMetaType<boolean> {
-        serialize(_ctx: FastFutureContext, obj: boolean, out: DataOut): void { out.writeBoolean(obj); }
-        deserialize(_ctx: FastFutureContext, dataIn: DataIn): boolean { return dataIn.readBoolean(); }
+        serialize(_ctx: MetaContext, obj: boolean, out: DataOut): void { out.writeBoolean(obj); }
+        deserialize(_ctx: MetaContext, dataIn: DataIn): boolean { return dataIn.readBoolean(); }
         metaHashCode(obj: boolean | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             return obj ? 1231 : 1237;
@@ -337,8 +337,8 @@ export class FastMeta {
     };
 
     public static readonly META_BYTE: FastMetaType<number> = new class implements FastMetaType<number> {
-        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { out.writeByte(obj); }
-        deserialize(_ctx: FastFutureContext, in_: DataIn): number { return in_.readByte(); }
+        serialize(_ctx: MetaContext, obj: number, out: DataOut): void { out.writeByte(obj); }
+        deserialize(_ctx: MetaContext, in_: DataIn): number { return in_.readByte(); }
         metaHashCode(obj: number | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             return (obj | 0);
@@ -357,8 +357,8 @@ export class FastMeta {
     };
 
     public static readonly META_SHORT: FastMetaType<number> = new class implements FastMetaType<number> {
-        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { out.writeShort(obj); }
-        deserialize(_ctx: FastFutureContext, in_: DataIn): number { return in_.readShort(); }
+        serialize(_ctx: MetaContext, obj: number, out: DataOut): void { out.writeShort(obj); }
+        deserialize(_ctx: MetaContext, in_: DataIn): number { return in_.readShort(); }
         metaHashCode(obj: number | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             return (obj | 0);
@@ -377,8 +377,8 @@ export class FastMeta {
     };
 
     public static readonly META_INT: FastMetaType<number> = new class implements FastMetaType<number> {
-        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { out.writeInt(obj); }
-        deserialize(_ctx: FastFutureContext, in_: DataIn): number { return in_.readInt(); }
+        serialize(_ctx: MetaContext, obj: number, out: DataOut): void { out.writeInt(obj); }
+        deserialize(_ctx: MetaContext, in_: DataIn): number { return in_.readInt(); }
         metaHashCode(obj: number | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             return (obj | 0);
@@ -397,8 +397,8 @@ export class FastMeta {
     };
 
     public static readonly META_LONG: FastMetaType<bigint> = new class implements FastMetaType<bigint> {
-        serialize(_ctx: FastFutureContext, obj: bigint, out: DataOut): void { out.writeLong(obj); }
-        deserialize(_ctx: FastFutureContext, in_: DataIn): bigint { return in_.readLong(); }
+        serialize(_ctx: MetaContext, obj: bigint, out: DataOut): void { out.writeLong(obj); }
+        deserialize(_ctx: MetaContext, in_: DataIn): bigint { return in_.readLong(); }
         metaHashCode(obj: bigint | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             const hash = obj ^ (obj >> 32n);
@@ -418,8 +418,8 @@ export class FastMeta {
     };
 
     public static readonly META_FLOAT: FastMetaType<number> = new class implements FastMetaType<number> {
-        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { out.writeFloat(obj); }
-        deserialize(_ctx: FastFutureContext, in_: DataIn): number { return in_.readFloat(); }
+        serialize(_ctx: MetaContext, obj: number, out: DataOut): void { out.writeFloat(obj); }
+        deserialize(_ctx: MetaContext, in_: DataIn): number { return in_.readFloat(); }
         metaHashCode(obj: number | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             const buf = new ArrayBuffer(4);
@@ -440,8 +440,8 @@ export class FastMeta {
     };
 
     public static readonly META_DOUBLE: FastMetaType<number> = new class implements FastMetaType<number> {
-        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { out.writeDouble(obj); }
-        deserialize(_ctx: FastFutureContext, in_: DataIn): number { return in_.readDouble(); }
+        serialize(_ctx: MetaContext, obj: number, out: DataOut): void { out.writeDouble(obj); }
+        deserialize(_ctx: MetaContext, in_: DataIn): number { return in_.readDouble(); }
         metaHashCode(obj: number | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             const buf = new ArrayBuffer(8);
@@ -464,8 +464,8 @@ export class FastMeta {
     };
 
     public static readonly META_DATE: FastMetaType<Date> = new class implements FastMetaType<Date> {
-        serialize(_ctx: FastFutureContext, obj: Date, out: DataOut): void { out.writeLong(obj.getTime()); }
-        deserialize(_ctx: FastFutureContext, in_: DataIn): Date { return new Date(Number(in_.readLong())); }
+        serialize(_ctx: MetaContext, obj: Date, out: DataOut): void { out.writeLong(obj.getTime()); }
+        deserialize(_ctx: MetaContext, in_: DataIn): Date { return new Date(Number(in_.readLong())); }
         metaHashCode(obj: Date | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             const time = BigInt(obj.getTime());
@@ -489,8 +489,8 @@ export class FastMeta {
     };
 
     public static readonly META_PACK: FastMetaType<number> = new class implements FastMetaType<number> {
-        serialize(_ctx: FastFutureContext, obj: number, out: DataOut): void { SerializerPackNumber.INSTANCE.put(out, obj); }
-        deserialize(_ctx: FastFutureContext, dataIn: DataIn): number { return Number(DeserializerPackNumber.INSTANCE.put(dataIn)); }
+        serialize(_ctx: MetaContext, obj: number, out: DataOut): void { SerializerPackNumber.INSTANCE.put(out, obj); }
+        deserialize(_ctx: MetaContext, dataIn: DataIn): number { return Number(DeserializerPackNumber.INSTANCE.put(dataIn)); }
         metaHashCode(obj: number | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             return (obj | 0);
@@ -509,12 +509,12 @@ export class FastMeta {
     };
 
     public static readonly META_STRING: FastMetaType<string> = new class implements FastMetaType<string> {
-        serialize(_ctx: FastFutureContext, obj: string, out: DataOut): void {
+        serialize(_ctx: MetaContext, obj: string, out: DataOut): void {
             const ar = TEXT_ENCODER.encode(obj);
             SerializerPackNumber.INSTANCE.put(out, ar.length);
             out.write(ar);
         }
-        deserialize(_ctx: FastFutureContext, dataIn: DataIn): string {
+        deserialize(_ctx: MetaContext, dataIn: DataIn): string {
             const len = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
             const ar = dataIn.readBytes(len);
             return TEXT_DECODER_UTF8.decode(ar);
@@ -541,7 +541,7 @@ export class FastMeta {
     };
 
     public static readonly META_UUID: FastMetaType<UUID> = new class implements FastMetaType<UUID> {
-        serialize(_ctx: FastFutureContext, obj: UUID, out: DataOut): void {
+        serialize(_ctx: MetaContext, obj: UUID, out: DataOut): void {
             if (!obj || !obj.data || obj.data.length !== 16) {
                 if (obj && typeof (obj as any).getMostSignificantBits === 'function') {
                     const view = new DataView(new ArrayBuffer(16));
@@ -555,7 +555,7 @@ export class FastMeta {
             out.write(obj.data);
         }
 
-        deserialize(_ctx: FastFutureContext, dataIn: DataIn): UUID {
+        deserialize(_ctx: MetaContext, dataIn: DataIn): UUID {
             const data = dataIn.readBytes(16);
             if (data.length !== 16) throw new Error("Could not read 16 bytes for UUID");
 
@@ -628,12 +628,12 @@ export class FastMeta {
     };
 
     public static readonly META_URI: FastMetaType<URI> = new class implements FastMetaType<URI> {
-        serialize(_ctx: FastFutureContext, obj: URI, out: DataOut): void {
+        serialize(_ctx: MetaContext, obj: URI, out: DataOut): void {
             const ar = TEXT_ENCODER.encode(obj);
             SerializerPackNumber.INSTANCE.put(out, ar.length);
             out.write(ar);
         }
-        deserialize(_ctx: FastFutureContext, dataIn: DataIn): URI {
+        deserialize(_ctx: MetaContext, dataIn: DataIn): URI {
             const len = Number(DeserializerPackNumber.INSTANCE.put(dataIn));
             const ar = dataIn.readBytes(len);
             const uriString = TEXT_DECODER_UTF8.decode(ar);
@@ -661,8 +661,8 @@ export class FastMeta {
     };
 
     public static readonly META_REQUEST_ID: FastMetaType<number> = new class implements FastMetaType<number> {
-        serialize(_ctx: FastFutureContext, ar: number, out: DataOut): void { out.writeInt(ar); }
-        deserialize(_ctx: FastFutureContext, dataIn: DataIn): number { return dataIn.readInt(); }
+        serialize(_ctx: MetaContext, ar: number, out: DataOut): void { out.writeInt(ar); }
+        deserialize(_ctx: MetaContext, dataIn: DataIn): number { return dataIn.readInt(); }
         metaHashCode(obj: number | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             return (obj | 0);
@@ -681,8 +681,8 @@ export class FastMeta {
     };
 
     public static readonly META_COMMAND: FastMetaType<number> = new class implements FastMetaType<number> {
-        serialize(_ctx: FastFutureContext, ar: number, out: DataOut): void { out.writeByte(ar); }
-        deserialize(_ctx: FastFutureContext, dataIn: DataIn): number { return dataIn.readUByte(); }
+        serialize(_ctx: MetaContext, ar: number, out: DataOut): void { out.writeByte(ar); }
+        deserialize(_ctx: MetaContext, dataIn: DataIn): number { return dataIn.readUByte(); }
         metaHashCode(obj: number | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             return (obj | 0);
@@ -729,7 +729,7 @@ export class FastMeta {
 /**
  * Implementation of FastApiContext.
  */
-export class FastApiContext implements FastFutureContext {
+export class FastApiContext implements MetaContext {
     private futures: Map<number, FutureRec> = new Map();
     private futuresCounter: AtomicInteger = new AtomicInteger(0);
     private toRemote: ConcurrentLinkedQueue_C<Uint8Array> = new ConcurrentLinkedQueue_C();
@@ -863,13 +863,13 @@ export class FastApiContext implements FastFutureContext {
 /**
  * Implementation of FastApiContext for a local API instance.
  */
-export class FastApiContextLocal<LT> extends FastApiContext {
+export class MetaContextLocal<LT> extends FastApiContext {
     public readonly localApi: LT;
 
-    constructor(localApi: LT | AFunction<FastApiContextLocal<LT>, LT>) {
+    constructor(localApi: LT | AFunction<MetaContextLocal<LT>, LT>) {
         super();
         if (typeof localApi === 'function') {
-            this.localApi = (localApi as AFunction<FastApiContextLocal<LT>, LT>)(this);
+            this.localApi = (localApi as AFunction<MetaContextLocal<LT>, LT>)(this);
         } else {
             this.localApi = localApi;
         }
@@ -920,7 +920,7 @@ export class RemoteApiFuture<T extends RemoteApi> {
         return res;
     }
 
-    public executeAll(ctx: FastFutureContext, sendFuture: AFuture): void {
+    public executeAll(ctx: MetaContext, sendFuture: AFuture): void {
         let ll = Log.context(this.logContext);
         try {
             const api = this.meta.makeRemote(ctx);

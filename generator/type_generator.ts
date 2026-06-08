@@ -334,7 +334,7 @@ const constructorParams = Array.from(allFields.entries()).map(([fn, ti]) => `${f
 
         sbImpl.push(`export class ${implName} implements FastMetaType<${name}> {`);
 
-        sbImpl.push(`    serialize(${sCtx}: FastFutureContext, ${objVar}: ${name}, ${outVar}: DataOut): void {`);
+        sbImpl.push(`    serialize(${sCtx}: MetaContext, ${objVar}: ${name}, ${outVar}: DataOut): void {`);
         if (isMetaBody) {
             const serializeLines: string[] = [];
             const fieldsForSerialize = new Map(Array.from(fields.entries()).map(([k, v]) => [`${objVar}.${k}`, v]));
@@ -371,7 +371,7 @@ const constructorParams = Array.from(allFields.entries()).map(([fn, ti]) => `${f
         }
         sbImpl.push(`    }`);
 
-        sbImpl.push(`    deserialize(${sCtxDeser}: FastFutureContext, ${inVar}: DataIn): ${name} {`);
+        sbImpl.push(`    deserialize(${sCtxDeser}: MetaContext, ${inVar}: DataIn): ${name} {`);
         if (isMetaBody) {
             const deserializeLines: string[] = [];
             const fieldsForDeserialize = new Map<string, TypeInfo>();
@@ -574,17 +574,18 @@ deserializeLines.push(`let ${localVar}: ${typeInfo.getFieldType()};`);
 
         const metaImplName = `${name}MetaImpl`;
         const sbImpl: string[] = [];
-        sbImpl.push(`export class ${metaImplName} implements FastMetaType<${name}> {`);
-        sbImpl.push(`    serialize(_sCtx: FastFutureContext, obj: ${name}, out: DataOut): void {`);
-        sbImpl.push(`        const values = Object.keys(${name}).filter(k => isNaN(parseInt(k)));`);
-        sbImpl.push(`        out.writeByte(values.indexOf(obj as string));`);
-        sbImpl.push(`    }`);
-        sbImpl.push(`    deserialize(_sCtx: FastFutureContext, in_: DataIn): ${name} {`);
-        sbImpl.push(`        const ordinal = in_.readUByte();`);
-        sbImpl.push(`        const keys = Object.keys(${name}).filter(k => isNaN(parseInt(k)));`);
-        sbImpl.push(`        if (ordinal < 0 || ordinal >= keys.length) throw new Error(\`Invalid ordinal \${ordinal} for enum ${name}\`);`);
-        sbImpl.push(`        return ${name}[keys[ordinal] as keyof typeof ${name}] as ${name};`);
-        sbImpl.push(`    }`);
+
+sbImpl.push(`export class ${metaImplName} implements FastMetaType<${name}> {`);
+sbImpl.push(`    private readonly values = [${values.map(v => `'${v}'`).join(', ')}];`);
+sbImpl.push(`    serialize(_sCtx: MetaContext, obj: ${name}, out: DataOut): void {`);
+sbImpl.push(`        out.writeByte(this.values.indexOf(obj as string));`);
+sbImpl.push(`    }`);
+sbImpl.push(`    deserialize(_sCtx: MetaContext, in_: DataIn): ${name} {`);
+sbImpl.push(`        const ordinal = in_.readUByte();`);
+sbImpl.push(`        if (ordinal < 0 || ordinal >= this.values.length) throw new Error(\`Invalid ordinal \${ordinal} for enum ${name}\`);`);
+sbImpl.push(`        return this.values[ordinal] as ${name};`);
+sbImpl.push(`    }`);
+
 
         const stringMetaAccessor = this.generatorLogic.generateAccessMeta(new TypeInfo("string"));
         sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return ${stringMetaAccessor}.metaHashCode(obj as string); }`);
@@ -638,8 +639,8 @@ deserializeLines.push(`let ${localVar}: ${typeInfo.getFieldType()};`);
         const metaImplName = `${name}MetaImpl`;
         const sbImpl: string[] = [];
         sbImpl.push(`export class ${metaImplName} implements FastMetaType<${name}> {`);
-        sbImpl.push(`    serialize(ctx: FastFutureContext, obj: ${name}, out: DataOut): void { FastMeta.META_ARRAY_BYTE.serialize(ctx, obj.data, out); }`);
-        sbImpl.push(`    deserialize(ctx: FastFutureContext, in_: DataIn): ${name} { return new ${name}(FastMeta.META_ARRAY_BYTE.deserialize(ctx, in_)); }`);
+        sbImpl.push(`    serialize(ctx: MetaContext, obj: ${name}, out: DataOut): void { FastMeta.META_ARRAY_BYTE.serialize(ctx, obj.data, out); }`);
+        sbImpl.push(`    deserialize(ctx: MetaContext, in_: DataIn): ${name} { return new ${name}(FastMeta.META_ARRAY_BYTE.deserialize(ctx, in_)); }`);
 
         const byteArrayMetaAccessor = this.generatorLogic.generateAccessMeta(new TypeInfo("byte[]"));
         sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return ${byteArrayMetaAccessor}.metaHashCode(obj?.data); }`);
@@ -663,14 +664,14 @@ deserializeLines.push(`let ${localVar}: ${typeInfo.getFieldType()};`);
         sb.push(`    }`);
 
         if (apiType && hasCrypto) {
-            sb.push(`\n    public accept(context: FastFutureContext, provider: BytesConverter, localApi: ${apiType}): void {`);
+            sb.push(`\n    public accept(context: MetaContext, provider: BytesConverter, localApi: ${apiType}): void {`);
             sb.push(`        const decryptedData = provider(this.data);`);
             sb.push(`        const dataInStatic = new DataInOutStatic(decryptedData);`);
             sb.push(`        if (!(${apiType} as any).META) throw new Error(\`META not found for API type ${apiType}\`);`);
             sb.push(`        (${apiType} as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);`);
             sb.push(`    }`);
         } else if (apiType) {
-            sb.push(`\n    public accept(context: FastFutureContext, localApi: ${apiType}): void {`);
+            sb.push(`\n    public accept(context: MetaContext, localApi: ${apiType}): void {`);
             sb.push(`        const dataInStatic = new DataInOutStatic(this.data);`);
             sb.push(`        if (!(${apiType} as any).META) throw new Error(\`META not found for API type ${apiType}\`);`);
             sb.push(`        (${apiType} as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);`);
@@ -683,7 +684,7 @@ deserializeLines.push(`let ${localVar}: ${typeInfo.getFieldType()};`);
         }
 
         if (apiType && hasCrypto) {
-            sb.push(`\n    public static remoteApi(context: FastFutureContext, provider: BytesConverter, apiConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
+            sb.push(`\n    public static remoteApi(context: MetaContext, provider: BytesConverter, apiConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
             sb.push(`        const api = (${apiType} as any).META.makeRemote(context);`);
             sb.push(`        apiConsumer(api);`);
             sb.push(`        const encryptedData = provider(context.remoteDataToArrayAsArray());`);
@@ -694,7 +695,7 @@ deserializeLines.push(`let ${localVar}: ${typeInfo.getFieldType()};`);
             sb.push(`        return new ${name}(encryptedData);`);
             sb.push(`    }`);
         } else if (apiType) {
-            sb.push(`\n    public static remoteApi(context: FastFutureContext, apiConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
+            sb.push(`\n    public static remoteApi(context: MetaContext, apiConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
             sb.push(`        const api = (${apiType} as any).META.makeRemote(context);`);
             sb.push(`        apiConsumer(api);`);
             sb.push(`        return new ${name}(context.remoteDataToArrayAsArray());`);

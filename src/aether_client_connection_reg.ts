@@ -8,7 +8,7 @@ import {
 import { WorkProofUtil } from './aether_work_proof';
 import { CryptoUtils } from './aether_crypto_utils';
 import { AKey, CryptoEngine, CryptoProviderFactory } from './aether_crypto';
-import { FastApiContext, FastApiContextLocal, FlushReport } from './aether_fastmeta';
+import { FastApiContext, MetaContextLocal, FlushReport } from './aether_fastmeta';
 import { URI } from './aether_types';
 import { AFuture, ARFuture } from './aether_future';
 import { Log } from './aether_logging';
@@ -104,7 +104,7 @@ export class ConnectionRegistration extends ConnectionBase<ClientApiRegUnsafe, R
         };
 
 
-        this.ctxSafe = new FastApiContextLocal(localApi);
+        this.ctxSafe = new MetaContextLocal(localApi);
         this.globalCtx = new FastApiContext();
     }
 

@@ -216,14 +216,16 @@ export class LogFilter {
     notLevel(level: LogLevel): LogFilter {
         return this.not(n => n.getLevel() === level);
     }
+
     private predicate: APredicate<LNode> = () => true;
     private fieldDropper: ABiPredicate<string, any> = () => false;
+    private hasDroppers = false;
 
     public applyDropFields(node: LNode): LNode {
-        if (this.isFieldDropperEmpty()) return node;
+        if (!this.hasDroppers) return node;
         const dropper = this.fieldDropper;
         return new class extends LNode {
-            constructor() { super(null); }
+            constructor() { super(node.parent); }
             public override get(key: string): any {
                 const val = node.get(key);
                 if (val !== undefined && dropper(key, val)) return undefined;
@@ -238,13 +240,15 @@ export class LogFilter {
         }();
     }
 
-    private isFieldDropperEmpty(): boolean {
-        return this.fieldDropper.toString() === "() => false";
-    }
-
     public test(node: LNode): boolean {
         try { return this.predicate(node); }
         catch (e) { console.error("LogFilter error", e); return true; }
+    }
+
+    private getRenderedMessage(node: LNode): string {
+        const msg = node.get(LogKeys.MSG);
+        if (!msg) return '';
+        return AString.of().addVars(msg, (key: string) => node.get(key)).toString();
     }
 
     // --- Fluent API ---
@@ -255,8 +259,16 @@ export class LogFilter {
     }
     public not(predicate: APredicate<LNode>): this { return this.filter(n => !predicate(n)); }
 
-    public filterText(text: string): this { return this.filter(n => String(n.get(LogKeys.MSG) || '').includes(text)); }
-    public notText(text: string): this { return this.not(n => String(n.get(LogKeys.MSG) || '').includes(text)); }
+    public filterMsg(text: string): this { return this.filter(n => String(n.get(LogKeys.MSG) || '').includes(text)); }
+    public notMsg(text: string): this { return this.not(n => String(n.get(LogKeys.MSG) || '').includes(text)); }
+
+    // --- Rendered text filters (match against fully resolved output) ---
+    public filterText(text: string): this {
+        return this.filter(n => this.getRenderedMessage(n).includes(text));
+    }
+    public notText(text: string): this {
+        return this.not(n => this.getRenderedMessage(n).includes(text));
+    }
 
     public filterRegex(expr: string | RegExp): this {
         const regex = typeof expr === 'string' ? new RegExp(expr) : expr;
@@ -267,6 +279,22 @@ export class LogFilter {
         return this.not(n => regex.test(String(n.get(LogKeys.MSG) || '')));
     }
 
+    // --- Rendered string filters (Slower, non-strict) ---
+    public filterRenderedText(text: string): this {
+        return this.filter(n => this.getRenderedMessage(n).includes(text));
+    }
+    public notRenderedText(text: string): this {
+        return this.not(n => this.getRenderedMessage(n).includes(text));
+    }
+    public filterRenderedRegex(expr: string | RegExp): this {
+        const regex = typeof expr === 'string' ? new RegExp(expr) : expr;
+        return this.filter(n => regex.test(this.getRenderedMessage(n)));
+    }
+    public notRenderedRegex(expr: string | RegExp): this {
+        const regex = typeof expr === 'string' ? new RegExp(expr) : expr;
+        return this.not(n => regex.test(this.getRenderedMessage(n)));
+    }
+
     public traceOff(): this { return this.not(n => n.check(LogKeys.LEVEL, LogLevel.TRACE)); }
     public debugOff(): this { return this.not(n => n.check(LogKeys.LEVEL, LogLevel.DEBUG)); }
     public infoOff(): this { return this.not(n => n.check(LogKeys.LEVEL, LogLevel.INFO)); }
@@ -274,6 +302,7 @@ export class LogFilter {
     public errorOff(): this { return this.not(n => n.check(LogKeys.LEVEL, LogLevel.ERROR)); }
 
     public drop(predicate: ABiPredicate<string, any>): this {
+        this.hasDroppers = true;
         const old = this.fieldDropper;
         this.fieldDropper = (k, v) => old(k, v) || predicate(k, v);
         return this;
@@ -284,14 +313,15 @@ export class LogFilter {
     public reset(): void {
         this.predicate = () => true;
         this.fieldDropper = () => false;
+        this.hasDroppers = false;
     }
 
     public aggregate(matchKeys: string[], diffKeys: string[], windowMs: number): this {
         const aggregator = new LogAggregator(matchKeys, diffKeys, windowMs);
         return this.filter(n => aggregator.test(n));
     }
-
 }
+
 
 // =============================================================================================
 // --- 4. LogPrinter ---
@@ -512,15 +542,18 @@ export class Log {
 
         const processedNode = this.filter.applyDropFields(node);
 
+
         this.LISTENERS.forEach(l => {
             try {
+                const listenerNode = l.filter instanceof LogFilter ? l.filter.applyDropFields(processedNode) : processedNode;
                 let allowed = true;
-                if (l.filter instanceof LogFilter) allowed = l.filter.test(processedNode);
-                else if (typeof l.filter === 'function') allowed = l.filter(processedNode);
+                if (l.filter instanceof LogFilter) allowed = l.filter.test(listenerNode);
+                else if (typeof l.filter === 'function') allowed = l.filter(listenerNode);
 
-                if (allowed) l.consumer(processedNode);
+                if (allowed) l.consumer(listenerNode);
             } catch (e) { console.error("Log listener error:", e); }
         });
+
     }
 
     public static resolveMessage(msg: string | ToString): string {
@@ -667,24 +700,21 @@ export class LogAggregator {
         return true;
     }
 
+
     private flush(entry: { sample: LNode; startTime: number; count: number; flushed: boolean }): void {
         if (entry.flushed) return;
         entry.flushed = true;
         const c = entry.count;
-        if (c > 0) {
-            const flushNode = entry.sample.add({ [Log.LOG_COUNT]: c + 1 });
-            Log.fire(flushNode);
-        } else {
-            Log.fire(entry.sample);
-        }
+        const flushNode = entry.sample.add({ [Log.LOG_COUNT]: c + 1 });
+        Log.fire(flushNode);
     }
 
     private flushExpired(): void {
         const now = Date.now();
         for (const [key, entry] of this.cache.entries()) {
             if (now - entry.startTime >= this.windowMs) {
-                this.flush(entry);
                 this.cache.delete(key);
+                this.flush(entry);
             }
         }
     }

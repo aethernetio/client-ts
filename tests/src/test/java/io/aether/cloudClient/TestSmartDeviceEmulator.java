@@ -6,7 +6,7 @@ import io.aether.cloud.client.AetherCloudClient;
 import io.aether.cloud.client.ClientStateInMemory;
 import io.aether.logger.Log;
 import io.aether.net.fastMeta.FastApiContext;
-import io.aether.net.fastMeta.FastFutureContext;
+import io.aether.net.fastMeta.MetaContext;
 import io.aether.net.fastMeta.FlushReport;
 
 import io.aether.utils.futures.AFuture;
@@ -58,7 +58,7 @@ public class TestSmartDeviceEmulator {
             io.aether.cloud.client.MessageNode node = client.getMessageNode(serviceUid);
             var regCtx = node.toApi(SmartHomeClientDeviceApi.META, SmartHomeClientDeviceApi.EMPTY);
             final SmartHomeHubRegistryApi hubRemote = regCtx.makeRemote(SmartHomeHubRegistryApi.META);
-            FastFutureContext devCtx = new FastApiContext() {
+            MetaContext devCtx = new FastApiContext() {
                 @Override
                 public void flush(FlushReport report) {
                     var d = remoteDataToArray();

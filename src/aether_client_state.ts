@@ -61,7 +61,7 @@ export class ClientStateInMemory implements ClientState {
      * @private
      * @type {AMFuture<number>}
      */
-    private pingDuration = AMFuture.completed(10);
+    private pingDuration = AMFuture.completed(1000);
 
     /**
      * @type {UUID}
@@ -88,7 +88,7 @@ export class ClientStateInMemory implements ClientState {
      * @private
      * @type {number}
      */
-    private timeoutForConnectToRegistrationServer = 5000;
+    private timeoutForConnectToRegistrationServer = 5650;
 
     /**
      * @private
@@ -174,23 +174,25 @@ export class ClientStateInMemory implements ClientState {
      * The expected string format for SignChecker.of() is "PROVIDER:KEY_DATA" (e.g., SODIUM:HEX_DATA).
      * This format is necessary for the SignChecker parsing logic (via CryptoProviderFactory).
      */
+
+
     private addDefaultRootSigners(): void {
         const defaultSignerStrings = [
             "SODIUM:4F202A94AB729FE9B381613AE77A8A7D89EDAB9299C3320D1A0B994BA710CCEB",
+            "HYDROGEN:883B4D7E0FB04A38CA12B3A451B00942048858263EE6E6D61150F2EF15F40343",
         ];
 
         for (const keyString of defaultSignerStrings) {
             try {
                 const checker = SignChecker.of(keyString);
                 this.addSigner(checker);
-            } catch
-            (e) {
-                Log.error("Failed to add default root signer", e as Error, {
-                    keyString,
-                });
+            } catch (e) {
+                Log.warn("Failed to add default root signer, skipping", { keyString, error: (e as Error).message });
             }
         }
     }
+
+
 
     /**
      * @private
@@ -315,6 +317,7 @@ export class ClientStateInMemory implements ClientState {
         return this.countServersForRegistration;
     }
 
+
     /** @inheritDoc */
     save(): Uint8Array {
         if (!this.uid || !this.alias || !this.masterKey || !this.parentUid) {
@@ -371,22 +374,43 @@ export class ClientStateInMemory implements ClientState {
         const d = new DataInOut();
         ClientStateForSave.META.serialize(null, dto, d);
         return d.toArray();
+
     }
 
-    /** @inheritDoc */
+    saveState(): void {
+        // empty in Java base implementation
+    }
+
+
     setCloud(uid: UUID, cloud: ClientCloud): void {
         this.getClientInfo(uid).setCloud(cloud);
     }
 
-    /** @inheritDoc */
     getCloud(uid: UUID): ClientCloud | null {
         if (!uid) return null;
         return this.getClientInfo(uid).getCloud();
     }
 
 
+
+    // saveToFile and loadFromFile removed - use localStorage via ClientStateInLocalStorage instead
+
+
+
+    public static load(data: Uint8Array): ClientStateInMemory {
+        try {
+            const dto: ClientStateForSave = ClientStateForSave.META.deserialize(null, new DataInOutStatic(data));
+            return new ClientStateInMemory(dto as any);
+        } catch (e) {
+            throw new Error(`Unparsable format state: ${(e as Error).message}`);
+        }
+    }
+
+
+
     /** @inheritDoc */
     load(data: Uint8Array): void {
+
         try {
             const dto = ClientStateForSave.META.deserialize(
                 null,
@@ -610,6 +634,9 @@ export interface ClientState {
      * @returns {Uint8Array} The serialized state.
      */
     save(): Uint8Array;
+
+    saveState(): void;
+
 
     /**
      * @description Loads and deserializes the client state from a byte array.

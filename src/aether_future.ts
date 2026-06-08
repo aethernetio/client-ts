@@ -600,10 +600,11 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
     public pipeTo(f: AFutureBaseImpl<any>): Self {
         if (!f) return this as unknown as Self;
         this.addListener(self => {
-
             if (self.isDone()) {
-                if (self instanceof ARFuture && f instanceof ARFuture) (f as ARFuture<any>).tryDone((self as ARFuture<any>).getNow());
-                else (f as any).tryDone();
+
+                if (typeof (self as any).getNow === 'function' && typeof (f as any).tryDone === 'function' && (f as any).tryDone.length >= 1) (f as unknown as ARFuture<any>).tryDone((self as unknown as ARFuture<any>).getNow());
+                else if (typeof (f as any).tryDone === 'function') (f as any).tryDone();
+
             } else if (self.isError()) {
                 f.tryError(self.getError()!);
             }
@@ -1236,13 +1237,13 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
     /**
      * Returns a statically canceled ARFuture.
      * @returns A new, canceled ARFuture.
+
     public static canceled<T>(): ARFuture<T> {
         const f = new ARFuture<T>();
         f.tryError(new Error("CancellationException"));
         return f;
     }
 
-    }
 
     /**
      * Creates a new ARFuture completed with an error.

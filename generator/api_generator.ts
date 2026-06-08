@@ -51,12 +51,11 @@ export class ApiGenerator {
         const methodList: any[] = [];
         this.getAllMethodsRecursive(methodList, false, apiName, apiDef);
 
-        methodList.forEach((m, index) => {
-            const yamlMethodDef = ((apiDef?.methods || {}) as any)[m.name] || {};
-            m.id = yamlMethodDef.id !== undefined ? yamlMethodDef.id : (index + 3);
-            m.doc = (yamlMethodDef as any).doc;
-            methods.set(m.name, m);
-        });
+
+methodList.forEach((m, index) => {
+    methods.set(m.name, m);
+});
+
         return methods;
     }
 
@@ -79,7 +78,11 @@ export class ApiGenerator {
         });
 
         Object.entries(apiDef.methods || {}).forEach(([methodName, m]) => {
-            const methodDef: any = { id: 0, name: methodName, params: {}, returns: null, throws: null, parent: parent };
+
+const yamlMethodDef = (apiDef?.methods as any)?.[methodName] || {};
+const methodId = yamlMethodDef.id !== undefined ? yamlMethodDef.id : (res.length + 3);
+
+const methodDef: any = { id: methodId, name: methodName, params: {}, returns: null, throws: null, parent: parent };
             const mDef = m as TypeDefinition;
             if (!mDef) return;
 
@@ -344,7 +347,7 @@ return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
     private generateMetaMakeLocal_fromDataIn(sb: string[], apiName: string, methods: Map<string, any>): void {
         const localApiVar = methods.size > 0 ? 'localApi' : '_localApi';
 
-        sb.push(`    makeLocal_fromDataIn(ctx: FastFutureContext, dataIn: DataIn, ${localApiVar}: ${apiName}): void {`);
+        sb.push(`    makeLocal_fromDataIn(ctx: MetaContext, dataIn: DataIn, ${localApiVar}: ${apiName}): void {`);
         sb.push(`        while(dataIn.isReadable()) { const commandId = dataIn.readUByte(); switch(commandId) {`);
         sb.push(`                case 0: { const reqId = FastMeta.META_REQUEST_ID.deserialize(ctx, dataIn); const futureRec = ctx.getFuture(reqId); if (futureRec) futureRec.onDone(dataIn); break; }`);
         sb.push(`                case 1: { const reqId = FastMeta.META_REQUEST_ID.deserialize(ctx, dataIn); const futureRec = ctx.getFuture(reqId); if (futureRec) futureRec.onError(dataIn); break; }`);
@@ -457,7 +460,7 @@ sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
      * @param apiName - The name of the API.
      */
     private generateMetaMakeLocal_fromBytes_ctxLocal(sb: string[], apiName: string): void {
-        sb.push(`    makeLocal_fromBytes_ctxLocal(ctx: FastApiContextLocal<${apiName}>, data: Uint8Array): void {`);
+        sb.push(`    makeLocal_fromBytes_ctxLocal(ctx: MetaContextLocal<${apiName}>, data: Uint8Array): void {`);
         sb.push(`        this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), ctx.localApi);`);
         sb.push(`    }`);
     }
@@ -468,7 +471,7 @@ sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
      * @param apiName - The name of the API.
      */
     private generateMetaMakeLocal_fromBytes_ctx(sb: string[], apiName: string): void {
-        sb.push(`    makeLocal_fromBytes_ctx(ctx: FastFutureContext, data: Uint8Array, localApi: ${apiName}): void {`);
+        sb.push(`    makeLocal_fromBytes_ctx(ctx: MetaContext, data: Uint8Array, localApi: ${apiName}): void {`);
         sb.push(`        this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);`);
         sb.push(`    }`);
     }
@@ -483,7 +486,7 @@ sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
         const g = this.generatorLogic;
         const sCtx = g.getUniqueVarName('sCtx');
 
-        sb.push(`    makeRemote(${sCtx}: FastFutureContext): ${apiName}Remote {`);
+        sb.push(`    makeRemote(${sCtx}: MetaContext): ${apiName}Remote {`);
         sb.push(`        const remoteApiImpl = {`);
         sb.push(`            flush: (sendFuture: FlushReport): void => {`);
         sb.push(`                ${sCtx}.flush(sendFuture);`);
@@ -504,7 +507,7 @@ sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
      * @param sb - The string array to append code lines to.
      * @param g - The GeneratorLogic instance.
      * @param m - The method definition object.
-     * @param sCtx - The name of the FastFutureContext variable.
+     * @param sCtx - The name of the MetaContext variable.
      */
     private generateRemoteApiMethodImpl(sb: string[], g: GeneratorLogic, m: any, sCtx: string): void {
         const returnTypeStrRaw = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)

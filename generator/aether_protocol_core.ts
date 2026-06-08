@@ -133,15 +133,17 @@ export class TypeInfo {
             this.isNullable = false;
         }
 
-        if (t.toLowerCase() === "intpack") {
-            this.isPack = true;
-            t = "long";
-        } else if (t.endsWith('(intpack)')) {
-            this.isPack = true;
-            t = t.substring(0, t.length - 9);
-        } else {
-            this.isPack = false;
-        }
+
+if (t.toLowerCase() === "intpack") {
+    this.isPack = true;
+    t = "long";
+} else if (t.endsWith('(intpack)')) {
+    this.isPack = true;
+    t = t.substring(0, t.length - 9);
+} else {
+    this.isPack = false;
+}
+
 
         const sIndex = t.lastIndexOf("[");
         if (t.endsWith("]") && sIndex > -1) {
@@ -630,7 +632,7 @@ export class GeneratorLogic {
     /**
      * Generates serialization code for a given type.
      * @param sb - The string array to append code lines to.
-     * @param serializeContextVar - The name of the FastFutureContext variable.
+     * @param serializeContextVar - The name of the MetaContext variable.
      * @param outVar - The name of the DataOut variable.
      * @param inVar - The name of the variable to serialize.
      * @param type - The TypeInfo of the variable to serialize.
@@ -646,7 +648,7 @@ export class GeneratorLogic {
     /**
      * Generates serialization code for an array type.
      * @param sb - The string array to append code lines to.
-     * @param serializeContextVar - The name of the FastFutureContext variable.
+     * @param serializeContextVar - The name of the MetaContext variable.
      * @param outVar - The name of the DataOut variable.
      * @param inVar - The name of the variable to serialize.
      * @param type - The TypeInfo of the array.
@@ -672,7 +674,7 @@ export class GeneratorLogic {
     /**
      * Generates serialization code for a non-array element type.
      * @param sb - The string array to append code lines to.
-     * @param serializeContextVar - The name of the FastFutureContext variable.
+     * @param serializeContextVar - The name of the MetaContext variable.
      * @param outVar - The name of the DataOut variable.
      * @param inVar - The name of the variable to serialize.
      * @param type - The TypeInfo of the element.
@@ -709,7 +711,7 @@ export class GeneratorLogic {
     /**
      * Generates deserialization code for a given type.
      * @param sb - The string array to append code lines to.
-     * @param serializeContextVar - The name of the FastFutureContext variable.
+     * @param serializeContextVar - The name of the MetaContext variable.
      * @param inVar - The name of the DataIn variable.
      * @param outVar - The name of the variable to assign the deserialized value to.
      * @param type - The TypeInfo of the variable to deserialize.
@@ -725,7 +727,7 @@ export class GeneratorLogic {
     /**
      * Generates deserialization code for an array type.
      * @param sb - The string array to append code lines to.
-     * @param serializeContextVar - The name of the FastFutureContext variable.
+     * @param serializeContextVar - The name of the MetaContext variable.
      * @param inVar - The name of the DataIn variable.
      * @param outVar - The name of the variable to assign the deserialized value to.
      * @param type - The TypeInfo of the array.
@@ -756,7 +758,7 @@ export class GeneratorLogic {
     /**
      * Generates deserialization code for a non-array element type.
      * @param sb - The string array to append code lines to.
-     * @param serializeContextVar - The name of the FastFutureContext variable.
+     * @param serializeContextVar - The name of the MetaContext variable.
      * @param inVar - The name of the DataIn variable.
      * @param outVar - The name of the variable to assign the deserialized value to.
      * @param type - The TypeInfo of the element.
@@ -794,7 +796,7 @@ export class GeneratorLogic {
     /**
      * Generates serialization code for all fields of a struct, handling nullability.
      * @param sb - The string array to append code lines to.
-     * @param serializeContextVar - The name of the FastFutureContext variable.
+     * @param serializeContextVar - The name of the MetaContext variable.
      * @param outVar - The name of the DataOut variable.
      * @param allFields - A map of field names (with "this.") to their TypeInfo.
      */
@@ -846,7 +848,7 @@ export class GeneratorLogic {
     /**
      * Generates the code to serialize fields, skipping null ones.
      * @param sb - The string array to append code lines to.
-     * @param serializeContextVar - The name of the FastFutureContext variable.
+     * @param serializeContextVar - The name of the MetaContext variable.
      * @param outVar - The name of the DataOut variable.
      * @param allFields - A map of all field names to TypeInfo.
      */
@@ -865,7 +867,7 @@ export class GeneratorLogic {
     /**
      * Generates deserialization code for all fields of a struct, handling nullability.
      * @param sb - The string array to append code lines to.
-     * @param serializeContextVar - The name of the FastFutureContext variable.
+     * @param serializeContextVar - The name of the MetaContext variable.
      * @param inVar - The name of the DataIn variable.
      * @param fieldVars - A map of local variable names to their TypeInfo.
      */
@@ -900,7 +902,7 @@ export class GeneratorLogic {
     /**
      * Generates the code to deserialize fields based on the nullability bitmask.
      * @param sb - The string array to append code lines to.
-     * @param serializeContextVar - The name of the FastFutureContext variable.
+     * @param serializeContextVar - The name of the MetaContext variable.
      * @param inVar - The name of the DataIn variable.
      * @param fieldVars - A map of local variable names to TypeInfo.
      * @param maskVar - The name of the variable holding the bitmask.

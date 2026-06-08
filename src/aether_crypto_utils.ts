@@ -196,4 +196,9 @@ export namespace CryptoUtils {
                 throw new Error("UnsupportedOperationException: Key type cannot be used to make an engine");
         }
     }
+
+    export function of(key: AKey): AKey {
+        return key;
+    }
+
 }

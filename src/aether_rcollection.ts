@@ -984,6 +984,7 @@ export class RQueueBySrc<T> extends RCollectionBySrc<T, Array<T>> implements RQu
         return this.isEmpty() ? null : this.src[0];
     }
 }
+
 /**
  * Высокопроизводительный асинхронный кеш.
  * Портирован из Java версии io.aether.utils.rcollections.BMap
@@ -991,6 +992,7 @@ export class RQueueBySrc<T> extends RCollectionBySrc<T, Array<T>> implements RQu
 export class BMap<K, V> {
     private static readonly ERROR_ENTRY = new Error("Queue overflow");
     private static readonly networkTimeout = new Error("Network timeout");
+    private static readonly CLIENT_NOT_FOUND = new Error("Client not registered in persistent DB");
     public static secondTimeout = 5;
 
     private readonly map = new CustomHashMap<K, BMap.BMapEntry<V>>();
@@ -1006,34 +1008,53 @@ export class BMap<K, V> {
     private _misses = 0;
     private _timeouts = 0;
     private _overflows = 0;
+
     public has(key: K): boolean {
         return this.map.has(key);
     }
-    constructor(name: string, timeout: number, maxQueueSize: number) {
+
+    constructor(name: string, timeoutMs: number, maxQueueSize: number) {
         this.mapName = name;
-        this.globalTimeoutMs = timeout > 0 ? timeout : 10;
+        this.globalTimeoutMs = timeoutMs > 0 ? timeoutMs : 30000;
         this.maxQueueSize = maxQueueSize > 0 ? maxQueueSize : 10000;
         this.abandonedInRequestQueue = new Error(`Abandoned in request queue: ${name}`);
     }
 
-    public putError(key: K, e: Error): void {
+    public getNow(key: K): V | null {
         const entry = this.map.get(key);
         if (entry) {
-            this.map.delete(key);
-            // В JS Queue нет эффективного удаления по значению,
-            // логика pollNextRequest сама пропустит удаленные из Map ключи.
-            entry.fail(RU.timeSeconds(), e);
+            const val = entry.getValue();
+            if (val !== null) this._hits++;
+            return val;
+        }
+        this._misses++;
+        return null;
+    }
+
+    // ---------- Публичный API ----------
+
+    public get(key: K, callback: Future<V>): void;
+    public get(key: K, timeoutSeconds: number, callback: Future<V>): void;
+    public get(arg1: K, arg2: Future<V> | number, arg3?: Future<V>): void {
+        if (typeof arg2 === 'number') {
+            const entry = this.getOrCreateEntry(arg1);
+            entry.listen(arg2, arg3!);
+        } else {
+            const entry = this.getOrCreateEntry(arg1);
+            entry.listen(BMap.secondTimeout, arg2);
         }
     }
+
 
     public getFuture(key: K): ARFuture<V>;
     public getFuture(timeout: number, key: K): ARFuture<V>;
     public getFuture(arg1: any, arg2?: any): ARFuture<V> {
         if (arg2 !== undefined) {
-            return this.get(arg2).toFuture(arg1);
+            return this.getOrCreateEntry(arg2).toFuture(arg1);
         }
-        return this.get(arg1).toFuture(BMap.secondTimeout);
+        return this.getOrCreateEntry(arg1).toFuture(BMap.secondTimeout);
     }
+
 
     public getAllAsFuture<E>(timeout: number, keys: K[], resultConverter: AFunction<V[], E>): ARFuture<E> {
         const res = ARFuture.make<E>();
@@ -1050,7 +1071,26 @@ export class BMap<K, V> {
         return res;
     }
 
-    public getAll(timeout: number, keys: K[], result: Future<V[]>): void {
+    public getTryAllAsFuture<E>(timeout: number, keys: K[], resultConverter: AFunction<[V[], Error[]], E>): ARFuture<E> {
+        const res = ARFuture.make<E>();
+        this.getTryAllImpl(timeout, keys, resultConverter as any);
+        return res;
+    }
+
+    public getAll(timeout: number, keys: K[], result: Future<V[]>): void;
+    public getAll(timeout: number, key1: K, key2: K, result: Future<V[]>): void;
+    public getAll(timeout: number, key1: K, key2: K, key3: K, result: Future<V[]>): void;
+    public getAll(timeout: number, arg1: any, arg2: any, arg3?: any, arg4?: any): void {
+        if (Array.isArray(arg1)) {
+            this.getAllImpl(timeout, arg1, arg2);
+        } else if (arg4) {
+            this.getAllImpl(timeout, [arg1, arg2, arg3], arg4);
+        } else {
+            this.getAllImpl(timeout, [arg1, arg2], arg3);
+        }
+    }
+
+    private getAllImpl(timeout: number, keys: K[], result: Future<V[]>): void {
         if (!keys || keys.length === 0) {
             result.onResolved([]);
             return;
@@ -1063,10 +1103,10 @@ export class BMap<K, V> {
 
         for (let i = 0; i < size && firstError === null; i++) {
             const index = i;
-            const entry = this.get(keys[i]);
+            const entry = this.getOrCreateEntry(keys[i]);
 
             if (entry.isResolved()) {
-                data[index] = entry.value!;
+                data[index] = entry.getValue()!;
                 if (--remaining === 0 && firstError === null) {
                     result.onResolved(data);
                 }
@@ -1099,7 +1139,11 @@ export class BMap<K, V> {
         }
     }
 
-    public getTryAll(timeout: number, keys: K[], result: Future<Tuple2<V[], Error[]>>): void {
+
+    // merged
+
+
+    private getTryAllImpl(timeout: number, keys: K[], result: Future<[V[], Error[]]>): void {
         if (!keys || keys.length === 0) {
             result.onResolved([[], []]);
             return;
@@ -1118,10 +1162,10 @@ export class BMap<K, V> {
 
         for (let i = 0; i < size; i++) {
             const index = i;
-            const entry = this.get(keys[i]);
+            const entry = this.getOrCreateEntry(keys[i]);
 
             if (entry.isResolved()) {
-                values[index] = entry.value!;
+                values[index] = entry.getValue()!;
                 checkComplete();
                 continue;
             }
@@ -1145,27 +1189,94 @@ export class BMap<K, V> {
         }
     }
 
-    public get(key: K): BMap.BMapEntry<V> {
-        Log.debug("BMap.get($key)",{key:key});
-        let entry = this.map.get(key);
-        if (entry) {
-            if (entry.value !== null) this._hits++;
-            return entry;
-        }
-        Log.debug("BMap.get($key) request",{key:key});
-
-        this._misses++;
-        if (this.toRequestQueue.size() >= this.maxQueueSize) {
-            this._overflows++;
-            const errEntry = new BMap.BMapEntry<V>(BMap.ERROR_ENTRY);
-            // Не сохраняем ошибку переполнения в мапу, чтобы была возможность повторить позже
-            return errEntry;
+    public getTryAllValues(timeout: number, keys: K[], result: Future<V[]>): void {
+        if (!keys || keys.length === 0) {
+            result.onResolved([]);
+            return;
         }
 
-        const newEntry = new BMap.BMapEntry<V>(null);
-        this.map.set(key, newEntry);
-        this.toRequestQueue.add(key);
-        return newEntry;
+        const size = keys.length;
+        const values: V[] = new Array(size);
+        let remaining = size;
+
+        const checkComplete = () => {
+            if (--remaining === 0) {
+                result.onResolved(values);
+            }
+        };
+
+        for (let i = 0; i < size; i++) {
+            const index = i;
+            const entry = this.getOrCreateEntry(keys[i]);
+
+            if (entry.isResolved()) {
+                values[index] = entry.getValue()!;
+                checkComplete();
+                continue;
+            }
+
+            if (entry.isError()) {
+                checkComplete();
+                continue;
+            }
+
+            entry.listen(timeout, {
+                onResolved: (value: V) => {
+                    values[index] = value;
+                    checkComplete();
+                },
+                onError: (time: number, error: Error) => {
+                    checkComplete();
+                }
+            });
+        }
+    }
+
+    public getTryAll(timeout: number, keys: K[], perItemCallback: (v: V | null, e: Error | null) => void, countResult: Future<number>): void {
+        if (!keys || keys.length === 0) {
+            countResult.onResolved(0);
+            return;
+        }
+
+        let remaining = keys.length;
+        let successCount = 0;
+
+        for (const key of keys) {
+            const entry = this.getOrCreateEntry(key);
+
+            if (entry.isResolved()) {
+                perItemCallback(entry.getValue()!, null);
+                successCount++;
+                if (--remaining === 0) {
+                    countResult.onResolved(successCount);
+                }
+                continue;
+            }
+
+            if (entry.isError()) {
+                perItemCallback(null, entry.getError()!);
+                if (--remaining === 0) {
+                    countResult.onResolved(successCount);
+                }
+                continue;
+            }
+
+            entry.listen(timeout, {
+                onResolved: (value: V) => {
+                    perItemCallback(value, null);
+                    successCount++;
+                    if (--remaining === 0) {
+                        countResult.onResolved(successCount);
+                    }
+                },
+                onError: (time: number, error: Error) => {
+                    perItemCallback(null, error);
+                    if (--remaining === 0) {
+                        countResult.onResolved(successCount);
+                    }
+                }
+            });
+        }
     }
 
     public pollAllRequests(): K[] {
@@ -1177,63 +1288,112 @@ export class BMap<K, V> {
         return res;
     }
 
+    public pollAllRequest(c: (key: K) => void): void {
+        while (true) {
+            const e = this.pollNextRequest();
+            if (e === null) break;
+            c(e);
+        }
+    }
+
     public pollNextRequest(): K | null {
         const key = this.toRequestQueue.poll();
         if (key === undefined || key === null) return null;
 
         const entry = this.map.get(key);
         if (entry) {
-            if (entry.value !== null) return this.pollNextRequest();
+            if (entry.getValue() !== null) return this.pollNextRequest();
             entry.sentAt = Date.now();
-            return key;
         }
-        return this.pollNextRequest();
+        return key;
     }
 
-    public put(key: K, value: V): void {
-        Log.debug("BMap.put($key,$value)",{key:key,value:value});
+    public putUnknownBatch(keys: K[]): void {
+        const t = RU.timeSeconds();
+        for (const key of keys) {
+            const entry = this.map.get(key);
+            if (entry) {
+                this.toRequestQueue.removeValue(key);
+                entry.fail(t, BMap.CLIENT_NOT_FOUND);
+            }
+        }
+    }
+
+    public put(key: K, value: V): void;
+    public put(key: K, newValue: V, updater: (current: V, newValue: V) => void): V;
+    public put(key: K, newValue: V, updater?: (current: V, newValue: V) => void): V | void {
         let entry = this.map.get(key);
         if (!entry) {
-            entry = new BMap.BMapEntry<V>(null);
+            entry = new BMap.BMapEntry<V>(key, null);
             this.map.set(key, entry);
+            entry.resolve(newValue);
+        } else {
+            const current = entry.getValue();
+            if (current === null) {
+                entry.resolve(newValue);
+            } else if (updater) {
+                updater(current, newValue);
+                entry.resolve(current);
+            } else {
+                entry.resolve(newValue);
+            }
         }
-        entry.resolve(value);
         this.toRequestQueue.removeValue(key);
+        return updater ? entry.getValue()! : undefined;
     }
+
+    public putError(key: K, e: Error): void {
+        const entry = this.map.get(key);
+        if (entry) {
+            this.toRequestQueue.removeValue(key);
+            entry.fail(RU.timeSeconds(), e);
+        }
+    }
+
     public checkTimeouts(): void {
-            const now = Date.now();
-            const t = RU.timeSeconds();
+        const now = Date.now();
+        const t = RU.timeSeconds();
 
-            for (const [key, entry] of this.map.entries()) {
+        for (const [key, entry] of this.map.entries()) {
+            if (entry.getValue() !== null || entry.isError()) {
+                continue;
+            }
 
-                if (entry.value !== null || entry.isError()) {
-                    continue;
-                }
-
-                if (entry.sentAt > 0) {
-                    if (now - entry.sentAt > this.globalTimeoutMs) {
-                        if (this.map.has(key) && this.map.get(key) === entry) {
-                            this.map.delete(key);
-                            this._timeouts++;
-                            entry.fail(t, BMap.networkTimeout);
-                        }
-                    }
-                } else if (now - entry.requestedAt > this.globalTimeoutMs * 4) {
+            if (entry.sentAt > 0) {
+                if (now - entry.sentAt > this.globalTimeoutMs) {
                     if (this.map.has(key) && this.map.get(key) === entry) {
                         this.map.delete(key);
-                        entry.fail(t, this.abandonedInRequestQueue);
+                        this.toRequestQueue.removeValue(key);
+                        this._timeouts++;
+                        entry.fail(t, BMap.networkTimeout);
                     }
+                }
+            } else if (now - entry.requestedAt > this.globalTimeoutMs * 4) {
+                if (this.map.has(key) && this.map.get(key) === entry) {
+                    this.map.delete(key);
+                    this.toRequestQueue.removeValue(key);
+                    entry.fail(t, this.abandonedInRequestQueue);
                 }
             }
         }
+    }
 
     public size(): number {
         return this.map.size;
     }
+
+    public keySet(): K[] {
+        const keys: K[] = [];
+        for (const k of this.map.keys()) {
+            keys.push(k);
+        }
+        return keys;
+    }
+
     public printStats(): void {
         let pendingInMap = 0;
         for (const e of this.map.values()) {
-            if (e.value === null && !e.isError()) pendingInMap++;
+            if (e.getValue() === null && !e.isError()) pendingInMap++;
         }
 
         const inQueue = this.toRequestQueue.size();
@@ -1256,110 +1416,157 @@ export class BMap<K, V> {
         return {
             *[Symbol.iterator]() {
                 for (const entry of self.map.values()) {
-                    if (entry.value !== null) yield entry.value;
+                    if (entry.getValue() !== null) yield entry.getValue()!;
                 }
             }
         };
     }
+
+    private getOrCreateEntry(key: K): BMap.BMapEntry<V> {
+        let entry = this.map.get(key);
+        if (entry) {
+            if (entry.getValue() !== null) this._hits++;
+            return entry;
+        }
+        Log.debug("BMap.get($key) request", { key: key });
+        this._misses++;
+        if (this.toRequestQueue.size() >= this.maxQueueSize) {
+            this._overflows++;
+            return new BMap.BMapEntry<V>(key, BMap.ERROR_ENTRY);
+        }
+        entry = new BMap.BMapEntry<V>(key, null);
+        this.map.set(key, entry);
+        this.toRequestQueue.add(key);
+        return entry;
+    }
 }
+
 
 /**
  * Внутренние компоненты BMap
  */
 export namespace BMap {
 
+
     export class BMapEntry<V> {
+        public readonly key: any;
         public readonly requestedAt: number;
-        public value: V | null = null;
         public sentAt: number = 0;
-
+        private _value: V | null = null;
+        private _failed: boolean = false;
+        private _error: Error | null = null;
         private readonly listeners: Future<V>[] = [];
-        private readonly errorMessage: Error | null;
 
-        constructor(error: Error | null) {
+        constructor(key: any, error: Error | null) {
+            this.key = key;
             this.requestedAt = Date.now();
-            this.errorMessage = error;
-        }
-
-        public isError(): boolean {
-            return this.errorMessage !== null;
-        }
-
-        public getError(): Error | null {
-            return this.errorMessage;
+            this._error = error;
         }
 
         public isResolved(): boolean {
-            return this.value !== null;
+            return this._value !== null;
+        }
+
+        public getValue(): V | null {
+            return this._value;
+        }
+
+        public isError(): boolean {
+            return this._error !== null;
+        }
+
+        public getError(): Error | null {
+            return this._error;
         }
 
         public toFuture(timeout: number = BMap.secondTimeout): ARFuture<V> {
-            if (this.isResolved()) return ARFuture.of(this.value!);
+            if (this.isResolved()) return ARFuture.of(this._value!);
             const res = ARFuture.make<V>();
             this.listen(timeout, Future.of(res));
             return res;
         }
 
-        public listen(timeout: number, listener: Future<V>): void {
-            if (this.isError()) {
-                listener.onError(0, this.errorMessage!);
-                return;
-            }
-            if (this.value !== null) {
-                listener.onResolved(this.value);
-                return;
-            }
-
-            const deadline = RU.timeSeconds() + timeout;
-            let finalized = false;
-
-            const internalListener: Future<V> = {
-                onResolved: (v: V) => {
-                    if (!finalized) {
-                        finalized = true;
-                        listener.onResolved(v);
-                    }
-                },
-                onError: (time: number, err: Error) => {
-                    if (!finalized) {
-                        if (RU.timeSeconds() > deadline) {
-                            finalized = true;
-                            listener.onError(time, err);
-                        } else {
-                            // Если не вышли за дедлайн, остаемся в очереди (логика Java)
-                            this.listeners.push(internalListener);
-                        }
-                    }
-                }
-            };
-
-            this.listeners.push(internalListener);
-
-            // Double check
-            if (this.value !== null) {
-                this.resolve(this.value);
-            }
+        public getNow(): V | null {
+            return this._value;
         }
 
         resolve(val: V): void {
-            this.value = val;
+            this._value = val;
+            this._error = null;
             let l: Future<V> | undefined;
             while ((l = this.listeners.shift())) {
                 l.onResolved(val);
             }
         }
 
-        fail(time: number, error: Error): void {
+        fail(time: number, e: Error): void {
+            this._error = e;
+            this._value = null;
+            this._failed = true;
             let l: Future<V> | undefined;
             while ((l = this.listeners.shift())) {
-                l.onError(time, error);
+                l.onError(time, e);
             }
         }
 
-        public getNow(): V | null {
-            return this.value;
+        public listen(timeoutSeconds: number, listener: Future<V>): void {
+            const deadline = RU.timeSeconds() + timeoutSeconds;
+            this.listen0(deadline, listener);
+        }
+
+        private listen0(deadline: number, listener: Future<V>): void {
+            if (this._failed || this.isError()) {
+                listener.onError(0, this._error!);
+                return;
+            }
+            const val = this.getValue();
+            if (val !== null) {
+                listener.onResolved(val);
+                return;
+            }
+
+            let fired = false;
+            const wrapped: Future<V> = {
+                onResolved: (value: V) => {
+                    if (!fired) {
+                        fired = true;
+                        listener.onResolved(value);
+                    }
+                },
+                onError: (time: number, error: Error) => {
+                    if (RU.timeSeconds() > deadline) {
+                        if (!fired) {
+                            fired = true;
+                            listener.onError(time, error);
+                        }
+                    } else {
+                        this.listeners.push(wrapped);
+                    }
+                }
+            };
+
+            this.listeners.push(wrapped);
+
+            // Double check after adding
+            if (this._failed || this.isError()) {
+                const idx = this.listeners.indexOf(wrapped);
+                if (idx >= 0) {
+                    this.listeners.splice(idx, 1);
+                    listener.onError(0, this._error!);
+                }
+                return;
+            }
+            const val2 = this.getValue();
+            if (val2 !== null) {
+                const idx = this.listeners.indexOf(wrapped);
+                if (idx >= 0) {
+                    this.listeners.splice(idx, 1);
+                    listener.onResolved(val2);
+                }
+            }
         }
     }
+
 }
 // =============================================================================================
 // SECTION 7: RCol (Static Factory)
@@ -1425,9 +1632,11 @@ export namespace RCol {
 
     export function bMap<K, V>(timeoutMs: number, name: string): BMap<K, V>;
     export function bMap<K, V>(): BMap<K, V>;
+
     export function bMap<K, V>(timeoutMs?: number, name?: string): BMap<K, V> {
-        const finalTimeout = timeoutMs ?? 4000;
+        const finalTimeout = timeoutMs ?? 30000;
         const finalName = name ?? "GenericBMap";
-        return new BMap<K, V>(finalName,10, finalTimeout);
+        return new BMap<K, V>(finalName, finalTimeout, 10000);
     }
+
 }
