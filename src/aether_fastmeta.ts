@@ -191,7 +191,7 @@ export interface RemoteApi {
 export interface FastMetaApi<T, R extends RemoteApi> {
     makeRemote(localApi: MetaContext): R;
     makeLocal_fromDataIn(ctx: MetaContext, dataIn: DataIn, localApi: T): void;
-    makeLocal_fromBytes_ctxLocal(ctx: MetaContextLocal<T>, data: Uint8Array): void;
+    makeLocal_fromBytes_ctxLocal(ctx: MetaContext<T>, data: Uint8Array): void;
     makeLocal_fromBytes_ctx(ctx: MetaContext, data: Uint8Array, localApi: T): void;
 }
 
@@ -863,13 +863,13 @@ export class FastApiContext implements MetaContext {
 /**
  * Implementation of FastApiContext for a local API instance.
  */
-export class MetaContextLocal<LT> extends FastApiContext {
+export class MetaContext<LT> extends FastApiContext {
     public readonly localApi: LT;
 
-    constructor(localApi: LT | AFunction<MetaContextLocal<LT>, LT>) {
+    constructor(localApi: LT | AFunction<MetaContext<LT>, LT>) {
         super();
         if (typeof localApi === 'function') {
-            this.localApi = (localApi as AFunction<MetaContextLocal<LT>, LT>)(this);
+            this.localApi = (localApi as AFunction<MetaContext<LT>, LT>)(this);
         } else {
             this.localApi = localApi;
         }

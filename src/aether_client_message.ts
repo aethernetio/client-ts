@@ -12,7 +12,7 @@ import { Queue } from './aether_utils';
 // Эти импорты нужны для методов toApi
 import {
     FastApiContext,
-    MetaContextLocal,
+    MetaContext,
     MetaContext,
     FastMetaApi,
     FlushReport,
@@ -242,10 +242,10 @@ export class MessageNode {
      */
     public toApiWithFactory<LT>(
         metaLt: FastMetaApi<LT, any>,
-        localApiFactory: AFunction<MetaContextLocal<LT>, LT>
-    ): MetaContextLocal<LT> {
+        localApiFactory: AFunction<MetaContext<LT>, LT>
+    ): MetaContext<LT> {
         const node = this;
-        const ctx = new class extends MetaContextLocal<LT> {
+        const ctx = new class extends MetaContext<LT> {
             constructor() {
                 super(localApiFactory);
             }
@@ -276,11 +276,11 @@ export class MessageNode {
      */
     public toApiR<LT>(
         metaLt: FastMetaApi<LT, any>,
-        localApiFactory: AFunction<MetaContextLocal<LT>, LT>
-    ): MetaContextLocal<LT> {
+        localApiFactory: AFunction<MetaContext<LT>, LT>
+    ): MetaContext<LT> {
         const nodeSend = this.send.bind(this);
 
-        const ctx = new (class extends MetaContextLocal<LT> {
+        const ctx = new (class extends MetaContext<LT> {
             constructor() {
                 super(localApiFactory); // Передаем фабрику
             }

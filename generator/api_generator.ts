@@ -460,7 +460,7 @@ sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
      * @param apiName - The name of the API.
      */
     private generateMetaMakeLocal_fromBytes_ctxLocal(sb: string[], apiName: string): void {
-        sb.push(`    makeLocal_fromBytes_ctxLocal(ctx: MetaContextLocal<${apiName}>, data: Uint8Array): void {`);
+        sb.push(`    makeLocal_fromBytes_ctxLocal(ctx: MetaContext<${apiName}>, data: Uint8Array): void {`);
         sb.push(`        this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), ctx.localApi);`);
         sb.push(`    }`);
     }

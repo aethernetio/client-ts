@@ -110,7 +110,7 @@ import * as Impl from './aether_api_impl'; // This is always relative
     FastMeta,
     SerializerPackNumber,
     DeserializerPackNumber,
-    MetaContextLocal,
+    MetaContext,
     FastMetaApi,
     FastFutureContextStub,
     UUID,

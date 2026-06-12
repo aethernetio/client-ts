@@ -11,7 +11,7 @@ import {
     FastMetaApi,
     RemoteApi,
     MetaContext,
-    MetaContextLocal,
+    MetaContext,
     SerializerPackNumber,
     DeserializerPackNumber,
     FlushReport
@@ -359,8 +359,8 @@ export enum ConnectionState {
  */
 class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
     public websocket: IUniversalWebSocket | null = null;
-    public context: MetaContextLocal<LT> | null = null;
-    public connectFuture: ARFuture<MetaContextLocal<LT>>;
+    public context: MetaContext<LT> | null = null;
+    public connectFuture: ARFuture<MetaContext<LT>>;
     public destroyer: Destroyer = new Destroyer("FastMetaClientWebSocket");
     public log: LNode;
     public uri: URI = "";
@@ -399,7 +399,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
      */
     constructor(reconnectConfig?: Partial<ReconnectConfig>) {
         this.log = Log.of({ component: 'FastMetaClientWebSocket' });
-        this.connectFuture = ARFuture.of<MetaContextLocal<LT>>();
+        this.connectFuture = ARFuture.of<MetaContext<LT>>();
         this.reconnectConfig = {
             maxAttempts: 0,
             baseDelay: 500,
@@ -446,14 +446,14 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
      * @param {FastMetaApi<LT, any>} localApiMeta Local API metadata
      * @param {FastMetaApi<any, RT>} remoteApiMeta Remote API metadata
      * @param {AFunction<RT, LT>} localApiProvider Local API provider function
-     * @returns {ARFuture<MetaContextLocal<LT>>} Future resolving to connection context
+     * @returns {ARFuture<MetaContext<LT>>} Future resolving to connection context
      */
     public connect(
         uri: URI,
         localApiMeta: FastMetaApi<LT, any>,
         remoteApiMeta: FastMetaApi<any, RT>,
         localApiProvider: AFunction<RT, LT>
-    ): ARFuture<MetaContextLocal<LT>> {
+    ): ARFuture<MetaContext<LT>> {
         Log.info("connect() called", { uri });
 
         try {
@@ -670,7 +670,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         }
 
         try {
-            const context = new MetaContextLocal<LT>((self: MetaContextLocal<LT>) => {
+            const context = new MetaContext<LT>((self: MetaContext<LT>) => {
                 const remoteApi = this.remoteApiMeta!.makeRemote(self);
                 return this.localApiProvider!(remoteApi);
             });
@@ -884,7 +884,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         }
 
         if (this.connectFuture.isFinalStatus()) {
-            this.connectFuture = ARFuture.of<MetaContextLocal<LT>>();
+            this.connectFuture = ARFuture.of<MetaContext<LT>>();
         }
 
         if (this.websocket) {
@@ -1032,9 +1032,9 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
     /**
      * @method getContext
      * @description Get connection context
-     * @returns {MetaContextLocal<LT> | null} Connection context or null
+     * @returns {MetaContext<LT> | null} Connection context or null
      */
-    public getContext(): MetaContextLocal<LT> | null {
+    public getContext(): MetaContext<LT> | null {
         return this.context;
     }
 
@@ -1084,9 +1084,9 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
 class FastMetaClientAdapter<LT, RT extends RemoteApi> implements FastMetaClient<LT, RT> {
     public wsClient: FastMetaClientWebSocket<LT, RT>;
     public writableConsumer: AConsumer<boolean>;
-    public context: MetaContextLocal<LT> | null = null;
+    public context: MetaContext<LT> | null = null;
     public log: LNode;
-    public contextFuture: ARFuture<MetaContextLocal<LT>>;
+    public contextFuture: ARFuture<MetaContext<LT>>;
 
     /**
      * @constructor
@@ -1117,7 +1117,7 @@ class FastMetaClientAdapter<LT, RT extends RemoteApi> implements FastMetaClient<
         Log.info("Calling wsClient.connect");
         this.contextFuture = this.wsClient.connect(uri, lt, rt, localApiProvider);
 
-        this.contextFuture.to((ctx: MetaContextLocal<LT>) => {
+        this.contextFuture.to((ctx: MetaContext<LT>) => {
             this.context = ctx;
         }).onError((error) => {
             Log.error("Failed to establish connection context", error);
