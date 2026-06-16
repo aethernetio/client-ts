@@ -110,19 +110,22 @@ import * as Impl from './aether_api_impl'; // This is always relative
     FastMeta,
     SerializerPackNumber,
     DeserializerPackNumber,
-    MetaContext,
+    RemoteApi,
     FastMetaApi,
     FastFutureContextStub,
     UUID,
     URI,
     AString,
-    FlushReport
+
+    BytesConverter,
+
 } from '${this.importPrefix}';
 import {
     ${allImports.join(',\n    ')}
 } from './aether_api'; // This is always relative
 
 `;
+
     }
 
     /**
@@ -243,16 +246,25 @@ import {
     private discoverAnonymousTypesInApi(apiName: string, apiDef: TypeDefinition | null | undefined): void {
         if (!apiDef) return;
 
+
         const processPotentialAnon = (parts: string[], typeDef: any): string | any => {
             if (typeof typeDef === 'object' && typeDef !== null) {
                 const nameParts = [...parts];
-                if (typeDef.stream && !nameParts.some(p => p.toLowerCase().includes("stream"))) {
+                const isStream = !!typeDef.stream;
+                if (isStream && !nameParts.some(p => p.toLowerCase().includes("stream"))) {
                     nameParts.push("Stream");
                 }
                 const anonName = this.generatorLogic.declareAnonymType(nameParts, typeDef as TypeDefinition);
                 if (!this.generatorLogic.allTypes.has(anonName)) {
                     this.generatorLogic.allTypes.set(anonName, typeDef as TypeDefinition);
                     this.generatorLogic.declaredTypeNames.add(anonName);
+                }
+                // Save stream metadata
+                if (isStream && typeDef.stream?.api) {
+                    this.generatorLogic.streamApiMap.set(anonName, typeDef.stream.api as string);
+                    if (typeDef.stream.remoteApi) {
+                        this.generatorLogic.streamRemoteApiMap.set(anonName, typeDef.stream.remoteApi as string);
+                    }
                 }
                 return anonName;
             }
@@ -278,6 +290,7 @@ import {
             }
         }
     }
+
 
     private discoverAnonymousTypesInDto(dtoName: string, dtoDef: TypeDefinition | null | undefined): void {
         if (!dtoDef || !dtoDef.fields) return;

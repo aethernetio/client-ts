@@ -10,13 +10,13 @@ import { Queue } from './aether_utils';
 
 // --- [НОВЫЕ ИМПОРТЫ] ---
 // Эти импорты нужны для методов toApi
+
 import {
-    FastApiContext,
-    MetaContext,
+    MetaContextBase,
     MetaContext,
     FastMetaApi,
-    FlushReport,
 } from './aether_fastmeta';
+
 import { DataInOutStatic } from './aether_datainout';
 // -----------------------
 
@@ -237,67 +237,51 @@ export class MessageNode {
         });
     }
 
+
     /**
-     * @description Создает FastApiContext, который flushes данные через этот MessageNode.
+     * @description Создает MetaContext, который flushes данные через этот MessageNode.
      */
     public toApiWithFactory<LT>(
         metaLt: FastMetaApi<LT, any>,
-        localApiFactory: AFunction<MetaContext<LT>, LT>
-    ): MetaContext<LT> {
+        localApiFactory: (ctx: MetaContext) => LT
+    ): MetaContext {
         const node = this;
-        const ctx = new class extends MetaContext<LT> {
-            constructor() {
-                super(localApiFactory);
-            }
-            public override flush(report: FlushReport): void {
-                const data = this.remoteDataToArrayAsArray();
-                if (data.length === 0) {
-                    report.done();
-                    return;
-                }
-                node.send(data).toRunnable(() => {
-                    report.done();
-                }).onError((err: Error) => {
-                    Log.error("MessageNode toApi flush error", err);
-                    report.abort();
-                });
-                node.client.flush();
-            }
-        }();
+        const ctx = new MetaContextBase();
+        ctx.localApi = localApiFactory(ctx);
+        ctx.onFlushData((data: Uint8Array) => {
+            if (data.length === 0) return;
+            node.send(data).onError((err: Error) => {
+                Log.error("MessageNode toApi flush error", err);
+            });
+            node.client.flush();
+        });
         this.toApiWithCtx(ctx, metaLt, ctx.localApi);
         return ctx;
     }
 
-
     /**
-     * @description Создает FastApiContext, который "промывает" (flushes) данные через этот MessageNode,
+     * @description Создает MetaContext, который "промывает" (flushes) данные через этот MessageNode,
      * используя фабрику для создания локального API.
      * (Портировано из MessageNode.java)
      */
     public toApiR<LT>(
         metaLt: FastMetaApi<LT, any>,
-        localApiFactory: AFunction<MetaContext<LT>, LT>
-    ): MetaContext<LT> {
+        localApiFactory: (ctx: MetaContext) => LT
+    ): MetaContext {
         const nodeSend = this.send.bind(this);
 
-        const ctx = new (class extends MetaContext<LT> {
-            constructor() {
-                super(localApiFactory); // Передаем фабрику
+        const ctx = new MetaContextBase();
+        ctx.localApi = localApiFactory(ctx);
+        ctx.onFlushData((d: Uint8Array) => {
+            if (d.length > 0) {
+                nodeSend(d);
             }
-            override flush(sendFuture?: FlushReport): void {
-                const d = this.remoteDataToArrayAsArray();
-                if (d.length > 0) {
-                    if (sendFuture) nodeSend(d).to(() => sendFuture.done()).onError(() => sendFuture.abort()); else nodeSend(d);
-                } else {
-                    sendFuture.done();
-                }
-            }
-        })();
+        });
 
-        // ctx.localApi теперь засетапен
         this.toApiWithCtx(ctx, metaLt, ctx.localApi);
         return ctx;
     }
+
 
     /**
      * @description Привязывает входящие данные (bufferIn) к локальной реализации API.

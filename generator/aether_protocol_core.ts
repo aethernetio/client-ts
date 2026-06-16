@@ -18,7 +18,7 @@ export type TypeDefinition = {
     doc?: string;
     fields?: { [key: string]: any };
     constants?: { [key: string]: string | number | boolean };
-    stream?: { api?: string, crypto?: boolean, name?: string };
+    stream?: { api?: string, crypto?: boolean, name?: string, remoteApi?: string };
     enum?: string[];
     abstract?: boolean;
     parent?: string;
@@ -289,6 +289,8 @@ if (t.toLowerCase() === "intpack") {
  */
 export class GeneratorLogic {
     public readonly canonicalApiMap = new Map<string, string>();
+    public readonly streamApiMap = new Map<string, string>();
+    public readonly streamRemoteApiMap = new Map<string, string>();
     private varCounter: number = 0;
     private metaAccessors: Map<string, string> = new Map();
     /**

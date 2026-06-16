@@ -13,16 +13,7 @@ import { AString } from './aether_astring';
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER_UTF8 = new TextDecoder('utf-8');
 
-export abstract class FlushReport {
-    public static STUB = new class extends FlushReport {
-        report(ignore: boolean) { }
-        done() { }
-        abort() { }
-    };
-    public abstract report(done: boolean): void;
-    public done() { this.report(true); }
-    public abort() { this.report(false); }
-}
+
 
 
 export class SerializerPackNumber {
@@ -113,7 +104,8 @@ export interface FutureRec {
 /**
  * Interface for the Aether protocol context, managing futures and serialization.
  */
-export interface MetaContext extends Destroyable {
+
+export interface MetaContext {
     sendToRemote(data: Uint8Array): void;
 
     regFuture(worker: FutureRec): number;
@@ -125,20 +117,41 @@ export interface MetaContext extends Destroyable {
 
     remoteDataToArray(out: DataOut): void;
     remoteDataToArrayAsArray(): Uint8Array;
-    flush(report: FlushReport): void;
+    flush(): void;
 
     isEmpty(): boolean;
     size(): number;
     close(): AFuture;
 
+    isActive(): boolean;
+    isLocked(): boolean;
+    lock(): AutoCloseable | null;
+    onFlush(flushAction: () => void): void;
+    onFlushData(c: (data: Uint8Array) => void): void;
+    findContext(factory: (ctx: MetaContext) => any, ...keys: any[]): MetaContext;
+    getLocalApi(): any;
+    onWritable(listener: (writable: boolean) => void): void;
+    fireWritable(writable: boolean): void;
+
     invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void;
     invokeLocalMethodAfter(methodName: string, result: any, argsNames: string[], argsValues: any[]): void;
+
     invokeRemoteMethodAfter(methodName: string, result: any, argsNames: string[], argsValues: any[]): void;
+    makeRemote<RT extends RemoteApi, RT2 extends RemoteApi>(meta: FastMetaApi<RT, RT2>): RT2;
 }
+
+
+
+export interface AutoCloseable {
+    close(): void;
+}
+
+
 
 /**
  * A stub implementation of MetaContext for synchronous operations.
  */
+
 export const FastFutureContextStub: MetaContext = {
     sendToRemote: (data: Uint8Array) => { throw new Error("Context is a stub and cannot send data."); },
     sendResultToRemote: (requestId: number, data: Uint8Array) => { throw new Error("Context is a stub and cannot send result."); },
@@ -146,17 +159,29 @@ export const FastFutureContextStub: MetaContext = {
     regFuture: (worker: FutureRec) => 0,
     regLocalFuture: () => { /* no-op */ },
     getFuture: (requestId: number) => { throw new Error("UnsupportedOperationException"); },
-    flush: (report: FlushReport) => { report.done(); },
+    flush: () => {},
     remoteDataToArray: (out: DataOut) => { /* no-op */ },
     remoteDataToArrayAsArray: () => new Uint8Array(0),
     isEmpty: () => true,
     size: () => 0,
     close: () => AFuture.completed(),
-    destroy: (_force: boolean) => AFuture.of(),
+    isActive: () => true,
+    isLocked: () => false,
+    lock: () => null,
+    onFlush: (_flushAction: () => void) => {},
+    onFlushData: (_c: (data: Uint8Array) => void) => {},
+    findContext: (_factory: (ctx: MetaContext) => any, ..._keys: any[]) => { throw new Error("UnsupportedOperationException"); },
+    getLocalApi: () => null,
+    onWritable: (_listener: (writable: boolean) => void) => {},
+    fireWritable: (_writable: boolean) => {},
     invokeLocalMethodBefore: (_methodName, _argsNames, _argsValues) => { /* no-op */ },
     invokeLocalMethodAfter: (_methodName, _result, _argsNames, _argsValues) => { /* no-op */ },
+
     invokeRemoteMethodAfter: (_methodName, _result, _argsNames, _argsValues) => { /* no-op */ },
-};
+    makeRemote: <RT extends RemoteApi, RT2 extends RemoteApi>(_meta: FastMetaApi<RT, RT2>): RT2 => { throw new Error("UnsupportedOperationException"); },
+}
+
+
 
 
 /**
@@ -180,20 +205,24 @@ export interface FastMetaType<T> {
 /**
  * Interface for a remote API endpoint.
  */
+
 export interface RemoteApi {
-    flush(report: FlushReport): void;
+    flush(): void;
     getFastMetaContext(): MetaContext;
 }
+
 
 /**
  * Interface for API metadata, handling remote/local creation.
  */
+
 export interface FastMetaApi<T, R extends RemoteApi> {
     makeRemote(localApi: MetaContext): R;
     makeLocal_fromDataIn(ctx: MetaContext, dataIn: DataIn, localApi: T): void;
-    makeLocal_fromBytes_ctxLocal(ctx: MetaContext<T>, data: Uint8Array): void;
+    makeLocal_fromBytes_ctxLocal(ctx: MetaContextLocal<T>, data: Uint8Array): void;
     makeLocal_fromBytes_ctx(ctx: MetaContext, data: Uint8Array, localApi: T): void;
 }
+
 
 /**
  * A function type for converting byte arrays.
@@ -727,16 +756,96 @@ export class FastMeta {
 
 
 /**
- * Implementation of FastApiContext.
+ * Implementation of MetaContextBase.
  */
-export class FastApiContext implements MetaContext {
-    private futures: Map<number, FutureRec> = new Map();
-    private futuresCounter: AtomicInteger = new AtomicInteger(0);
-    private toRemote: ConcurrentLinkedQueue_C<Uint8Array> = new ConcurrentLinkedQueue_C();
-    private returnTasks: AtomicInteger = new AtomicInteger(0);
-    private sizeBytes: AtomicInteger = new AtomicInteger(0);
 
-    public destroy(_force: boolean): AFuture { return this.close(); }
+export class MetaContextBase implements MetaContext {
+    protected futures: Map<number, FutureRec> = new Map();
+    protected futuresCounter: AtomicInteger = new AtomicInteger(0);
+    protected toRemote: ConcurrentLinkedQueue_C<Uint8Array> = new ConcurrentLinkedQueue_C();
+    protected returnTasks: AtomicInteger = new AtomicInteger(0);
+    protected sizeBytes: AtomicInteger = new AtomicInteger(0);
+    private childContexts: Map<string, MetaContextBase> = new Map();
+    private _lock: (() => void) | null = null;
+    private writableListener: ((writable: boolean) => void) | null = null;
+    private flushAction: (() => void) | null = null;
+    public localApi: any = null;
+    protected parent: MetaContextBase | null = null;
+
+    public getLocalApi(): any { return this.localApi; }
+
+    public isActive(): boolean { return this.parent === null || this.parent.isActive(); }
+
+    public isLocked(): boolean { return this._lock !== null; }
+
+    public lock(): AutoCloseable | null {
+        if (this.isLocked()) {
+            throw new Error("Already locked");
+        }
+        const unlock = () => { this._lock = null; };
+        this._lock = unlock;
+        return { close: unlock };
+    }
+
+    public onFlush(flushAction: () => void): void {
+        this.flushAction = flushAction;
+    }
+
+    public onFlushData(c: (data: Uint8Array) => void): void {
+        this.onFlush(() => {
+            if (this.isEmpty()) return;
+            const d = this.remoteDataToArrayAsArray();
+            if (d.length === 0) return;
+            c(d);
+        });
+    }
+
+    public findContext(factory: (ctx: MetaContext) => any, ...keys: any[]): MetaContext {
+        const keyStr = JSON.stringify(keys);
+        let ctx = this.childContexts.get(keyStr);
+        if (!ctx) {
+            ctx = this.createChildContext();
+            ctx.parent = this;
+            ctx.localApi = factory(ctx);
+            this.childContexts.set(keyStr, ctx);
+        }
+        return ctx;
+    }
+
+    protected createChildContext(): MetaContextBase {
+        return new MetaContextBase();
+    }
+
+    public onWritable(listener: (writable: boolean) => void): void {
+        this.writableListener = listener;
+    }
+
+    public fireWritable(writable: boolean): void {
+        const l = this.writableListener;
+        if (l) l(writable);
+    }
+
+    public flush(): void {
+        if (this.isLocked()) return;
+        if (this.parent !== null) {
+            this.parent.flush();
+            return;
+        }
+        this.runFlushLifecycle();
+    }
+
+    protected runFlushLifecycle(): void {
+        if (this.isLocked()) return;
+        for (const child of this.childContexts.values()) {
+            if (!child.isEmpty()) {
+                child.runFlushLifecycle();
+            }
+        }
+        if (this.flushAction) {
+            this.flushAction();
+        }
+    }
+
     public getFuture(requestId: number): FutureRec | undefined {
         const future = this.futures.get(requestId);
         this.futures.delete(requestId);
@@ -751,18 +860,14 @@ export class FastApiContext implements MetaContext {
 
     public sendResultToRemote(requestId: number, data: Uint8Array): void {
         const d = new DataInOut();
-
         FastMeta.META_COMMAND.serialize(FastFutureContextStub, 0, d);
         FastMeta.META_REQUEST_ID.serialize(FastFutureContextStub, requestId, d);
-
         if (data.length > 0) {
             d.write(data);
         }
-
         this.sendToRemote(d.toArray());
-
         if (this.returnTasks.decrementAndGet() === 0) {
-            this.flush(AFuture.make());
+            this.flush();
         }
     }
 
@@ -771,9 +876,22 @@ export class FastApiContext implements MetaContext {
         this.sizeBytes.addAndGet(data.length);
     }
 
-    public isEmpty(): boolean { return this.toRemote.isEmpty(); }
+    public isEmpty(): boolean {
+        if (this.isLocked()) return true;
+        if (!this.toRemote.isEmpty()) return false;
+        for (const child of this.childContexts.values()) {
+            if (!child.isEmpty()) return false;
+        }
+        return true;
+    }
 
-    public size(): number { return this.sizeBytes.get(); }
+    public size(): number {
+        let s = this.sizeBytes.get();
+        for (const child of this.childContexts.values()) {
+            s += child.size();
+        }
+        return s;
+    }
 
     public remoteDataToArrayAsArray(): Uint8Array {
         const out = new DataInOut();
@@ -794,24 +912,16 @@ export class FastApiContext implements MetaContext {
         this.futures.set(r, worker);
         return r;
     }
-    public flush(report: FlushReport): void {
-        const data = this.remoteDataToArrayAsArray();
-        if (data.length === 0) {
-            report.done();
-            return;
-        }
-        this.sendToRemote(data);
-        report.done();
-    }
-
-
-
 
     public close(): AFuture {
         this.futures.clear();
         this.toRemote.clear();
         this.sizeBytes.set(0);
         this.returnTasks.set(0);
+        this.childContexts.clear();
+        this.flushAction = null;
+        this.writableListener = null;
+        this._lock = null;
         return AFuture.of();
     }
 
@@ -824,11 +934,8 @@ export class FastApiContext implements MetaContext {
         meta.makeLocal_fromDataIn(this, dataIn, localApi);
     }
 
-
     public invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void {
-        const logData: LogData = {
-            "methodName": methodName
-        };
+        const logData: LogData = { "methodName": methodName };
         for (let i = 0; i < argsNames.length; i++) {
             logData[`arg_${argsNames[i]}`] = argsValues[i];
         }
@@ -836,10 +943,7 @@ export class FastApiContext implements MetaContext {
     }
 
     public invokeLocalMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
-        const logData: LogData = {
-            "methodName": methodName,
-            "result": result
-        };
+        const logData: LogData = { "methodName": methodName, "result": result };
         for (let i = 0; i < argsNames.length; i++) {
             logData[`arg_${argsNames[i]}`] = argsValues[i];
         }
@@ -847,34 +951,32 @@ export class FastApiContext implements MetaContext {
     }
 
     public invokeRemoteMethodAfter(methodName: string, result: AFuture | ARFuture<any> | null, argsNames: string[], argsValues: any[]): void {
-        const logData: LogData = {
-            "methodName": methodName,
-            "result": result
-        };
-
+        const logData: LogData = { "methodName": methodName, "result": result };
         for (let i = 0; i < argsNames.length; i++) {
             logData[`arg_${argsNames[i]}`] = argsValues[i];
         }
-
         Log.trace(`cmd remote      : $methodName`, logData);
     }
 }
 
+
 /**
- * Implementation of FastApiContext for a local API instance.
+ * Implementation of MetaContext for a local API instance.
  */
-export class MetaContext<LT> extends FastApiContext {
+
+export class MetaContextLocal<LT> extends MetaContextBase {
     public readonly localApi: LT;
 
-    constructor(localApi: LT | AFunction<MetaContext<LT>, LT>) {
+    constructor(localApi: LT | ((ctx: MetaContextLocal<LT>) => LT)) {
         super();
         if (typeof localApi === 'function') {
-            this.localApi = (localApi as AFunction<MetaContext<LT>, LT>)(this);
+            this.localApi = (localApi as (ctx: MetaContextLocal<LT>) => LT)(this);
         } else {
             this.localApi = localApi;
         }
     }
 }
+
 
 /**
  * Manages executing tasks against a RemoteApi instance.

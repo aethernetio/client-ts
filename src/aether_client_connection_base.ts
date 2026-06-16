@@ -15,12 +15,15 @@ import {
 import { AetherCloudClient } from './aether_client';
 import { AetherCodec, IPAddress, IPAddressV4, IPAddressV6, IPAddressWeb, ServerDescriptor } from './aether_api';
 import { Log } from './aether_logging';
+
 import {
     FastMetaApi,
-    RemoteApi
+    RemoteApi,
+    MetaContext
 } from './aether_fastmeta';
+
 import { AFuture, ARFuture, EventConsumer } from './aether_future';
-import { FastMetaClient, FastMetaNet } from './aether_fastmeta_net';
+import { FastMetaNet } from './aether_fastmeta_net';
 
 /**
  * @description Converts an IPAddress DTO to its string representation.
@@ -166,45 +169,19 @@ export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec:
  * @implements {Destroyable}
  * @description Base class for client connections (Registration and Work).
  */
+
 export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
 
-    /**
-     * @description Reference to the main client instance.
-     * @protected
-     * @type {AetherCloudClient}
-     */
     protected readonly client: AetherCloudClient;
-
-    /** * @description The URI of the connected server.
-     * @type {URI}
-     */
     public readonly uri: URI;
-
-    /** * @description Future that completes when the connection is established and the root remote API is ready.
-     * @type {ARFuture<RT>}
-     */
     public readonly connectFuture: ARFuture<RT>;
-
-    /** * @description The underlying FastMeta client implementation.
-     * @protected
-     * @type {FastMetaClient<LT, RT>}
-     */
-    protected readonly fastMetaClient: FastMetaClient<LT, RT> | null;
-
-    /** * @description The root remote API instance, available after connectFuture completes.
-     * @protected
-     * @type {(RT | null)}
-     */
+    protected readonly metaContext: MetaContext | null;
     protected rootApi: RT | null = null;
-
     public readonly stateListeners = new EventConsumer<boolean>();
-
-
-    /** * @description Base logging context for this connection instance.
-     * @protected
-     * @type {*}
-     */
     protected readonly logCtxData: any;
+
+
+
 
 
     public constructor(
@@ -221,35 +198,28 @@ export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
         if (client.destroyer.isDestroyed()) {
             this.connectFuture.tryError(new Error("Client is destroyed"));
             this.rootApi = null;
-            this.fastMetaClient = null;
+            this.metaContext = null;
             return;
         }
 
         client.destroyer.add(this);
         const localApi = this as unknown as LT;
 
-        const localApiProvider = (remoteApi: RT) => {
-            this.rootApi = remoteApi;
-            return localApi;
-        };
-
-        const writableConsumer = (isWritable: boolean) => {
-            this.onConnectionStateChanged(isWritable);
-            if (isWritable) {
-                if (this.rootApi) {
-                    this.connectFuture.tryDone(this.rootApi);
-                } else {
-                    Log.error("Connection writable but rootApi null", { uri: uri.toString() });
-                    this.connectFuture.tryError(new Error("rootApi is null"));
-                }
-            }
-            this.stateListeners.fire(isWritable);
-        };
-
         const factory = FastMetaNet.INSTANCE.get();
-        this.fastMetaClient = factory.makeClient(uri, localApiMeta, remoteApiMeta, localApiProvider, writableConsumer);
-        client.destroyer.add(this.fastMetaClient);
+        this.metaContext = factory.makeClient(uri, localApiMeta, (ctx: MetaContext) => {
+            this.rootApi = ctx.makeRemote(remoteApiMeta);
+            this.connectFuture.tryDone(this.rootApi);
+            this.stateListeners.fire(true);
+            return localApi;
+        });
+        client.destroyer.add({
+            destroy: (_force: boolean) => {
+                this.metaContext?.close();
+                return AFuture.completed();
+            }
+        });
     }
+
 
 
     /**
@@ -276,19 +246,12 @@ export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
      * @returns {AFuture} A future that completes when the connection is closed.
      * @inheritdoc
      */
-    public destroy(_force: boolean): AFuture {
-        Log.info("Destroying Connection", this.logCtxData);
-        if (!this.connectFuture.isFinalStatus()) {
-            Log.trace("Cancelling connectFuture during destroy.", this.logCtxData);
-            this.connectFuture.cancel();
-        }
 
-        if (this.fastMetaClient) {
-            return this.fastMetaClient.destroy(_force);
-        } else {
-            return AFuture.completed();
-        }
+    public destroy(_force: boolean): AFuture {
+        this.metaContext?.close();
+        return AFuture.completed();
     }
+
 
 
     /**

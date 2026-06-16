@@ -52,9 +52,9 @@ export class ApiGenerator {
         this.getAllMethodsRecursive(methodList, false, apiName, apiDef);
 
 
-methodList.forEach((m, index) => {
-    methods.set(m.name, m);
-});
+        methodList.forEach((m, index) => {
+            methods.set(m.name, m);
+        });
 
         return methods;
     }
@@ -79,10 +79,10 @@ methodList.forEach((m, index) => {
 
         Object.entries(apiDef.methods || {}).forEach(([methodName, m]) => {
 
-const yamlMethodDef = (apiDef?.methods as any)?.[methodName] || {};
-const methodId = yamlMethodDef.id !== undefined ? yamlMethodDef.id : (res.length + 3);
+            const yamlMethodDef = (apiDef?.methods as any)?.[methodName] || {};
+            const methodId = yamlMethodDef.id !== undefined ? yamlMethodDef.id : (res.length + 3);
 
-const methodDef: any = { id: methodId, name: methodName, params: {}, returns: null, throws: null, parent: parent };
+            const methodDef: any = { id: methodId, name: methodName, params: {}, returns: null, throws: null, parent: parent };
             const mDef = m as TypeDefinition;
             if (!mDef) return;
 
@@ -90,12 +90,48 @@ const methodDef: any = { id: methodId, name: methodName, params: {}, returns: nu
                 methodDef.doc = (mDef as any).doc;
             }
 
+
             if (mDef.params) {
                 Object.entries(mDef.params).forEach(([paramName, paramType]) => {
-                    if (typeof paramType === 'object' && paramType !== null && !(paramType as any).stream) {
+                    if (typeof paramType === 'object' && paramType !== null && (paramType as any).stream) {
+                        // Stream type that wasn't pre-processed (shouldn't happen, but handle)
+                        const streamDef = (paramType as any).stream;
+                        const anonymeTypeName = this.generatorLogic.declareAnonymType([paramName + "Stream", methodName, apiName], paramType as TypeDefinition);
+                        methodDef.params[paramName] = anonymeTypeName;
+                        methodDef.streamParams = (methodDef.streamParams || {});
+                        methodDef.streamParams[paramName] = true;
+                        methodDef.streamApiTypes = (methodDef.streamApiTypes || {});
+                        methodDef.streamApiTypes[paramName] = streamDef.api;
+                        if (streamDef.remoteApi) {
+                            methodDef.streamRemoteApiTypes = (methodDef.streamRemoteApiTypes || {});
+                            methodDef.streamRemoteApiTypes[paramName] = streamDef.remoteApi;
+                        }
+                    } else if (typeof paramType === 'object' && paramType !== null && !(paramType as any).stream) {
                         throw new Error(`[ApiGenerator] Unexpected anonymous type object in method ${methodName}. The pre-pass should have replaced it with a name.`);
+                    } else {
+
+                    } else {
+                        const typeName = paramType as string;
+                        methodDef.params[paramName] = typeName;
+                        // Check if this is a stream type by looking up its definition
+                        const streamApi = this.generatorLogic.streamApiMap.get(typeName);
+                        const typeDef = this.generatorLogic.allTypes.get(typeName);
+                        const isStream = !!(streamApi || typeDef?.stream);
+                        if (isStream) {
+                            methodDef.streamParams = (methodDef.streamParams || {});
+                            methodDef.streamParams[paramName] = true;
+                            const api = streamApi || typeDef?.stream?.api;
+                            methodDef.streamApiTypes = (methodDef.streamApiTypes || {});
+                            methodDef.streamApiTypes[paramName] = api || 'unknown';
+                            const streamRemoteApi = this.generatorLogic.streamRemoteApiMap.get(typeName) || typeDef?.stream?.remoteApi;
+                            if (streamRemoteApi) {
+                                methodDef.streamRemoteApiTypes = (methodDef.streamRemoteApiTypes || {});
+                                methodDef.streamRemoteApiTypes[paramName] = streamRemoteApi;
+                            }
+                        }
                     }
-                    methodDef.params[paramName] = paramType as string | TypeDefinition;
+
+                    }
                 });
             }
             if (mDef.returns) {
@@ -231,7 +267,7 @@ const methodDef: any = { id: methodId, name: methodName, params: {}, returns: nu
                 ? (pt as TypeDefinition).stream!.name!
                 : pt as string;
             const typeStr = this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
-return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
+            return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
         }).join(', ');
 
         const hasReturns = m.returns != null;
@@ -267,12 +303,38 @@ return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
      * @param apiDef - The TypeDefinition for the API.
      * @returns The generated TypeScript code as a string.
      */
+
     private generateApiRemote(apiName: string, apiDef: TypeDefinition): string {
         const parents = ((apiDef?.parents || []) as string[]).map(p => this.generatorLogic.resolveCanonicalTypeName(p));
         const extendsParents = parents.map(p => `${p}Remote`).join(', ');
         const extendsClause = parents.length > 0 ? `, ${extendsParents}` : '';
-        return `export interface ${apiName}Remote extends ${apiName}, RemoteApi${extendsClause} {}`;
+        const sb: string[] = [];
+        sb.push(`export interface ${apiName}Remote extends ${apiName}, RemoteApi${extendsClause} {`);
+
+        const methods = this.getAllMethods(apiName, apiDef);
+        methods.forEach(m => {
+            if (m.parent) return;
+            const streamParamNames = m.streamParams ? Object.keys(m.streamParams) : [];
+            if (streamParamNames.length === 1) {
+                const streamParamName = streamParamNames[0];
+                const streamApiType = this.generatorLogic.resolveCanonicalTypeName(m.streamApiTypes[streamParamName]);
+                const nonStreamParams = Object.entries(m.params).filter(([k]) => !m.streamParams[k]);
+                const openArgs: string[] = [];
+                nonStreamParams.forEach(([n, t]) => {
+                    const ti = new TypeInfo(this.generatorLogic.resolveCanonicalTypeName(t as string));
+                    openArgs.push(`${n}: ${ti.getArgumentType()}`);
+                });
+                const factoryType = m.streamRemoteApiTypes?.[streamParamName] ?? "any";
+                openArgs.push(`factory: (api: ${streamApiType}Remote) => ${factoryType}`);
+                openArgs.push(`converter: BytesConverter`);
+                openArgs.push(`...keys: any[]`);
+                sb.push(`    open${m.name.charAt(0).toUpperCase() + m.name.slice(1)}(${openArgs.join(', ')}): ${streamApiType}Remote;`);
+            }
+        });
+        sb.push(`}`);
+        return sb.join('\n');
     }
+
 
     /**
      * Generates the `Local` abstract base class for an API (e.g., `MyApiLocal`).
@@ -309,7 +371,7 @@ return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
                 ? (pt as TypeDefinition).stream!.name!
                 : pt as string;
             const typeStr = this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
-return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
+            return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
         }).join(', ');
 
         const hasReturns = m.returns != null;
@@ -398,7 +460,7 @@ return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
             const typeInfo = new TypeInfo(typeStr);
             const localVar = g.getUniqueVarName(paramName);
 
-sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
+            sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
             fieldsForDeserialize.set(localVar, typeInfo);
             paramVars.push(localVar);
             paramNames.push(paramName);
@@ -460,8 +522,8 @@ sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
      * @param apiName - The name of the API.
      */
     private generateMetaMakeLocal_fromBytes_ctxLocal(sb: string[], apiName: string): void {
-        sb.push(`    makeLocal_fromBytes_ctxLocal(ctx: MetaContext<${apiName}>, data: Uint8Array): void {`);
-        sb.push(`        this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), ctx.localApi);`);
+        sb.push(`    makeLocal_fromBytes_ctxLocal(ctx: MetaContext, data: Uint8Array): void {`);
+        sb.push(`        this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), ctx.getLocalApi());`);
         sb.push(`    }`);
     }
 
@@ -488,19 +550,58 @@ sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
 
         sb.push(`    makeRemote(${sCtx}: MetaContext): ${apiName}Remote {`);
         sb.push(`        const remoteApiImpl = {`);
-        sb.push(`            flush: (sendFuture: FlushReport): void => {`);
-        sb.push(`                ${sCtx}.flush(sendFuture);`);
+
+        sb.push(`            flush: (): void => {`);
+        sb.push(`                ${sCtx}.flush();`);
         sb.push(`            },`);
+
         sb.push(`            getFastMetaContext: () => ${sCtx},`);
+
 
         methods.forEach(m => {
             this.generateRemoteApiMethodImpl(sb, g, m, sCtx);
+        });
+
+        // open* methods for stream parameters
+        methods.forEach(m => {
+            if (m.parent) return;
+            const streamParamNames = m.streamParams ? Object.keys(m.streamParams) : [];
+            if (streamParamNames.length === 1) {
+                const streamParamName = streamParamNames[0];
+                const streamTypeName = g.resolveCanonicalTypeName(m.params[streamParamName]);
+                const streamApiType = g.resolveCanonicalTypeName(m.streamApiTypes[streamParamName]);
+                const nonStreamParams = Object.entries(m.params).filter(([k]) => !m.streamParams[k]);
+                const openArgs: string[] = [];
+                nonStreamParams.forEach(([n, t]) => {
+                    const ti = new TypeInfo(g.resolveCanonicalTypeName(t as string));
+                    openArgs.push(`${n}: ${ti.getArgumentType()}`);
+                });
+                const factoryType = m.streamRemoteApiTypes?.[streamParamName] ?? "any";
+                openArgs.push(`factory: (api: ${streamApiType}Remote) => ${factoryType}`);
+                openArgs.push(`converter: BytesConverter`);
+                openArgs.push(`...keys: any[]`);
+
+                const allArgsInOrder = Object.keys(m.params).map(pn => {
+                    if (m.streamParams[pn]) {
+                        return `${m.params[pn]}.Out.send(converter(data))`;
+                    }
+                    return pn;
+                }).join(', ');
+
+                sb.push(`            open${m.name.charAt(0).toUpperCase() + m.name.slice(1)}(${openArgs.join(', ')}): ${streamApiType}Remote {`);
+                sb.push(`                return ${sCtx}.findContext(ctx => {`);
+                sb.push(`                    ctx.onFlushData(data => this.${m.name}(${allArgsInOrder}));`);
+                sb.push(`                    return factory(ctx.makeRemote((${streamApiType} as any).META));`);
+                sb.push(`                }, ...keys).makeRemote((${streamApiType} as any).META) as ${streamApiType}Remote;`);
+                sb.push(`            },`);
+            }
         });
 
         sb.push(`        };`);
         sb.push(`        return remoteApiImpl as ${apiName}Remote;`);
         sb.push(`    }`);
     }
+
 
     /**
      * Generates the implementation for a single remote API method inside `makeRemote`.
@@ -528,7 +629,7 @@ sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
                 ? (pt as TypeDefinition).stream!.name!
                 : pt as string;
             const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
-return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
+            return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
         }).join(', ');
 
         const hasReturns_sig = m.returns != null;

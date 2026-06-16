@@ -612,11 +612,12 @@ sbImpl.push(`    }`);
      * @param cfg - The TypeDefinition for the stream.
      * @returns The generated TypeScript code as a string.
      */
+
     private generateStreamClass(name: string, cfg: TypeDefinition): string {
         const sb: string[] = [];
         const hasApi = cfg.stream?.api as string;
-
         const apiType = hasApi ? this.generatorLogic.resolveCanonicalTypeName(hasApi) : undefined;
+        const remoteApiType = cfg.stream?.remoteApi ? this.generatorLogic.resolveCanonicalTypeName(cfg.stream.remoteApi as string) : undefined;
         const hasCrypto = !!cfg.stream?.crypto;
         const apiRemoteType = apiType ? `${apiType}Remote` : 'unknown';
 
@@ -628,19 +629,175 @@ sbImpl.push(`    }`);
         }
 
         sb.push(`export class ${name} implements ToString {`);
-        sb.push(`    public readonly data: Uint8Array;`);
+        sb.push(`    public data: Uint8Array;`);
 
-        sb.push(`    /**`);
-        sb.push(`     * Creates an instance of ${name}.`);
-        sb.push(`     * @param data - The raw byte data for this stream.`);
-        sb.push(`     */`);
-        sb.push(`    constructor(data: Uint8Array) { this.data = data; }\n`);
+    sb.push(`    constructor(data: Uint8Array) { this.data = data; }`);
 
+    sb.push(`    public asIn(): any { return this as any; }`);
+
+    sb.push(`    public static readonly In = class In extends ${name} {`);
+    sb.push(`        private parentContext: MetaContext | null = null;`);
+    sb.push(`        private activeContext: MetaContext | null = null;`);
+
+    sb.push(`        private factory: ((ctx: MetaContext) => any) | null = null;`);
+    sb.push(`        private _streamKeys: any[] | null = null;`);
+    sb.push(`        private onFlushC: ((cc: MetaContext) => void) | null = null;`);
+    if (hasCrypto) sb.push(`        private cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;`);
+
+    sb.push(`        constructor(data: Uint8Array, parentContext: MetaContext) {`);
+    sb.push(`            super(data);`);
+    sb.push(`            this.parentContext = parentContext;`);
+    sb.push(`        }`);
+
+    // onFlush methods
+    sb.push(`        onFlush(c: (cc: MetaContext, data: Uint8Array) => void): this {`);
+    sb.push(`            this.onFlushC = (cc) => { const d = cc.remoteDataToArrayAsArray(); if (d.length > 0) c(cc, d); };`);
+    sb.push(`            return this;`);
+    sb.push(`        }`);
+    if (apiType) {
+    sb.push(`        onFlushWithLocal<LT extends ${apiType}>(c: (cc: MetaContext, data: Uint8Array, localApi: LT) => void): this {`);
+    sb.push(`            this.onFlushC = (cc) => { const d = cc.remoteDataToArrayAsArray(); if (d.length > 0) c(cc, d, cc.getLocalApi() as LT); };`);
+    sb.push(`            return this;`);
+    sb.push(`        }`);
+    }
+    sb.push(`        onFlushCtx(c: (cc: MetaContext) => void): this {`);
+    sb.push(`            this.onFlushC = c;`);
+    sb.push(`            return this;`);
+    sb.push(`        }`);
+    sb.push(`        onFlushData(c: (data: Uint8Array) => void): this {`);
+    sb.push(`            this.onFlushC = (cc) => { const d = cc.remoteDataToArrayAsArray(); if (d.length > 0) c(d); };`);
+    sb.push(`            return this;`);
+    sb.push(`        }`);
+    if (remoteApiType) {
+    sb.push(`        onFlushToRemote<RT extends RemoteApi>(meta: FastMetaApi<any, RT>, c: (data: Uint8Array, remote: RT) => void): this {`);
+    sb.push(`            this.onFlushC = (cc) => { const d = cc.remoteDataToArrayAsArray(); if (d.length > 0) c(d, cc.makeRemote(meta)); };`);
+    sb.push(`            return this;`);
+    sb.push(`        }`);
+    }
+
+    // keys
+    sb.push(`        keys(factory: (ctx: MetaContext) => any, ...keys: any[]): this {`);
+    sb.push(`            this.factory = factory;`);
+    sb.push(`            this._streamKeys = keys;`);
+    sb.push(`            return this;`);
+    sb.push(`        }`);
+
+    // remoteApi
+    if (remoteApiType) {
+    sb.push(`        remoteApi(): ${remoteApiType}Remote {`);
+    sb.push(`            const activeCtx = this.parentContext!.findContext(this.factory!, this._streamKeys || []);`);
+    sb.push(`            return activeCtx.makeRemote((${remoteApiType} as any).META) as ${remoteApiType}Remote;`);
+    sb.push(`        }`);
+    }
+    sb.push(`        remoteParentApi<RT extends RemoteApi>(meta: FastMetaApi<any, RT>): RT {`);
+    sb.push(`            return this.parentContext!.makeRemote(meta) as RT;`);
+    sb.push(`        }`);
+
+    // convert
+    if (hasCrypto) {
+    sb.push(`        convert(converter: (data: Uint8Array) => Uint8Array): this {`);
+    sb.push(`            this.cryptoConverter = converter;`);
+    sb.push(`            return this;`);
+    sb.push(`        }`);
+    }
+    // ctx
+    sb.push(`        ctx(c: MetaContext): this {`);
+    sb.push(`            this.activeContext = c;`);
+    sb.push(`            return this;`);
+    sb.push(`        }`);
+
+    // accept
+    sb.push(`        accept(): void {`);
+    sb.push(`            let targetData = this.data;`);
+    if (hasCrypto) sb.push(`            if (this.cryptoConverter) targetData = this.cryptoConverter(targetData);`);
+    sb.push(`            if (!this.activeContext) {`);
+    sb.push(`                if (!this.factory) throw new Error("factory is null");`);
+    sb.push(`                let effectiveFactory = this.factory;`);
+    sb.push(`                if (this.onFlushC) {`);
+    sb.push(`                    const flushCallback = this.onFlushC;`);
+    sb.push(`                    effectiveFactory = (ctx: MetaContext) => {`);
+    sb.push(`                        ctx.onFlush(() => flushCallback(ctx));`);
+    sb.push(`                        return this.factory!(ctx);`);
+    sb.push(`                    };`);
+    sb.push(`                }`);
+    sb.push(`                this.activeContext = this.parentContext!.findContext(effectiveFactory, this._streamKeys || []);`);
+    sb.push(`            }`);
+    if (apiType) {
+    sb.push(`            (${apiType} as any).META.makeLocal_fromDataIn(this.activeContext, new DataInOutStatic(targetData), this.activeContext.getLocalApi());`);
+    } else {
+    sb.push(`            throw new Error("API type not defined for stream accept");`);
+    }
+    sb.push(`        }`);
+    sb.push(`    };`);
+
+
+        // === Out (client-side) ===
+        sb.push(`    public static readonly Out = class Out extends ${name} {`);
+        sb.push(`        private deferredRemoteGenerator: ((api: any) => void) | null = null;`);
+        sb.push(`        private deferredFactory: ((ctx: MetaContext) => any) | null = null;`);
+        sb.push(`        private deferredKeys: any[] | null = null;`);
+        if (hasCrypto) sb.push(`        private cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;`);
+
+        sb.push(`        constructor() { super(new Uint8Array(0)); }`);
+
+        // send(byte[])
+        sb.push(`        static send(rawData: Uint8Array): Out {`);
+        sb.push(`            const out = new Out();`);
+        sb.push(`            (out as any).data = rawData;`);
+        sb.push(`            return out;`);
+        sb.push(`        }`);
+
+        // send(Consumer, factory, keys)
+        sb.push(`        static sendWithApi(remoteGenerator: (api: ${apiRemoteType}) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out {`);
+        sb.push(`            const out = new Out();`);
+        sb.push(`            out.deferredRemoteGenerator = remoteGenerator;`);
+        sb.push(`            out.deferredFactory = factory;`);
+        sb.push(`            out.deferredKeys = keys;`);
+        sb.push(`            return out;`);
+        sb.push(`        }`);
+
+        // convert
+        if (hasCrypto) {
+        sb.push(`        convert(converter: (data: Uint8Array) => Uint8Array): this {`);
+        sb.push(`            this.cryptoConverter = converter;`);
+        sb.push(`            return this;`);
+        sb.push(`        }`);
+        }
+        sb.push(`    };`);
+
+        // === META ===
         const metaImplName = `${name}MetaImpl`;
         const sbImpl: string[] = [];
         sbImpl.push(`export class ${metaImplName} implements FastMetaType<${name}> {`);
-        sbImpl.push(`    serialize(ctx: MetaContext, obj: ${name}, out: DataOut): void { FastMeta.META_ARRAY_BYTE.serialize(ctx, obj.data, out); }`);
-        sbImpl.push(`    deserialize(ctx: MetaContext, in_: DataIn): ${name} { return new ${name}(FastMeta.META_ARRAY_BYTE.deserialize(ctx, in_)); }`);
+        sbImpl.push(`    serialize(ctx: MetaContext, obj: ${name}, out: DataOut): void {`);
+        sbImpl.push(`        if (obj instanceof ${name}.Out) {`);
+        sbImpl.push(`            const outObj = obj as any;`);
+        sbImpl.push(`            if (outObj.deferredFactory) {`);
+        if (apiType) {
+        sbImpl.push(`                const childCtx = ctx.findContext(outObj.deferredFactory, outObj.deferredKeys || []);`);
+        sbImpl.push(`                const remoteApi = childCtx.makeRemote((${apiType} as any).META);`);
+        sbImpl.push(`                outObj.deferredRemoteGenerator(remoteApi);`);
+        if (hasCrypto) {
+        sbImpl.push(`                const raw = childCtx.remoteDataToArrayAsArray();`);
+        sbImpl.push(`                outObj.data = outObj.cryptoConverter ? outObj.cryptoConverter(raw) : raw;`);
+        } else {
+        sbImpl.push(`                outObj.data = childCtx.remoteDataToArrayAsArray();`);
+        }
+        } else {
+        sbImpl.push(`                throw new Error("API type not defined for stream serialize");`);
+        }
+        sbImpl.push(`            }`);
+        sbImpl.push(`        }`);
+        sbImpl.push(`        FastMeta.META_ARRAY_BYTE.serialize(ctx, obj.data, out);`);
+        sbImpl.push(`    }`);
+        sbImpl.push(`    deserialize(ctx: MetaContext, in_: DataIn): ${name} {`);
+        sbImpl.push(`        try {`);
+        sbImpl.push(`            const data = FastMeta.META_ARRAY_BYTE.deserialize(ctx, in_);`);
+        sbImpl.push(`            return new ${name}.In(data, ctx) as any as ${name};`);
+        sbImpl.push(`        } catch (e) {`);
+        sbImpl.push(`            throw new Error("Stream error: " + (e as Error).message);`);
+        sbImpl.push(`        }`);
+        sbImpl.push(`    }`);
 
         const byteArrayMetaAccessor = this.generatorLogic.generateAccessMeta(new TypeInfo("byte[]"));
         sbImpl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return ${byteArrayMetaAccessor}.metaHashCode(obj?.data); }`);
@@ -652,64 +809,20 @@ sbImpl.push(`    }`);
         sbImpl.push(`    }`);
 
         sbImpl.push(FAST_META_TYPE_IMPL_STUB_METHODS.replace(/: any/g, `: ${name}`).replace(/: any {/g, `: ${name} {`));
-
         sbImpl.push(`}`);
         this.generatorLogic.allImplCode.push(sbImpl.join('\n'));
 
-        sb.push(`    public static readonly META: FastMetaType<${name}> = new Impl.${metaImplName}();\n`);
+        sb.push(`    public static readonly META: FastMetaType<${name}> = new Impl.${metaImplName}();`);
 
         sb.push(`    public toAString(result: AString): AString {`);
         sb.push(`        ${name}.META.metaToString(this, result);`);
         sb.push(`        return result;`);
         sb.push(`    }`);
 
-        if (apiType && hasCrypto) {
-            sb.push(`\n    public accept(context: MetaContext, provider: BytesConverter, localApi: ${apiType}): void {`);
-            sb.push(`        const decryptedData = provider(this.data);`);
-            sb.push(`        const dataInStatic = new DataInOutStatic(decryptedData);`);
-            sb.push(`        if (!(${apiType} as any).META) throw new Error(\`META not found for API type ${apiType}\`);`);
-            sb.push(`        (${apiType} as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);`);
-            sb.push(`    }`);
-        } else if (apiType) {
-            sb.push(`\n    public accept(context: MetaContext, localApi: ${apiType}): void {`);
-            sb.push(`        const dataInStatic = new DataInOutStatic(this.data);`);
-            sb.push(`        if (!(${apiType} as any).META) throw new Error(\`META not found for API type ${apiType}\`);`);
-            sb.push(`        (${apiType} as any).META.makeLocal_fromDataIn(context, dataInStatic, localApi);`);
-            sb.push(`    }`);
-        } else if (hasCrypto) {
-            sb.push(`\n    public accept(provider: BytesConverter, dataConsumer: AConsumer<Uint8Array>): void {`);
-            sb.push(`        const decryptedData = provider(this.data);`);
-            sb.push(`        dataConsumer(decryptedData);`);
-            sb.push(`    }`);
-        }
-
-        if (apiType && hasCrypto) {
-            sb.push(`\n    public static remoteApi(context: MetaContext, provider: BytesConverter, apiConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
-            sb.push(`        const api = (${apiType} as any).META.makeRemote(context);`);
-            sb.push(`        apiConsumer(api);`);
-            sb.push(`        const encryptedData = provider(context.remoteDataToArrayAsArray());`);
-            sb.push(`        return new ${name}(encryptedData);`);
-            sb.push(`    }`);
-            sb.push(`\n    public static remoteBytes(provider: BytesConverter, remoteData: Uint8Array): ${name} {`);
-            sb.push(`        const encryptedData = provider(remoteData);`);
-            sb.push(`        return new ${name}(encryptedData);`);
-            sb.push(`    }`);
-        } else if (apiType) {
-            sb.push(`\n    public static remoteApi(context: MetaContext, apiConsumer: AConsumer<${apiRemoteType}>): ${name} {`);
-            sb.push(`        const api = (${apiType} as any).META.makeRemote(context);`);
-            sb.push(`        apiConsumer(api);`);
-            sb.push(`        return new ${name}(context.remoteDataToArrayAsArray());`);
-            sb.push(`    }`);
-        } else if (hasCrypto) {
-            sb.push(`\n    public static fromBytes(provider: BytesConverter, data: Uint8Array): ${name} {`);
-            sb.push(`        const encryptedData = provider(data);`);
-            sb.push(`        return new ${name}(encryptedData);`);
-            sb.push(`    }`);
-        }
-
-        sb.push(`}\n`);
+        sb.push(`}`);
         return sb.join('\n');
     }
+
 
     /**
      * Generates concrete getter methods for a structure's fields.

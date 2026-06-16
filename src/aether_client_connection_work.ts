@@ -21,7 +21,7 @@ import {
 import { AtomicLong, AtomicReference,  ClientStartException, UUID } from './aether_types';
 import { AFuture } from './aether_future';
 import { Log } from './aether_logging';
-import { FastApiContext, FlushReport, RemoteApiFuture } from './aether_fastmeta';
+import { MetaContextBase, RemoteApiFuture } from './aether_fastmeta';
 import { CryptoEngine } from './aether_crypto';
 import { RU } from './aether_utils';
 import { MessageNode } from './aether_client_message';
@@ -337,6 +337,7 @@ class MyClientApiSafe implements ClientApiSafe {
     }
 }
 
+
 /**
  * @class ConnectionWork
  * @description Represents a working connection to an Aether server after successful login/authentication
@@ -346,17 +347,14 @@ class MyClientApiSafe implements ClientApiSafe {
 export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemote> implements ClientApiUnsafe {
     public readonly lastBackPing = new AtomicLong(Number.MAX_SAFE_INTEGER);
     public readonly ready = AFuture.make();
-    readonly apiSafe: ClientApiSafe;
-    readonly apiSafeCtx: FastApiContext;
     readonly cryptoEngine: CryptoEngine;
-    readonly remoteApiFutureAuth = new RemoteApiFuture<AuthorizedApiRemote>(AuthorizedApi.META);
+    readonly authorizedApi: AuthorizedApiRemote;
     private readonly serverDescriptor: ServerDescriptor;
     private readonly inProcess = new AtomicReference<boolean>(false);
     basicStatus: boolean;
     lastWorkTime: number = 0;
     firstAuth: boolean = false;
     private _errorTimestamp: number = 0;
-
 
     protected override onConnectionStateChanged(isWritable: boolean): void {
         if (this.cryptoEngine == null) {
@@ -367,30 +365,10 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
         if (isWritable) {
             Log.info("Network restored. Resetting auth state and forcing flush.", { uri: this.uri });
             this.firstAuth = false;
-            this.flush();
         } else {
             this.firstAuth = false;
         }
         this.stateListeners.fire(isWritable);
-    }
-
-
-
-
-
-    /**
-     * @private
-     * @method hasPendingMessages
-     * @description Check if there are pending messages
-     * @returns {boolean} True if pending messages exist
-     */
-    private hasPendingMessages(): boolean {
-        for (const m of this.client.messageNodeMap.values()) {
-            if (m.connectionsOut.has(this) && !m.bufferOut.isEmpty()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -407,7 +385,6 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
 
         if (isHttps) {
             uri = getUriFromServerDescriptor(s, AetherCodec.WSS);
-
             if (!uri) {
                 Log.warn("ConnectionWork: HTTPS environment requires WSS with a Domain Name. Server only provided IPs or non-WSS endpoints.", { serverId: s.id });
             }
@@ -425,66 +402,16 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
         Log.trace("try connect to work server: " + uri, { uri: uri });
         super(client, uri, ClientApiUnsafe.META, LoginApi.META);
         this.cryptoEngine = client.getCryptoEngineForServer(s.id);
+
+        if (this.cryptoEngine == null) {
+            Log.error("ConnectionWork: cryptoEngine is null for server " + s.id + ". Authentication will fail.");
+        }
         this.serverDescriptor = s;
-        this.apiSafe = new MyClientApiSafe(client, this);
-
-        this.remoteApiFutureAuth.addPermanent((a: AuthorizedApiRemote, f: AFuture) => {
-            try {
-                this.flushBackgroundRequests(a, f);
-            } catch (e) {
-                Log.error("Error in permanent remoteApiFutureAuth task", e as Error);
-            }
-        });
-
-        this.apiSafeCtx = new FastApiContext();
-
-
-    this.apiSafeCtx.flush = (report: FlushReport): void => {
-        const loginApi = this.getRootApi();
-        if (!loginApi) {
-            report.abort();
-            return;
-        }
-        const sendFuture = AFuture.make();
-        this.flushBackgroundRequests(this.apiSafeCtx.makeRemote(AuthorizedApi.META), sendFuture);
-
-        while (true) {
-            const task = this.client.authTasks.poll();
-            if (!task) break;
-            task(this.apiSafeCtx.makeRemote(AuthorizedApi.META));
-        }
-
-        const dataToSend = this.apiSafeCtx.remoteDataToArrayAsArray();
-
-        if (dataToSend.length === 0) {
-            report.done();
-            return;
-        }
-
-        const loginStream = LoginStream.remoteBytes(this.cryptoEngine.encrypt.bind(this.cryptoEngine), dataToSend);
-        const alias = this.client.getAlias();
-        if (!alias) {
-            report.abort();
-            return;
-        }
-
-        loginApi.loginByAlias(alias, loginStream);
-
-        const wrappedReport: FlushReport = {
-            report: (done: boolean) => {
-                if (done) {
-                    sendFuture.done();
-                } else {
-                    sendFuture.error(new Error("flush failed"));
-                }
-                report.report(done);
-            },
-            done: () => wrappedReport.report(true),
-            abort: () => wrappedReport.report(false)
-        };
-        loginApi.flush(wrappedReport);
-    };
-
+        this.basicStatus = false;
+        this.authorizedApi = this.getRootApi()!.openLoginByAlias(client.getAlias()!, 
+            () => new MyClientApiSafe(client, this), 
+            (data: Uint8Array) => this.cryptoEngine.encrypt(data), 
+            "loginByAlias");
 
         this.connectFuture.onError((err: Error) => {
             this._errorTimestamp = RU.time();
@@ -492,83 +419,101 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
         });
     }
 
-
-
-
-    private flushBackgroundRequests(a: AuthorizedApiRemote, f: AFuture): void {
+    public flushBackgroundRequests(): void {
+        const a = this.authorizedApi;
         const requestCloud = this.client.clouds.pollAllRequests();
-        if (requestCloud.length > 0) a.resolveClouds(requestCloud);
+        if (requestCloud.length > 0) a.resolveClouds(requestCloud as UUID[]);
 
         const requestServers = this.client.servers.pollAllRequests();
-        if (requestServers.length > 0) a.resolverServers(Array.from(requestServers));
+        if (requestServers.length > 0) {
+            const serverIds = new Int16Array(requestServers.map((id: number) => id));
+            a.resolverServers(serverIds as any);
+        }
 
         const requestClientGroups = this.client.clientGroups.pollAllRequests();
-        if (requestClientGroups.length > 0) a.requestAccessGroupsForClients(Array.from(requestClientGroups));
+        if (requestClientGroups.length > 0) a.requestAccessGroupsForClients(requestClientGroups as UUID[]);
 
         const requestAccessGroups = this.client.accessGroups.pollAllRequests();
-        if (requestAccessGroups.length > 0) a.requestAccessGroupsItems(Array.from(requestAccessGroups));
+        if (requestAccessGroups.length > 0) {
+            const groupIds = requestAccessGroups.map((id: bigint) => id);
+            a.requestAccessGroupsItems(groupIds);
+        }
 
         const requestAllAccessed = this.client.allAccessedClients.pollAllRequests();
-        if (requestAllAccessed.length > 0) a.requestAllAccessedClients(Array.from(requestAllAccessed));
+        if (requestAllAccessed.length > 0) a.requestAllAccessedClients(requestAllAccessed as UUID[]);
 
         const requestAccessCheck = this.client.accessCheckCache.pollAllRequests();
-        if (requestAccessCheck.length > 0) a.requestAccessCheck(Array.from(requestAccessCheck));
-
+        if (requestAccessCheck.length > 0) a.requestAccessCheck(requestAccessCheck);
 
         for (const [groupId, uidsMap] of this.client.accessOperationsAdd) {
             const uidsToAdd = Array.from(uidsMap.keys()).map(k => UUID.fromString(k));
             if (uidsToAdd.length > 0) {
+                Log.debug("Flushing ADD request for group " + groupId + ": " + uidsToAdd);
                 a.addItemsToAccessGroup(groupId, uidsToAdd);
             }
         }
-
         for (const [groupId, uidsMap] of this.client.accessOperationsRemove) {
             const uidsToRemove = Array.from(uidsMap.keys()).map(k => UUID.fromString(k));
             if (uidsToRemove.length > 0) {
+                Log.debug("Flushing REMOVE request for group " + groupId + ": " + uidsToRemove);
                 a.removeItemsFromAccessGroup(groupId, uidsToRemove);
             }
         }
-
-
         while (true) {
             const t = this.client.authTasks.poll();
             if (!t) break;
             t(a);
         }
 
-        let task: ClientTask | undefined | null;
-        while ((task = this.client.clientTasks.poll()) != null) {
-            a.client(task.uid, (task.task as any));
-        }
-
-        const batcher = new MessageBatcher();
-        const nodeMessages: Array<{ data: Uint8Array; future: AFuture }> = [];
-        const cancelTasks: Array<() => void> = [];
+        const messagesForSend: Message[] = [];
+        const messagesForSend2: Array<{data: Uint8Array, future: AFuture}> = [];
+        const tasksForCancelMessages: Array<() => void> = [];
 
         for (const m of this.client.messageNodeMap.values()) {
             if (m.connectionsOut.has(this)) {
-                const msgs: Array<{ data: Uint8Array; future: AFuture }> = [];
+                const nodeMessages: Array<{data: Uint8Array, future: AFuture}> = [];
+                let currentBatchSize = 0;
+                const MAX_BATCH_BYTES = 512 * 1024;
                 while (true) {
                     const entry = m.bufferOut.peekFirst();
-                    if (!entry) break;
+                    if (!entry || (currentBatchSize + entry.data.length > MAX_BATCH_BYTES)) break;
                     const polled = m.bufferOut.pollFirst();
                     if (polled) {
-                        msgs.push(polled);
-                        batcher.add(m.consumerUUID, polled.data);
+                        nodeMessages.push(polled);
+                        currentBatchSize += polled.data.length;
                     }
                 }
-                if (msgs.length > 0) {
-                    nodeMessages.push(...msgs);
-                    cancelTasks.push(() => {
-                        for (let i = msgs.length - 1; i >= 0; i--) {
-                            m.bufferOut.addFirst(msgs[i]);
-                        }
+                if (nodeMessages.length > 0) {
+                    Log.debug("message send client to server: " + this.client.getUid() + " -> " + m.consumerUUID);
+                    for (const v of nodeMessages) {
+                        messagesForSend.push(new Message(m.consumerUUID, v.data));
+                    }
+                    messagesForSend2.push(...nodeMessages);
+                    tasksForCancelMessages.push(() => {
+                        m.bufferOut.addAll(nodeMessages);
                     });
                 }
             }
         }
 
-        if (!batcher.isEmpty()) {
+        const sendFuture = AFuture.make();
+        sendFuture.to(() => {
+            const uid = this.client.getUid();
+            if (uid) this.client.priorityManager.promote(uid, this.getServerDescriptor().id);
+            for (const v of messagesForSend2) {
+                v.future.done();
+            }
+        }).onError(() => {
+            for (const cancel of tasksForCancelMessages) {
+                cancel();
+            }
+        });
+
+        if (messagesForSend.length > 0) {
+            const batcher = new MessageBatcher();
+            for (const msg of messagesForSend) {
+                batcher.add(msg.uid, msg.data);
+            }
             batcher.flush(a);
         }
 
@@ -576,59 +521,31 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
             this.firstAuth = true;
             a.ping(0n).to(() => {
                 Log.debug("First ping response received. Marking connection ready.");
-            }).onError((e) => {
+            }).onError((e: Error) => {
                 Log.warn("First ping failed, will retry.", e);
                 this.firstAuth = false;
             });
         }
-
-        f.to(() => {
-            const uid = this.client.getUid();
-            if (uid) this.client.priorityManager.promote(uid, this.getServerDescriptor().id);
-            for (const v of nodeMessages) {
-                v.future.done();
-            }
-        }).onError(() => {
-            for (const cancel of cancelTasks) {
-                cancel();
-            }
-        });
     }
 
-
-
-    /**
-     * Aggregates pending requests into batches and sends them via AuthorizedApi.
-     * Ported from ConnectionWork.java
-     */
-    /**
-     * @method sendSafeApiDataMulti
-     * @description Handle multi-part safe API data (not supported)
-     * @param {number} _backId Back ID
-     * @param {LoginClientStream} _data Login client stream
-     * @returns {AFuture} Completion future
-     */
     sendSafeApiDataMulti(_backId: number, _data: LoginClientStream): AFuture {
         const err = new Error("UnsupportedOperationException: sendSafeApiDataMulti is not supported in TS client");
         Log.error("UnsupportedOperationException", err);
         return AFuture.ofThrow(err);
     }
 
-    /**
-     * @method sendSafeApiData
-     * @description Handle safe API data
-     * @param {LoginClientStream} data Login client stream
-     * @returns {AFuture} Completion future
-     */
     sendSafeApiData(data: LoginClientStream): AFuture {
         const future = AFuture.make();
         try {
-        Log.info("Received sendSafeApiData stream", {
+            Log.info("Received sendSafeApiData stream", {
                 component: "ConnectionWork",
                 server: this.uri,
                 dataLen: data.data.length
             });
-            data.accept(this.apiSafeCtx, this.cryptoEngine.decrypt.bind(this.cryptoEngine), this.apiSafe);
+            data.asIn()
+                .convert((d: Uint8Array) => this.cryptoEngine.decrypt(d))
+                .ctx(this.authorizedApi.getFastMetaContext())
+                .accept();
             Log.info("sendSafeApiData stream processed successfully", { component: "ConnectionWork", server: this.uri });
             future.tryDone();
         } catch (e) {
@@ -638,64 +555,37 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
         return future;
     }
 
-    /**
-     * @method getServerDescriptor
-     * @description Get server descriptor
-     * @returns {ServerDescriptor} Server descriptor
-     */
     public getServerDescriptor(): ServerDescriptor {
         return this.serverDescriptor;
     }
 
-    /**
-     * @method toString
-     * @description Get string representation
-     * @returns {string} String representation
-     */
     public toAString(): string {
         const uri = getUriFromServerDescriptor(this.serverDescriptor, AetherCodec.WS) ?? `serverID=${this.serverDescriptor.id}`;
         return `work(${uri})`;
     }
 
-    /**
-     * @method setBasic
-     * @description Set basic status
-     * @param {boolean} basic Basic status
-     */
     public setBasic(basic: boolean): void {
         this.basicStatus = basic;
     }
 
-    /**
-     * @method lifeTime
-     * @description Get connection lifetime
-     * @returns {number} Lifetime in milliseconds
-     */
     public lifeTime(): number {
         return RU.time() - this.lastBackPing.get();
     }
 
-    private logTime = 0;
-
     public scheduledWork(): void {
         const t = RU.time();
-        if ((t - this.lastWorkTime < this.client.getPingTime() || !this.inProcess.compareAndSet(false, true))) {
-            return;
-        }
+        if ((t - this.lastWorkTime < this.client.getPingTime() || !this.inProcess.compareAndSet(false, true))) return;
         this.lastWorkTime = t;
-        this.apiSafeCtx.flush(FlushReport.STUB);
-        this.inProcess.set(false);
+        const f = AFuture.make();
+        f.timeout(2, () => {
+            Log.warn("connection work flush 1 timeout");
+        });
     }
 
     public flush(): void {
-        if (!this.apiSafeCtx) return;
         if (!this.inProcess.compareAndSet(false, true)) return;
         this.lastWorkTime = RU.time();
-        this.apiSafeCtx.flush(FlushReport.STUB);
+        this.flushBackgroundRequests();
         this.inProcess.set(false);
     }
-
-
-
-
 }

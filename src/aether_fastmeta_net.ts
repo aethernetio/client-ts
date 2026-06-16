@@ -7,15 +7,16 @@ import {
     ClientStartException,
     ClientApiException
 } from './aether_types';
+
 import {
     FastMetaApi,
     RemoteApi,
     MetaContext,
-    MetaContext,
+    MetaContextLocal,
     SerializerPackNumber,
     DeserializerPackNumber,
-    FlushReport
 } from './aether_fastmeta';
+
 import { Log, LNode } from './aether_logging';
 import { DataInOut } from './aether_datainout';
 import { Destroyer } from './aether_utils';
@@ -194,45 +195,33 @@ class WebSocketFactory {
     }
 }
 
+
 /**
  * @interface FastMetaNet
  * @description Network abstraction for FastMeta protocol
  */
 export interface FastMetaNet {
-    makeClient<LT, RT extends RemoteApi>(
-        uri: URI,
-        lt: FastMetaApi<LT, any>,
-        rt: FastMetaApi<any, RT>,
-        localApi: AFunction<RT, LT>,
-        writableConsumer: AConsumer<boolean>
-    ): FastMetaClient<LT, RT>;
-
-    makeServer<LT, RT extends RemoteApi>(
+    makeClient<LT>(
         uri: URI,
         localApiMeta: FastMetaApi<LT, any>,
-        remoteApiMeta: FastMetaApi<any, RT>,
-        handler: FastMetaServer.Handler<LT, RT>
-    ): FastMetaServer<LT, RT>;
+        localApiFactory: (ctx: MetaContext) => LT
+    ): MetaContext;
+
+    makeServer<LT>(
+        uri: URI,
+        localApiMeta: FastMetaApi<LT, any>,
+        contextConfigurator: (ctx: MetaContext) => LT
+    ): FastMetaServer<LT>;
 }
+
+
 
 /**
  * @namespace FastMetaNet
  * @description Namespace for FastMetaNet interfaces
  */
 export namespace FastMetaNet {
-    /**
-     * @interface Connection
-     * @description Connection interface for FastMetaNet
-     */
-    export interface Connection<LT, RT extends RemoteApi> extends Destroyable {
-        read(): void;
-        stopRead(): void;
-        write(data: Uint8Array,report:FlushReport): void;
-        getLocalApi(): LT;
-        getRemoteApi(): RT;
-        isWritable(): boolean;
-        getMetaContext(): MetaContext;
-    }
+
 
     /**
      * @class DefaultFastMetaNetImpl
@@ -242,39 +231,47 @@ export namespace FastMetaNet {
     class DefaultFastMetaNetImpl implements FastMetaNet {
         /**
          * @method makeClient
-         * @description Create FastMeta client
-         * @template LT Local API type
-         * @template RT Remote API type
+         * @description Create FastMeta client, returning MetaContext
          */
-        public makeClient<LT, RT extends RemoteApi>(
+        public makeClient<LT>(
             uri: URI,
-            lt: FastMetaApi<LT, any>,
-            rt: FastMetaApi<any, RT>,
-            localApi: AFunction<RT, LT>,
-            writableConsumer: AConsumer<boolean>
-        ): FastMetaClient<LT, RT> {
-            return new FastMetaClientAdapter<LT, RT>(
+            localApiMeta: FastMetaApi<LT, any>,
+            localApiFactory: (ctx: MetaContext) => LT
+        ): MetaContext {
+            return new FastMetaClientAdapter<LT>(
                 uri,
-                lt,
-                rt,
-                localApi,
-                writableConsumer
+                localApiMeta,
+                localApiFactory
             );
+        }
+
+        /**
+         * @method makeClientWithRemote
+         * @description Create FastMeta client with full RemoteApi support
+         */
+        public makeClientWithRemote<LT, RT extends RemoteApi>(
+            uri: URI,
+            localApiMeta: FastMetaApi<LT, any>,
+            remoteApiMeta: FastMetaApi<any, RT>,
+            localApiFactory: (ctx: MetaContext) => LT
+        ): RT {
+            const c = this.makeClient(uri, localApiMeta, localApiFactory);
+            return c.makeRemote(remoteApiMeta);
         }
 
         /**
          * @method makeServer
          * @description Create FastMeta server (not supported in this build)
          */
-        public makeServer<LT, RT extends RemoteApi>(
+        public makeServer<LT>(
             _uri: URI,
             _localApiMeta: FastMetaApi<LT, any>,
-            _remoteApiMeta: FastMetaApi<any, RT>,
-            _handler: FastMetaServer.Handler<LT, RT>
-        ): FastMetaServer<LT, RT> {
+            _contextConfigurator: (ctx: MetaContext) => LT
+        ): FastMetaServer<LT> {
             throw new Error("Server implementation (makeServer) is not supported in this FastMetaNet build.");
         }
     }
+
 
     /**
      * @class Instance
@@ -298,37 +295,19 @@ export namespace FastMetaNet {
     }
     export const INSTANCE = Instance;
 }
-/**
- * @interface FastMetaClient
- * @description FastMeta client interface
- */
-export interface FastMetaClient<LT, RT extends RemoteApi> extends FastMetaNet.Connection<LT, RT> {
-    flush(sendFuture: FlushReport): void;
-}
+
 
 /**
  * @interface FastMetaServer
  * @description FastMeta server interface
  */
-export interface FastMetaServer<LT, RT extends RemoteApi> extends Destroyable {
+export interface FastMetaServer<LT> extends Destroyable {
+    ready(): AFuture;
     stop(): AFuture;
-    handlers(): Iterable<FastMetaNet.Connection<LT, RT>>;
+    handlers(): Iterable<MetaContext>;
 }
 
-/**
- * @namespace FastMetaServer
- * @description Namespace for FastMetaServer interfaces
- */
-export namespace FastMetaServer {
-    /**
-     * @interface Handler
-     * @description Server connection handler interface
-     */
-    export interface Handler<LT, RT extends RemoteApi> {
-        onNewConnection(connection: FastMetaNet.Connection<LT, RT>): LT;
-        onConnectionClose(connection: FastMetaNet.Connection<LT, RT>): void;
-    }
-}
+
 
 /**
  * @interface ReconnectConfig
@@ -357,16 +336,17 @@ export enum ConnectionState {
  * @description WebSocket-based FastMeta client implementation
  * @implements {Destroyable}
  */
-class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
+
+class FastMetaClientWebSocket<LT> implements Destroyable {
     public websocket: IUniversalWebSocket | null = null;
-    public context: MetaContext<LT> | null = null;
-    public connectFuture: ARFuture<MetaContext<LT>>;
+    public context: MetaContextLocal<LT> | null = null;
+    public connectFuture: ARFuture<MetaContextLocal<LT>>;
     public destroyer: Destroyer = new Destroyer("FastMetaClientWebSocket");
     public log: LNode;
     public uri: URI = "";
     public localApiMeta: FastMetaApi<LT, any> | null = null;
-    public localApiProvider: AFunction<RT, LT> | null = null;
-    public remoteApiMeta: FastMetaApi<any, RT> | null = null;
+    public localApiFactory: ((ctx: MetaContext) => LT) | null = null;
+
     public receiveBuffer: DataInOut = new DataInOut();
     public reconnectConfig: ReconnectConfig;
     public reconnectAttempts: number = 0;
@@ -397,9 +377,10 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
      * @constructor
      * @param {Partial<ReconnectConfig>} reconnectConfig Reconnection configuration
      */
+
     constructor(reconnectConfig?: Partial<ReconnectConfig>) {
         this.log = Log.of({ component: 'FastMetaClientWebSocket' });
-        this.connectFuture = ARFuture.of<MetaContext<LT>>();
+        this.connectFuture = ARFuture.of<MetaContextLocal<LT>>();
         this.reconnectConfig = {
             maxAttempts: 0,
             baseDelay: 500,
@@ -414,6 +395,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
 
         Log.info("FastMetaClientWebSocket initialized with infinite reconnection strategy");
     }
+
 
     private startConnectTimeout(): void {
         this.clearConnectTimeout();
@@ -439,21 +421,20 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
     }
 
 
+
     /**
      * @method connect
      * @description Establish WebSocket connection
      * @param {URI} uri Connection URI
      * @param {FastMetaApi<LT, any>} localApiMeta Local API metadata
-     * @param {FastMetaApi<any, RT>} remoteApiMeta Remote API metadata
-     * @param {AFunction<RT, LT>} localApiProvider Local API provider function
-     * @returns {ARFuture<MetaContext<LT>>} Future resolving to connection context
+     * @param {(ctx: MetaContext) => LT} localApiFactory Local API factory function
+     * @returns {ARFuture<MetaContextLocal<LT>>} Future resolving to connection context
      */
     public connect(
         uri: URI,
         localApiMeta: FastMetaApi<LT, any>,
-        remoteApiMeta: FastMetaApi<any, RT>,
-        localApiProvider: AFunction<RT, LT>
-    ): ARFuture<MetaContext<LT>> {
+        localApiFactory: (ctx: MetaContext) => LT
+    ): ARFuture<MetaContextLocal<LT>> {
         Log.info("connect() called", { uri });
 
         try {
@@ -465,8 +446,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
             this.uri = uri;
             this.connectionStats.connectionUri = uri;
             this.localApiMeta = localApiMeta;
-            this.remoteApiMeta = remoteApiMeta;
-            this.localApiProvider = localApiProvider;
+            this.localApiFactory = localApiFactory;
             this.isManualClose = false;
 
             this.setConnectionState(ConnectionState.CONNECTING);
@@ -480,17 +460,17 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         }
     }
 
+
+
     /**
      * @method write
      * @description Write data through WebSocket connection
      * @param {Uint8Array} data Data to write
-     * @returns {AFuture} Future indicating write completion
      */
-    public write(data: Uint8Array, report:FlushReport): void {
+    public write(data: Uint8Array): void {
         try {
             if (!this.websocket || !this.isConnected()) {
-                report.abort();
-                return ;
+                return;
             }
             const frameBuffer = new DataInOut();
             SerializerPackNumber.INSTANCE.put(frameBuffer, data.length);
@@ -499,11 +479,12 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
 
             this.connectionStats.totalBytesSent += finalBytesToSend.length;
             this.connectionStats.totalMessagesSent++;
-            this.sendWebSocketData(finalBytesToSend, report);
+            this.sendWebSocketData(finalBytesToSend);
         } catch (e) {
-            report.abort();
+            // silently ignore write errors
         }
     }
+
 
     /**
      * @method createWebSocketConnection
@@ -648,6 +629,7 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         }
     }
 
+
     /**
      * @method handleOpen
      * @description Handle WebSocket open event
@@ -663,45 +645,26 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         this.connectionStats.lastConnectTime = Date.now();
         this.connectionStats.totalReconnects++;
 
-        if (!this.remoteApiMeta || !this.localApiProvider || !this.websocket) {
+        if (!this.localApiFactory || !this.websocket) {
             this.connectFuture.error(new ClientStartException("Internal state error"));
             this.close();
             return;
         }
 
         try {
-            const context = new MetaContext<LT>((self: MetaContext<LT>) => {
-                const remoteApi = this.remoteApiMeta!.makeRemote(self);
-                return this.localApiProvider!(remoteApi);
+            this.context = new MetaContextLocal<LT>((ctx) => {
+                return this.localApiFactory!(ctx);
             });
-
-            this.context = context;
-
-            this.context.flush = (sendFuture?: FlushReport) => {
-                if (!sendFuture) {
-                    sendFuture = FlushReport.STUB;
+            this.context.onFlushData((dataArray) => {
+                if (this.websocket && this.isConnected()) {
+                    const frameBuffer = new DataInOut();
+                    SerializerPackNumber.INSTANCE.put(frameBuffer, dataArray.length);
+                    frameBuffer.write(dataArray);
+                    this.connectionStats.totalBytesSent += frameBuffer.getSizeForRead();
+                    this.connectionStats.totalMessagesSent++;
+                    this.sendWebSocketData(frameBuffer.toArray());
                 }
-                try {
-                    if (this.websocket && this.isConnected()) {
-                        const dataArray = context.remoteDataToArrayAsArray();
-                        if (dataArray.length > 0) {
-                            const frameBuffer = new DataInOut();
-                            SerializerPackNumber.INSTANCE.put(frameBuffer, dataArray.length);
-                            frameBuffer.write(dataArray);
-                            const finalBytesToSend = frameBuffer.toArray();
-                            this.connectionStats.totalBytesSent += finalBytesToSend.length;
-                            this.connectionStats.totalMessagesSent++;
-                            this.sendWebSocketData(finalBytesToSend, sendFuture);
-                        } else {
-                            sendFuture.done();
-                        }
-                    } else {
-                        sendFuture.abort();
-                    }
-                } catch (e) {
-                    sendFuture.abort();
-                }
-            };
+            });
 
             this.connectFuture.tryDone(this.context);
             this.setConnectionState(ConnectionState.CONNECTED);
@@ -713,24 +676,24 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         }
     }
 
+
+
     /**
      * @method sendWebSocketData
      * @description Send data through WebSocket
      * @param {Uint8Array} data Data to send
-     * @param {AFuture} sendFuture Future to complete when sent
      */
-    private sendWebSocketData(data: Uint8Array, sendFuture: FlushReport): void {
+    private sendWebSocketData(data: Uint8Array): void {
         if (!this.websocket) {
-            sendFuture.abort();
             return;
         }
         try {
             this.websocket.send(data);
-            sendFuture.done();
         } catch (e) {
-            sendFuture.abort();
+            // silently ignore send errors
         }
     }
+
 
     /**
      * @method handleErrorEvent
@@ -883,9 +846,11 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
             return;
         }
 
+
         if (this.connectFuture.isFinalStatus()) {
-            this.connectFuture = ARFuture.of<MetaContext<LT>>();
+            this.connectFuture = ARFuture.of<MetaContextLocal<LT>>();
         }
+
 
         if (this.websocket) {
             try {
@@ -1029,14 +994,16 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         return { ...this.connectionStats };
     }
 
+
     /**
      * @method getContext
      * @description Get connection context
-     * @returns {MetaContext<LT> | null} Connection context or null
+     * @returns {MetaContextLocal<LT> | null} Connection context or null
      */
-    public getContext(): MetaContext<LT> | null {
+    public getContext(): MetaContextLocal<LT> | null {
         return this.context;
     }
+
 
     /**
      * @method getLocalApi
@@ -1047,14 +1014,17 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
         return this.context!.localApi;
     }
 
+
     /**
      * @method getRemoteApi
-     * @description Get remote API instance
+     * @description Get remote API instance via context
+     * @param {FastMetaApi<any, RT>} remoteApiMeta Remote API metadata
      * @returns {RT} Remote API instance
      */
-    public getRemoteApi(): RT {
-        return this.remoteApiMeta!.makeRemote(this.context!);
+    public getRemoteApi<RT extends RemoteApi>(remoteApiMeta: FastMetaApi<any, RT>): RT {
+        return this.context!.makeRemote(remoteApiMeta);
     }
+
 
     /**
      * @method destroy
@@ -1076,87 +1046,66 @@ class FastMetaClientWebSocket<LT, RT extends RemoteApi> implements Destroyable {
     }
 }
 
+
 /**
  * @class FastMetaClientAdapter
- * @description Adapter for FastMeta client
- * @implements {FastMetaClient<LT, RT>}
+ * @description Adapter for FastMeta client wrapping WebSocket transport
  */
-class FastMetaClientAdapter<LT, RT extends RemoteApi> implements FastMetaClient<LT, RT> {
-    public wsClient: FastMetaClientWebSocket<LT, RT>;
-    public writableConsumer: AConsumer<boolean>;
-    public context: MetaContext<LT> | null = null;
-    public log: LNode;
-    public contextFuture: ARFuture<MetaContext<LT>>;
 
-    /**
-     * @constructor
-     * @param {URI} uri Connection URI
-     * @param {FastMetaApi<LT, any>} lt Local API metadata
-     * @param {FastMetaApi<any, RT>} rt Remote API metadata
-     * @param {AFunction<RT, LT>} localApiProvider Local API provider function
-     * @param {AConsumer<boolean>} writableConsumer Write status consumer
-     */
+class FastMetaClientAdapter<LT> implements MetaContext {
+    public wsClient: FastMetaClientWebSocket<LT>;
+    public context: MetaContext | null = null;
+    public log: LNode;
+    public contextFuture: ARFuture<MetaContext>;
+
     constructor(
         uri: URI,
         lt: FastMetaApi<LT, any>,
-        rt: FastMetaApi<any, RT>,
-        localApiProvider: AFunction<RT, LT>,
-        writableConsumer: AConsumer<boolean>
+        localApiFactory: (ctx: MetaContext) => LT
     ) {
-        this.writableConsumer = writableConsumer;
         this.log = Log.of({ component: "FastMetaClientAdapter", uri: uri });
-
         Log.info("FastMetaClientAdapter init");
-
-        this.wsClient = new FastMetaClientWebSocket<LT, RT>();
-
-        this.wsClient.onStateChange((state) => {
-            this.writableConsumer(state === ConnectionState.CONNECTED);
-        });
-
+        this.wsClient = new FastMetaClientWebSocket<LT>();
         Log.info("Calling wsClient.connect");
-        this.contextFuture = this.wsClient.connect(uri, lt, rt, localApiProvider);
-
-        this.contextFuture.to((ctx: MetaContext<LT>) => {
+        this.contextFuture = this.wsClient.connect(uri, lt, localApiFactory);
+        this.contextFuture.to((ctx: MetaContext) => {
             this.context = ctx;
         }).onError((error) => {
             Log.error("Failed to establish connection context", error);
         });
     }
 
-    public flush(sendFuture: FlushReport): void {
-        this.context?.flush(sendFuture);
+    // MetaContext delegation
+    sendToRemote(data: Uint8Array): void { this.context!.sendToRemote(data); }
+    regFuture(worker: import('./aether_fastmeta').FutureRec): number { return this.context!.regFuture(worker); }
+    regLocalFuture(): void { this.context!.regLocalFuture(); }
+    getFuture(requestId: number): import('./aether_fastmeta').FutureRec | undefined { return this.context!.getFuture(requestId); }
+    sendResultToRemote(requestId: number, data: Uint8Array): void { this.context!.sendResultToRemote(requestId, data); }
+    sendResultToRemoteNoData(requestId: number): void { this.context!.sendResultToRemoteNoData(requestId); }
+    remoteDataToArray(out: import('./aether_datainout').DataOut): void { this.context!.remoteDataToArray(out); }
+    remoteDataToArrayAsArray(): Uint8Array { return this.context!.remoteDataToArrayAsArray(); }
+    flush(): void { this.context?.flush(); }
+    isEmpty(): boolean { return this.context ? this.context.isEmpty() : true; }
+    size(): number { return this.context ? this.context.size() : 0; }
+    close(): AFuture { return this.wsClient.close(); }
+    isActive(): boolean { return this.context ? this.context.isActive() : false; }
+    isLocked(): boolean { return this.context ? this.context.isLocked() : false; }
+    lock(): import('./aether_fastmeta').AutoCloseable | null { return this.context ? this.context.lock() : null; }
+    onFlush(flushAction: () => void): void { this.context?.onFlush(flushAction); }
+    onFlushData(c: (data: Uint8Array) => void): void { this.context?.onFlushData(c); }
+    findContext(factory: (ctx: MetaContext) => any, ...keys: any[]): MetaContext { return this.context!.findContext(factory, ...keys); }
+    getLocalApi(): any { return this.context!.getLocalApi(); }
+    onWritable(listener: (writable: boolean) => void): void { this.context?.onWritable(listener); }
+    fireWritable(writable: boolean): void { this.context?.fireWritable(writable); }
+    invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void { this.context?.invokeLocalMethodBefore(methodName, argsNames, argsValues); }
+    invokeLocalMethodAfter(methodName: string, result: any, argsNames: string[], argsValues: any[]): void { this.context?.invokeLocalMethodAfter(methodName, result, argsNames, argsValues); }
+    invokeRemoteMethodAfter(methodName: string, result: any, argsNames: string[], argsValues: any[]): void { this.context?.invokeRemoteMethodAfter(methodName, result, argsNames, argsValues); }
+    makeRemote<RT extends RemoteApi>(meta: FastMetaApi<any, RT>): RT { return this.context!.makeRemote(meta); }
+
+    getRemoteApi<RT extends RemoteApi>(remoteApiMeta: FastMetaApi<any, RT>): RT {
+        return this.wsClient.getRemoteApi(remoteApiMeta);
     }
-
-    public close(): AFuture {
-        return this.wsClient.close();
-    }
-
-    public destroy(force: boolean): AFuture {
-        return this.wsClient.destroy(force);
-    }
-
-    public getLocalApi(): LT {
-        return this.context!.localApi;
-    }
-
-    public getRemoteApi(): RT {
-        return this.wsClient.getRemoteApi();
-    }
-
-    public getMetaContext(): MetaContext {
-        return this.context!;
-    }
-
-    public isWritable(): boolean {
-        return this.wsClient.getConnectionState() === ConnectionState.CONNECTED;
-    }
-
-    public read(): void { }
-
-    public stopRead(): void { }
-
-    public write(data: Uint8Array,report:FlushReport): void {
-        return this.wsClient.write(data,report);
-    }
+    getMetaContext(): MetaContext { return this; }
+    write(data: Uint8Array): void { this.wsClient.write(data); }
+    destroy(force: boolean): AFuture { return this.wsClient.destroy(force); }
 }
