@@ -404,6 +404,11 @@ export class Queue<T> implements IQueue<T> {
         return false;
     }
 
+    addAll(elements: T[]): void {
+        this.storage.push(...elements);
+    }
+
+
 
     /**
      * Извлекает и удаляет элемент из начала очереди.

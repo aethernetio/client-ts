@@ -71,9 +71,6 @@ export class AccessGroupImpl implements AccessGroupI {
 
 
 
-export class ClientTask {
-    constructor(public readonly uid: UUID, public readonly task: AConsumer<ServerApiByUid>) { }
-}
 
 
 export class AetherCloudClient implements Destroyable {
@@ -112,7 +109,6 @@ export class AetherCloudClient implements Destroyable {
 
     public readonly accessOperationsAdd = new Map<bigint, Map<string, ARFuture<boolean>>>();
     public readonly accessOperationsRemove = new Map<bigint, Map<string, ARFuture<boolean>>>();
-    public readonly clientTasks = new Queue<ClientTask>();
     public readonly authTasks = new Queue<AConsumer<AuthorizedApiRemote>>();
 
     public readonly priorityManager = new CloudPriorityManager();
@@ -151,9 +147,11 @@ export class AetherCloudClient implements Destroyable {
         this.destroyer.add((_: boolean) => this.closeConnections());
         this.populateCachesFromState();
 
+
         this.onNewChild.add((u: UUID) => {
             if (this.onNewChildApi.hasListener()) {
-                this.getClientApi(u, (api: ServerApiByUid) => this.onNewChildApi.fire(u, api));
+//                    TODO Я удалил очередь задач. Нужно сделать прямой выбор ConnectionWork
+//                    this.getClientApi(u, (api: ServerApiByUid) => this.onNewChildApi.fire(u, api));
             }
         });
 
@@ -303,7 +301,7 @@ export class AetherCloudClient implements Destroyable {
                     if (!descriptor) return;
                     const conn: ConnectionWork = this.getConnection(descriptor);
                     if (sid === orderedSids[0]) {
-                        conn.connectFuture.toRunnable(() => this.startFuture.tryDone());
+                        this.startFuture.tryDone();
                     }
                 }).onError(() => {
                     this.priorityManager.demote(uid, sid);
@@ -362,7 +360,7 @@ export class AetherCloudClient implements Destroyable {
             conn = new ConnectionWork(this, serverDescriptor);
             conn.stateListeners.add((isWritable: boolean) => {
                 if (isWritable) {
-                    conn.flush(); // отправляем всё, что накопилось
+                    conn.flushBackgroundRequests(); // отправляем всё, что накопилось
                 } else {
                     const uid: UUID | null = this.getUid();
                     if (uid) {
@@ -559,10 +557,15 @@ export class AetherCloudClient implements Destroyable {
     }
 
 
-    public getClientApi(uid: UUID, c: AConsumer<ServerApiByUid>): void {
-        this.clientTasks.add(new ClientTask(uid, c));
-        this.flush();
+
+    /**
+     * @deprecated Use getMessageNode instead
+     */
+    public getClientApi(uid: UUID, callback: AConsumer<ServerApiByUid>): void {
+        // TODO: rewrite after Connection/ConnectionWork refactoring
+        throw new Error("getClientApi is deprecated, use getMessageNode instead");
     }
+
 
     public getAuthApi(t: AConsumer<AuthorizedApiRemote>): void {
         if (!this.destroyer.isDestroyed()) {
@@ -582,7 +585,7 @@ export class AetherCloudClient implements Destroyable {
         this.accessGroups.checkTimeouts();
         this.allAccessedClients.checkTimeouts();
         this.accessCheckCache.checkTimeouts();
-        this.connections.forEach((c: ConnectionWork) => c.flush());
+        this.connections.forEach((c: ConnectionWork) => c.flushBackgroundRequests());
     }
 
     private startScheduledTask(): void {

@@ -44,12 +44,12 @@ export class ConnectionRegistration extends ConnectionBase<ClientApiRegUnsafe, R
     private getAsymmetricPublicKey(): ARFuture<CryptoEngine> {
         Log.debug("RegConn: TCP connection successful, requesting asymmetric key.", { uri: this.uri });
         return this.getRootApi()!.getAsymmetricPublicKey(this.client.getCryptoLib()).map(k => {
-            const kk = CryptoUtils.ofSignedKey(k);
+            const kk = CryptoUtils.dtoSignedKeyToInternal(k);
             if (!this.client.verifySign(kk)) {
                 Log.error("RegConn: Key verification failed.", { signedKey: kk });
                 throw new Error("Key verification exception");
             }
-            return kk.key().asAsymmetric().toCryptoEngine();
+            return kk.key.asAsymmetric().toCryptoEngine();
         });
     }
 
@@ -76,12 +76,12 @@ export class ConnectionRegistration extends ConnectionBase<ClientApiRegUnsafe, R
                     wpd.getPoolSize(),
                     5300
                 );
-                if (!this.client.verifySign(CryptoUtils.ofSignedKey(wpd.getGlobalKey()))) {
+                if (!this.client.verifySign(CryptoUtils.dtoSignedKeyToInternal(wpd.getGlobalKey()))) {
                     Log.error("RegConn: Global key verification failed.");
                     throw new Error("Global key verification failed");
                 }
                 this.gcp = CryptoEngine.of(
-                    CryptoUtils.ofKey(wpd.getGlobalKey().key).asAsymmetric().toCryptoEngine(), 
+                    CryptoUtils.dtoKeyToAKey(wpd.getGlobalKey().key).asAsymmetric().toCryptoEngine(), 
                     this.client.getMasterKey().toCryptoEngine()
                 );
 
@@ -102,7 +102,7 @@ export class ConnectionRegistration extends ConnectionBase<ClientApiRegUnsafe, R
                             this.resolveCloud(d.getCloud(), asymCE).to(() => {
                                 Log.info("RegConn: resolve cloud.");
                             });
-                        }).addListener((f: AFuture) => {
+                        }).addListener((f: any) => {
                             if (!f.isDone()) {
                                 Log.error("flush task canceled 1! " + f);
                             } else {

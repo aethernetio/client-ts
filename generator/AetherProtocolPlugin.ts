@@ -89,12 +89,15 @@ export class AetherProtocolGenerator {
         }
 
 
+
+
         console.log('Running unified code generation...');
         const generatedFiles = await generateAetherProtocol(
             this.allDslMeta,
             this.createAggregatedResolver(),
             primaryBaseName
         );
+
 
         console.log(`Writing ${Object.keys(generatedFiles).length} generated file(s)...`);
 

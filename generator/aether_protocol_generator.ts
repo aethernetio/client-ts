@@ -141,6 +141,8 @@ import {
 
         this.performAnonymousTypeDiscovery();
 
+
+
         const sortedTypeNames = Array.from(this.generatorLogic.allTypes.keys()).sort((a, b) => {
             const defA = this.generatorLogic.allTypes.get(a);
             const defB = this.generatorLogic.allTypes.get(b);
@@ -155,6 +157,7 @@ import {
             if (rankA !== rankB) return rankA - rankB;
             return a.localeCompare(b);
         });
+
 
         this.generateSortedTypes(sortedTypeNames, enums, abstracts, concretes, streams);
         this.generateApiCode(apisCode);
@@ -193,16 +196,18 @@ import {
             .replace(/^( {16})/gm, '                ')
             .replace(/^( {20})/gm, '                    ');
     }
+
     private performAnonymousTypeDiscovery(): void {
         Object.values(this.globalProtocolData).forEach(dslMeta => {
             Object.entries(dslMeta.api || {}).forEach(([apiName, apiDef]) => {
-                this.discoverAnonymousTypesInApi(apiName, apiDef as TypeDefinition);
+                this.discoverAnonymousTypesInApi(apiName, apiDef as TypeDefinition, dslMeta);
             });
             Object.entries(dslMeta.types || {}).forEach(([typeName, typeDef]) => {
-                this.discoverAnonymousTypesInDto(typeName, typeDef as TypeDefinition);
+                this.discoverAnonymousTypesInDto(typeName, typeDef as TypeDefinition, dslMeta);
             });
         });
     }
+
 
     private generateSortedTypes(sortedTypeNames: string[], enums: string[], abstracts: string[], concretes: string[], streams: string[]): void {
         sortedTypeNames.forEach(name => {
@@ -220,6 +225,8 @@ import {
         });
     }
 
+
+
     private generateApiCode(apisCode: string[]): void {
         this.generatorLogic.canonicalApiMap.forEach((canonicalName, lowerName) => {
             if (!this.generatedApis.has(canonicalName)) {
@@ -233,6 +240,8 @@ import {
         });
     }
 
+
+
     private assembleGeneratedFile(enums: string[], abstracts: string[], concretes: string[], streams: string[], apisCode: string[]): string {
         let code = this.getPreambleImports();
         code += enums.join('\n\n') + (enums.length ? '\n\n' : '');
@@ -243,9 +252,9 @@ import {
         return code;
     }
 
-    private discoverAnonymousTypesInApi(apiName: string, apiDef: TypeDefinition | null | undefined): void {
-        if (!apiDef) return;
 
+    private discoverAnonymousTypesInApi(apiName: string, apiDef: TypeDefinition | null | undefined, dslMeta: AetherDslMeta): void {
+        if (!apiDef) return;
 
         const processPotentialAnon = (parts: string[], typeDef: any): string | any => {
             if (typeof typeDef === 'object' && typeDef !== null) {
@@ -258,8 +267,9 @@ import {
                 if (!this.generatorLogic.allTypes.has(anonName)) {
                     this.generatorLogic.allTypes.set(anonName, typeDef as TypeDefinition);
                     this.generatorLogic.declaredTypeNames.add(anonName);
+                    if (!dslMeta.types) dslMeta.types = {};
+                    dslMeta.types[anonName] = typeDef as TypeDefinition;
                 }
-                // Save stream metadata
                 if (isStream && typeDef.stream?.api) {
                     this.generatorLogic.streamApiMap.set(anonName, typeDef.stream.api as string);
                     if (typeDef.stream.remoteApi) {
@@ -292,7 +302,9 @@ import {
     }
 
 
-    private discoverAnonymousTypesInDto(dtoName: string, dtoDef: TypeDefinition | null | undefined): void {
+
+
+    private discoverAnonymousTypesInDto(dtoName: string, dtoDef: TypeDefinition | null | undefined, dslMeta: AetherDslMeta): void {
         if (!dtoDef || !dtoDef.fields) return;
 
         const processFieldType = (parts: string[], typeDef: any): string | any => {
@@ -301,7 +313,9 @@ import {
                 if (!this.generatorLogic.allTypes.has(anonName)) {
                     this.generatorLogic.allTypes.set(anonName, typeDef as TypeDefinition);
                     this.generatorLogic.declaredTypeNames.add(anonName);
-                    this.discoverAnonymousTypesInDto(anonName, typeDef as TypeDefinition);
+                    if (!dslMeta.types) dslMeta.types = {};
+                    dslMeta.types[anonName] = typeDef as TypeDefinition;
+                    this.discoverAnonymousTypesInDto(anonName, typeDef as TypeDefinition, dslMeta);
                 }
                 return anonName;
             }
@@ -312,6 +326,7 @@ import {
             dtoDef.fields![fieldName] = processFieldType([fieldName, dtoName], fieldType);
         });
     }
+
 }
 
     /**

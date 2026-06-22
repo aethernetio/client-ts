@@ -1,5 +1,5 @@
 import { ConnectionBase, getUriFromServerDescriptor } from './aether_client_connection_base';
-import { AetherCloudClient, ClientTask } from './aether_client';
+import { AetherCloudClient } from './aether_client';
 import {
     AccessGroup,
     AccessCheckResult,
@@ -242,6 +242,11 @@ class MyClientApiSafe implements ClientApiSafe {
             this.client.onNewChild.fire(u);
         }
     }
+
+    sendMessage(msg: Message): void {
+        // Обрабатывается в sendMessages
+    }
+
     /**
      * Processes incoming messages and promotes connection priority.
      * Ported from ConnectionWork.java
@@ -307,11 +312,12 @@ class MyClientApiSafe implements ClientApiSafe {
      * @param {Cloud} cloud Cloud data
      * @returns {AFuture} Completion future
      */
-    sendCloud(uid: UUID, cloud: Cloud): AFuture {
-        Log.trace("sendCloud received", { component: "MyClientApiSafe", uid: uid });
-        this.client.setCloud(uid, cloud);
-        return AFuture.of();
+
+    sendCloud(uidAndCloud: UUIDAndCloud): void {
+        Log.trace("sendCloud received", { component: "MyClientApiSafe", uid: uidAndCloud.getUid() });
+        this.client.setCloud(uidAndCloud.getUid(), uidAndCloud.getCloud());
     }
+
 
     /**
      * @method sendClouds
@@ -321,7 +327,7 @@ class MyClientApiSafe implements ClientApiSafe {
      */
     sendClouds(clouds: UUIDAndCloud[]): AFuture {
         Log.trace("sendClouds received", { component: "MyClientApiSafe", count: clouds.length });
-        clouds.forEach(c => this.sendCloud(c.getUid(), c.getCloud()));
+        clouds.forEach(c => this.sendCloud(c));
         this.client.flush();
         return AFuture.of();
     }
@@ -582,10 +588,4 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
         });
     }
 
-    public flush(): void {
-        if (!this.inProcess.compareAndSet(false, true)) return;
-        this.lastWorkTime = RU.time();
-        this.flushBackgroundRequests();
-        this.inProcess.set(false);
-    }
 }

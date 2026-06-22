@@ -2,10 +2,13 @@
 // This file contains the logic for generating TypeScript code for DSL API definitions
 // (Interfaces, Remote, and Local implementations).
 
+import { join } from "path";
+import { get } from "http";
+import { throws } from "assert";
 import {
     GeneratorLogic,
     TypeDefinition,
-    TypeInfo
+    TypeInfo,
 } from "./aether_protocol_core";
 
 /**
@@ -19,7 +22,9 @@ export class ApiGenerator {
      * Creates an instance of ApiGenerator.
      * @param generatorLogic - The shared GeneratorLogic instance.
      */
-    constructor(generatorLogic: GeneratorLogic) { this.generatorLogic = generatorLogic; }
+    constructor(generatorLogic: GeneratorLogic) {
+        this.generatorLogic = generatorLogic;
+    }
 
     /**
      * Generates all code related to a single API definition.
@@ -27,15 +32,23 @@ export class ApiGenerator {
      * @param apiDef - The TypeDefinition for the API.
      * @returns A map containing the generated code, keyed by API name.
      */
-    generateApi(apiName: string, apiDef: TypeDefinition): { [key: string]: string } {
+    generateApi(
+        apiName: string,
+        apiDef: TypeDefinition,
+    ): { [key: string]: string } {
         const methods = this.getAllMethods(apiName, apiDef);
 
         const metaImplName = `${apiName}MetaImpl`;
         this.generateApiMetaImpl(apiName, metaImplName, methods);
 
-        let apiCode = this.generateApiInterface(apiName, apiDef, methods, metaImplName);
-        apiCode += '\n\n' + this.generateApiRemote(apiName, apiDef);
-        apiCode += '\n\n' + this.generateApiLocal(apiName, apiDef);
+        let apiCode = this.generateApiInterface(
+            apiName,
+            apiDef,
+            methods,
+            metaImplName,
+        );
+        apiCode += "\n\n" + this.generateApiRemote(apiName, apiDef);
+        apiCode += "\n\n" + this.generateApiLocal(apiName, apiDef);
 
         return { [apiName]: apiCode };
     }
@@ -46,11 +59,13 @@ export class ApiGenerator {
      * @param apiDef - The TypeDefinition for the API.
      * @returns A Map of method names to their definitions.
      */
-    private getAllMethods(apiName: string, apiDef: TypeDefinition): Map<string, any> {
+    private getAllMethods(
+        apiName: string,
+        apiDef: TypeDefinition,
+    ): Map<string, any> {
         const methods: Map<string, any> = new Map();
         const methodList: any[] = [];
         this.getAllMethodsRecursive(methodList, false, apiName, apiDef);
-
 
         methodList.forEach((m, index) => {
             methods.set(m.name, m);
@@ -66,23 +81,42 @@ export class ApiGenerator {
      * @param apiName - The name of the current API being processed.
      * @param apiDef - The definition of the current API.
      */
-    private getAllMethodsRecursive(res: any[], parent: boolean, apiName: string, apiDef: TypeDefinition | undefined): void {
+    private getAllMethodsRecursive(
+        res: any[],
+        parent: boolean,
+        apiName: string,
+        apiDef: TypeDefinition | undefined,
+    ): void {
         if (!apiDef) return;
 
-        (apiDef.parents as string[])?.forEach(p => {
+        (apiDef.parents as string[])?.forEach((p) => {
             const parentApiNameRaw = p as string;
-            const parentApiName = this.generatorLogic.resolveCanonicalTypeName(parentApiNameRaw);
-            const parentApiDef = this.generatorLogic.allTypes.get(parentApiName);
-            if (!parentApiDef) throw new Error(`Parent API '${p}' not found for API '${apiName}'.`);
+            const parentApiName =
+                this.generatorLogic.resolveCanonicalTypeName(parentApiNameRaw);
+            const parentApiDef =
+                this.generatorLogic.allTypes.get(parentApiName);
+            if (!parentApiDef)
+                throw new Error(
+                    `Parent API '${p}' not found for API '${apiName}'.`,
+                );
             this.getAllMethodsRecursive(res, true, parentApiName, parentApiDef);
         });
 
         Object.entries(apiDef.methods || {}).forEach(([methodName, m]) => {
-
             const yamlMethodDef = (apiDef?.methods as any)?.[methodName] || {};
-            const methodId = yamlMethodDef.id !== undefined ? yamlMethodDef.id : (res.length + 3);
+            const methodId =
+                yamlMethodDef.id !== undefined
+                    ? yamlMethodDef.id
+                    : res.length + 3;
 
-            const methodDef: any = { id: methodId, name: methodName, params: {}, returns: null, throws: null, parent: parent };
+            const methodDef: any = {
+                id: methodId,
+                name: methodName,
+                params: {},
+                returns: null,
+                throws: null,
+                parent: parent,
+            };
             const mDef = m as TypeDefinition;
             if (!mDef) return;
 
@@ -90,83 +124,125 @@ export class ApiGenerator {
                 methodDef.doc = (mDef as any).doc;
             }
 
-
             if (mDef.params) {
-                Object.entries(mDef.params).forEach(([paramName, paramType]) => {
-                    if (typeof paramType === 'object' && paramType !== null && (paramType as any).stream) {
-                        // Stream type that wasn't pre-processed (shouldn't happen, but handle)
-                        const streamDef = (paramType as any).stream;
-                        const anonymeTypeName = this.generatorLogic.declareAnonymType([paramName + "Stream", methodName, apiName], paramType as TypeDefinition);
-                        methodDef.params[paramName] = anonymeTypeName;
-                        methodDef.streamParams = (methodDef.streamParams || {});
-                        methodDef.streamParams[paramName] = true;
-                        methodDef.streamApiTypes = (methodDef.streamApiTypes || {});
-                        methodDef.streamApiTypes[paramName] = streamDef.api;
-                        if (streamDef.remoteApi) {
-                            methodDef.streamRemoteApiTypes = (methodDef.streamRemoteApiTypes || {});
-                            methodDef.streamRemoteApiTypes[paramName] = streamDef.remoteApi;
-                        }
-                    } else if (typeof paramType === 'object' && paramType !== null && !(paramType as any).stream) {
-                        throw new Error(`[ApiGenerator] Unexpected anonymous type object in method ${methodName}. The pre-pass should have replaced it with a name.`);
-                    } else {
-
-                    } else {
-                        const typeName = paramType as string;
-                        methodDef.params[paramName] = typeName;
-                        // Check if this is a stream type by looking up its definition
-                        const streamApi = this.generatorLogic.streamApiMap.get(typeName);
-                        const typeDef = this.generatorLogic.allTypes.get(typeName);
-                        const isStream = !!(streamApi || typeDef?.stream);
-                        if (isStream) {
-                            methodDef.streamParams = (methodDef.streamParams || {});
+                Object.entries(mDef.params).forEach(
+                    ([paramName, paramType]) => {
+                        if (
+                            typeof paramType === "object" &&
+                            paramType !== null &&
+                            (paramType as any).stream
+                        ) {
+                            // Stream type that wasn't pre-processed (shouldn't happen, but handle)
+                            const streamDef = (paramType as any).stream;
+                            const anonymeTypeName =
+                                this.generatorLogic.declareAnonymType(
+                                    [paramName + "Stream", methodName, apiName],
+                                    paramType as TypeDefinition,
+                                );
+                            methodDef.params[paramName] = anonymeTypeName;
+                            methodDef.streamParams =
+                                methodDef.streamParams || {};
                             methodDef.streamParams[paramName] = true;
-                            const api = streamApi || typeDef?.stream?.api;
-                            methodDef.streamApiTypes = (methodDef.streamApiTypes || {});
-                            methodDef.streamApiTypes[paramName] = api || 'unknown';
-                            const streamRemoteApi = this.generatorLogic.streamRemoteApiMap.get(typeName) || typeDef?.stream?.remoteApi;
-                            if (streamRemoteApi) {
-                                methodDef.streamRemoteApiTypes = (methodDef.streamRemoteApiTypes || {});
-                                methodDef.streamRemoteApiTypes[paramName] = streamRemoteApi;
+                            methodDef.streamApiTypes =
+                                methodDef.streamApiTypes || {};
+                            methodDef.streamApiTypes[paramName] = streamDef.api;
+                            if (streamDef.remoteApi) {
+                                methodDef.streamRemoteApiTypes =
+                                    methodDef.streamRemoteApiTypes || {};
+                                methodDef.streamRemoteApiTypes[paramName] =
+                                    streamDef.remoteApi;
+                            }
+                        } else if (
+                            typeof paramType === "object" &&
+                            paramType !== null &&
+                            !(paramType as any).stream
+                        ) {
+                            throw new Error(
+                                `[ApiGenerator] Unexpected anonymous type object in method ${methodName}. The pre-pass should have replaced it with a name.`,
+                            );
+                        } else {
+                            const typeName = paramType as string;
+                            methodDef.params[paramName] = typeName;
+                            const streamApi =
+                                this.generatorLogic.streamApiMap.get(typeName);
+                            const typeDef =
+                                this.generatorLogic.allTypes.get(typeName);
+                            const isStream = !!(streamApi || typeDef?.stream);
+                            if (isStream) {
+                                methodDef.streamParams =
+                                    methodDef.streamParams || {};
+                                methodDef.streamParams[paramName] = true;
+                                const api = streamApi || typeDef?.stream?.api;
+                                methodDef.streamApiTypes =
+                                    methodDef.streamApiTypes || {};
+                                methodDef.streamApiTypes[paramName] =
+                                    api || "unknown";
+                                const streamRemoteApi =
+                                    this.generatorLogic.streamRemoteApiMap.get(
+                                        typeName,
+                                    ) || typeDef?.stream?.remoteApi;
+                                if (streamRemoteApi) {
+                                    methodDef.streamRemoteApiTypes =
+                                        methodDef.streamRemoteApiTypes || {};
+                                    methodDef.streamRemoteApiTypes[paramName] =
+                                        streamRemoteApi;
+                                }
                             }
                         }
-                    }
-
-                    }
-                });
+                    },
+                );
             }
             if (mDef.returns) {
-                if (typeof mDef.returns === 'object' && mDef.returns !== null && !(mDef.returns as any).stream) {
-                    throw new Error(`[ApiGenerator] Unexpected anonymous type object in method ${methodName} returns. The pre-pass should have replaced it with a name.`);
+                if (
+                    typeof mDef.returns === "object" &&
+                    mDef.returns !== null &&
+                    !(mDef.returns as any).stream
+                ) {
+                    throw new Error(
+                        `[ApiGenerator] Unexpected anonymous type object in method ${methodName} returns. The pre-pass should have replaced it with a name.`,
+                    );
                 }
                 methodDef.returns = mDef.returns as string | TypeDefinition;
             }
             if (mDef.throws) {
-                if (typeof mDef.throws === 'object' && mDef.throws !== null && !(mDef.throws as any).stream) {
-                    throw new Error(`[ApiGenerator] Unexpected anonymous type object in method ${methodName} throws. The pre-pass should have replaced it with a name.`);
+                if (
+                    typeof mDef.throws === "object" &&
+                    mDef.throws !== null &&
+                    !(mDef.throws as any).stream
+                ) {
+                    throw new Error(
+                        `[ApiGenerator] Unexpected anonymous type object in method ${methodName} throws. The pre-pass should have replaced it with a name.`,
+                    );
                 }
                 methodDef.throws = mDef.throws as string | TypeDefinition;
             }
-            if (!res.some(it => it.name == methodName)) res.push(methodDef);
+            if (!res.some((it) => it.name == methodName)) res.push(methodDef);
         });
     }
-
     /**
      * Generates the API `META` implementation class and adds it to the generator logic.
      * @param apiName - The name of the API.
      * @param metaImplName - The name of the implementation class (e.g., "MyApiMetaImpl").
      * @param methods - A Map of all methods for this API.
      */
-    private generateApiMetaImpl(apiName: string, metaImplName: string, methods: Map<string, any>): void {
+    private generateApiMetaImpl(
+        apiName: string,
+        metaImplName: string,
+        methods: Map<string, any>,
+    ): void {
         const sbImpl: string[] = [];
-        sbImpl.push(`export class ${metaImplName} implements FastMetaApi<${apiName}, ${apiName}Remote> {`);
+        sbImpl.push(
+            `export class ${metaImplName} implements FastMetaApi<${apiName}, ${apiName}Remote> {`,
+        );
 
         this.generateMetaMakeLocal_fromDataIn(sbImpl, apiName, methods);
         this.generateMetaMakeLocal_fromBytes_ctxLocal(sbImpl, apiName);
         this.generateMetaMakeLocal_fromBytes_ctx(sbImpl, apiName);
         this.generateMetaMakeRemote(sbImpl, apiName, methods);
+        this.generateMetaIsValidCommand(sbImpl, methods);
 
         sbImpl.push(`}`);
-        this.generatorLogic.allImplCode.push(sbImpl.join('\n'));
+        this.generatorLogic.allImplCode.push(sbImpl.join("\n"));
     }
 
     /**
@@ -176,29 +252,42 @@ export class ApiGenerator {
      * @param indent - The indentation (e.g., "    ").
      * @returns An array of JSDoc strings.
      */
-    private generateMethodJSDoc(m: any, finalReturns: string, indent: string): string[] {
+    private generateMethodJSDoc(
+        m: any,
+        finalReturns: string,
+        indent: string,
+    ): string[] {
         const sb: string[] = [];
         const doc = (m as any).doc;
         const docLines: string[] = [];
 
         if (doc) {
-            (doc as string).split('\n').forEach(line => docLines.push(`${indent} * ${line}`));
+            (doc as string)
+                .split("\n")
+                .forEach((line) => docLines.push(`${indent} * ${line}`));
         }
 
         const paramEntries = Object.entries(m.params);
         if (paramEntries.length > 0) {
             if (docLines.length > 0) docLines.push(`${indent} *`);
             paramEntries.forEach(([pn, pt]) => {
-                const typeStrRaw = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
-                    ? (pt as TypeDefinition).stream!.name!
-                    : pt as string;
-                const typeStr = this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
-                docLines.push(`${indent} * @param ${pn} - ${new TypeInfo(typeStr).getArgumentType()}`);
+                const typeStrRaw =
+                    typeof pt === "object" &&
+                    pt !== null &&
+                    (pt as TypeDefinition).stream?.name
+                        ? (pt as TypeDefinition).stream!.name!
+                        : (pt as string);
+                const typeStr =
+                    this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
+                docLines.push(
+                    `${indent} * @param ${pn} - ${new TypeInfo(typeStr).getArgumentType()}`,
+                );
             });
         }
 
         if (finalReturns !== "void" && finalReturns !== "AFuture") {
-            if (docLines.length > 0 && paramEntries.length === 0) docLines.push(`${indent} *`);
+            if (docLines.length > 0 && paramEntries.length === 0)
+                docLines.push(`${indent} *`);
             docLines.push(`${indent} * @returns ${finalReturns}`);
         }
 
@@ -209,13 +298,12 @@ export class ApiGenerator {
 
         if (docLines.length > 0) {
             sb.push(`${indent}/**`);
-            docLines.forEach(line => sb.push(line));
+            docLines.forEach((line) => sb.push(line));
             sb.push(`${indent} */`);
         }
 
         return sb;
     }
-
 
     /**
      * Generates the main API interface and its `META` namespace.
@@ -225,20 +313,30 @@ export class ApiGenerator {
      * @param metaImplName - The name of the implementation class for the META field.
      * @returns The generated TypeScript code as a string.
      */
-    private generateApiInterface(apiName: string, apiDef: TypeDefinition, methods: Map<string, any>, metaImplName: string): string {
+    private generateApiInterface(
+        apiName: string,
+        apiDef: TypeDefinition,
+        methods: Map<string, any>,
+        metaImplName: string,
+    ): string {
         const sb: string[] = [];
-        const parents = ((apiDef?.parents || []) as string[]).map(p => this.generatorLogic.resolveCanonicalTypeName(p));
-        const extendsClause = parents.length > 0 ? ` extends ${parents.join(', ')}` : '';
+        const parents = ((apiDef?.parents || []) as string[]).map((p) =>
+            this.generatorLogic.resolveCanonicalTypeName(p),
+        );
+        const extendsClause =
+            parents.length > 0 ? ` extends ${parents.join(", ")}` : "";
 
         const doc = (apiDef as any)?.doc;
         if (doc) {
             sb.push(`/**`);
-            (doc as string).split('\n').forEach(line => sb.push(` * ${line}`));
+            (doc as string)
+                .split("\n")
+                .forEach((line) => sb.push(` * ${line}`));
             sb.push(` */`);
         }
 
         sb.push(`export interface ${apiName}${extendsClause} {`);
-        methods.forEach(m => {
+        methods.forEach((m) => {
             if (m.parent) return;
             this.generateApiInterfaceMethod(sb, m);
         });
@@ -251,9 +349,11 @@ export class ApiGenerator {
         if (!hasMethods && !hasParents) {
             sb.push(`    export const EMPTY: ${apiName} = {};`);
         }
-        sb.push(`    export const META: FastMetaApi<${apiName}, ${apiName}Remote> = new Impl.${metaImplName}();`);
+        sb.push(
+            `    export const META: FastMetaApi<${apiName}, ${apiName}Remote> = new Impl.${metaImplName}();`,
+        );
         sb.push(`}`);
-        return sb.join('\n');
+        return sb.join("\n");
     }
 
     /**
@@ -262,24 +362,34 @@ export class ApiGenerator {
      * @param m - The method definition object.
      */
     private generateApiInterfaceMethod(sb: string[], m: any): void {
-        const paramTypes = Object.entries(m.params).map(([pn, pt]) => {
-            const typeStrRaw = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
-                ? (pt as TypeDefinition).stream!.name!
-                : pt as string;
-            const typeStr = this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
-            return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
-        }).join(', ');
+        const paramTypes = Object.entries(m.params)
+            .map(([pn, pt]) => {
+                const typeStrRaw =
+                    typeof pt === "object" &&
+                    pt !== null &&
+                    (pt as TypeDefinition).stream?.name
+                        ? (pt as TypeDefinition).stream!.name!
+                        : (pt as string);
+                const typeStr =
+                    this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
+                return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
+            })
+            .join(", ");
 
         const hasReturns = m.returns != null;
         const hasThrows = m.throws != null;
         let finalReturns: string;
 
         if (hasReturns) {
-            const returnTypeStrRaw = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
-                ? (m.returns as TypeDefinition).stream!.name!
-                : m.returns as string;
+            const returnTypeStrRaw =
+                typeof m.returns === "object" &&
+                m.returns !== null &&
+                (m.returns as TypeDefinition).stream?.name
+                    ? (m.returns as TypeDefinition).stream!.name!
+                    : (m.returns as string);
 
-            const returnTypeStr = this.generatorLogic.resolveCanonicalTypeName(returnTypeStrRaw);
+            const returnTypeStr =
+                this.generatorLogic.resolveCanonicalTypeName(returnTypeStrRaw);
 
             if (returnTypeStr === "void") {
                 finalReturns = "AFuture";
@@ -293,7 +403,7 @@ export class ApiGenerator {
             finalReturns = "void";
         }
 
-        sb.push(...this.generateMethodJSDoc(m, finalReturns, '    '));
+        sb.push(...this.generateMethodJSDoc(m, finalReturns, "    "));
         sb.push(`    ${m.name}(${paramTypes}): ${finalReturns};`);
     }
 
@@ -305,36 +415,55 @@ export class ApiGenerator {
      */
 
     private generateApiRemote(apiName: string, apiDef: TypeDefinition): string {
-        const parents = ((apiDef?.parents || []) as string[]).map(p => this.generatorLogic.resolveCanonicalTypeName(p));
-        const extendsParents = parents.map(p => `${p}Remote`).join(', ');
-        const extendsClause = parents.length > 0 ? `, ${extendsParents}` : '';
+        const parents = ((apiDef?.parents || []) as string[]).map((p) =>
+            this.generatorLogic.resolveCanonicalTypeName(p),
+        );
+        const extendsParents = parents.map((p) => `${p}Remote`).join(", ");
+        const extendsClause = parents.length > 0 ? `, ${extendsParents}` : "";
         const sb: string[] = [];
-        sb.push(`export interface ${apiName}Remote extends ${apiName}, RemoteApi${extendsClause} {`);
+        sb.push(
+            `export interface ${apiName}Remote extends ${apiName}, RemoteApi${extendsClause} {`,
+        );
 
         const methods = this.getAllMethods(apiName, apiDef);
-        methods.forEach(m => {
+        methods.forEach((m) => {
             if (m.parent) return;
-            const streamParamNames = m.streamParams ? Object.keys(m.streamParams) : [];
+            const streamParamNames = m.streamParams
+                ? Object.keys(m.streamParams)
+                : [];
             if (streamParamNames.length === 1) {
                 const streamParamName = streamParamNames[0];
-                const streamApiType = this.generatorLogic.resolveCanonicalTypeName(m.streamApiTypes[streamParamName]);
-                const nonStreamParams = Object.entries(m.params).filter(([k]) => !m.streamParams[k]);
+                const streamApiType =
+                    this.generatorLogic.resolveCanonicalTypeName(
+                        m.streamApiTypes[streamParamName],
+                    );
+                const nonStreamParams = Object.entries(m.params).filter(
+                    ([k]) => !m.streamParams[k],
+                );
                 const openArgs: string[] = [];
                 nonStreamParams.forEach(([n, t]) => {
-                    const ti = new TypeInfo(this.generatorLogic.resolveCanonicalTypeName(t as string));
+                    const ti = new TypeInfo(
+                        this.generatorLogic.resolveCanonicalTypeName(
+                            t as string,
+                        ),
+                    );
                     openArgs.push(`${n}: ${ti.getArgumentType()}`);
                 });
-                const factoryType = m.streamRemoteApiTypes?.[streamParamName] ?? "any";
-                openArgs.push(`factory: (api: ${streamApiType}Remote) => ${factoryType}`);
+                const factoryType =
+                    m.streamRemoteApiTypes?.[streamParamName] ?? "any";
+                openArgs.push(
+                    `factory: (api: ${streamApiType}Remote) => ${factoryType}`,
+                );
                 openArgs.push(`converter: BytesConverter`);
                 openArgs.push(`...keys: any[]`);
-                sb.push(`    open${m.name.charAt(0).toUpperCase() + m.name.slice(1)}(${openArgs.join(', ')}): ${streamApiType}Remote;`);
+                sb.push(
+                    `    open${m.name.charAt(0).toUpperCase() + m.name.slice(1)}(${openArgs.join(", ")}): ${streamApiType}Remote;`,
+                );
             }
         });
         sb.push(`}`);
-        return sb.join('\n');
+        return sb.join("\n");
     }
-
 
     /**
      * Generates the `Local` abstract base class for an API (e.g., `MyApiLocal`).
@@ -346,18 +475,22 @@ export class ApiGenerator {
         const sb: string[] = [];
         const remoteType = `${apiName}Remote`;
 
-        sb.push(`export abstract class ${apiName}Local<RT extends RemoteApi> implements ${apiName} {`);
+        sb.push(
+            `export abstract class ${apiName}Local<RT extends RemoteApi> implements ${apiName} {`,
+        );
         sb.push(`    protected readonly remoteApi: RT;`);
         sb.push(`    public getRemoteApi(): RT { return this.remoteApi; }`);
-        sb.push(`    protected constructor(remoteApi: RT) { this.remoteApi = remoteApi; }`);
+        sb.push(
+            `    protected constructor(remoteApi: RT) { this.remoteApi = remoteApi; }`,
+        );
 
         const methods = this.getAllMethods(apiName, apiDef);
-        methods.forEach(m => {
+        methods.forEach((m) => {
             this.generateApiLocalMethod(sb, m);
         });
 
         sb.push(`}`);
-        return sb.join('\n');
+        return sb.join("\n");
     }
 
     /**
@@ -366,23 +499,33 @@ export class ApiGenerator {
      * @param m - The method definition object.
      */
     private generateApiLocalMethod(sb: string[], m: any): void {
-        const paramTypes = Object.entries(m.params).map(([pn, pt]) => {
-            const typeStrRaw = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
-                ? (pt as TypeDefinition).stream!.name!
-                : pt as string;
-            const typeStr = this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
-            return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
-        }).join(', ');
+        const paramTypes = Object.entries(m.params)
+            .map(([pn, pt]) => {
+                const typeStrRaw =
+                    typeof pt === "object" &&
+                    pt !== null &&
+                    (pt as TypeDefinition).stream?.name
+                        ? (pt as TypeDefinition).stream!.name!
+                        : (pt as string);
+                const typeStr =
+                    this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
+                return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
+            })
+            .join(", ");
 
         const hasReturns = m.returns != null;
         const hasThrows = m.throws != null;
         let finalReturns: string;
 
         if (hasReturns) {
-            const returnTypeStrRaw = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
-                ? (m.returns as TypeDefinition).stream!.name!
-                : m.returns as string;
-            const returnTypeStr = this.generatorLogic.resolveCanonicalTypeName(returnTypeStrRaw);
+            const returnTypeStrRaw =
+                typeof m.returns === "object" &&
+                m.returns !== null &&
+                (m.returns as TypeDefinition).stream?.name
+                    ? (m.returns as TypeDefinition).stream!.name!
+                    : (m.returns as string);
+            const returnTypeStr =
+                this.generatorLogic.resolveCanonicalTypeName(returnTypeStrRaw);
 
             if (returnTypeStr === "void") {
                 finalReturns = "AFuture";
@@ -396,8 +539,10 @@ export class ApiGenerator {
             finalReturns = "void";
         }
 
-        sb.push(...this.generateMethodJSDoc(m, finalReturns, '    '));
-        sb.push(`    public abstract ${m.name}(${paramTypes}): ${finalReturns};`);
+        sb.push(...this.generateMethodJSDoc(m, finalReturns, "    "));
+        sb.push(
+            `    public abstract ${m.name}(${paramTypes}): ${finalReturns};`,
+        );
     }
 
     /**
@@ -406,19 +551,33 @@ export class ApiGenerator {
      * @param apiName - The name of the API.
      * @param methods - A Map of all methods for this API.
      */
-    private generateMetaMakeLocal_fromDataIn(sb: string[], apiName: string, methods: Map<string, any>): void {
-        const localApiVar = methods.size > 0 ? 'localApi' : '_localApi';
+    private generateMetaMakeLocal_fromDataIn(
+        sb: string[],
+        apiName: string,
+        methods: Map<string, any>,
+    ): void {
+        const localApiVar = methods.size > 0 ? "localApi" : "_localApi";
 
-        sb.push(`    makeLocal_fromDataIn(ctx: MetaContext, dataIn: DataIn, ${localApiVar}: ${apiName}): void {`);
-        sb.push(`        while(dataIn.isReadable()) { const commandId = dataIn.readUByte(); switch(commandId) {`);
-        sb.push(`                case 0: { const reqId = FastMeta.META_REQUEST_ID.deserialize(ctx, dataIn); const futureRec = ctx.getFuture(reqId); if (futureRec) futureRec.onDone(dataIn); break; }`);
-        sb.push(`                case 1: { const reqId = FastMeta.META_REQUEST_ID.deserialize(ctx, dataIn); const futureRec = ctx.getFuture(reqId); if (futureRec) futureRec.onError(dataIn); break; }`);
+        sb.push(
+            `    makeLocal_fromDataIn(ctx: MetaContext, dataIn: DataIn, ${localApiVar}: ${apiName}): void {`,
+        );
+        sb.push(
+            `        while(dataIn.isReadable()) { const commandId = dataIn.readUByte(); switch(commandId) {`,
+        );
+        sb.push(
+            `                case 0: { const reqId = FastMeta.META_REQUEST_ID.deserialize(ctx, dataIn); const futureRec = ctx.getFuture(reqId); if (futureRec) futureRec.onDone(dataIn); break; }`,
+        );
+        sb.push(
+            `                case 1: { const reqId = FastMeta.META_REQUEST_ID.deserialize(ctx, dataIn); const futureRec = ctx.getFuture(reqId); if (futureRec) futureRec.onError(dataIn); break; }`,
+        );
 
-        methods.forEach(m => {
+        methods.forEach((m) => {
             this.generateApiMethodCase(sb, this.generatorLogic, m, localApiVar);
         });
 
-        sb.push(`            default: throw new Error(\`Unknown command ID: \${commandId}\`);`);
+        sb.push(
+            `            default: throw new Error(\`Unknown command ID: \${commandId}\`);`,
+        );
         sb.push(`        }}`);
         sb.push(`    }`);
     }
@@ -431,87 +590,134 @@ export class ApiGenerator {
      * @param m - The method definition object.
      * @param localApiVar - The name of the local API implementation variable.
      */
-    private generateApiMethodCase(sb: string[], g: GeneratorLogic, m: any, localApiVar: string): void {
-        const returnTypeStrRaw = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
-            ? (m.returns as TypeDefinition).stream!.name!
-            : m.returns as string;
+    private generateApiMethodCase(
+        sb: string[],
+        g: GeneratorLogic,
+        m: any,
+        localApiVar: string,
+    ): void {
+        const returnTypeStrRaw =
+            typeof m.returns === "object" &&
+            m.returns !== null &&
+            (m.returns as TypeDefinition).stream?.name
+                ? (m.returns as TypeDefinition).stream!.name!
+                : (m.returns as string);
         const returnTypeStr = g.resolveCanonicalTypeName(returnTypeStrRaw);
         const returnTypeInfo = new TypeInfo(returnTypeStr);
 
-        const throwsTypeStrRaw = (typeof m.throws === 'object' && m.throws !== null && (m.throws as TypeDefinition).stream?.name)
-            ? (m.throws as TypeDefinition).stream!.name!
-            : m.throws as string;
+        const throwsTypeStrRaw =
+            typeof m.throws === "object" &&
+            m.throws !== null &&
+            (m.throws as TypeDefinition).stream?.name
+                ? (m.throws as TypeDefinition).stream!.name!
+                : (m.throws as string);
         const throwsTypeStr = g.resolveCanonicalTypeName(throwsTypeStrRaw);
 
         const hasResponse = m.returns != null || m.throws != null;
-        const reqIdVar = g.getUniqueVarName('reqId');
+        const reqIdVar = g.getUniqueVarName("reqId");
         const paramVars: string[] = [];
         const fieldsForDeserialize = new Map<string, TypeInfo>();
 
         sb.push(`            case ${m.id}: {`);
-        if (hasResponse) sb.push(`                const ${reqIdVar} = dataIn.readInt();`);
+        if (hasResponse)
+            sb.push(`                const ${reqIdVar} = dataIn.readInt();`);
 
         const paramNames: string[] = [];
         Object.entries(m.params).forEach(([paramName, paramType]) => {
-            const typeStrRaw = (typeof paramType === 'object' && paramType !== null && (paramType as TypeDefinition).stream?.name)
-                ? (paramType as TypeDefinition).stream!.name!
-                : paramType as string;
+            const typeStrRaw =
+                typeof paramType === "object" &&
+                paramType !== null &&
+                (paramType as TypeDefinition).stream?.name
+                    ? (paramType as TypeDefinition).stream!.name!
+                    : (paramType as string);
             const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
             const typeInfo = new TypeInfo(typeStr);
             const localVar = g.getUniqueVarName(paramName);
 
-            sb.push(`                let ${localVar}: ${typeInfo.getFieldType()};`);
+            sb.push(
+                `                let ${localVar}: ${typeInfo.getFieldType()};`,
+            );
             fieldsForDeserialize.set(localVar, typeInfo);
             paramVars.push(localVar);
             paramNames.push(paramName);
         });
 
         const deserLines: string[] = [];
-        g.generateDeserializerFields(deserLines, 'ctx', 'dataIn', fieldsForDeserialize);
-        deserLines.forEach(l => sb.push(`                ${l}`));
+        g.generateDeserializerFields(
+            deserLines,
+            "ctx",
+            "dataIn",
+            fieldsForDeserialize,
+        );
+        deserLines.forEach((l) => sb.push(`                ${l}`));
 
         const argsNamesVar = g.getUniqueVarName("argsNames");
         const argsValuesVar = g.getUniqueVarName("argsValues");
-        sb.push(`                const ${argsNamesVar}: string[] = [${paramNames.map(n => `"${n}"`).join(', ')}];`);
-        sb.push(`                const ${argsValuesVar}: any[] = [${paramVars.join(', ')}];`);
-        sb.push(`                ctx.invokeLocalMethodBefore("${m.name}", ${argsNamesVar}, ${argsValuesVar});`);
+        sb.push(
+            `                const ${argsNamesVar}: string[] = [${paramNames.map((n) => `"${n}"`).join(", ")}];`,
+        );
+        sb.push(
+            `                const ${argsValuesVar}: any[] = [${paramVars.join(", ")}];`,
+        );
+        sb.push(
+            `                ctx.invokeLocalMethodBefore("${m.name}", ${argsNamesVar}, ${argsValuesVar});`,
+        );
 
-        const call = `${localApiVar}.${m.name}(${paramVars.join(', ')})`;
+        const call = `${localApiVar}.${m.name}(${paramVars.join(", ")})`;
         if (throwsTypeStr) sb.push(`                try {`);
 
-        const callIndent = throwsTypeStr ? '    ' : '';
+        const callIndent = throwsTypeStr ? "    " : "";
 
         if (hasResponse) {
-            sb.push(`                    ${callIndent}ctx.regLocalFuture(); const resultFuture = ${call};`);
-            sb.push(`                    ${callIndent}ctx.invokeLocalMethodAfter("${m.name}", resultFuture, ${argsNamesVar}, ${argsValuesVar});`);
+            sb.push(
+                `                    ${callIndent}ctx.regLocalFuture(); const resultFuture = ${call};`,
+            );
+            sb.push(
+                `                    ${callIndent}ctx.invokeLocalMethodAfter("${m.name}", resultFuture, ${argsNamesVar}, ${argsValuesVar});`,
+            );
 
             if (m.returns != null && returnTypeInfo.javaType === "void") {
-                sb.push(`                    ${callIndent}resultFuture.to(() => { ctx.sendResultToRemoteNoData(${reqIdVar}); });`);
-            }
-            else if (m.returns != null) {
+                sb.push(
+                    `                    ${callIndent}resultFuture.to(() => { ctx.sendResultToRemoteNoData(${reqIdVar}); });`,
+                );
+            } else if (m.returns != null) {
                 const rt = returnTypeInfo;
                 const d = g.getUniqueVarName("data");
                 const rr = g.getUniqueVarName("v");
                 const serLines: string[] = [];
-                g.generateSerializer(serLines, 'ctx', d, rr, rt);
+                g.generateSerializer(serLines, "ctx", d, rr, rt);
 
-                sb.push(`                    ${callIndent}resultFuture.to((${rr}: ${rt.getArgumentType()}) => { const ${d} = new DataInOut();`);
-                serLines.forEach(l => sb.push(`                    ${callIndent}    ${l}`));
-                sb.push(`                    ${callIndent}    ctx.sendResultToRemote(${reqIdVar}, ${d}.toArray()); });`);
+                sb.push(
+                    `                    ${callIndent}resultFuture.to((${rr}: ${rt.getArgumentType()}) => { const ${d} = new DataInOut();`,
+                );
+                serLines.forEach((l) =>
+                    sb.push(`                    ${callIndent}    ${l}`),
+                );
+                sb.push(
+                    `                    ${callIndent}    ctx.sendResultToRemote(${reqIdVar}, ${d}.toArray()); });`,
+                );
             }
         } else {
             sb.push(`                    ${callIndent}${call};`);
-            sb.push(`                    ${callIndent}ctx.invokeLocalMethodAfter("${m.name}", null, ${argsNamesVar}, ${argsValuesVar});`);
+            sb.push(
+                `                    ${callIndent}ctx.invokeLocalMethodAfter("${m.name}", null, ${argsNamesVar}, ${argsValuesVar});`,
+            );
         }
 
         if (throwsTypeStr) {
             const et = new TypeInfo(throwsTypeStr as string);
             const d = g.getUniqueVarName("data");
             sb.push(`                } catch (e: any) {`);
-            sb.push(`                    ctx.invokeLocalMethodAfter("${m.name}", null, ${argsNamesVar}, ${argsValuesVar});`);
+            sb.push(
+                `                    ctx.invokeLocalMethodAfter("${m.name}", null, ${argsNamesVar}, ${argsValuesVar});`,
+            );
             sb.push(`                    const ${d} = new DataInOut();`);
-            sb.push(`                    FastMeta.META_COMMAND.serialize(ctx, 1, ${d}); FastMeta.META_REQUEST_ID.serialize(ctx, ${reqIdVar}, ${d});`);
-            sb.push(`                    ${g.generateAccessMeta(et)}.serialize(ctx, e as ${et.getArgumentType()}, ${d}); ctx.sendToRemote(${d}.toArray()); }`);
+            sb.push(
+                `                    FastMeta.META_COMMAND.serialize(ctx, 1, ${d}); FastMeta.META_REQUEST_ID.serialize(ctx, ${reqIdVar}, ${d});`,
+            );
+            sb.push(
+                `                    ${g.generateAccessMeta(et)}.serialize(ctx, e as ${et.getArgumentType()}, ${d}); ctx.sendToRemote(${d}.toArray()); }`,
+            );
         }
         sb.push(`                break; }`);
     }
@@ -521,9 +727,16 @@ export class ApiGenerator {
      * @param sb - The string array to append code lines to.
      * @param apiName - The name of the API.
      */
-    private generateMetaMakeLocal_fromBytes_ctxLocal(sb: string[], apiName: string): void {
-        sb.push(`    makeLocal_fromBytes_ctxLocal(ctx: MetaContext, data: Uint8Array): void {`);
-        sb.push(`        this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), ctx.getLocalApi());`);
+    private generateMetaMakeLocal_fromBytes_ctxLocal(
+        sb: string[],
+        apiName: string,
+    ): void {
+        sb.push(
+            `    makeLocal_fromBytes_ctxLocal(ctx: MetaContext, data: Uint8Array): void {`,
+        );
+        sb.push(
+            `        this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), ctx.getLocalApi());`,
+        );
         sb.push(`    }`);
     }
 
@@ -532,9 +745,16 @@ export class ApiGenerator {
      * @param sb - The string array to append code lines to.
      * @param apiName - The name of the API.
      */
-    private generateMetaMakeLocal_fromBytes_ctx(sb: string[], apiName: string): void {
-        sb.push(`    makeLocal_fromBytes_ctx(ctx: MetaContext, data: Uint8Array, localApi: ${apiName}): void {`);
-        sb.push(`        this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);`);
+    private generateMetaMakeLocal_fromBytes_ctx(
+        sb: string[],
+        apiName: string,
+    ): void {
+        sb.push(
+            `    makeLocal_fromBytes_ctx(ctx: MetaContext, data: Uint8Array, localApi: ${apiName}): void {`,
+        );
+        sb.push(
+            `        this.makeLocal_fromDataIn(ctx, new DataInOutStatic(data), localApi);`,
+        );
         sb.push(`    }`);
     }
 
@@ -544,9 +764,13 @@ export class ApiGenerator {
      * @param apiName - The name of the API.
      * @param methods - A Map of all methods for this API.
      */
-    private generateMetaMakeRemote(sb: string[], apiName: string, methods: Map<string, any>): void {
+    private generateMetaMakeRemote(
+        sb: string[],
+        apiName: string,
+        methods: Map<string, any>,
+    ): void {
         const g = this.generatorLogic;
-        const sCtx = g.getUniqueVarName('sCtx');
+        const sCtx = g.getUniqueVarName("sCtx");
 
         sb.push(`    makeRemote(${sCtx}: MetaContext): ${apiName}Remote {`);
         sb.push(`        const remoteApiImpl = {`);
@@ -557,42 +781,64 @@ export class ApiGenerator {
 
         sb.push(`            getFastMetaContext: () => ${sCtx},`);
 
-
-        methods.forEach(m => {
+        methods.forEach((m) => {
             this.generateRemoteApiMethodImpl(sb, g, m, sCtx);
         });
 
         // open* methods for stream parameters
-        methods.forEach(m => {
+        methods.forEach((m) => {
             if (m.parent) return;
-            const streamParamNames = m.streamParams ? Object.keys(m.streamParams) : [];
+            const streamParamNames = m.streamParams
+                ? Object.keys(m.streamParams)
+                : [];
             if (streamParamNames.length === 1) {
                 const streamParamName = streamParamNames[0];
-                const streamTypeName = g.resolveCanonicalTypeName(m.params[streamParamName]);
-                const streamApiType = g.resolveCanonicalTypeName(m.streamApiTypes[streamParamName]);
-                const nonStreamParams = Object.entries(m.params).filter(([k]) => !m.streamParams[k]);
+                const streamTypeName = g.resolveCanonicalTypeName(
+                    m.params[streamParamName],
+                );
+                const streamApiType = g.resolveCanonicalTypeName(
+                    m.streamApiTypes[streamParamName],
+                );
+                const nonStreamParams = Object.entries(m.params).filter(
+                    ([k]) => !m.streamParams[k],
+                );
                 const openArgs: string[] = [];
                 nonStreamParams.forEach(([n, t]) => {
-                    const ti = new TypeInfo(g.resolveCanonicalTypeName(t as string));
+                    const ti = new TypeInfo(
+                        g.resolveCanonicalTypeName(t as string),
+                    );
                     openArgs.push(`${n}: ${ti.getArgumentType()}`);
                 });
-                const factoryType = m.streamRemoteApiTypes?.[streamParamName] ?? "any";
-                openArgs.push(`factory: (api: ${streamApiType}Remote) => ${factoryType}`);
+                const factoryType =
+                    m.streamRemoteApiTypes?.[streamParamName] ?? "any";
+                openArgs.push(
+                    `factory: (api: ${streamApiType}Remote) => ${factoryType}`,
+                );
                 openArgs.push(`converter: BytesConverter`);
                 openArgs.push(`...keys: any[]`);
 
-                const allArgsInOrder = Object.keys(m.params).map(pn => {
-                    if (m.streamParams[pn]) {
-                        return `${m.params[pn]}.Out.send(converter(data))`;
-                    }
-                    return pn;
-                }).join(', ');
+                const allArgsInOrder = Object.keys(m.params)
+                    .map((pn) => {
+                        if (m.streamParams[pn]) {
+                            return `${m.params[pn]}.Out.send(converter(data))`;
+                        }
+                        return pn;
+                    })
+                    .join(", ");
 
-                sb.push(`            open${m.name.charAt(0).toUpperCase() + m.name.slice(1)}(${openArgs.join(', ')}): ${streamApiType}Remote {`);
+                sb.push(
+                    `            open${m.name.charAt(0).toUpperCase() + m.name.slice(1)}(${openArgs.join(", ")}): ${streamApiType}Remote {`,
+                );
                 sb.push(`                return ${sCtx}.findContext(ctx => {`);
-                sb.push(`                    ctx.onFlushData(data => this.${m.name}(${allArgsInOrder}));`);
-                sb.push(`                    return factory(ctx.makeRemote((${streamApiType} as any).META));`);
-                sb.push(`                }, ...keys).makeRemote((${streamApiType} as any).META) as ${streamApiType}Remote;`);
+                sb.push(
+                    `                    ctx.onFlushData(data => this.${m.name}(${allArgsInOrder}));`,
+                );
+                sb.push(
+                    `                    return factory(ctx.makeRemote((${streamApiType} as any).META));`,
+                );
+                sb.push(
+                    `                }, ...keys).makeRemote((${streamApiType} as any).META) as ${streamApiType}Remote;`,
+                );
                 sb.push(`            },`);
             }
         });
@@ -602,7 +848,6 @@ export class ApiGenerator {
         sb.push(`    }`);
     }
 
-
     /**
      * Generates the implementation for a single remote API method inside `makeRemote`.
      * @param sb - The string array to append code lines to.
@@ -610,27 +855,43 @@ export class ApiGenerator {
      * @param m - The method definition object.
      * @param sCtx - The name of the MetaContext variable.
      */
-    private generateRemoteApiMethodImpl(sb: string[], g: GeneratorLogic, m: any, sCtx: string): void {
-        const returnTypeStrRaw = (typeof m.returns === 'object' && m.returns !== null && (m.returns as TypeDefinition).stream?.name)
-            ? (m.returns as TypeDefinition).stream!.name!
-            : m.returns as string;
+    private generateRemoteApiMethodImpl(
+        sb: string[],
+        g: GeneratorLogic,
+        m: any,
+        sCtx: string,
+    ): void {
+        const returnTypeStrRaw =
+            typeof m.returns === "object" &&
+            m.returns !== null &&
+            (m.returns as TypeDefinition).stream?.name
+                ? (m.returns as TypeDefinition).stream!.name!
+                : (m.returns as string);
         const returnTypeStr = g.resolveCanonicalTypeName(returnTypeStrRaw);
         const returnTypeInfo = new TypeInfo(returnTypeStr);
 
-        const throwsTypeStrRaw = (typeof m.throws === 'object' && m.throws !== null && (m.throws as TypeDefinition).stream?.name)
-            ? (m.throws as TypeDefinition).stream!.name!
-            : m.throws as string;
+        const throwsTypeStrRaw =
+            typeof m.throws === "object" &&
+            m.throws !== null &&
+            (m.throws as TypeDefinition).stream?.name
+                ? (m.throws as TypeDefinition).stream!.name!
+                : (m.throws as string);
         const throwsTypeStr = g.resolveCanonicalTypeName(throwsTypeStrRaw);
 
         const hasResponse = m.returns != null || m.throws != null;
 
-        const paramTypes = Object.entries(m.params).map(([pn, pt]) => {
-            const typeStrRaw = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
-                ? (pt as TypeDefinition).stream!.name!
-                : pt as string;
-            const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
-            return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
-        }).join(', ');
+        const paramTypes = Object.entries(m.params)
+            .map(([pn, pt]) => {
+                const typeStrRaw =
+                    typeof pt === "object" &&
+                    pt !== null &&
+                    (pt as TypeDefinition).stream?.name
+                        ? (pt as TypeDefinition).stream!.name!
+                        : (pt as string);
+                const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
+                return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
+            })
+            .join(", ");
 
         const hasReturns_sig = m.returns != null;
         const hasThrows_sig = m.throws != null;
@@ -649,67 +910,118 @@ export class ApiGenerator {
         }
 
         const paramNames = Object.keys(m.params);
-        const reqIdVar = g.getUniqueVarName('reqId');
-        const dataOutVar = g.getUniqueVarName('dataOut');
-        const resultVar = g.getUniqueVarName('result');
+        const reqIdVar = g.getUniqueVarName("reqId");
+        const dataOutVar = g.getUniqueVarName("dataOut");
+        const resultVar = g.getUniqueVarName("result");
 
         sb.push(`            ${m.name}: (${paramTypes}): ${finalReturns} => {`);
-        sb.push(`                const ${dataOutVar} = new DataInOut(); ${dataOutVar}.writeByte(${m.id});`);
+        sb.push(
+            `                const ${dataOutVar} = new DataInOut(); ${dataOutVar}.writeByte(${m.id});`,
+        );
 
         const argsNamesVar = g.getUniqueVarName("argsNames");
         const argsValuesVar = g.getUniqueVarName("argsValues");
-        sb.push(`                const ${argsNamesVar}: string[] = [${paramNames.map(n => `"${n}"`).join(', ')}];`);
-        sb.push(`                const ${argsValuesVar}: any[] = [${paramNames.join(', ')}];`);
+        sb.push(
+            `                const ${argsNamesVar}: string[] = [${paramNames.map((n) => `"${n}"`).join(", ")}];`,
+        );
+        sb.push(
+            `                const ${argsValuesVar}: any[] = [${paramNames.join(", ")}];`,
+        );
 
         if (hasResponse) {
-            sb.push(`                const ${resultVar} = ${returnTypeInfo.getInitFuture()};`);
-            sb.push(`                ${sCtx}.invokeRemoteMethodAfter("${m.name}", ${resultVar}, ${argsNamesVar}, ${argsValuesVar});`);
+            sb.push(
+                `                const ${resultVar} = ${returnTypeInfo.getInitFuture()};`,
+            );
+            sb.push(
+                `                ${sCtx}.invokeRemoteMethodAfter("${m.name}", ${resultVar}, ${argsNamesVar}, ${argsValuesVar});`,
+            );
             sb.push(`                const ${reqIdVar} = ${sCtx}.regFuture({`);
             sb.push(`                    onDone: (in_: DataIn) => {`);
 
             if (m.returns != null && returnTypeInfo.javaType !== "void") {
                 const rt = returnTypeInfo;
-                sb.push(`                        (${resultVar} as ARFuture<${rt.getArgumentType()}>).tryDone(${g.generateAccessMeta(rt)}.deserialize(${sCtx}, in_));`);
+                sb.push(
+                    `                        (${resultVar} as ARFuture<${rt.getArgumentType()}>).tryDone(${g.generateAccessMeta(rt)}.deserialize(${sCtx}, in_));`,
+                );
             } else {
-                sb.push(`                        (${resultVar} as AFuture).tryDone();`);
+                sb.push(
+                    `                        (${resultVar} as AFuture).tryDone();`,
+                );
             }
 
             sb.push(`                    },`);
-            const onErrorInParam = throwsTypeStr ? 'in_' : '_in_';
-            sb.push(`                    onError: (${onErrorInParam}: DataIn) => {`);
+            const onErrorInParam = throwsTypeStr ? "in_" : "_in_";
+            sb.push(
+                `                    onError: (${onErrorInParam}: DataIn) => {`,
+            );
 
             if (throwsTypeStr) {
                 const et = new TypeInfo(throwsTypeStr as string);
-                sb.push(`                        const errorObj: ${et.getArgumentType()} = ${g.generateAccessMeta(et)}.deserialize(${sCtx}, ${onErrorInParam}); ${resultVar}.error(errorObj as Error);`);
+                sb.push(
+                    `                        const errorObj: ${et.getArgumentType()} = ${g.generateAccessMeta(et)}.deserialize(${sCtx}, ${onErrorInParam}); ${resultVar}.error(errorObj as Error);`,
+                );
             } else {
-                sb.push(`                        ${resultVar}.error(new Error("Remote call failed without a typed exception"));`);
+                sb.push(
+                    `                        ${resultVar}.error(new Error("Remote call failed without a typed exception"));`,
+                );
             }
 
             sb.push(`                    }`);
             sb.push(`                }); ${dataOutVar}.writeInt(${reqIdVar});`);
         } else {
-            sb.push(`                ${sCtx}.invokeRemoteMethodAfter("${m.name}", null, ${argsNamesVar}, ${argsValuesVar});`);
+            sb.push(
+                `                ${sCtx}.invokeRemoteMethodAfter("${m.name}", null, ${argsNamesVar}, ${argsValuesVar});`,
+            );
         }
 
-        const fieldsForSerialize = new Map(paramNames.map(pn => {
-            const pt = (m.params as any)[pn];
-            const typeStrRaw = (typeof pt === 'object' && pt !== null && (pt as TypeDefinition).stream?.name)
-                ? (pt as TypeDefinition).stream!.name!
-                : pt as string;
-            const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
-            return [pn, new TypeInfo(typeStr)];
-        }));
+        const fieldsForSerialize = new Map(
+            paramNames.map((pn) => {
+                const pt = (m.params as any)[pn];
+                const typeStrRaw =
+                    typeof pt === "object" &&
+                    pt !== null &&
+                    (pt as TypeDefinition).stream?.name
+                        ? (pt as TypeDefinition).stream!.name!
+                        : (pt as string);
+                const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
+                return [pn, new TypeInfo(typeStr)];
+            }),
+        );
 
         const serLines: string[] = [];
-        g.generateSerializerFields(serLines, sCtx, dataOutVar, fieldsForSerialize);
-        serLines.forEach(l => sb.push(`                ${l}`));
+        g.generateSerializerFields(
+            serLines,
+            sCtx,
+            dataOutVar,
+            fieldsForSerialize,
+        );
+        serLines.forEach((l) => sb.push(`                ${l}`));
 
-        sb.push(`                ${sCtx}.sendToRemote(${dataOutVar}.toArray());`);
+        sb.push(
+            `                ${sCtx}.sendToRemote(${dataOutVar}.toArray());`,
+        );
 
         if (hasResponse) {
             sb.push(`                return ${resultVar};`);
         }
 
         sb.push(`            },`);
+    }
+
+    private generateMetaIsValidCommand(
+        sb: string[],
+        methods: Map<string, any>,
+    ): void {
+        sb.push(`    isValidCommand(commandId: number): boolean {`);
+        sb.push(`        switch(commandId) {`);
+        sb.push(`            case 0: // META_RESULT`);
+        sb.push(`            case 1: // META_ERROR`);
+        methods.forEach((m) => {
+            sb.push(`            case ${m.id}: // ${m.name}`);
+        });
+        sb.push(`                return true;`);
+        sb.push(`            default: return false;`);
+        sb.push(`        }`);
+        sb.push(`    }`);
     }
 }

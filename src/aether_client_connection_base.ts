@@ -174,7 +174,7 @@ export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
 
     protected readonly client: AetherCloudClient;
     public readonly uri: URI;
-    public readonly connectFuture: ARFuture<RT>;
+    public readonly connectFuture: AFuture;
     protected readonly metaContext: MetaContext | null;
     protected rootApi: RT | null = null;
     public readonly stateListeners = new EventConsumer<boolean>();
@@ -193,7 +193,7 @@ export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
         this.uri = uri;
         this.client = client;
         this.logCtxData = { uri: uri.toString() };
-        this.connectFuture = ARFuture.make<RT>();
+        this.connectFuture = AFuture.make();
 
         if (client.destroyer.isDestroyed()) {
             this.connectFuture.tryError(new Error("Client is destroyed"));
@@ -208,7 +208,7 @@ export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
         const factory = FastMetaNet.INSTANCE.get();
         this.metaContext = factory.makeClient(uri, localApiMeta, (ctx: MetaContext) => {
             this.rootApi = ctx.makeRemote(remoteApiMeta);
-            this.connectFuture.tryDone(this.rootApi);
+            this.connectFuture.tryDone();
             this.stateListeners.fire(true);
             return localApi;
         });
@@ -237,7 +237,7 @@ export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
      * @description Gets the future that completes when the root remote API is ready.
      * @returns {ARFuture<RT>} The future for the remote API.
      */
-    public getRootApiFuture(): ARFuture<RT> {
+    public getRootApiFuture(): AFuture {
         return this.connectFuture;
     }
 
