@@ -25,7 +25,6 @@ export class ChatService {
                     let res = [];
                     for (let u of allUsers) {
                         u.remoteApi.addUser(newUser);
-                        u.remoteApi.flush();
                         res.push(u);
                     }
                     allUsers[remoteApi.protocol.uid.toString()] = newUser;
