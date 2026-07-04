@@ -129,6 +129,7 @@ export interface MetaContext {
     onFlush(flushAction: () => void): void;
     onFlushData(c: (data: Uint8Array) => void): void;
     findContext(factory: (ctx: MetaContext) => any, ...keys: any[]): MetaContext;
+    getProperty(key: number): any;
     getLocalApi(): any;
     onWritable(listener: (writable: boolean) => void): void;
     fireWritable(writable: boolean): void;
@@ -158,6 +159,7 @@ export const FastFutureContextStub: MetaContext = {
     sendResultToRemoteNoData: (requestId: number) => { throw new Error("Context is a stub and cannot send result."); },
     regFuture: (worker: FutureRec) => 0,
     regLocalFuture: () => { /* no-op */ },
+    getProperty: (_key: number) => null,
     getFuture: (requestId: number) => { throw new Error("UnsupportedOperationException"); },
     flush: () => {},
     remoteDataToArray: (out: DataOut) => { /* no-op */ },
@@ -773,6 +775,7 @@ export class MetaContextBase implements MetaContext {
     protected parent: MetaContextBase | null = null;
 
     public getLocalApi(): any { return this.localApi; }
+    public getProperty(_key: number): any { return null; }
 
     public isActive(): boolean { return this.parent === null || this.parent.isActive(); }
 
@@ -871,10 +874,19 @@ export class MetaContextBase implements MetaContext {
         }
     }
 
+
     public sendToRemote(data: Uint8Array): void {
         this.toRemote.add(data);
         this.sizeBytes.addAndGet(data.length);
+        this.notifyDataAdded();
     }
+
+    protected notifyDataAdded(): void {
+        if (this.parent) {
+            this.parent.notifyDataAdded();
+        }
+    }
+
 
     public isEmpty(): boolean {
         if (this.isLocked()) return true;
@@ -958,6 +970,80 @@ export class MetaContextBase implements MetaContext {
         Log.trace(`cmd remote      : $methodName`, logData);
     }
 }
+
+
+/**
+ * AutoFlushContext — автоматически сбрасывает данные по таймеру.
+ * Используется для WebSocket-соединений чтобы не дёргать flush() вручную.
+ */
+export class AutoFlushContext extends MetaContextBase {
+    private readonly minPeriodMs: number;
+    private readonly maxSize: number;
+    private lastDataTime: number = Date.now();
+    private flushTask: ReturnType<typeof setTimeout> | null = null;
+    private writable: boolean = true;
+
+    constructor(minPeriodMs: number = 1, maxSize: number = 65536) {
+        super();
+        this.minPeriodMs = minPeriodMs;
+        this.maxSize = maxSize;
+        this.startFlushTimer();
+    }
+
+    protected override notifyDataAdded(): void {
+        this.lastDataTime = Date.now();
+        this.startFlushTimer();
+        super.notifyDataAdded();
+    }
+
+    public override sendToRemote(data: Uint8Array): void {
+        super.sendToRemote(data);
+    }
+
+    public override isActive(): boolean {
+        return this.size() < this.maxSize;
+    }
+
+    private startFlushTimer(): void {
+        if (!this.writable) return;
+        if (this.flushTask !== null) return;
+
+        const flushAction = () => {
+            if (this.isEmpty()) {
+                this.flushTask = null;
+                return;
+            }
+
+            this.flush();
+
+            this.flushTask = null;
+            if (!this.isEmpty()) {
+                this.startFlushTimer();
+            }
+        };
+
+        this.flushTask = setTimeout(flushAction, this.minPeriodMs);
+    }
+
+    public override fireWritable(w: boolean): void {
+        this.writable = w;
+        if (w) {
+            this.startFlushTimer();
+            if (!this.isEmpty()) this.flush();
+        } else {
+            this.stopFlushTimer();
+        }
+        super.fireWritable(w);
+    }
+
+    private stopFlushTimer(): void {
+        if (this.flushTask !== null) {
+            clearTimeout(this.flushTask);
+            this.flushTask = null;
+        }
+    }
+}
+
 
 
 /**

@@ -11,11 +11,13 @@ import { Queue } from './aether_utils';
 // --- [НОВЫЕ ИМПОРТЫ] ---
 // Эти импорты нужны для методов toApi
 
+
 import {
-    MetaContextBase,
+    AutoFlushContext,
     MetaContext,
     FastMetaApi,
 } from './aether_fastmeta';
+
 
 import { DataInOutStatic } from './aether_datainout';
 // -----------------------
@@ -158,10 +160,11 @@ export class MessageNode {
 
 // Timeout moved to overflow logic
 
+
         if (this.connectionsOut.size === 0) {
             Log.trace("MessageNode: Message buffered, no connections yet.");
-            this.client.flush();
         }
+
         return sendFuture;
     }
 
@@ -245,16 +248,18 @@ export class MessageNode {
         metaLt: FastMetaApi<LT, any>,
         localApiFactory: (ctx: MetaContext) => LT
     ): MetaContext {
-        const node = this;
-        const ctx = new MetaContextBase();
+
+        const ctx = new AutoFlushContext();
         ctx.localApi = localApiFactory(ctx);
+
+
         ctx.onFlushData((data: Uint8Array) => {
             if (data.length === 0) return;
-            node.send(data).onError((err: Error) => {
+            this.send(data).onError((err: Error) => {
                 Log.error("MessageNode toApi flush error", err);
             });
-            node.client.flush();
         });
+
         this.toApiWithCtx(ctx, metaLt, ctx.localApi);
         return ctx;
     }
@@ -270,8 +275,10 @@ export class MessageNode {
     ): MetaContext {
         const nodeSend = this.send.bind(this);
 
-        const ctx = new MetaContextBase();
+
+        const ctx = new AutoFlushContext();
         ctx.localApi = localApiFactory(ctx);
+
         ctx.onFlushData((d: Uint8Array) => {
             if (d.length > 0) {
                 nodeSend(d);

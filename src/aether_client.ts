@@ -1,30 +1,37 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export { MessageNode, MessageEventListener } from './aether_client_message';
-import { ClientState, ClientStateInMemory } from './aether_client_state';
-import { ClientStateInLocalStorage } from './aether_client_state_localstorage';
+export { MessageNode, MessageEventListener } from "./aether_client_message";
+import { ClientState, ClientStateInMemory } from "./aether_client_state";
+import { ClientStateInLocalStorage } from "./aether_client_state_localstorage";
 import {
     AKey,
     CryptoEngine,
     CryptoProviderFactory,
     SignedKey,
-    PairSymKeys
-} from './aether_crypto';
+    PairSymKeys,
+} from "./aether_crypto";
+import { ConnectionWork } from "./aether_client_connection_work";
+import { ConnectionRegistration } from "./aether_client_connection_reg";
+import { LNode, Log } from "./aether_logging";
 import {
-    ConnectionWork
-} from './aether_client_connection_work';
+    AConsumer,
+    ClientApiException,
+    ClientStartException,
+    Destroyable,
+    URI,
+    UUID,
+} from "./aether_types";
+import { Destroyer, RU, Queue, StandardUUIDs } from "./aether_utils";
 import {
-    ConnectionRegistration
-} from './aether_client_connection_reg';
-import {
-    LNode,
-    Log
-} from './aether_logging';
-import { AConsumer, ClientApiException, ClientStartException, Destroyable, URI, UUID } from './aether_types';
-import { Destroyer, RU, Queue, StandardUUIDs } from './aether_utils';
-import { AFuture, ARFuture, EventBiConsumer, EventConsumer } from './aether_future';
+    AFuture,
+    ARFuture,
+    EventBiConsumer,
+    EventConsumer,
+} from "./aether_future";
 import {
     Cloud,
+    CloudConfig,
+    AppliedConfig,
     FinishResult,
     ServerDescriptor,
     AccessGroup,
@@ -32,14 +39,27 @@ import {
     ServerApiByUid,
     AccessCheckPair,
     CryptoLib,
-} from './aether_api';
-import { BMap, RCol } from './aether_rcollection';
-import { ClientCloud, CloudPriorityManager } from "./aether_client_cloud_priority";
-import { MessageEventListener, MessageEventListenerDefault, MessageNode } from './aether_client_message';
-import { CryptoUtils } from './aether_crypto_utils';
+    IpInfo,
+} from "./aether_api";
 
-export enum RegStatus { NO, BEGIN, CONFIRM }
+import { BMap, RCol } from "./aether_rcollection";
+import {
+    ClientCloud,
+    CloudPriorityManager,
+} from "./aether_client_cloud_priority";
+import {
+    MessageEventListener,
+    MessageEventListenerDefault,
+    MessageNode,
+} from "./aether_client_message";
+import { CryptoUtils } from "./aether_crypto_utils";
+import { FastMetaApi, MetaContext, RemoteApi } from "./aether_fastmeta";
 
+export enum RegStatus {
+    NO,
+    BEGIN,
+    CONFIRM,
+}
 
 export interface AccessGroupI {
     id: bigint;
@@ -47,10 +67,6 @@ export interface AccessGroupI {
     data: Set<UUID>;
     contains(uuid: UUID): ARFuture<boolean>;
 }
-
-
-
-
 
 export class AccessGroupImpl implements AccessGroupI {
     public id: bigint;
@@ -67,11 +83,6 @@ export class AccessGroupImpl implements AccessGroupI {
         return ARFuture.of(this.data.has(uuid));
     }
 }
-
-
-
-
-
 
 export class AetherCloudClient implements Destroyable {
     private static readonly RECOVERY_RETRY_DELAY_MS = 10000;
@@ -98,90 +109,120 @@ export class AetherCloudClient implements Destroyable {
 
     public readonly onClientStreamCreated = new EventConsumer<MessageNode>();
 
-
     public readonly onMessage = new EventBiConsumer<UUID, Uint8Array>();
-
 
     public readonly onNewChildApi = new EventBiConsumer<UUID, ServerApiByUid>();
 
+    public readonly accessOperationsAdd = new Map<
+        bigint,
+        Map<string, ARFuture<boolean>>
+    >();
+    public readonly accessOperationsRemove = new Map<
+        bigint,
+        Map<string, ARFuture<boolean>>
+    >();
 
+    public readonly appliedConfigsRequests = new BMap<AppliedConfig, boolean>("AppliedConfigsRequests", 5000, 10000);
+    private readonly anyConnection = ARFuture.make<ConnectionWork | ConnectionRegistration>();
 
-
-    public readonly accessOperationsAdd = new Map<bigint, Map<string, ARFuture<boolean>>>();
-    public readonly accessOperationsRemove = new Map<bigint, Map<string, ARFuture<boolean>>>();
     public readonly authTasks = new Queue<AConsumer<AuthorizedApiRemote>>();
 
     public readonly priorityManager = new CloudPriorityManager();
     public readonly state: ClientState;
-    private readonly connectionRegistrations = new Set<ConnectionRegistration>();
+    private readonly connectionRegistrations =
+        new Set<ConnectionRegistration>();
     private beginConnect = false;
     private name: string | null;
     private readonly lastSecond: number;
 
     public getCryptoLib(): CryptoLib {
-        return CryptoLib.SODIUM
+        return CryptoLib.SODIUM;
     }
-
 
     constructor(state?: ClientState, name?: string | null) {
         if (!state) {
-            if (typeof localStorage !== 'undefined') {
-                state = new ClientStateInLocalStorage(StandardUUIDs.ANONYMOUS_UID, ["tcp://registration.aethernet.io:9010"]);
+            if (typeof localStorage !== "undefined") {
+                state = new ClientStateInLocalStorage(
+                    StandardUUIDs.ANONYMOUS_UID,
+                    ["tcp://registration.aethernet.io:9010"],
+                );
             } else {
-                state = new ClientStateInMemory(StandardUUIDs.ANONYMOUS_UID, ["tcp://registration.aethernet.io:9010"]);
+                state = new ClientStateInMemory(StandardUUIDs.ANONYMOUS_UID, [
+                    "tcp://registration.aethernet.io:9010",
+                ]);
             }
         }
 
         this.state = state;
         this.name = name ?? null;
         this.lastSecond = Math.floor(RU.time() / 1000);
-        this.logClientContext = Log.of({ component: "Client", clientName: name });
+        this.logClientContext = Log.of({
+            component: "Client",
+            clientName: name,
+        });
 
         this.clouds = RCol.bMap<UUID, ClientCloud>(30000, "CloudCache");
-        this.servers = RCol.bMap<number, ServerDescriptor>(30000, "ServerCache");
-        this.clientGroups = RCol.bMap<UUID, Set<bigint>>(30000, "ClientGroupsCache");
-        this.accessGroups = RCol.bMap<bigint, AccessGroup | null>(30000, "AccessGroupsCache");
-        this.allAccessedClients = RCol.bMap<UUID, Set<UUID>>(30000, "AllAccessedClientsCache");
-        this.accessCheckCache = RCol.bMap<AccessCheckPair, boolean>(30000, "AccessCheckCache");
+        this.servers = RCol.bMap<number, ServerDescriptor>(
+            30000,
+            "ServerCache",
+        );
+        this.clientGroups = RCol.bMap<UUID, Set<bigint>>(
+            30000,
+            "ClientGroupsCache",
+        );
+        this.accessGroups = RCol.bMap<bigint, AccessGroup | null>(
+            30000,
+            "AccessGroupsCache",
+        );
+        this.allAccessedClients = RCol.bMap<UUID, Set<UUID>>(
+            30000,
+            "AllAccessedClientsCache",
+        );
+        this.accessCheckCache = RCol.bMap<AccessCheckPair, boolean>(
+            30000,
+            "AccessCheckCache",
+        );
 
         this.destroyer.add((_: boolean) => this.closeConnections());
         this.populateCachesFromState();
 
-
         this.onNewChild.add((u: UUID) => {
             if (this.onNewChildApi.hasListener()) {
-//                    TODO Я удалил очередь задач. Нужно сделать прямой выбор ConnectionWork
-//                    this.getClientApi(u, (api: ServerApiByUid) => this.onNewChildApi.fire(u, api));
+                //                    TODO Я удалил очередь задач. Нужно сделать прямой выбор ConnectionWork
+                //                    this.getClientApi(u, (api: ServerApiByUid) => this.onNewChildApi.fire(u, api));
             }
         });
 
         this.startFuture.toRunnable(() => this.startScheduledTask());
         this.startFuture.toRunnable(() => {
-            this.forceUpdateStateFromCache().toRunnable(() => this.state.saveState());
+            this.forceUpdateStateFromCache().toRunnable(() =>
+                this.state.saveState(),
+            );
         });
         this.connect();
-
-
-
 
         // Forward incoming messages from all MessageNodes to the onMessage event
 
         this.onClientStreamCreated.add((node: MessageNode) => {
-            Log.info("MessageNode created", { uid: node.consumerUUID.toString() });
+            Log.info("MessageNode created", {
+                uid: node.consumerUUID.toString(),
+            });
             node.bufferIn.add((msg: { data: Uint8Array }) => {
                 try {
-                    Log.info("Forwarding message to onMessage", { from: node.consumerUUID.toString() });
+                    Log.info("Forwarding message to onMessage", {
+                        from: node.consumerUUID.toString(),
+                    });
                     this.onMessage.fire(node.consumerUUID, msg.data);
                 } catch (e) {
-                    Log.error("Error forwarding message to onMessage", e as Error, { from: node.consumerUUID.toString() });
+                    Log.error(
+                        "Error forwarding message to onMessage",
+                        e as Error,
+                        { from: node.consumerUUID.toString() },
+                    );
                 }
             });
         });
-
-
-
     }
-
 
     private closeConnections(): void {
         this.connections.forEach((c: ConnectionWork) => c.destroy(true));
@@ -217,7 +258,9 @@ export class AetherCloudClient implements Destroyable {
         }
         if (step === 0) {
             if (!this.startFuture.isDone()) {
-                this.startFuture.tryError(new ClientStartException("All connection attempts failed."));
+                this.startFuture.tryError(
+                    new ClientStartException("All connection attempts failed."),
+                );
             }
             return;
         }
@@ -226,24 +269,41 @@ export class AetherCloudClient implements Destroyable {
             if (this.regStatus.value === RegStatus.NO) {
                 this.regStatus.value = RegStatus.BEGIN;
                 const regs: ConnectionRegistration[] = this.makeConnectionReg();
-                const timeout: number = this.state.getTimeoutForConnectToRegistrationServer();
+                const timeout: number =
+                    this.state.getTimeoutForConnectToRegistrationServer();
 
-                const anyFuture: AFuture = AFuture.any(...regs.map((r: ConnectionRegistration) => r.registration()));
-                anyFuture.toRunnable(() => this.startScheduledTask()).onError((e: Error) => this.startFuture.tryError(e));
-                anyFuture.timeoutMs(timeout, () => {
-                    Log.warn("Failed to connect to registration server", { uris: this.state.getRegistrationUri() });
-                    RU.schedule(this.destroyer, 5000, () => this.connectStep(step));
-                },this.destroyer);
+                const anyFuture: AFuture = AFuture.any(
+                    ...regs.map((r: ConnectionRegistration) =>
+                        r.registration(),
+                    ),
+                );
+                anyFuture
+                    .toRunnable(() => this.startScheduledTask())
+                    .onError((e: Error) => this.startFuture.tryError(e));
+                anyFuture.timeoutMs(
+                    timeout,
+                    () => {
+                        Log.warn("Failed to connect to registration server", {
+                            uris: this.state.getRegistrationUri(),
+                        });
+                        RU.schedule(this.destroyer, 5000, () =>
+                            this.connectStep(step),
+                        );
+                    },
+                    this.destroyer,
+                );
             }
         } else {
             try {
                 const uid: UUID = this.getUid()!;
                 const cloudData = this.state.getCloud(uid);
-                const cloud: Cloud | null = cloudData ? cloudData.toCloud() : null;
+                const cloud: Cloud | null = cloudData
+                    ? cloudData.toCloud()
+                    : null;
 
                 if (!cloud) {
                     Log.info("Recovery required: Cloud missing from cache.");
-        this.triggerRecovery().pipeTo(this.startFuture);
+                    this.triggerRecovery().pipeTo(this.startFuture);
                     return;
                 }
 
@@ -273,11 +333,13 @@ export class AetherCloudClient implements Destroyable {
     private makeConnectionReg(): ConnectionRegistration[] {
         if (this.connectionRegistrations.size === 0) {
             const uris: URI[] = this.state.getRegistrationUri();
+
             uris.slice(0, 3).forEach((uri: URI) => {
                 const reg = new ConnectionRegistration(this, uri);
-
+                this.anyConnection.tryDone(reg);
                 this.connectionRegistrations.add(reg);
             });
+
         }
         return [...this.connectionRegistrations];
     }
@@ -289,30 +351,35 @@ export class AetherCloudClient implements Destroyable {
         if (!uid) return;
         Log.info("makeFirstConnection called for uid: $uid", { uid: uid });
 
-
         this.getCloud(uid).toConsumer((cloud: Cloud) => {
             if (!cloud || !cloud.data.length) {
                 this.triggerRecovery();
                 return;
             }
-            const orderedSids: number[] = this.priorityManager.getOrderedSids(uid, cloud);
+            const orderedSids: number[] = this.priorityManager.getOrderedSids(
+                uid,
+                cloud,
+            );
             for (const sid of orderedSids) {
-                this.getServer(sid).toConsumer((descriptor: ServerDescriptor | null) => {
-                    if (!descriptor) return;
-                    const conn: ConnectionWork = this.getConnection(descriptor);
-                    if (sid === orderedSids[0]) {
-                        this.startFuture.tryDone();
-                    }
-                }).onError(() => {
-                    this.priorityManager.demote(uid, sid);
-                    if (sid === orderedSids[0]) this.makeFirstConnection();
-                });
+                this.getServer(sid)
+                    .toConsumer((descriptor: ServerDescriptor | null) => {
+                        if (!descriptor) return;
+                        const conn: ConnectionWork =
+                            this.getConnection(descriptor);
+                        if (sid === orderedSids[0]) {
+                            this.startFuture.tryDone();
+                        }
+                    })
+                    .onError(() => {
+                        this.priorityManager.demote(uid, sid);
+                        if (sid === orderedSids[0]) this.makeFirstConnection();
+                    });
             }
         });
     }
 
     public triggerRecovery(): AFuture {
-        if (this.destroyer.isDestroyed()) return;
+        if (this.destroyer.isDestroyed()) return AFuture.completed();
         if (this.isRecoveryInProgress.value) return this.recoveryFuture;
         this.isRecoveryInProgress.value = true;
         Log.info("Starting recovery process...");
@@ -325,37 +392,54 @@ export class AetherCloudClient implements Destroyable {
         const uidLocal = uid;
         if (cloud != null) {
             // Есть облако в кэше - пытаемся разрешить сервера
-            recoveryFutureLocal = AFuture.any(...regs.map(c => c.resolveCloudPublic(cloud)));
+            recoveryFutureLocal = AFuture.any(
+                ...regs.map((c) => c.resolveCloudPublic(cloud)),
+            );
         } else {
             // Нет облака - выполняем полную регистрацию заново
-            Log.info("Cloud missing from cache, performing full re-registration.");
+            Log.info(
+                "Cloud missing from cache, performing full re-registration.",
+            );
             if (!uidLocal) {
-                recoveryFutureLocal = AFuture.ofThrow(new Error("No UID, cannot register"));
+                recoveryFutureLocal = AFuture.ofThrow(
+                    new Error("No UID, cannot register"),
+                );
             } else {
                 // Сбрасываем статус регистрации, чтобы confirmRegistration могла выполниться
                 this.regStatus.value = RegStatus.BEGIN;
-                const regDone = AFuture.any(...regs.map(c => c.registration()));
-                recoveryFutureLocal = regDone.pipeTo(this.clouds.getFuture(uidLocal).toFuture());
+                const regDone = AFuture.any(
+                    ...regs.map((c) => c.registration()),
+                );
+                recoveryFutureLocal = regDone.pipeTo(
+                    this.clouds.getFuture(uidLocal).toFuture(),
+                );
             }
         }
-        recoveryFutureLocal.toRunnable(() => {
-            Log.info("Recovery successful.");
-            this.isRecoveryInProgress.value = false;
-            this.recoveryFuture.tryDone();
-        }).onError((e: Error) => {
-            Log.error("Recovery attempt failed.", e);
-            RU.schedule(this.destroyer, AetherCloudClient.RECOVERY_RETRY_DELAY_MS, () => {
+        recoveryFutureLocal
+            .toRunnable(() => {
+                Log.info("Recovery successful.");
                 this.isRecoveryInProgress.value = false;
+                this.recoveryFuture.tryDone();
+            })
+            .onError((e: Error) => {
+                Log.error("Recovery attempt failed.", e);
+                RU.schedule(
+                    this.destroyer,
+                    AetherCloudClient.RECOVERY_RETRY_DELAY_MS,
+                    () => {
+                        this.isRecoveryInProgress.value = false;
+                    },
+                );
             });
-        });
         return recoveryFutureLocal;
     }
     public getConnection(serverDescriptor: ServerDescriptor): ConnectionWork {
-        if (!serverDescriptor) throw new ClientApiException("Descriptor is null");
+        if (!serverDescriptor)
+            throw new ClientApiException("Descriptor is null");
         const sid: number = serverDescriptor.id;
         this.putServerDescriptor(serverDescriptor);
 
-        let conn = this.connections.get(sid);
+        let conn = this.connections.get(sid) as ConnectionWork;
         if (!conn) {
             conn = new ConnectionWork(this, serverDescriptor);
             conn.stateListeners.add((isWritable: boolean) => {
@@ -370,15 +454,21 @@ export class AetherCloudClient implements Destroyable {
                     }
                 }
             });
+
             this.connections.set(sid, conn);
+            this.anyConnection.tryDone(conn);
             this.destroyer.add(conn);
+
 
             for (const node of this.messageNodeMap.values()) {
                 node.connectionsOut.add(conn);
             }
-
         }
         return conn;
+    }
+
+    public getAnyConnection(): ARFuture<ConnectionWork | ConnectionRegistration> {
+        return this.anyConnection;
     }
 
 
@@ -387,24 +477,32 @@ export class AetherCloudClient implements Destroyable {
         if (r) return ARFuture.of(r.toCloud());
 
         const res = ARFuture.make<Cloud>();
-        this.clouds.getFuture(uid).to((v: ClientCloud) => {
-            if (v) res.done(v.toCloud());
-        }).onError((e: Error) => {
-            Log.error("timeout get cloud", { uid });
-            res.error(e);
-        });
+        this.clouds
+            .getFuture(uid)
+            .to((v: ClientCloud) => {
+                if (v) res.done(v.toCloud());
+            })
+            .onError((e: Error) => {
+                Log.error("timeout get cloud", { uid });
+                res.error(e);
+            });
         return res;
     }
 
     public getServer(id: number): ARFuture<ServerDescriptor> {
         const res: ARFuture<ServerDescriptor> = this.servers.getFuture(id);
-        res.timeoutMs(7000, () => Log.warn("Timeout waiting for server description", { id }), this.destroyer);
+        res.timeoutMs(
+            7000,
+            () => Log.warn("Timeout waiting for server description", { id }),
+            this.destroyer,
+        );
         return res;
     }
 
-
-
-    public getServerDescriptorForUid(uid: UUID, t: AConsumer<ServerDescriptor>): void {
+    public getServerDescriptorForUid(
+        uid: UUID,
+        t: AConsumer<ServerDescriptor>,
+    ): void {
         if (this.destroyer.isDestroyed()) return;
         if (uid.equals(this.getUid())) {
             const cloud = this.state.getCloud(uid);
@@ -421,7 +519,6 @@ export class AetherCloudClient implements Destroyable {
         });
     }
 
-
     public getClientGroups(uid: UUID): ARFuture<Set<bigint>> {
         return this.clientGroups.getFuture(uid);
     }
@@ -437,39 +534,53 @@ export class AetherCloudClient implements Destroyable {
         return this.createAccessGroupWithOwner(this.getUid()!, ...uids);
     }
 
-
     public getGroup(groupId: bigint): ARFuture<AccessGroup> {
-        return this.accessGroups.getFuture(groupId);
+        return this.accessGroups.getFuture(groupId) as ARFuture<AccessGroup>;
     }
 
-    public getClientState(): ClientState { return this.state; }
+    public getClientState(): ClientState {
+        return this.state;
+    }
 
-    public getName(): string | null { return this.name; }
+    public getName(): string | null {
+        return this.name;
+    }
 
-    public setName(name: string): void { this.name = name; }
+    public setName(name: string): void {
+        this.name = name;
+    }
 
     public getAuthApiFuture(): ARFuture<AuthorizedApiRemote> {
         const f = ARFuture.make<AuthorizedApiRemote>();
         this.getAuthApi((api) => f.done(api));
         return f;
     }
-    public getAuthApi1<T>(t: (api: AuthorizedApiRemote) => ARFuture<T>): ARFuture<T> {
-        if (this.destroyer.isDestroyed()) return ARFuture.ofThrow(new Error("Client is destroyed"));
+    public getAuthApi1<T>(
+        t: (api: AuthorizedApiRemote) => ARFuture<T>,
+    ): ARFuture<T> {
+        if (this.destroyer.isDestroyed())
+            return ARFuture.ofThrow(new Error("Client is destroyed"));
         const res = ARFuture.make<T>();
         this.getAuthApiFuture().mapRFuture(t).to(res);
         return res;
     }
 
-
     public getConnections(): ConnectionWork[] {
         return Array.from(this.connections.values());
     }
 
-    public isRegistered(): boolean { return this.state.getUid() != null; }
+    public isRegistered(): boolean {
+        return this.state.getUid() != null;
+    }
 
-    public isConnected(): boolean { return this.getUid() != null; }
+    public isConnected(): boolean {
+        return this.getUid() != null;
+    }
 
-    public openStreamToClientDetails(uid: UUID, strategy: MessageEventListener): MessageNode {
+    public openStreamToClientDetails(
+        uid: UUID,
+        strategy: MessageEventListener,
+    ): MessageNode {
         return this.getMessageNode(uid, strategy);
     }
 
@@ -479,26 +590,95 @@ export class AetherCloudClient implements Destroyable {
 
     // onMessage is a public field (EventBiConsumer), not a method in TS
 
-
     public onClientStream(consumer: AConsumer<MessageNode>): void {
         this.onClientStreamCreated.add(consumer);
     }
 
-    public onMessageMethod(consumer: (uid: UUID, data: Uint8Array) => void): void {
-        this.onClientStream(m => {
-            m.bufferIn.add(d => {
+    public onMessageMethod(
+        consumer: (uid: UUID, data: Uint8Array) => void,
+    ): void {
+        this.onClientStream((m) => {
+            m.bufferIn.add((d) => {
                 consumer(m.getConsumerUUID(), d.data);
             });
         });
     }
 
-
-
-
     public putServerDescriptor(s: ServerDescriptor): void {
         this.servers.put(s.id, s);
         this.state.getServerInfo(s.id).setDescriptor(s);
+
     }
+
+    public getMyIp(): ARFuture<IpInfo> {
+        const result = ARFuture.make<IpInfo>();
+        this.getMyIp0(result);
+        return result;
+    }
+
+    private getMyIp0(result: ARFuture<IpInfo>): void {
+        const timeout = ARFuture.make<IpInfo>();
+        timeout.timeoutMs(2000, () => {
+            if (!result.isDone()) {
+                this.retryGetMyIp(result);
+            }
+        }, this.destroyer);
+        for (const conn of this.connections.values()) {
+            if (conn.isWritable()) {
+                conn.getRootApi()!.getMyIp().to((r: IpInfo) => {
+                    if (result.tryDone(r)) timeout.cancel();
+                }).onError(() => {
+                    if (!result.isDone()) this.retryGetMyIp(result);
+                });
+                return;
+            }
+        }
+        this.getAnyConnection().to((c: ConnectionWork | ConnectionRegistration) => {
+            if (c instanceof ConnectionWork && c.isWritable()) {
+                c.getRootApi()!.getMyIp().to((r: IpInfo) => {
+                    if (result.tryDone(r)) timeout.cancel();
+                }).onError(() => {
+                    if (!result.isDone()) this.retryGetMyIp(result);
+                });
+            } else if (c instanceof ConnectionRegistration && c.isWritable()) {
+                c.getRootApi()!.getMyIp().to((r: IpInfo) => {
+                    if (result.tryDone(r)) timeout.cancel();
+                }).onError(() => {
+                    if (!result.isDone()) this.retryGetMyIp(result);
+                });
+            } else {
+                if (!result.isDone()) this.retryGetMyIp(result);
+            }
+        }).onError(() => {
+            if (!result.isDone()) this.retryGetMyIp(result);
+        });
+    }
+
+    private retryGetMyIp(result: ARFuture<IpInfo>): void {
+        if (this.destroyer.isDestroyed()) return;
+        RU.schedule(this.destroyer, 500, () => {
+            if (!result.isDone()) {
+                this.getMyIp0(result);
+            }
+        });
+    }
+
+    public reportAppliedConfig(configs: AppliedConfig[]): void {
+        for (const ac of configs) {
+            const cc = this.clouds.getNow(ac.getSubjectUid());
+            if (cc && ac.getConfigVersion() > cc.getConfirmedConfigVersion()) {
+                cc.updateConfirmedConfigVersion(ac.getConfigVersion());
+            }
+            this.appliedConfigsRequests.put(ac, true);
+        }
+    }
+
+    public requestCloudConfig(subjectUid: UUID): void {
+        const cc = this.clouds.getNow(subjectUid);
+        const version = cc ? cc.getConfigVersion() - 1n : -1n;
+        this.appliedConfigsRequests.getFuture(new AppliedConfig(subjectUid, version));
+    }
+
 
 
     /**
@@ -506,8 +686,14 @@ export class AetherCloudClient implements Destroyable {
      * @param uid The client UUID.
      * @param cloud The cloud configuration.
      */
+
     public setCloud(uid: UUID, cloud: Cloud): void {
-        this.clouds.put(uid, new ClientCloud(uid, cloud));
+        const cc = this.clouds.getNow(uid);
+        if (cc) {
+            cc.applyCloudConfig(new CloudConfig(uid, 0n, cloud), this.appliedConfigsRequests);
+        } else {
+            this.clouds.put(uid, new ClientCloud(uid, cloud));
+        }
     }
 
 
@@ -519,53 +705,67 @@ export class AetherCloudClient implements Destroyable {
         return this.state.getAlias();
     }
 
-
-    public getUid(): UUID | null { return this.state.getUid(); }
+    public getUid(): UUID | null {
+        return this.state.getUid();
+    }
 
     public getMasterKey(): AKey.Symmetric {
         const res2 = this.state.getMasterKey();
         if (res2) return CryptoUtils.of(res2).asSymmetric();
-        const res = CryptoProviderFactory.getProvider(this.getCryptoLib().toString()).createSymmetricKey();
+        const res = CryptoProviderFactory.getProvider(
+            this.getCryptoLib().toString(),
+        ).createSymmetricKey();
         this.state.setMasterKey(CryptoUtils.of(res));
         return res;
     }
 
     public getCryptoEngineForServer(serverId: number): CryptoEngine {
         const k: AKey.Symmetric = this.getMasterKey();
-        const kk: PairSymKeys = k.getCryptoProvider().createKeyForServer(k, serverId);
-        return CryptoEngine.of(kk.clientKey.toCryptoEngine(), kk.serverKey.toCryptoEngine());
+        const kk: PairSymKeys = k
+            .getCryptoProvider()
+            .createKeyForServer(k, serverId);
+        return CryptoEngine.of(
+            kk.clientKey.toCryptoEngine(),
+            kk.serverKey.toCryptoEngine(),
+        );
     }
 
-    public getPingTime(): number { return this.state.getPingDuration().getNow() ?? 1000; }
+    public getPingTime(): number {
+        return this.state.getPingDuration().getNow() ?? 1000;
+    }
 
-
-    public getMessageNode(uid: UUID, strategy: MessageEventListener = MessageEventListenerDefault): MessageNode {
+    public getMessageNode(
+        uid: UUID,
+        strategy: MessageEventListener = MessageEventListenerDefault,
+    ): MessageNode {
         const key: string = uid.toString();
         Log.info("getMessageNode called for uid: $uid", { uid: uid });
         let node = this.messageNodeMap.get(key);
         if (!node) {
-            Log.info("getMessageNode: creating new node for uid: $uid", { uid: uid });
+            Log.info("getMessageNode: creating new node for uid: $uid", {
+                uid: uid,
+            });
             node = new MessageNode(this, uid, strategy);
             this.messageNodeMap.set(key, node);
             this.onClientStreamCreated.fire(node);
             this.flush();
-
         } else {
-            Log.info("getMessageNode: returning existing node for uid: $uid", { uid: uid });
+            Log.info("getMessageNode: returning existing node for uid: $uid", {
+                uid: uid,
+            });
         }
         return node;
     }
-
-
 
     /**
      * @deprecated Use getMessageNode instead
      */
     public getClientApi(uid: UUID, callback: AConsumer<ServerApiByUid>): void {
         // TODO: rewrite after Connection/ConnectionWork refactoring
-        throw new Error("getClientApi is deprecated, use getMessageNode instead");
+        throw new Error(
+            "getClientApi is deprecated, use getMessageNode instead",
+        );
     }
-
 
     public getAuthApi(t: AConsumer<AuthorizedApiRemote>): void {
         if (!this.destroyer.isDestroyed()) {
@@ -585,15 +785,24 @@ export class AetherCloudClient implements Destroyable {
         this.accessGroups.checkTimeouts();
         this.allAccessedClients.checkTimeouts();
         this.accessCheckCache.checkTimeouts();
-        this.connections.forEach((c: ConnectionWork) => c.flushBackgroundRequests());
+        this.connections.forEach((c: ConnectionWork) =>
+            c.flushBackgroundRequests(),
+        );
     }
 
     private startScheduledTask(): void {
-        RU.scheduleAtFixedRate(this.destroyer, 3, "MILLISECONDS", () => this.flush());
+        RU.scheduleAtFixedRate(this.destroyer, 3, "MILLISECONDS", () =>
+            this.flush(),
+        );
     }
 
-    public createAccessGroupWithOwner(owner: UUID, ...uids: UUID[]): ARFuture<AccessGroupI> {
-        return this.getAuthApi1(c => c.createAccessGroup(owner, uids)).map(id => new AccessGroupImpl(new AccessGroup(owner, id, uids)));
+    public createAccessGroupWithOwner(
+        owner: UUID,
+        ...uids: UUID[]
+    ): ARFuture<AccessGroupI> {
+        return this.getAuthApi1((c) => c.createAccessGroup(owner, uids)).map(
+            (id) => new AccessGroupImpl(new AccessGroup(owner, id, uids)),
+        );
     }
 
     public forceUpdateStateFromCache(): AFuture {
@@ -601,17 +810,26 @@ export class AetherCloudClient implements Destroyable {
         const uid: UUID | null = this.getUid();
         if (!uid) return AFuture.ofThrow(new Error("Not registered"));
 
-        this.getCloud(uid).to((cloud: Cloud) => {
-            this.state.setCloud(uid, new ClientCloud(uid, cloud));
-            const futures: ARFuture<ServerDescriptor>[] = cloud.data.map((sid: number) => this.getServer(sid));
-            ARFuture.all(futures).to(() => {
-                cloud.data.forEach((sid: number) => {
-                    const d: ServerDescriptor | null = this.servers.getFuture(sid).getNow();
-                    if (d) this.state.getServerInfo(sid).setDescriptor(d);
-                });
-                res.done();
-            }).onError((e: Error) => res.error(e));
-        }).onError((e: Error) => res.error(e));
+        this.getCloud(uid)
+            .to((cloud: Cloud) => {
+                this.state.setCloud(uid, new ClientCloud(uid, cloud));
+                const futures: ARFuture<ServerDescriptor>[] = cloud.data.map(
+                    (sid: number) => this.getServer(sid),
+                );
+                ARFuture.all(futures)
+                    .to(() => {
+                        cloud.data.forEach((sid: number) => {
+                            const d: ServerDescriptor | null = this.servers
+                                .getFuture(sid)
+                                .getNow();
+                            if (d)
+                                this.state.getServerInfo(sid).setDescriptor(d);
+                        });
+                        res.done();
+                    })
+                    .onError((e: Error) => res.error(e));
+            })
+            .onError((e: Error) => res.error(e));
         return res;
     }
 
@@ -622,27 +840,37 @@ export class AetherCloudClient implements Destroyable {
         }
         this.regStatus.value = RegStatus.CONFIRM;
 
-        this.clouds.put(regResp.getUid(), new ClientCloud(regResp.getUid(), regResp.getCloud()!));
-        this.state.setCloud(regResp.getUid(), new ClientCloud(regResp.getUid(), regResp.getCloud()!));
+        this.clouds.put(
+            regResp.getUid(),
+            new ClientCloud(regResp.getUid(), regResp.getCloud()!),
+        );
+        this.state.setCloud(
+            regResp.getUid(),
+            new ClientCloud(regResp.getUid(), regResp.getCloud()!),
+        );
 
         this.state.setUid(regResp.getUid());
         this.state.setAlias(regResp.getAlias());
 
         const cloud: Cloud | null = regResp.getCloud();
         if (cloud && cloud.data.length > 0) {
-            cloud.data.forEach((sid: number) => this.getServer(sid).to((d: ServerDescriptor | null) => {
-                if (d) this.getConnection(d);
-            }));
-        };
+            cloud.data.forEach((sid: number) =>
+                this.getServer(sid).to((d: ServerDescriptor | null) => {
+                    if (d) this.getConnection(d);
+                }),
+            );
+        }
         this.flush();
-
 
         this.onMessage.fire(regResp.getUid(), new Uint8Array());
         this.startFuture.tryDone();
     }
 
     public verifySign(signedKey: SignedKey): boolean {
-        return CryptoUtils.verifySignInternal(signedKey, this.state.getRootSigners());
+        return CryptoUtils.verifySignInternal(
+            signedKey,
+            this.state.getRootSigners(),
+        );
     }
 
     public sendMessage(uid: UUID, data: Uint8Array): AFuture {
@@ -656,21 +884,133 @@ export class AetherCloudClient implements Destroyable {
     public static of(state: ClientState): AetherCloudClient {
         return new AetherCloudClient(state);
     }
+    private static readonly DEFAULT_REG_URI =
+        "tcp://registration.aethernet.io:9010";
+
+    public static asClient<LT, RT extends RemoteApi>(
+        parentUid: UUID,
+        name: string,
+        localMeta: FastMetaApi<LT, any>,
+        remoteMeta: FastMetaApi<any, RT>,
+        localApiFactory: (remoteApi: RT) => LT,
+    ): AetherCloudClient {
+        return AetherCloudClient.asClient2(
+            parentUid,
+            AetherCloudClient.DEFAULT_REG_URI,
+            name,
+            localMeta,
+            remoteMeta,
+            localApiFactory,
+        );
+    }
+
+    public static asClient2<LT, RT extends RemoteApi>(
+        parentUid: UUID,
+        regUri: string,
+        name: string,
+        localMeta: FastMetaApi<LT, any>,
+        remoteMeta: FastMetaApi<any, RT>,
+        localApiFactory: (remoteApi: RT) => LT,
+    ): AetherCloudClient {
+        const state = new ClientStateInLocalStorage(
+            parentUid,
+            [regUri],
+            undefined,
+            undefined,
+            "state-" + name,
+        );
+        const client = new AetherCloudClient(state, name);
+        client.startFuture.toRunnable(() => {
+            const node = client.getMessageNode(parentUid);
+            node.toApiR(localMeta, (ctx) => {
+                const remoteApi = ctx.makeRemote(remoteMeta);
+                return localApiFactory(remoteApi);
+            });
+        });
+        return client;
+    }
+
+    public static asClient3<LT, RT extends RemoteApi>(
+        state: ClientState,
+        name: string,
+        localMeta: FastMetaApi<LT, any>,
+        remoteMeta: FastMetaApi<any, RT>,
+        localApiFactory: (remoteApi: RT) => LT,
+    ): AetherCloudClient {
+        const client = new AetherCloudClient(state, name);
+        client.startFuture.toRunnable(() => {
+            const node = client.getMessageNode(state.getParentUid());
+            node.toApiR(localMeta, (ctx) => {
+                const remoteApi = ctx.makeRemote(remoteMeta);
+                return localApiFactory(remoteApi);
+            });
+        });
+        return client;
+    }
+
+    public static asServer<LT>(
+        parentUid: UUID,
+        name: string,
+        serviceMeta: FastMetaApi<LT, any>,
+        localApiFactory: (ctx: MetaContext) => LT,
+    ): AetherCloudClient {
+        return AetherCloudClient.asServer2(
+            parentUid,
+            AetherCloudClient.DEFAULT_REG_URI,
+            name,
+            serviceMeta,
+            localApiFactory,
+        );
+    }
+
+    public static asServer2<LT>(
+        parentUid: UUID,
+        regUri: string,
+        name: string,
+        serviceMeta: FastMetaApi<LT, any>,
+        localApiFactory: (ctx: MetaContext) => LT,
+    ): AetherCloudClient {
+        const state = new ClientStateInLocalStorage(
+            parentUid,
+            [regUri],
+            undefined,
+            undefined,
+            "state-" + name,
+        );
+        const client = new AetherCloudClient(state, name);
+        client.onClientStream((node: MessageNode) => {
+            node.toApiR(serviceMeta, localApiFactory);
+        });
+        return client;
+    }
+
+    public static asServer3<LT>(
+        state: ClientState,
+        name: string,
+        serviceMeta: FastMetaApi<LT, any>,
+        localApiFactory: (ctx: MetaContext) => LT,
+    ): AetherCloudClient {
+        const client = new AetherCloudClient(state, name);
+        client.onClientStream((node: MessageNode) => {
+            node.toApiR(serviceMeta, localApiFactory);
+        });
+        return client;
+    }
 
     public destroy(force: boolean): AFuture {
         return this.destroyer.destroy(force);
     }
 }
-export * from './aether_client_state';
-export * from './aether_client_message';
-export * from './aether_fastmeta';
-export * from './aether_astring';
-export * from './aether_types';
-export * from './aether_future';
-export * from './aether_utils';
-export * from './aether_logging';
-export * from './aether_rcollection';
-export * as aetherApi from './aether_api';
-export * from './aether_crypto';
-export * from './aether_crypto_sodium';
-export * from './aether_client_state_localstorage';
+export * from "./aether_client_state";
+export * from "./aether_client_message";
+export * from "./aether_fastmeta";
+export * from "./aether_astring";
+export * from "./aether_types";
+export * from "./aether_future";
+export * from "./aether_utils";
+export * from "./aether_logging";
+export * from "./aether_rcollection";
+export * as aetherApi from "./aether_api";
+export * from "./aether_crypto";
+export * from "./aether_crypto_sodium";
+export * from "./aether_client_state_localstorage";

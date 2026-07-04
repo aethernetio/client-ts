@@ -8,14 +8,18 @@ import {
     ClientApiException
 } from './aether_types';
 
+
 import {
     FastMetaApi,
     RemoteApi,
     MetaContext,
+    MetaContextBase,
+    AutoFlushContext,
     MetaContextLocal,
     SerializerPackNumber,
     DeserializerPackNumber,
 } from './aether_fastmeta';
+
 
 import { Log, LNode } from './aether_logging';
 import { DataInOut } from './aether_datainout';
@@ -652,9 +656,10 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
         }
 
         try {
-            this.context = new MetaContextLocal<LT>((ctx) => {
-                return this.localApiFactory!(ctx);
-            });
+
+            this.context = new AutoFlushContext() as unknown as MetaContextLocal<LT>;
+            (this.context as MetaContextBase).localApi = this.localApiFactory!(this.context);
+
             this.context.onFlushData((dataArray) => {
                 if (this.websocket && this.isConnected()) {
                     const frameBuffer = new DataInOut();
@@ -1095,6 +1100,7 @@ class FastMetaClientAdapter<LT> implements MetaContext {
     onFlushData(c: (data: Uint8Array) => void): void { this.context?.onFlushData(c); }
     findContext(factory: (ctx: MetaContext) => any, ...keys: any[]): MetaContext { return this.context!.findContext(factory, ...keys); }
     getLocalApi(): any { return this.context!.getLocalApi(); }
+    getProperty(_key: number): any { return this.context?.getProperty(_key) ?? null; }
     onWritable(listener: (writable: boolean) => void): void { this.context?.onWritable(listener); }
     fireWritable(writable: boolean): void { this.context?.fireWritable(writable); }
     invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void { this.context?.invokeLocalMethodBefore(methodName, argsNames, argsValues); }

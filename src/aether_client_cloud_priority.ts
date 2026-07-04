@@ -1,15 +1,41 @@
+
 import { UUID } from './aether_types';
-import { Cloud } from './aether_api';
+import { AppliedConfig, Cloud, CloudConfig } from './aether_api';
+import { BMap } from './aether_rcollection';
 import { ToString, AString } from './aether_astring';
 
+
 export class ClientCloud implements ToString {
+
     private readonly uid: UUID;
     private sids: number[];
     private weights: Map<number, number> = new Map();
+    private configVersion: bigint = 0n;
+    private confirmedConfigVersion: bigint = 0n;
 
     public get data(): number[] {
         return this.sids;
     }
+
+    public getUid(): UUID { return this.uid; }
+    public getConfigVersion(): bigint { return this.configVersion; }
+    public getConfirmedConfigVersion(): bigint { return this.confirmedConfigVersion; }
+
+    public applyCloudConfig(config: CloudConfig, requestsBMap: BMap<AppliedConfig, boolean>): void {
+        if (config.getConfigVersion() > this.configVersion) {
+            this.smartMerge(config.getCloud());
+            this.configVersion = config.getConfigVersion();
+            requestsBMap.getFuture(new AppliedConfig(this.uid, this.configVersion));
+        }
+    }
+
+    public updateConfirmedConfigVersion(version: bigint): void {
+        if (version > this.confirmedConfigVersion) {
+            this.confirmedConfigVersion = version;
+        }
+    }
+
+
 
 
     constructor(uid: UUID, cloud: Cloud) {

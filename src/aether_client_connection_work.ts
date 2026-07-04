@@ -1,14 +1,17 @@
 import { ConnectionBase, getUriFromServerDescriptor } from './aether_client_connection_base';
 import { AetherCloudClient } from './aether_client';
+
 import {
     AccessGroup,
     AccessCheckResult,
     AetherCodec,
+    AppliedConfig,
     AuthorizedApi,
     AuthorizedApiRemote,
     ClientApiSafe,
     ClientApiUnsafe,
     Cloud,
+    CloudConfig,
     LoginApi,
     LoginApiRemote,
     LoginClientStream,
@@ -18,6 +21,8 @@ import {
     UUIDAndCloud,
     AccessCheckPair,
 } from './aether_api';
+
+
 import { AtomicLong, AtomicReference,  ClientStartException, UUID } from './aether_types';
 import { AFuture } from './aether_future';
 import { Log } from './aether_logging';
@@ -25,6 +30,7 @@ import { MetaContextBase, RemoteApiFuture } from './aether_fastmeta';
 import { CryptoEngine } from './aether_crypto';
 import { RU } from './aether_utils';
 import { MessageNode } from './aether_client_message';
+import { ClientCloud } from './aether_client_cloud_priority';
 import { MessageBatcher } from './MessageBatcher';
 
 /**
@@ -341,6 +347,19 @@ class MyClientApiSafe implements ClientApiSafe {
         Log.warn("MyClientApiSafe.requestTelemetry not implemented");
         return AFuture.of();
     }
+
+    sendCloudConfigs(configs: CloudConfig[]): AFuture {
+        for (const cc of configs) {
+            const clientCloud = this.client.clouds.getNow(cc.getSubjectUid());
+            if (clientCloud) {
+                clientCloud.applyCloudConfig(cc, this.client.appliedConfigsRequests);
+            } else {
+                this.client.clouds.put(cc.getSubjectUid(), new ClientCloud(cc.getSubjectUid(), cc.getCloud()));
+            }
+        }
+        return AFuture.of();
+    }
+
 }
 
 
@@ -425,8 +444,31 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
         });
     }
 
+
     public flushBackgroundRequests(): void {
         const a = this.authorizedApi;
+
+        for (const uid of this.client.clouds.pollAllRequests()) {
+            const cc = this.client.clouds.getNow(uid);
+            const version = cc ? cc.getConfigVersion() - 1n : -1n;
+            this.client.appliedConfigsRequests.getFuture(new AppliedConfig(uid, version));
+        }
+
+        for (const cc of this.client.clouds.values()) {
+            if (cc.getConfigVersion() > cc.getConfirmedConfigVersion()) {
+                this.client.appliedConfigsRequests.getFuture(new AppliedConfig(cc.getUid(), cc.getConfigVersion()));
+            }
+        }
+
+        const pendingList: AppliedConfig[] = [];
+        let req: AppliedConfig | null;
+        while ((req = this.client.appliedConfigsRequests.pollNextRequest()) != null) {
+            pendingList.push(req);
+        }
+        if (pendingList.length > 0) {
+            a.reportAppliedConfig(pendingList);
+        }
+
         const requestCloud = this.client.clouds.pollAllRequests();
         if (requestCloud.length > 0) a.resolveClouds(requestCloud as UUID[]);
 
@@ -525,7 +567,7 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
 
         if (!this.firstAuth) {
             this.firstAuth = true;
-            a.ping(0n).to(() => {
+            a.ping(0n, 0n).to(() => {
                 Log.debug("First ping response received. Marking connection ready.");
             }).onError((e: Error) => {
                 Log.warn("First ping failed, will retry.", e);
@@ -533,6 +575,7 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
             });
         }
     }
+
 
     sendSafeApiDataMulti(_backId: number, _data: LoginClientStream): AFuture {
         const err = new Error("UnsupportedOperationException: sendSafeApiDataMulti is not supported in TS client");

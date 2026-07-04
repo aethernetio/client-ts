@@ -282,4 +282,9 @@ export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
         // To be overridden by subclasses
     }
 
+    public isWritable(): boolean {
+        return false;
+    }
+
+
 }
