@@ -39,7 +39,10 @@ import {
     ServerApiByUid,
     AccessCheckPair,
     CryptoLib,
+
     IpInfo,
+    WebRtcSession,
+
 } from "./aether_api";
 
 import { BMap, RCol } from "./aether_rcollection";
@@ -906,6 +909,18 @@ export class AetherCloudClient implements Destroyable {
     public sendMessage(uid: UUID, data: Uint8Array): AFuture {
         return this.getMessageNode(uid, MessageEventListenerDefault).send(data);
     }
+
+    public requestWebRtcSession(uid: UUID): ARFuture<WebRtcSession> {
+        const res = ARFuture.of<WebRtcSession>();
+        this.getServerDescriptorForUid(uid, (sd: ServerDescriptor) => {
+            const cw = this.connections.get(sd.id);
+            if (cw) {
+                cw.authorizedApi.requestWebRtcSession(uid).to((s: WebRtcSession) => res.done(s)).onError((e: Error) => res.error(e));
+            }
+        });
+        return res;
+    }
+
 
     public getNextPing(): number {
         return 0;
