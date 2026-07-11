@@ -53,11 +53,15 @@ export class ConnectionRegistration extends ConnectionBase<ClientApiRegUnsafe, R
         });
     }
 
+
+
     public registration(): AFuture {
         Log.debug("RegConn: Starting async registration process.", { uri: this.uri });
         this.getAsymmetricPublicKey().to((ce: CryptoEngine) => this.regProcess(ce));
         return this.connectFuture;
     }
+
+
 
     private regProcess(asymCE: CryptoEngine): void {
         this.safeApi = this.getRootApi()!.openEnter(this.client.getCryptoLib(), 

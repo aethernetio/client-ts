@@ -402,27 +402,21 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
      * @param {ServerDescriptor} s Server descriptor
      */
     constructor(client: AetherCloudClient, s: ServerDescriptor) {
+
         const isBrowser = typeof window !== 'undefined' || typeof self !== 'undefined';
-        const loc = typeof window !== 'undefined' ? window.location : (typeof self !== 'undefined' ? self.location : null);
-        const isHttps = isBrowser && loc && loc.protocol === 'https:';
 
         let uri: string | null = null;
 
-        if (isHttps) {
-            uri = getUriFromServerDescriptor(s, AetherCodec.WSS);
-            if (!uri) {
-                Log.warn("ConnectionWork: HTTPS environment requires WSS with a Domain Name. Server only provided IPs or non-WSS endpoints.", { serverId: s.id });
-            }
-        } else {
+        uri = getUriFromServerDescriptor(s, AetherCodec.WSS);
+        if (!uri) {
             uri = getUriFromServerDescriptor(s, AetherCodec.WS);
-            if (!uri) {
-                uri = getUriFromServerDescriptor(s, AetherCodec.WSS);
-            }
         }
 
         if (!uri) {
-            throw new ClientStartException(`Could not determine a valid WebSocket URI for ServerDescriptor ID ${s.id}. IsHttps: ${isHttps}`);
+            throw new ClientStartException(`Could not determine a valid WebSocket URI for ServerDescriptor ID ${s.id}.`);
         }
+
+
 
         Log.trace("try connect to work server: " + uri, { uri: uri });
         super(client, uri, ClientApiUnsafe.META, LoginApi.META);

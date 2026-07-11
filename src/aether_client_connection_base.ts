@@ -205,13 +205,15 @@ export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
         client.destroyer.add(this);
         const localApi = this as unknown as LT;
 
+
         const factory = FastMetaNet.INSTANCE.get();
-        this.metaContext = factory.makeClient(uri, localApiMeta, (ctx: MetaContext) => {
-            this.rootApi = ctx.makeRemote(remoteApiMeta);
+        this.rootApi = factory.makeClientWithRemote(uri, localApiMeta, remoteApiMeta, (ctx: MetaContext) => {
             this.connectFuture.tryDone();
             this.stateListeners.fire(true);
             return localApi;
         });
+        this.metaContext = (this.rootApi as any).getFastMetaContext();
+
         client.destroyer.add({
             destroy: (_force: boolean) => {
                 this.metaContext?.close();

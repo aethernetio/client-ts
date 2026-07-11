@@ -54,6 +54,12 @@ import {
 } from "./aether_client_message";
 import { CryptoUtils } from "./aether_crypto_utils";
 import { FastMetaApi, MetaContext, RemoteApi } from "./aether_fastmeta";
+import { time, info, error, clear, warn } from "console";
+import { get } from "http";
+import { connect } from "http2";
+import { add } from "libsodium-wrappers";
+import { send } from "process";
+import { aetherApi } from "./aether_client";
 
 export enum RegStatus {
     NO,
@@ -122,8 +128,14 @@ export class AetherCloudClient implements Destroyable {
         Map<string, ARFuture<boolean>>
     >();
 
-    public readonly appliedConfigsRequests = new BMap<AppliedConfig, boolean>("AppliedConfigsRequests", 5000, 10000);
-    private readonly anyConnection = ARFuture.make<ConnectionWork | ConnectionRegistration>();
+    public readonly appliedConfigsRequests = new BMap<AppliedConfig, boolean>(
+        "AppliedConfigsRequests",
+        5000,
+        10000,
+    );
+    private readonly anyConnection = ARFuture.make<
+        ConnectionWork | ConnectionRegistration
+    >();
 
     public readonly authTasks = new Queue<AConsumer<AuthorizedApiRemote>>();
 
@@ -339,7 +351,6 @@ export class AetherCloudClient implements Destroyable {
                 this.anyConnection.tryDone(reg);
                 this.connectionRegistrations.add(reg);
             });
-
         }
         return [...this.connectionRegistrations];
     }
@@ -459,7 +470,6 @@ export class AetherCloudClient implements Destroyable {
             this.anyConnection.tryDone(conn);
             this.destroyer.add(conn);
 
-
             for (const node of this.messageNodeMap.values()) {
                 node.connectionsOut.add(conn);
             }
@@ -467,10 +477,11 @@ export class AetherCloudClient implements Destroyable {
         return conn;
     }
 
-    public getAnyConnection(): ARFuture<ConnectionWork | ConnectionRegistration> {
+    public getAnyConnection(): ARFuture<
+        ConnectionWork | ConnectionRegistration
+    > {
         return this.anyConnection;
     }
-
 
     public getCloud(uid: UUID): ARFuture<Cloud> {
         const r = this.state.getCloud(uid);
@@ -607,7 +618,6 @@ export class AetherCloudClient implements Destroyable {
     public putServerDescriptor(s: ServerDescriptor): void {
         this.servers.put(s.id, s);
         this.state.getServerInfo(s.id).setDescriptor(s);
-
     }
 
     public getMyIp(): ARFuture<IpInfo> {
@@ -618,40 +628,58 @@ export class AetherCloudClient implements Destroyable {
 
     private getMyIp0(result: ARFuture<IpInfo>): void {
         const timeout = ARFuture.make<IpInfo>();
-        timeout.timeoutMs(2000, () => {
-            if (!result.isDone()) {
-                this.retryGetMyIp(result);
-            }
-        }, this.destroyer);
+        timeout.timeoutMs(
+            2000,
+            () => {
+                if (!result.isDone()) {
+                    this.retryGetMyIp(result);
+                }
+            },
+            this.destroyer,
+        );
         for (const conn of this.connections.values()) {
             if (conn.isWritable()) {
-                conn.getRootApi()!.getMyIp().to((r: IpInfo) => {
-                    if (result.tryDone(r)) timeout.cancel();
-                }).onError(() => {
-                    if (!result.isDone()) this.retryGetMyIp(result);
-                });
+                conn.getRootApi()!
+                    .getMyIp()
+                    .to((r: IpInfo) => {
+                        if (result.tryDone(r)) timeout.cancel();
+                    })
+                    .onError(() => {
+                        if (!result.isDone()) this.retryGetMyIp(result);
+                    });
                 return;
             }
         }
-        this.getAnyConnection().to((c: ConnectionWork | ConnectionRegistration) => {
-            if (c instanceof ConnectionWork && c.isWritable()) {
-                c.getRootApi()!.getMyIp().to((r: IpInfo) => {
-                    if (result.tryDone(r)) timeout.cancel();
-                }).onError(() => {
+        this.getAnyConnection()
+            .to((c: ConnectionWork | ConnectionRegistration) => {
+                if (c instanceof ConnectionWork && c.isWritable()) {
+                    c.getRootApi()!
+                        .getMyIp()
+                        .to((r: IpInfo) => {
+                            if (result.tryDone(r)) timeout.cancel();
+                        })
+                        .onError(() => {
+                            if (!result.isDone()) this.retryGetMyIp(result);
+                        });
+                } else if (
+                    c instanceof ConnectionRegistration &&
+                    c.isWritable()
+                ) {
+                    c.getRootApi()!
+                        .getMyIp()
+                        .to((r: IpInfo) => {
+                            if (result.tryDone(r)) timeout.cancel();
+                        })
+                        .onError(() => {
+                            if (!result.isDone()) this.retryGetMyIp(result);
+                        });
+                } else {
                     if (!result.isDone()) this.retryGetMyIp(result);
-                });
-            } else if (c instanceof ConnectionRegistration && c.isWritable()) {
-                c.getRootApi()!.getMyIp().to((r: IpInfo) => {
-                    if (result.tryDone(r)) timeout.cancel();
-                }).onError(() => {
-                    if (!result.isDone()) this.retryGetMyIp(result);
-                });
-            } else {
+                }
+            })
+            .onError(() => {
                 if (!result.isDone()) this.retryGetMyIp(result);
-            }
-        }).onError(() => {
-            if (!result.isDone()) this.retryGetMyIp(result);
-        });
+            });
     }
 
     private retryGetMyIp(result: ARFuture<IpInfo>): void {
@@ -676,10 +704,10 @@ export class AetherCloudClient implements Destroyable {
     public requestCloudConfig(subjectUid: UUID): void {
         const cc = this.clouds.getNow(subjectUid);
         const version = cc ? cc.getConfigVersion() - 1n : -1n;
-        this.appliedConfigsRequests.getFuture(new AppliedConfig(subjectUid, version));
+        this.appliedConfigsRequests.getFuture(
+            new AppliedConfig(subjectUid, version),
+        );
     }
-
-
 
     /**
      * Updates the cloud configuration for a specific UID.
@@ -690,12 +718,14 @@ export class AetherCloudClient implements Destroyable {
     public setCloud(uid: UUID, cloud: Cloud): void {
         const cc = this.clouds.getNow(uid);
         if (cc) {
-            cc.applyCloudConfig(new CloudConfig(uid, 0n, cloud), this.appliedConfigsRequests);
+            cc.applyCloudConfig(
+                new CloudConfig(uid, 0n, cloud),
+                this.appliedConfigsRequests,
+            );
         } else {
             this.clouds.put(uid, new ClientCloud(uid, cloud));
         }
     }
-
 
     /**
      * Retrieves the current client alias from state.
@@ -885,7 +915,7 @@ export class AetherCloudClient implements Destroyable {
         return new AetherCloudClient(state);
     }
     private static readonly DEFAULT_REG_URI =
-        "tcp://registration.aethernet.io:9010";
+        "wss://dbservice.aethernet.io:9013";
 
     public static asClient<LT, RT extends RemoteApi>(
         parentUid: UUID,

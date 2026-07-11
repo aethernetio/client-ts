@@ -24,6 +24,7 @@ import {
 import { Log, LNode } from './aether_logging';
 import { DataInOut } from './aether_datainout';
 import { Destroyer } from './aether_utils';
+import { FastMetaClientWebRTC } from './aether_fastmeta_webrtc';
 
 /**
  * @interface IUniversalWebSocket
@@ -204,6 +205,8 @@ class WebSocketFactory {
  * @interface FastMetaNet
  * @description Network abstraction for FastMeta protocol
  */
+
+
 export interface FastMetaNet {
     makeClient<LT>(
         uri: URI,
@@ -211,12 +214,21 @@ export interface FastMetaNet {
         localApiFactory: (ctx: MetaContext) => LT
     ): MetaContext;
 
+    makeClientWithRemote<LT, RT extends RemoteApi>(
+        uri: URI,
+        localApiMeta: FastMetaApi<LT, any>,
+        remoteApiMeta: FastMetaApi<any, RT>,
+        localApiFactory: (ctx: MetaContext) => LT
+    ): RT;
+
     makeServer<LT>(
         uri: URI,
         localApiMeta: FastMetaApi<LT, any>,
         contextConfigurator: (ctx: MetaContext) => LT
     ): FastMetaServer<LT>;
 }
+
+
 
 
 
@@ -237,17 +249,27 @@ export namespace FastMetaNet {
          * @method makeClient
          * @description Create FastMeta client, returning MetaContext
          */
+
         public makeClient<LT>(
             uri: URI,
             localApiMeta: FastMetaApi<LT, any>,
             localApiFactory: (ctx: MetaContext) => LT
         ): MetaContext {
+            const scheme = uri.split('://')[0];
+            if (scheme === 'webrtc') {
+                return new FastMetaClientWebRTCAdapter<LT>(
+                    uri,
+                    localApiMeta,
+                    localApiFactory
+                );
+            }
             return new FastMetaClientAdapter<LT>(
                 uri,
                 localApiMeta,
                 localApiFactory
             );
         }
+
 
         /**
          * @method makeClientWithRemote
@@ -1057,9 +1079,9 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
  * @description Adapter for FastMeta client wrapping WebSocket transport
  */
 
-class FastMetaClientAdapter<LT> implements MetaContext {
+
+class FastMetaClientAdapter<LT> extends AutoFlushContext {
     public wsClient: FastMetaClientWebSocket<LT>;
-    public context: MetaContext | null = null;
     public log: LNode;
     public contextFuture: ARFuture<MetaContext>;
 
@@ -1068,45 +1090,57 @@ class FastMetaClientAdapter<LT> implements MetaContext {
         lt: FastMetaApi<LT, any>,
         localApiFactory: (ctx: MetaContext) => LT
     ) {
+        super();
         this.log = Log.of({ component: "FastMetaClientAdapter", uri: uri });
         Log.info("FastMetaClientAdapter init");
+        this.localApi = localApiFactory(this);
         this.wsClient = new FastMetaClientWebSocket<LT>();
         Log.info("Calling wsClient.connect");
         this.contextFuture = this.wsClient.connect(uri, lt, localApiFactory);
         this.contextFuture.to((ctx: MetaContext) => {
-            this.context = ctx;
+            this.onFlushData((data: Uint8Array) => {
+                ctx.sendToRemote(data);
+            });
         }).onError((error) => {
             Log.error("Failed to establish connection context", error);
         });
     }
 
-    // MetaContext delegation
-    sendToRemote(data: Uint8Array): void { this.context!.sendToRemote(data); }
-    regFuture(worker: import('./aether_fastmeta').FutureRec): number { return this.context!.regFuture(worker); }
-    regLocalFuture(): void { this.context!.regLocalFuture(); }
-    getFuture(requestId: number): import('./aether_fastmeta').FutureRec | undefined { return this.context!.getFuture(requestId); }
-    sendResultToRemote(requestId: number, data: Uint8Array): void { this.context!.sendResultToRemote(requestId, data); }
-    sendResultToRemoteNoData(requestId: number): void { this.context!.sendResultToRemoteNoData(requestId); }
-    remoteDataToArray(out: import('./aether_datainout').DataOut): void { this.context!.remoteDataToArray(out); }
-    remoteDataToArrayAsArray(): Uint8Array { return this.context!.remoteDataToArrayAsArray(); }
-    flush(): void { this.context?.flush(); }
-    isEmpty(): boolean { return this.context ? this.context.isEmpty() : true; }
-    size(): number { return this.context ? this.context.size() : 0; }
-    close(): AFuture { return this.wsClient.close(); }
-    isActive(): boolean { return this.context ? this.context.isActive() : false; }
-    isLocked(): boolean { return this.context ? this.context.isLocked() : false; }
-    lock(): import('./aether_fastmeta').AutoCloseable | null { return this.context ? this.context.lock() : null; }
-    onFlush(flushAction: () => void): void { this.context?.onFlush(flushAction); }
-    onFlushData(c: (data: Uint8Array) => void): void { this.context?.onFlushData(c); }
-    findContext(factory: (ctx: MetaContext) => any, ...keys: any[]): MetaContext { return this.context!.findContext(factory, ...keys); }
-    getLocalApi(): any { return this.context!.getLocalApi(); }
-    getProperty(_key: number): any { return this.context?.getProperty(_key) ?? null; }
-    onWritable(listener: (writable: boolean) => void): void { this.context?.onWritable(listener); }
-    fireWritable(writable: boolean): void { this.context?.fireWritable(writable); }
-    invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void { this.context?.invokeLocalMethodBefore(methodName, argsNames, argsValues); }
-    invokeLocalMethodAfter(methodName: string, result: any, argsNames: string[], argsValues: any[]): void { this.context?.invokeLocalMethodAfter(methodName, result, argsNames, argsValues); }
-    invokeRemoteMethodAfter(methodName: string, result: any, argsNames: string[], argsValues: any[]): void { this.context?.invokeRemoteMethodAfter(methodName, result, argsNames, argsValues); }
-    makeRemote<RT extends RemoteApi>(meta: FastMetaApi<any, RT>): RT { return this.context!.makeRemote(meta); }
+
+class FastMetaClientWebRTCAdapter<LT> extends AutoFlushContext {
+    public webrtcClient: FastMetaClientWebRTC<LT>;
+    public log: LNode;
+    public contextFuture: ARFuture<MetaContext>;
+
+    constructor(
+        uri: URI,
+        lt: FastMetaApi<LT, any>,
+        localApiFactory: (ctx: MetaContext) => LT
+    ) {
+        super();
+        this.log = Log.of({ component: "FastMetaClientWebRTCAdapter", uri: uri });
+        this.localApi = localApiFactory(this);
+        this.webrtcClient = new FastMetaClientWebRTC<LT>();
+        this.contextFuture = this.webrtcClient.connect(uri, lt, localApiFactory);
+        this.contextFuture.to((ctx: MetaContext) => {
+            this.onFlushData((data: Uint8Array) => {
+                ctx.sendToRemote(data);
+            });
+        }).onError((error) => {
+            Log.error("Failed to establish WebRTC connection context", error);
+        });
+    }
+
+    getRemoteApi<RT extends RemoteApi>(remoteApiMeta: FastMetaApi<any, RT>): RT {
+        return (this.webrtcClient.context as any)?.makeRemote(remoteApiMeta);
+    }
+    getMetaContext(): MetaContext { return this; }
+    write(data: Uint8Array): void { this.webrtcClient.write(data); }
+    destroy(force: boolean): AFuture { return this.webrtcClient.destroy(force); }
+}
+
+
+
 
     getRemoteApi<RT extends RemoteApi>(remoteApiMeta: FastMetaApi<any, RT>): RT {
         return this.wsClient.getRemoteApi(remoteApiMeta);
