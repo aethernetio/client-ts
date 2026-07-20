@@ -8,6 +8,9 @@
   },
   "include": [
     "src/**/*",
-    "test/aether_point_to_point.test.ts"
+    "generator/**/*",
+    "test/aether_point_to_point.test.ts",
+    "test/collapsible_methods.test.ts",
+    "test/message_node_webrtc.test.ts"
   ]
 }

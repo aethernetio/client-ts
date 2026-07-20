@@ -101,6 +101,9 @@ export class TypeInfo {
     public readonly isPack: boolean;
     public readonly isAbstract: boolean;
 
+    public readonly isCollapsible: boolean;
+
+
     private static readonly PRIMITIVE_TYPES = new Set([
         "void", "byte", "short", "int", "long", "float", "double", "boolean",
         "String", "UUID", "URI", "Date", "java.util.Date", "string"
@@ -111,11 +114,14 @@ export class TypeInfo {
      * @param type - The DSL type string (e.g., "int?", "string[]", "long(intpack)").
      * @param isAbstract - Whether this type is known to be abstract.
      */
+
+
     constructor(type: string, isAbstract: boolean = false) {
         this.isAbstract = isAbstract;
         if (typeof type !== 'string') {
             this.javaType = "void"; this.javaTypeBoxed = "void"; this.arrayStaticSize = 0;
             this.isNullable = false; this.isArray = false; this.isPack = false;
+            this.isCollapsible = false;
             return;
         }
         let t = type ? type.trim() : "";
@@ -123,27 +129,29 @@ export class TypeInfo {
         if (!t) {
             this.javaType = "void"; this.javaTypeBoxed = "void"; this.arrayStaticSize = 0;
             this.isNullable = false; this.isArray = false; this.isPack = false;
+            this.isCollapsible = false;
             return;
         }
 
-        if (t.endsWith('?')) {
-            this.isNullable = true;
-            t = t.substring(0, t.length - 1);
-        } else {
-            this.isNullable = false;
+        let nullable = false;
+        let collapsible = false;
+        while (t.endsWith('?') || t.endsWith('~')) {
+            if (t.endsWith('?')) nullable = true;
+            if (t.endsWith('~')) collapsible = true;
+            t = t.substring(0, t.length - 1).trimEnd();
         }
+        this.isNullable = nullable;
+        this.isCollapsible = collapsible;
 
-
-if (t.toLowerCase() === "intpack") {
-    this.isPack = true;
-    t = "long";
-} else if (t.endsWith('(intpack)')) {
-    this.isPack = true;
-    t = t.substring(0, t.length - 9);
-} else {
-    this.isPack = false;
-}
-
+        if (t.toLowerCase() === "intpack") {
+            this.isPack = true;
+            t = "long";
+        } else if (t.endsWith('(intpack)')) {
+            this.isPack = true;
+            t = t.substring(0, t.length - 9);
+        } else {
+            this.isPack = false;
+        }
 
         const sIndex = t.lastIndexOf("[");
         if (t.endsWith("]") && sIndex > -1) {
@@ -178,6 +186,8 @@ if (t.toLowerCase() === "intpack") {
             default: this.javaType = t; this.javaTypeBoxed = t;
         }
     }
+
+
 
     /**
      * Gets the class name for this type.
@@ -278,9 +288,11 @@ if (t.toLowerCase() === "intpack") {
      * Gets the original DSL string representation of this type.
      * @returns The DSL string.
      */
+
     toString(): string {
-        return `${this.javaType}${this.isPack ? '(pack)' : ''}${this.isArray ? `[${this.arrayStaticSize > 0 ? this.arrayStaticSize : ''}]` : ''}${this.isNullable ? '?' : ''}`;
+        return `${this.javaType}${this.isPack ? '(pack)' : ''}${this.isArray ? `[${this.arrayStaticSize > 0 ? this.arrayStaticSize : ''}]` : ''}${this.isNullable ? '?' : ''}${this.isCollapsible ? '~' : ''}`;
     }
+
 }
 
 /**
@@ -342,52 +354,51 @@ export class GeneratorLogic {
      * @param referencedName - The name used in the DSL (e.g., "string", "MyObject", "myobject").
      * @returns The canonical name (e.g., "string", "MyObject").
      */
+
     public resolveCanonicalTypeName(referencedName: string): string {
-            if (!referencedName || typeof referencedName !== 'string') return referencedName;
-            let t = referencedName.trim();
+        if (!referencedName || typeof referencedName !== 'string') return referencedName;
+        let t = referencedName.trim();
 
-            // Логика суффиксов ( ? и [] )
-            if (t.endsWith('?')) t = t.substring(0, t.length - 1);
-            const sIndex = t.lastIndexOf("[");
-            if (t.endsWith("]") && sIndex > -1) t = t.substring(0, sIndex);
-
-            if (t.toLowerCase() === "intpack") return referencedName;
-            if (t.endsWith('(intpack)')) t = t.substring(0, t.length - 9);
-
-            const lowerName = t.toLowerCase();
-
-            // Проверка примитивов (как в Groovy)
-            switch (lowerName) {
-                case "byte":
-                case "short":
-                case "int":
-                case "long":
-                case "float":
-                case "double":
-                case "boolean":
-                case "bool":
-                case "string":
-                case "uuid":
-                case "uri":
-                case "date":
-                case "java.util.date":
-                    return referencedName; // Это примитив, сопоставление не нужно
-            }
-
-            // 1. Поиск в канонической карте ТИПОВ
-            const canonicalType = this.canonicalTypeNameMap.get(lowerName);
-            if (canonicalType) {
-                return referencedName.replace(t, canonicalType);
-            }
-
-            // 2. Поиск в канонической карте API
-            const canonicalApi = this.canonicalApiMap.get(lowerName);
-            if (canonicalApi) {
-                return referencedName.replace(t, canonicalApi);
-            }
-
-            return referencedName;
+        while (t.endsWith('?') || t.endsWith('~')) {
+            t = t.substring(0, t.length - 1).trimEnd();
         }
+        const sIndex = t.lastIndexOf("[");
+        if (t.endsWith("]") && sIndex > -1) t = t.substring(0, sIndex);
+
+        if (t.toLowerCase() === "intpack") return referencedName;
+        if (t.endsWith('(intpack)')) t = t.substring(0, t.length - 9);
+
+        const lowerName = t.toLowerCase();
+        switch (lowerName) {
+            case "byte":
+            case "short":
+            case "int":
+            case "long":
+            case "float":
+            case "double":
+            case "boolean":
+            case "bool":
+            case "string":
+            case "uuid":
+            case "uri":
+            case "date":
+            case "java.util.date":
+                return referencedName;
+        }
+
+        const canonicalType = this.canonicalTypeNameMap.get(lowerName);
+        if (canonicalType) {
+            return referencedName.replace(t, canonicalType);
+        }
+
+        const canonicalApi = this.canonicalApiMap.get(lowerName);
+        if (canonicalApi) {
+            return referencedName.replace(t, canonicalApi);
+        }
+
+        return referencedName;
+    }
+
 
     /**
      * Analyzes all loaded types and builds the inheritance and dispatch maps.
@@ -576,7 +587,7 @@ export class GeneratorLogic {
      * @returns TypeScript code (e.g., "FastMeta.META_STRING", "MyStruct.META").
      */
     generateAccessMeta(t: TypeInfo): string {
-        const typeKey = t.toString();
+        const typeKey = t.toString().replace(/~$/, '');
         let res = this.metaAccessors.get(typeKey);
         if (res) return res;
 

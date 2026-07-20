@@ -114,6 +114,7 @@ export class Validator {
                     this.validateFields(fieldName, fieldTypeNameRaw, sourceFile, `${typeName}.${fieldName}`);
                 } else {
                     const fieldTypeInfo = new TypeInfo(fieldTypeNameRaw as string, false);
+                    this.validateNonCollapsibleType(fieldTypeInfo, sourceFile, `In type '${typeName}', field '${fieldName}'`);
                     if (!this.findTypeDefinition(fieldTypeInfo.javaType)) {
                         this.errors.push(`In file '${path.basename(sourceFile)}': In type '${typeName}', field '${fieldName}' refers to an unknown type '${fieldTypeInfo.javaType}'.`);
                     }
@@ -148,6 +149,7 @@ export class Validator {
                 if (!methodDef) return;
 
                 const context = `API '${apiName}', method '${methodName}'`;
+                this.validateCollapsibleMethodContract(methodDef, sourceFile, context);
 
                 const returns = methodDef['returns'];
                 if (returns) {
@@ -155,6 +157,7 @@ export class Validator {
                         this.validateFields("returns", returns, sourceFile, `${apiName}.${methodName}`);
                     } else {
                         const returnTypeInfo = new TypeInfo(returns as string, false);
+                        this.validateNonCollapsibleType(returnTypeInfo, sourceFile, `In ${context}, return type`);
                         if (!this.findTypeDefinition(returnTypeInfo.javaType)) {
                             this.errors.push(`In file '${path.basename(sourceFile)}': In ${context}, has an unknown return type '${returnTypeInfo.javaType}'.`);
                         }
@@ -167,6 +170,7 @@ export class Validator {
                         this.validateFields("throws", throwsDef, sourceFile, `${apiName}.${methodName}`);
                     } else {
                         const throwsTypeInfo = new TypeInfo(throwsDef as string, false);
+                        this.validateNonCollapsibleType(throwsTypeInfo, sourceFile, `In ${context}, throws type`);
                         if (!this.findTypeDefinition(throwsTypeInfo.javaType)) {
                             this.errors.push(`In file '${path.basename(sourceFile)}': In ${context}, has an unknown throws type '${throwsTypeInfo.javaType}'.`);
                         }
@@ -190,6 +194,38 @@ export class Validator {
         });
     }
 
+
+    private validateNonCollapsibleType(
+        typeInfo: TypeInfo,
+        sourceFile: string,
+        context: string,
+    ): void {
+        if (typeInfo.isCollapsible) {
+            this.errors.push(
+                `In file '${path.basename(sourceFile)}': ${context} cannot use the collapsible '~' modifier.`,
+            );
+        }
+    }
+
+    private validateCollapsibleMethodContract(
+        methodDef: any,
+        sourceFile: string,
+        context: string,
+    ): void {
+        const hasCollapsibleParam = Object.values(methodDef.params || {}).some(
+            (paramType) =>
+                typeof paramType === 'string' &&
+                new TypeInfo(paramType, false).isCollapsible,
+        );
+
+        if (hasCollapsibleParam && (methodDef.returns != null || methodDef.throws != null)) {
+            this.errors.push(
+                `In file '${path.basename(sourceFile)}': ${context} has collapsible parameters and therefore cannot declare returns or throws.`,
+            );
+        }
+    }
+
+
     /**
      * Recursively validates fields within an anonymous type definition.
      */
@@ -202,6 +238,7 @@ export class Validator {
                 this.validateFields(nestedFieldName, nestedFieldType, sourceFile, `${contextName}.${fieldName}`);
             } else {
                 const fieldTypeInfo = new TypeInfo(nestedFieldType as string, false);
+                this.validateNonCollapsibleType(fieldTypeInfo, sourceFile, `In '${contextName}', nested field '${nestedFieldName}'`);
                 if (!this.findTypeDefinition(fieldTypeInfo.javaType)) {
                     this.errors.push(`In file '${path.basename(sourceFile)}': In '${contextName}', anonymous type for field '${fieldName}' (nested field '${nestedFieldName}') refers to an unknown type '${fieldTypeInfo.javaType}'.`);
                 }

@@ -6,14 +6,10 @@
 // (ВЕРСИЯ 2: Обновлена поддержка 64-bit Long -> readLong() : bigint, writeLong(v: number | bigint))
 // =============================================================================================
 
-import { Uint8Array } from './aether_types';
+
 import { HexUtils } from './aether_utils';
 
-// Helper types for write operations (minimal structure for DTO types) - Kept for compatibility if needed elsewhere
-/** Minimal interface representing Java's DataInOut class for write operations. */
-type DataInOutJava = { data: Uint8Array, readPos: number, writePos: number, getSizeForRead: () => number, clear: () => void };
-/** Minimal interface representing Java's DataInOutStatic class for write operations. */
-type DataInOutStaticJava = { data: Uint8Array, readPos: number, writePos: number, getSizeForRead: () => number, clear: () => void };
+
 
 
 // =============================================================================================
@@ -74,9 +70,10 @@ export interface DataOut {
     write(b: number[]): void;
     write(b: Uint8Array, off: number, len: number): number;
     write(b: number[], off: number, len: number): number;
-    write(data: DataIn): void;
-    write(data: DataInOutJava): void;
-    write(data: DataInOutStaticJava): void;
+
+    write(data: DataInOut): void;
+    write(data: DataInOutStatic): void;
+
 
     // Primitive write methods
     writeByte(v: number): void;
@@ -119,6 +116,10 @@ const DataIO_Utils = {
 abstract class DataIOBase implements DataIO {
     // --- Core Abstract Methods ---
     abstract getSizeForRead(): number;
+
+    declare private readonly dataIoBrand: undefined;
+
+
     abstract readUByte(): number; // Needs direct implementation for efficiency
     abstract writeByte(v: number): void; // Needs direct implementation for efficiency
     abstract clear(): void;
@@ -237,88 +238,65 @@ abstract class DataIOBase implements DataIO {
         return res;
     }
 
+
     write(b: Uint8Array, off: number, len: number): number;
     write(b: number[], off: number, len: number): number;
     write(b: Uint8Array): void;
     write(b: number[]): void;
-    write(data: DataIn): void;
-    write(data: DataInOutJava): void;
-    write(data: DataInOutStaticJava): void;
-    write(b: Uint8Array | number[] | DataIn | DataInOutJava | DataInOutStaticJava | ArrayBuffer | Buffer, off?: number, len?: number): number | void {
+    write(data: DataInOut): void;
+    write(data: DataInOutStatic): void;
+    write(
+        b: Uint8Array | number[] | DataInOut | DataInOutStatic | ArrayBuffer,
+        off?: number,
+        len?: number,
+    ): number | void {
         if (off !== undefined && len !== undefined) {
-            const targetLen = len as number;
-            let bb = b as any;
             if (b instanceof Uint8Array) {
-                return this._writeCore(b, off, targetLen);
-            } else if (b instanceof Array) {
-                const buf = new Uint8Array((b as number[]).slice(off, off + targetLen));
-                return this._writeCore(buf, 0, buf.length);
-            } else if (b instanceof ArrayBuffer) {
-                const buf = new Uint8Array(b, off, targetLen);
-                return this._writeCore(buf, 0, buf.length);
-            } else if (typeof Buffer !== 'undefined' && b instanceof Buffer) {
-                // Для Node.js Buffer
-                const buf = new Uint8Array(b.buffer, b.byteOffset + off, targetLen);
-                return this._writeCore(buf, 0, buf.length);
-            } else if (b && (b as any).buffer instanceof ArrayBuffer && typeof (b as any).byteLength === 'number') {
-                // Для других типизированных массивов (Int8Array, Uint16Array и т.д.)
-                const buf = new Uint8Array((b as any).buffer, (b as any).byteOffset + off, targetLen);
-                return this._writeCore(buf, 0, buf.length);
-            } else if (bb && typeof bb.length === 'number') {
-                const r = this._writeCore(bb as ArrayLike<number>, 0, bb.length);
-                if (r !== bb.length) { throw new Error("Assertion failed: Failed to write all bytes from TypedArray"); }
-                return;
-
-            } else {
-                throw new Error("Invalid arguments for write(b, off, len)");
+                return this._writeCore(b, off, len);
             }
+            if (b instanceof Array) {
+                const buffer = new Uint8Array(b.slice(off, off + len));
+                return this._writeCore(buffer, 0, buffer.length);
+            }
+            if (b instanceof ArrayBuffer) {
+                const buffer = new Uint8Array(b, off, len);
+                return this._writeCore(buffer, 0, buffer.length);
+            }
+            throw new Error("write(b, off, len) accepts only Uint8Array, number[], or ArrayBuffer");
         }
-        let bb = b as any;
+
         if (b instanceof Uint8Array) {
-            const r = this._writeCore(b, 0, b.length);
-            if (r !== b.length) { throw new Error("Assertion failed: Failed to write all bytes from Uint8Array"); }
+            this.writeAll(b, "Uint8Array");
             return;
-        } else if (b instanceof Array) {
-            const buf = new Uint8Array(b as number[]);
-            const r = this._writeCore(buf, 0, buf.length);
-            if (r !== buf.length) { throw new Error("Assertion failed: Failed to write all bytes from number[]"); }
+        }
+        if (b instanceof Array) {
+            this.writeAll(new Uint8Array(b), "number[]");
             return;
-        } else if (b && typeof (b as any).getSizeForRead === 'function' && (b as any).data instanceof Uint8Array) {
-            const dataIn = b as DataIn & { data: Uint8Array, readPos: number };
-            const size = dataIn.getSizeForRead();
+        }
+        if (b instanceof DataInOut || b instanceof DataInOutStatic) {
+            const size = b.getSizeForRead();
             if (size > 0) {
-                const bytesWritten = this._writeCore(dataIn.data, dataIn.readPos, size);
-                if (bytesWritten !== size) { throw new Error("Assertion failed: Failed to write all data from DataIn source"); }
+                const written = this._writeCore(b.data, b.readPos, size);
+                if (written !== size) {
+                    throw new Error("Assertion failed: Failed to write all data from DataInOut");
+                }
             }
             return;
-        } else if (b && typeof (b as any).toArray === 'function') {
-            this.write((b as DataIn).toArray());
+        }
+        if (b instanceof ArrayBuffer) {
+            this.writeAll(new Uint8Array(b), "ArrayBuffer");
             return;
-        } else if (b instanceof ArrayBuffer) {
-            const buf = new Uint8Array(b);
-            const r = this._writeCore(buf, 0, buf.length);
-            if (r !== buf.length) { throw new Error("Assertion failed: Failed to write all bytes from ArrayBuffer"); }
-            return;
-        } else if (typeof Buffer !== 'undefined' && b instanceof Buffer) {
-            const buf = new Uint8Array(b.buffer, b.byteOffset, b.byteLength);
-            const r = this._writeCore(buf, 0, buf.length);
-            if (r !== buf.length) { throw new Error("Assertion failed: Failed to write all bytes from Buffer"); }
-            return;
-        } else if (b && bb.buffer instanceof ArrayBuffer && typeof bb.byteLength === 'number') {
-            // Для других типизированных массивов (Int8Array, Uint16Array и т.д.)
-            let bb = (b as any);
-            const buf = new Uint8Array(bb.buffer, bb.byteOffset, bb.byteLength);
-            const r = this._writeCore(buf, 0, buf.length);
-            if (r !== buf.length) { throw new Error("Assertion failed: Failed to write all bytes from TypedArray"); }
-            return;
-        } else if (bb && typeof bb.length === 'number') {
-            const r = this._writeCore(bb as ArrayLike<number>, 0, bb.length);
-            if (r !== bb.length) { throw new Error("Assertion failed: Failed to write all bytes from TypedArray"); }
-            return;
-        } else {
-            throw new Error(`Invalid arguments for write: expected Uint8Array, number[], DataIn, or toArrayable, got ${typeof b} with value ${JSON.stringify(b)}`);
+        }
+        throw new Error("Invalid write source. Use a supported value created with its constructor.");
+    }
+
+    private writeAll(data: Uint8Array, sourceName: string): void {
+        const written = this._writeCore(data, 0, data.length);
+        if (written !== data.length) {
+            throw new Error(`Assertion failed: Failed to write all bytes from ${sourceName}`);
         }
     }
+
 
     writeBoolean(v: boolean): void { this.writeByte(v ? 1 : 0); }
     writeShort(v: number): void {

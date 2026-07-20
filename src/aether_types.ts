@@ -246,6 +246,7 @@ export class ConcurrentLinkedQueue_C<T> {
     public clear(): void { this.items = []; }
     public get length(): number { return this.items.length; }
     public size(): number { return this.items.length; }
+    public values(): readonly T[] { return this.items; }
     public removeIf(predicate: APredicate<T>): boolean {
         const originalLength = this.items.length;
         this.items = this.items.filter(i => !predicate(i));

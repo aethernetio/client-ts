@@ -1,9 +1,11 @@
 // @ts-nocheck
+
 import {
-    Uint8Array, AtomicInteger, ConcurrentLinkedQueue_C, AFunction,
+    AtomicInteger, ConcurrentLinkedQueue_C, AFunction,
     ABiConsumer, ABiFunction, Destroyable, AConsumer,
     UUID, URI,
 } from './aether_types';
+
 
 import { AFuture, ARFuture } from './aether_future';
 import { DataIn, DataInOut, DataInOutStatic, DataOut } from './aether_datainout';
@@ -106,7 +108,7 @@ export interface FutureRec {
  */
 
 export interface MetaContext {
-    sendToRemote(data: Uint8Array): void;
+    sendToRemote(data: Uint8Array | LazyPacket): void;
 
     regFuture(worker: FutureRec): number;
     regLocalFuture(): void;
@@ -148,13 +150,33 @@ export interface AutoCloseable {
 }
 
 
+export interface LazyPacket {
+    size(): number;
+    serialize(out: DataOut): void;
+}
+
+export namespace LazyPacket {
+    export function fromBytes(data: Uint8Array): LazyPacket {
+        return {
+            size: (): number => data.length,
+            serialize: (out: DataOut): void => out.write(data),
+        };
+    }
+}
+
+export interface CollapsiblePacket extends LazyPacket {
+    collapsibleKey(): unknown;
+}
+
+
+
 
 /**
  * A stub implementation of MetaContext for synchronous operations.
  */
 
 export const FastFutureContextStub: MetaContext = {
-    sendToRemote: (data: Uint8Array) => { throw new Error("Context is a stub and cannot send data."); },
+    sendToRemote: (_data: Uint8Array | LazyPacket) => { throw new Error("Context is a stub and cannot send data."); },
     sendResultToRemote: (requestId: number, data: Uint8Array) => { throw new Error("Context is a stub and cannot send result."); },
     sendResultToRemoteNoData: (requestId: number) => { throw new Error("Context is a stub and cannot send result."); },
     regFuture: (worker: FutureRec) => 0,
@@ -764,7 +786,7 @@ export class FastMeta {
 export class MetaContextBase implements MetaContext {
     protected futures: Map<number, FutureRec> = new Map();
     protected futuresCounter: AtomicInteger = new AtomicInteger(0);
-    protected toRemote: ConcurrentLinkedQueue_C<Uint8Array> = new ConcurrentLinkedQueue_C();
+    protected toRemote: ConcurrentLinkedQueue_C<LazyPacket> = new ConcurrentLinkedQueue_C();
     protected returnTasks: AtomicInteger = new AtomicInteger(0);
     protected sizeBytes: AtomicInteger = new AtomicInteger(0);
     private childContexts: Map<string, MetaContextBase> = new Map();
@@ -875,11 +897,15 @@ export class MetaContextBase implements MetaContext {
     }
 
 
-    public sendToRemote(data: Uint8Array): void {
-        this.toRemote.add(data);
-        this.sizeBytes.addAndGet(data.length);
+
+    public sendToRemote(data: Uint8Array | LazyPacket): void {
+        const packet = data instanceof Uint8Array
+            ? LazyPacket.fromBytes(data)
+            : data;
+        this.toRemote.add(packet);
         this.notifyDataAdded();
     }
+
 
     protected notifyDataAdded(): void {
         if (this.parent) {
@@ -897,13 +923,18 @@ export class MetaContextBase implements MetaContext {
         return true;
     }
 
+
     public size(): number {
-        let s = this.sizeBytes.get();
+        let s = 0;
+        for (const packet of this.toRemote.values()) {
+            s += packet.size();
+        }
         for (const child of this.childContexts.values()) {
             s += child.size();
         }
         return s;
     }
+
 
     public remoteDataToArrayAsArray(): Uint8Array {
         const out = new DataInOut();
@@ -911,13 +942,15 @@ export class MetaContextBase implements MetaContext {
         return out.toArray();
     }
 
+
     public remoteDataToArray(out: DataOut): void {
-        let data: Uint8Array | undefined;
-        while ((data = this.toRemote.poll()) !== undefined) {
-            out.write(data);
+        let packet: LazyPacket | undefined;
+        while ((packet = this.toRemote.poll()) !== undefined) {
+            packet.serialize(out);
         }
         this.sizeBytes.set(0);
     }
+
 
     public regFuture(worker: FutureRec): number {
         const r = this.futuresCounter.incrementAndGet();

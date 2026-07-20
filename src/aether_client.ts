@@ -114,6 +114,7 @@ export class AetherCloudClient implements Destroyable {
         return this.state.getParentUid();
     }
     public readonly messageNodeMap = new Map<string, MessageNode>();
+    private webRtcMessageNode: MessageNode | null = null;
     public readonly onNewChild = new EventConsumer<UUID>();
 
     public readonly onClientStreamCreated = new EventConsumer<MessageNode>();
@@ -910,15 +911,81 @@ export class AetherCloudClient implements Destroyable {
         return this.getMessageNode(uid, MessageEventListenerDefault).send(data);
     }
 
+    public tryAcquireWebRtcMessageNode(node: MessageNode): boolean {
+        if (this.destroyer.isDestroyed()) return false;
+        if (this.webRtcMessageNode && this.webRtcMessageNode !== node) return false;
+        this.webRtcMessageNode = node;
+        return true;
+    }
+
+    public releaseWebRtcMessageNode(node: MessageNode): void {
+        if (this.webRtcMessageNode === node) this.webRtcMessageNode = null;
+    }
+
     public requestWebRtcSession(uid: UUID): ARFuture<WebRtcSession> {
-        const res = ARFuture.of<WebRtcSession>();
-        this.getServerDescriptorForUid(uid, (sd: ServerDescriptor) => {
-            const cw = this.connections.get(sd.id);
-            if (cw) {
-                cw.authorizedApi.requestWebRtcSession(uid).to((s: WebRtcSession) => res.done(s)).onError((e: Error) => res.error(e));
+        const result = ARFuture.make<WebRtcSession>();
+        result.timeoutMs(
+            5000,
+            () => result.tryError(new Error(
+                `Timed out requesting WebRTC session for ${uid.toAString()}`,
+            )),
+            this.destroyer,
+        );
+
+        this.getServerDescriptorForUid(uid, (descriptor: ServerDescriptor) => {
+            if (result.isFinalStatus()) return;
+            try {
+                const connection = this.connections.get(descriptor.id)
+                    ?? this.getConnection(descriptor);
+                const request = connection.authorizedApi.requestWebRtcSession(uid);
+                connection.authorizedApi.flush();
+                request.to((session: WebRtcSession) => {
+                    if (session) result.tryDone(session);
+                });
+            } catch (error) {
+                Log.warn('Failed to request WebRTC session', {
+                    error,
+                    uid: uid.toAString().toString(),
+                    serverId: descriptor.id,
+                });
             }
         });
-        return res;
+        return result;
+    }
+
+    public publishWebRtcSession(session: WebRtcSession): AFuture {
+        const result = AFuture.make();
+        const uid = this.getUid();
+        if (!uid) return result.error(new Error('Client is not registered'));
+
+        this.getCloud(uid)
+            .to((cloud: Cloud) => {
+                if (!cloud?.data?.length) {
+                    result.tryError(new Error('Client cloud is empty'));
+                    return;
+                }
+
+                const publishes = cloud.data.map((serverId: number) => {
+                    const published = AFuture.make();
+                    this.getServer(serverId)
+                        .to((descriptor: ServerDescriptor) => {
+                            try {
+                                const connection = this.connections.get(serverId)
+                                    ?? this.getConnection(descriptor);
+                                connection.authorizedApi.publishWebRtcSession(session);
+                                connection.authorizedApi.flush();
+                                published.tryDone();
+                            } catch (error) {
+                                published.tryError(error as Error);
+                            }
+                        })
+                        .onError((error: Error) => published.tryError(error));
+                    return published;
+                });
+                AFuture.all(...publishes).pipeTo(result);
+            })
+            .onError((error: Error) => result.tryError(error));
+        return result;
     }
 
 

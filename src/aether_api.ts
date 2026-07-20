@@ -32,6 +32,13 @@ export namespace PowMethod  {
     export const META: FastMetaType<PowMethod> = new Impl.PowMethodMetaImpl();
     
 }
+export enum ServerType  {
+    REG = 'REG', WORK = 'WORK' 
+}
+export namespace ServerType  {
+    export const META: FastMetaType<ServerType> = new Impl.ServerTypeMetaImpl();
+    
+}
 export enum Status  {
     PENDING = 'PENDING', COMPLETED = 'COMPLETED', FAILED = 'FAILED' 
 }
@@ -2753,6 +2760,83 @@ export class FinishResult implements ToString  {
     
 }
 /**
+ * Represents the FinishResultGlobalRegServerApi structure.
+ */
+export class FinishResultGlobalRegServerApi implements ToString  {
+    public readonly alias: UUID;
+    public readonly uid: UUID;
+    public readonly cloud: Cloud;
+    public static readonly META_BODY: FastMetaType<FinishResultGlobalRegServerApi> = new Impl.FinishResultGlobalRegServerApiMetaBodyImpl();
+    public static readonly META: FastMetaType<FinishResultGlobalRegServerApi> = FinishResultGlobalRegServerApi.META_BODY;
+    /**
+     * Creates an instance of FinishResultGlobalRegServerApi.
+     * @param alias - UUID
+     * @param uid - UUID
+     * @param cloud - Cloud
+     */
+    constructor(alias: UUID, uid: UUID, cloud: Cloud)  {
+        this.alias = alias;
+        this.uid = uid;
+        this.cloud = cloud;
+        if (cloud === null || cloud === undefined) throw new Error(`Field 'cloud' cannot be null for type FinishResultGlobalRegServerApi.`);
+        
+    }
+    public getAlias(): UUID  {
+        return this.alias;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getCloud(): Cloud  {
+        return this.cloud;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of FinishResultGlobalRegServerApi.
+     * @param {FinishResultGlobalRegServerApi | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: FinishResultGlobalRegServerApi | null | undefined): number  {
+        return FinishResultGlobalRegServerApi.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of FinishResultGlobalRegServerApi with another object.
+     * @param {FinishResultGlobalRegServerApi | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: FinishResultGlobalRegServerApi | null | undefined, v2: any | null | undefined): boolean  {
+        return FinishResultGlobalRegServerApi.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return FinishResultGlobalRegServerApi.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return FinishResultGlobalRegServerApi.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        FinishResultGlobalRegServerApi.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
  * Represents the HydrogenCurvePrivate structure.
  *
  * @aetherTypeId 1
@@ -3137,6 +3221,73 @@ export class HydrogenSignPublic extends KeySignPublic implements ToString  {
     }
     public toAString(result: AString): AString  {
         HydrogenSignPublic.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the IceCandidate structure.
+ */
+export class IceCandidate implements ToString  {
+    public readonly data: Uint8Array;
+    public static readonly META_BODY: FastMetaType<IceCandidate> = new Impl.IceCandidateMetaBodyImpl();
+    public static readonly META: FastMetaType<IceCandidate> = IceCandidate.META_BODY;
+    /**
+     * Creates an instance of IceCandidate.
+     * @param data - Uint8Array
+     */
+    constructor(data: Uint8Array)  {
+        this.data = data;
+        if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type IceCandidate.`);
+        
+    }
+    public getData(): Uint8Array  {
+        return this.data;
+        
+    }
+    public dataContains(el: number): boolean  {
+        return (this.data as Uint8Array).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of IceCandidate.
+     * @param {IceCandidate | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: IceCandidate | null | undefined): number  {
+        return IceCandidate.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of IceCandidate with another object.
+     * @param {IceCandidate | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: IceCandidate | null | undefined, v2: any | null | undefined): boolean  {
+        return IceCandidate.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return IceCandidate.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return IceCandidate.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        IceCandidate.META.metaToString(this, result);
         return result;
         
     }
@@ -4248,6 +4399,7 @@ export class ServerDescriptorWithGeo implements ToString  {
     public readonly ipAddress: IPAddressAndPortsList;
     public readonly latitude: number;
     public readonly longitude: number;
+    public readonly type: ServerType;
     public static readonly META_BODY: FastMetaType<ServerDescriptorWithGeo> = new Impl.ServerDescriptorWithGeoMetaBodyImpl();
     public static readonly META: FastMetaType<ServerDescriptorWithGeo> = ServerDescriptorWithGeo.META_BODY;
     /**
@@ -4256,13 +4408,16 @@ export class ServerDescriptorWithGeo implements ToString  {
      * @param ipAddress - IPAddressAndPortsList
      * @param latitude - number
      * @param longitude - number
+     * @param type - ServerType
      */
-    constructor(id: number, ipAddress: IPAddressAndPortsList, latitude: number, longitude: number)  {
+    constructor(id: number, ipAddress: IPAddressAndPortsList, latitude: number, longitude: number, type: ServerType)  {
         this.id = id;
         this.ipAddress = ipAddress;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.type = type;
         if (ipAddress === null || ipAddress === undefined) throw new Error(`Field 'ipAddress' cannot be null for type ServerDescriptorWithGeo.`);
+        if (type === null || type === undefined) throw new Error(`Field 'type' cannot be null for type ServerDescriptorWithGeo.`);
         
     }
     public getId(): number  {
@@ -4279,6 +4434,10 @@ export class ServerDescriptorWithGeo implements ToString  {
     }
     public getLongitude(): number  {
         return this.longitude;
+        
+    }
+    public getType(): ServerType  {
+        return this.type;
         
     }
     /**
@@ -5177,6 +5336,85 @@ export class UUIDAndCloud implements ToString  {
     }
     public toAString(result: AString): AString  {
         UUIDAndCloud.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the WebRtcSession structure.
+ */
+export class WebRtcSession implements ToString  {
+    public readonly sdp: Uint8Array;
+    public readonly candidates: IceCandidate[];
+    public static readonly META_BODY: FastMetaType<WebRtcSession> = new Impl.WebRtcSessionMetaBodyImpl();
+    public static readonly META: FastMetaType<WebRtcSession> = WebRtcSession.META_BODY;
+    /**
+     * Creates an instance of WebRtcSession.
+     * @param sdp - Uint8Array
+     * @param candidates - IceCandidate[]
+     */
+    constructor(sdp: Uint8Array, candidates: IceCandidate[])  {
+        this.sdp = sdp;
+        this.candidates = candidates;
+        if (sdp === null || sdp === undefined) throw new Error(`Field 'sdp' cannot be null for type WebRtcSession.`);
+        if (candidates === null || candidates === undefined) throw new Error(`Field 'candidates' cannot be null for type WebRtcSession.`);
+        
+    }
+    public getSdp(): Uint8Array  {
+        return this.sdp;
+        
+    }
+    public sdpContains(el: number): boolean  {
+        return (this.sdp as Uint8Array).includes(el as any);
+        
+    }
+    public getCandidates(): IceCandidate[]  {
+        return this.candidates;
+        
+    }
+    public candidatesContains(el: IceCandidate): boolean  {
+        return (this.candidates as IceCandidate[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of WebRtcSession.
+     * @param {WebRtcSession | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: WebRtcSession | null | undefined): number  {
+        return WebRtcSession.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of WebRtcSession with another object.
+     * @param {WebRtcSession | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: WebRtcSession | null | undefined, v2: any | null | undefined): boolean  {
+        return WebRtcSession.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return WebRtcSession.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return WebRtcSession.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        WebRtcSession.META.metaToString(this, result);
         return result;
         
     }
@@ -6194,10 +6432,24 @@ export class LoginStream implements ToString  {
             return this;
             
         }
+        onFlushToRemote<RT extends RemoteApi>(meta: FastMetaApi<any, RT>, c: (data: Uint8Array, remote: RT) => void): this  {
+            this.onFlushC = (cc) =>  {
+                const d = cc.remoteDataToArrayAsArray();
+                if (d.length > 0) c(d, (this.parentContext as any).makeRemote(meta));
+                
+            };
+            return this;
+            
+        }
         keys(factory: (ctx: MetaContext) => AuthorizedApi, ...keys: any[]): this  {
             this.factory = factory;
             this._streamKeys = keys;
             return this;
+            
+        }
+        remoteApi(): ClientApiSafeRemote  {
+            const activeCtx = this.parentContext!.findContext(this.factory!, this._streamKeys || []);
+            return activeCtx.makeRemote((ClientApiSafe as any).META) as ClientApiSafeRemote;
             
         }
         remoteParentApi<RT extends RemoteApi>(meta: FastMetaApi<any, RT>): RT  {
@@ -6960,6 +7212,19 @@ export interface AuthorizedApi  {
      * @aetherMethodId 36
      */
     pullMessages(): void;
+    /**
+     * @param uid - UUID
+     * @returns ARFuture<WebRtcSession>
+     *
+     * @aetherMethodId 40
+     */
+    requestWebRtcSession(uid: UUID): ARFuture<WebRtcSession>;
+    /**
+     * @param session - WebRtcSession
+     *
+     * @aetherMethodId 41
+     */
+    publishWebRtcSession(session: WebRtcSession): void;
     
 }
 export namespace AuthorizedApi  {
@@ -7221,6 +7486,19 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 36
      */
     public abstract pullMessages(): void;
+    /**
+     * @param uid - UUID
+     * @returns ARFuture<WebRtcSession>
+     *
+     * @aetherMethodId 40
+     */
+    public abstract requestWebRtcSession(uid: UUID): ARFuture<WebRtcSession>;
+    /**
+     * @param session - WebRtcSession
+     *
+     * @aetherMethodId 41
+     */
+    public abstract publishWebRtcSession(session: WebRtcSession): void;
     
 }
 export interface LoginApi  {
@@ -7257,8 +7535,8 @@ export namespace LoginApi  {
     
 }
 export interface LoginApiRemote extends LoginApi, RemoteApi  {
-    openLoginByUID(uid: UUID, factory: (api: AuthorizedApiRemote) => any, converter: BytesConverter, ...keys: any[]): AuthorizedApiRemote;
-    openLoginByAlias(alias: UUID, factory: (api: AuthorizedApiRemote) => any, converter: BytesConverter, ...keys: any[]): AuthorizedApiRemote;
+    openLoginByUID(uid: UUID, factory: (api: AuthorizedApiRemote) => ClientApiSafe, converter: BytesConverter, ...keys: any[]): AuthorizedApiRemote;
+    openLoginByAlias(alias: UUID, factory: (api: AuthorizedApiRemote) => ClientApiSafe, converter: BytesConverter, ...keys: any[]): AuthorizedApiRemote;
     
 }
 export abstract class LoginApiLocal<RT extends RemoteApi> implements LoginApi  {
@@ -7522,56 +7800,6 @@ export abstract class ServerApiByUidLocal<RT extends RemoteApi> implements Serve
     public abstract setMsgTimeLimit(seconds: number): AFuture;
     
 }
-export interface ClientApiRegSafe  {
-    
-}
-export namespace ClientApiRegSafe  {
-    export const EMPTY: ClientApiRegSafe =  {
-        
-    };
-    export const META: FastMetaApi<ClientApiRegSafe, ClientApiRegSafeRemote> = new Impl.ClientApiRegSafeMetaImpl();
-    
-}
-export interface ClientApiRegSafeRemote extends ClientApiRegSafe, RemoteApi  {
-    
-}
-export abstract class ClientApiRegSafeLocal<RT extends RemoteApi> implements ClientApiRegSafe  {
-    protected readonly remoteApi: RT;
-    public getRemoteApi(): RT  {
-        return this.remoteApi;
-        
-    }
-    protected constructor(remoteApi: RT)  {
-        this.remoteApi = remoteApi;
-        
-    }
-    
-}
-export interface GlobalRegClientApi  {
-    
-}
-export namespace GlobalRegClientApi  {
-    export const EMPTY: GlobalRegClientApi =  {
-        
-    };
-    export const META: FastMetaApi<GlobalRegClientApi, GlobalRegClientApiRemote> = new Impl.GlobalRegClientApiMetaImpl();
-    
-}
-export interface GlobalRegClientApiRemote extends GlobalRegClientApi, RemoteApi  {
-    
-}
-export abstract class GlobalRegClientApiLocal<RT extends RemoteApi> implements GlobalRegClientApi  {
-    protected readonly remoteApi: RT;
-    public getRemoteApi(): RT  {
-        return this.remoteApi;
-        
-    }
-    protected constructor(remoteApi: RT)  {
-        this.remoteApi = remoteApi;
-        
-    }
-    
-}
 export interface ClientApiRegUnsafe  {
     /**
      * @param stream - ClientApiRegSafeStream
@@ -7628,11 +7856,11 @@ export interface GlobalRegServerApi  {
      */
     setMasterKey(key: Key): void;
     /**
-     * @returns ARFuture<FinishResult>
+     * @returns ARFuture<FinishResultGlobalRegServerApi>
      *
      * @aetherMethodId 4
      */
-    finish(): ARFuture<FinishResult>;
+    finish(): ARFuture<FinishResultGlobalRegServerApi>;
     
 }
 export namespace GlobalRegServerApi  {
@@ -7659,11 +7887,11 @@ export abstract class GlobalRegServerApiLocal<RT extends RemoteApi> implements G
      */
     public abstract setMasterKey(key: Key): void;
     /**
-     * @returns ARFuture<FinishResult>
+     * @returns ARFuture<FinishResultGlobalRegServerApi>
      *
      * @aetherMethodId 4
      */
-    public abstract finish(): ARFuture<FinishResult>;
+    public abstract finish(): ARFuture<FinishResultGlobalRegServerApi>;
     
 }
 export interface ServerRegistrationApi  {
@@ -7812,5 +8040,55 @@ export abstract class RegistrationRootApiLocal<RT extends RemoteApi> implements 
      * @aetherMethodId 6
      */
     public abstract getMyIp(): ARFuture<IpInfo>;
+    
+}
+export interface ClientApiRegSafe  {
+    
+}
+export namespace ClientApiRegSafe  {
+    export const EMPTY: ClientApiRegSafe =  {
+        
+    };
+    export const META: FastMetaApi<ClientApiRegSafe, ClientApiRegSafeRemote> = new Impl.ClientApiRegSafeMetaImpl();
+    
+}
+export interface ClientApiRegSafeRemote extends ClientApiRegSafe, RemoteApi  {
+    
+}
+export abstract class ClientApiRegSafeLocal<RT extends RemoteApi> implements ClientApiRegSafe  {
+    protected readonly remoteApi: RT;
+    public getRemoteApi(): RT  {
+        return this.remoteApi;
+        
+    }
+    protected constructor(remoteApi: RT)  {
+        this.remoteApi = remoteApi;
+        
+    }
+    
+}
+export interface GlobalRegClientApi  {
+    
+}
+export namespace GlobalRegClientApi  {
+    export const EMPTY: GlobalRegClientApi =  {
+        
+    };
+    export const META: FastMetaApi<GlobalRegClientApi, GlobalRegClientApiRemote> = new Impl.GlobalRegClientApiMetaImpl();
+    
+}
+export interface GlobalRegClientApiRemote extends GlobalRegClientApi, RemoteApi  {
+    
+}
+export abstract class GlobalRegClientApiLocal<RT extends RemoteApi> implements GlobalRegClientApi  {
+    protected readonly remoteApi: RT;
+    public getRemoteApi(): RT  {
+        return this.remoteApi;
+        
+    }
+    protected constructor(remoteApi: RT)  {
+        this.remoteApi = remoteApi;
+        
+    }
     
 }

@@ -24,7 +24,6 @@ import {
 import { Log, LNode } from './aether_logging';
 import { DataInOut } from './aether_datainout';
 import { Destroyer } from './aether_utils';
-import { FastMetaClientWebRTC } from './aether_fastmeta_webrtc';
 
 /**
  * @interface IUniversalWebSocket
@@ -255,14 +254,6 @@ export namespace FastMetaNet {
             localApiMeta: FastMetaApi<LT, any>,
             localApiFactory: (ctx: MetaContext) => LT
         ): MetaContext {
-            const scheme = uri.split('://')[0];
-            if (scheme === 'webrtc') {
-                return new FastMetaClientWebRTCAdapter<LT>(
-                    uri,
-                    localApiMeta,
-                    localApiFactory
-                );
-            }
             return new FastMetaClientAdapter<LT>(
                 uri,
                 localApiMeta,
@@ -1106,46 +1097,15 @@ class FastMetaClientAdapter<LT> extends AutoFlushContext {
         });
     }
 
-
-class FastMetaClientWebRTCAdapter<LT> extends AutoFlushContext {
-    public webrtcClient: FastMetaClientWebRTC<LT>;
-    public log: LNode;
-    public contextFuture: ARFuture<MetaContext>;
-
-    constructor(
-        uri: URI,
-        lt: FastMetaApi<LT, any>,
-        localApiFactory: (ctx: MetaContext) => LT
-    ) {
-        super();
-        this.log = Log.of({ component: "FastMetaClientWebRTCAdapter", uri: uri });
-        this.localApi = localApiFactory(this);
-        this.webrtcClient = new FastMetaClientWebRTC<LT>();
-        this.contextFuture = this.webrtcClient.connect(uri, lt, localApiFactory);
-        this.contextFuture.to((ctx: MetaContext) => {
-            this.onFlushData((data: Uint8Array) => {
-                ctx.sendToRemote(data);
-            });
-        }).onError((error) => {
-            Log.error("Failed to establish WebRTC connection context", error);
-        });
-    }
-
-    getRemoteApi<RT extends RemoteApi>(remoteApiMeta: FastMetaApi<any, RT>): RT {
-        return (this.webrtcClient.context as any)?.makeRemote(remoteApiMeta);
-    }
-    getMetaContext(): MetaContext { return this; }
-    write(data: Uint8Array): void { this.webrtcClient.write(data); }
-    destroy(force: boolean): AFuture { return this.webrtcClient.destroy(force); }
-}
-
-
-
-
     getRemoteApi<RT extends RemoteApi>(remoteApiMeta: FastMetaApi<any, RT>): RT {
         return this.wsClient.getRemoteApi(remoteApiMeta);
     }
+
     getMetaContext(): MetaContext { return this; }
+
     write(data: Uint8Array): void { this.wsClient.write(data); }
+
     destroy(force: boolean): AFuture { return this.wsClient.destroy(force); }
+
+
 }

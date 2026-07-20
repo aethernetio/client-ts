@@ -773,6 +773,7 @@ export class ApiGenerator {
         const sCtx = g.getUniqueVarName("sCtx");
 
         sb.push(`    makeRemote(${sCtx}: MetaContext): ${apiName}Remote {`);
+        this.generateCollapsibleStates(sb, g, methods, sCtx);
         sb.push(`        const remoteApiImpl = {`);
 
         sb.push(`            flush: (): void => {`);
@@ -861,6 +862,12 @@ export class ApiGenerator {
         m: any,
         sCtx: string,
     ): void {
+
+        if (this.isCollapsibleMethod(m)) {
+            this.generateCollapsibleRemoteApiMethodImpl(sb, g, m, sCtx);
+            return;
+        }
+
         const returnTypeStrRaw =
             typeof m.returns === "object" &&
             m.returns !== null &&
@@ -1007,6 +1014,252 @@ export class ApiGenerator {
 
         sb.push(`            },`);
     }
+
+
+    private getMethodParamTypeInfo(
+        g: GeneratorLogic,
+        m: any,
+        paramName: string,
+    ): TypeInfo {
+        const paramType = (m.params as any)[paramName];
+        const typeStrRaw =
+            typeof paramType === "object" &&
+            paramType !== null &&
+            (paramType as TypeDefinition).stream?.name
+                ? (paramType as TypeDefinition).stream!.name!
+                : (paramType as string);
+        return new TypeInfo(g.resolveCanonicalTypeName(typeStrRaw));
+    }
+
+    private isCollapsibleMethod(m: any): boolean {
+        return Object.keys(m.params || {}).some((paramName) =>
+            this.getMethodParamTypeInfo(
+                this.generatorLogic,
+                m,
+                paramName,
+            ).isCollapsible,
+        );
+    }
+
+    private createCollapsibleState(g: GeneratorLogic, m: any): any {
+        const state = {
+            entriesVar: g.getUniqueVarName(`collapsibleEntries_${m.name}`),
+            queuedVar: g.getUniqueVarName(`collapsiblePacketQueued_${m.name}`),
+            serializeVar: g.getUniqueVarName(`serializeCollapsible_${m.name}`),
+        };
+        m.collapsibleState = state;
+        return state;
+    }
+
+
+
+    private getMethodParamNamesByCollapsible(
+        m: any,
+        collapsible: boolean,
+    ): string[] {
+        return Object.keys(m.params || {}).filter(
+            (paramName) =>
+                this.getMethodParamTypeInfo(
+                    this.generatorLogic,
+                    m,
+                    paramName,
+                ).isCollapsible === collapsible,
+        );
+    }
+
+    private buildCollapsibleSerializeFields(
+        g: GeneratorLogic,
+        m: any,
+        entryVar: string,
+    ): Map<string, TypeInfo> {
+        const fields = new Map<string, TypeInfo>();
+        let keyIndex = 0;
+        let collapsibleIndex = 0;
+
+        Object.keys(m.params || {}).forEach((paramName) => {
+            const typeInfo = this.getMethodParamTypeInfo(g, m, paramName);
+            const expression = typeInfo.isCollapsible
+                ? `${entryVar}.collapsibleValues[${collapsibleIndex++}]`
+                : `${entryVar}.keyValues[${keyIndex++}]`;
+            fields.set(expression, typeInfo);
+        });
+
+        return fields;
+    }
+
+    private generateCollapsibleState(
+        sb: string[],
+        g: GeneratorLogic,
+        m: any,
+        sCtx: string,
+    ): void {
+        const state = this.createCollapsibleState(g, m);
+        const outVar = g.getUniqueVarName("collapsibleOut");
+        const entryVar = g.getUniqueVarName("collapsibleEntry");
+        const fields = this.buildCollapsibleSerializeFields(g, m, entryVar);
+        const serializerLines: string[] = [];
+
+        g.generateSerializerFields(
+            serializerLines,
+            sCtx,
+            outVar,
+            fields,
+        );
+
+        sb.push(
+            `        const ${state.entriesVar}: Array<{ keyValues: any[]; collapsibleValues: any[] }> = [];`,
+        );
+        sb.push(`        let ${state.queuedVar} = false;`);
+        sb.push(`        const ${state.serializeVar} = (${outVar}: DataOut): void => {`);
+        sb.push(`            for (const ${entryVar} of ${state.entriesVar}) {`);
+        sb.push(`                ${outVar}.writeByte(${m.id});`);
+        serializerLines.forEach((line) => sb.push(`                ${line}`));
+        sb.push(`            }`);
+        sb.push(`        };`);
+    }
+
+    private generateCollapsibleStates(
+        sb: string[],
+        g: GeneratorLogic,
+        methods: Map<string, any>,
+        sCtx: string,
+    ): void {
+        methods.forEach((m) => {
+            if (this.isCollapsibleMethod(m)) {
+                this.generateCollapsibleState(sb, g, m, sCtx);
+            }
+        });
+    }
+
+
+
+    private buildCollapsibleParamSignature(
+        g: GeneratorLogic,
+        m: any,
+    ): string {
+        return Object.keys(m.params || {})
+            .map((paramName) => {
+                const typeInfo = this.getMethodParamTypeInfo(g, m, paramName);
+                return `${paramName}: ${typeInfo.getFieldType()}`;
+            })
+            .join(", ");
+    }
+
+    private buildCollapsibleKeyMatch(
+        g: GeneratorLogic,
+        m: any,
+        entryVar: string,
+        keyValuesVar: string,
+    ): string {
+        const keyParamNames =
+            this.getMethodParamNamesByCollapsible(m, false);
+        if (keyParamNames.length === 0) return "true";
+
+        return keyParamNames
+            .map((paramName, index) => {
+                const typeInfo =
+                    this.getMethodParamTypeInfo(g, m, paramName);
+                return `${g.generateAccessMeta(typeInfo)}.metaEquals(${entryVar}.keyValues[${index}], ${keyValuesVar}[${index}])`;
+            })
+            .join(" && ");
+    }
+
+    private emitCollapsibleEntryUpdate(
+        sb: string[],
+        g: GeneratorLogic,
+        m: any,
+    ): void {
+        const state = m.collapsibleState;
+        const keyNames = this.getMethodParamNamesByCollapsible(m, false);
+        const valueNames = this.getMethodParamNamesByCollapsible(m, true);
+        const keyValuesVar = g.getUniqueVarName("keyValues");
+        const valuesVar = g.getUniqueVarName("collapsibleValues");
+        const existingVar = g.getUniqueVarName("existingCollapsible");
+        const entryVar = g.getUniqueVarName("entry");
+        const match = this.buildCollapsibleKeyMatch(
+            g,
+            m,
+            entryVar,
+            keyValuesVar,
+        );
+
+        sb.push(`                const ${keyValuesVar}: any[] = [${keyNames.join(", ")}];`);
+        sb.push(`                const ${valuesVar}: any[] = [${valueNames.join(", ")}];`);
+        sb.push(`                const ${existingVar} = ${state.entriesVar}.find((${entryVar}) => ${match});`);
+        sb.push(`                if (${existingVar}) {`);
+        sb.push(`                    ${existingVar}.collapsibleValues = ${valuesVar};`);
+        sb.push(`                } else {`);
+        sb.push(`                    ${state.entriesVar}.push({ keyValues: ${keyValuesVar}, collapsibleValues: ${valuesVar} });`);
+        sb.push(`                }`);
+    }
+
+
+
+    private emitCollapsibleInvocationHook(
+        sb: string[],
+        g: GeneratorLogic,
+        m: any,
+        sCtx: string,
+    ): void {
+        const paramNames = Object.keys(m.params || {});
+        const argsNamesVar = g.getUniqueVarName("argsNames");
+        const argsValuesVar = g.getUniqueVarName("argsValues");
+
+        sb.push(`                const ${argsNamesVar}: string[] = [${paramNames.map((name) => `"${name}"`).join(", ")}];`);
+        sb.push(`                const ${argsValuesVar}: any[] = [${paramNames.join(", ")}];`);
+        sb.push(`                ${sCtx}.invokeRemoteMethodAfter("${m.name}", null, ${argsNamesVar}, ${argsValuesVar});`);
+    }
+
+    private emitCollapsiblePacketSchedule(
+        sb: string[],
+        g: GeneratorLogic,
+        m: any,
+        sCtx: string,
+    ): void {
+        const state = m.collapsibleState;
+        const sizeOutVar = g.getUniqueVarName("sizeOut");
+
+        sb.push(`                if (!${state.queuedVar}) {`);
+        sb.push(`                    ${state.queuedVar} = true;`);
+        sb.push(`                    ${sCtx}.sendToRemote({`);
+        sb.push(`                        size: (): number => {`);
+        sb.push(`                            const ${sizeOutVar} = new DataInOut();`);
+        sb.push(`                            ${state.serializeVar}(${sizeOutVar});`);
+        sb.push(`                            return ${sizeOutVar}.getSizeForRead();`);
+        sb.push(`                        },`);
+        sb.push(`                        serialize: (out: DataOut): void => {`);
+        sb.push(`                            ${state.serializeVar}(out);`);
+        sb.push(`                            ${state.entriesVar}.length = 0;`);
+        sb.push(`                            ${state.queuedVar} = false;`);
+        sb.push(`                        },`);
+        sb.push(`                    });`);
+        sb.push(`                }`);
+    }
+
+
+
+    private generateCollapsibleRemoteApiMethodImpl(
+        sb: string[],
+        g: GeneratorLogic,
+        m: any,
+        sCtx: string,
+    ): void {
+        if (m.returns != null || m.throws != null) {
+            throw new Error(
+                `Collapsible method '${m.name}' cannot declare returns or throws.`,
+            );
+        }
+
+        const paramSignature =
+            this.buildCollapsibleParamSignature(g, m);
+
+        sb.push(`            ${m.name}: (${paramSignature}): void => {`);
+        this.emitCollapsibleInvocationHook(sb, g, m, sCtx);
+        this.emitCollapsibleEntryUpdate(sb, g, m);
+        this.emitCollapsiblePacketSchedule(sb, g, m, sCtx);
+        sb.push(`            },`);
+    }
+
 
     private generateMetaIsValidCommand(
         sb: string[],
