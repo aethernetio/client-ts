@@ -12,7 +12,10 @@ enum CodeState {
     STRING_DOUBLE,
     COMMENT_LINE,
     COMMENT_BLOCK,
+
     STRING_SINGLE,
+    STRING_TEMPLATE,
+
 }
 
 /**
@@ -64,6 +67,10 @@ export class TypeScriptCodeFormatter {
                         currentState = CodeState.STRING_DOUBLE;
                     } else if (currentChar === "'" && prevChar !== '\\') {
                         currentState = CodeState.STRING_SINGLE;
+
+                    } else if (currentChar === '`' && prevChar !== '\\') {
+                        currentState = CodeState.STRING_TEMPLATE;
+
                     } else if (currentChar === '/' && nextChar === '/') {
                         currentState = CodeState.COMMENT_LINE;
                         result.push(currentChar, nextChar);
@@ -130,6 +137,14 @@ export class TypeScriptCodeFormatter {
                         currentState = CodeState.CODE;
                     }
                     break;
+
+                case CodeState.STRING_TEMPLATE:
+                    result.push(currentChar);
+                    if (currentChar === '`' && prevChar !== '\\') {
+                        currentState = CodeState.CODE;
+                    }
+                    break;
+
 
                 case CodeState.COMMENT_LINE:
                     result.push(currentChar);

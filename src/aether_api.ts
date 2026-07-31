@@ -1,5 +1,5 @@
 import  {
-    AFuture, ARFuture, DataInOutStatic, FastMetaType, MetaContext, RemoteApi, FastMetaApi, BytesConverter, UUID, URI, AConsumer, ToString, AString
+    AFuture, ARFuture, DataInOutStatic, DataInOut, FastMetaType, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastFutureContextStub, SyncMapChannel, MetaContext, RemoteApi, FastMetaApi, BytesConverter, UUID, URI, AConsumer, ToString, FastMetaHierarchyType, AString
 }
 from './aether_client';
 import * as Impl from './aether_api_impl';
@@ -49,16 +49,19 @@ export namespace Status  {
 /**
  * Represents the abstract AetherTypeDescriptor structure.
  */
-export abstract class AetherTypeDescriptor implements ToString  {
+export abstract class AetherTypeDescriptor implements ToString, FastMetaHierarchyType  {
     public abstract getKind(): string;
     public readonly id: bigint;
     public readonly docId: bigint | null;
-    public abstract getAetherTypeId(): number;
+    public getAetherTypeId(): number  {
+        return -1;
+        
+    }
     public static readonly META: FastMetaType<AetherTypeDescriptor> = new Impl.AetherTypeDescriptorMetaImpl();
     /**
      * Creates an instance of AetherTypeDescriptor.
      * @param id - bigint
-     * @param docId - bigint
+     * @param docId - bigint | null
      */
     constructor(id: bigint, docId: bigint | null)  {
         this.id = id;
@@ -112,8 +115,11 @@ export abstract class AetherTypeDescriptor implements ToString  {
 /**
  * Represents the abstract IPAddress structure.
  */
-export abstract class IPAddress implements ToString  {
-    public abstract getAetherTypeId(): number;
+export abstract class IPAddress implements ToString, FastMetaHierarchyType  {
+    public getAetherTypeId(): number  {
+        return -1;
+        
+    }
     public static readonly META: FastMetaType<IPAddress> = new Impl.IPAddressMetaImpl();
     /**
      * Creates an instance of IPAddress.
@@ -121,6 +127,7 @@ export abstract class IPAddress implements ToString  {
     constructor()  {
         
     }
+    public abstract getData(): Uint8Array;
     /**
      * Calculates a hash code for a static instance of IPAddress.
      * @param {IPAddress | null | undefined} obj - The object to hash.
@@ -160,8 +167,11 @@ export abstract class IPAddress implements ToString  {
 /**
  * Represents the abstract Key structure.
  */
-export abstract class Key implements ToString  {
-    public abstract getAetherTypeId(): number;
+export abstract class Key implements ToString, FastMetaHierarchyType  {
+    public getAetherTypeId(): number  {
+        return -1;
+        
+    }
     public static readonly META: FastMetaType<Key> = new Impl.KeyMetaImpl();
     /**
      * Creates an instance of Key.
@@ -169,6 +179,7 @@ export abstract class Key implements ToString  {
     constructor()  {
         
     }
+    public abstract getData(): Uint8Array;
     /**
      * Calculates a hash code for a static instance of Key.
      * @param {Key | null | undefined} obj - The object to hash.
@@ -208,7 +219,7 @@ export abstract class Key implements ToString  {
 /**
  * Represents the abstract KeyAsymmetric structure.
  */
-export abstract class KeyAsymmetric extends Key implements ToString  {
+export abstract class KeyAsymmetric extends Key implements ToString, FastMetaHierarchyType  {
     public override getAetherTypeId(): number  {
         return -1;
         
@@ -221,6 +232,7 @@ export abstract class KeyAsymmetric extends Key implements ToString  {
         super();
         
     }
+    public abstract getData(): Uint8Array;
     /**
      * Calculates a hash code for a static instance of KeyAsymmetric.
      * @param {KeyAsymmetric | null | undefined} obj - The object to hash.
@@ -260,7 +272,7 @@ export abstract class KeyAsymmetric extends Key implements ToString  {
 /**
  * Represents the abstract KeyAsymmetricPrivate structure.
  */
-export abstract class KeyAsymmetricPrivate extends KeyAsymmetric implements ToString  {
+export abstract class KeyAsymmetricPrivate extends KeyAsymmetric implements ToString, FastMetaHierarchyType  {
     public override getAetherTypeId(): number  {
         return -1;
         
@@ -273,6 +285,7 @@ export abstract class KeyAsymmetricPrivate extends KeyAsymmetric implements ToSt
         super();
         
     }
+    public abstract getData(): Uint8Array;
     /**
      * Calculates a hash code for a static instance of KeyAsymmetricPrivate.
      * @param {KeyAsymmetricPrivate | null | undefined} obj - The object to hash.
@@ -312,7 +325,7 @@ export abstract class KeyAsymmetricPrivate extends KeyAsymmetric implements ToSt
 /**
  * Represents the abstract KeyAsymmetricPublic structure.
  */
-export abstract class KeyAsymmetricPublic extends KeyAsymmetric implements ToString  {
+export abstract class KeyAsymmetricPublic extends KeyAsymmetric implements ToString, FastMetaHierarchyType  {
     public override getAetherTypeId(): number  {
         return -1;
         
@@ -325,6 +338,7 @@ export abstract class KeyAsymmetricPublic extends KeyAsymmetric implements ToStr
         super();
         
     }
+    public abstract getData(): Uint8Array;
     /**
      * Calculates a hash code for a static instance of KeyAsymmetricPublic.
      * @param {KeyAsymmetricPublic | null | undefined} obj - The object to hash.
@@ -364,7 +378,7 @@ export abstract class KeyAsymmetricPublic extends KeyAsymmetric implements ToStr
 /**
  * Represents the abstract KeySign structure.
  */
-export abstract class KeySign extends Key implements ToString  {
+export abstract class KeySign extends Key implements ToString, FastMetaHierarchyType  {
     public override getAetherTypeId(): number  {
         return -1;
         
@@ -377,6 +391,7 @@ export abstract class KeySign extends Key implements ToString  {
         super();
         
     }
+    public abstract getData(): Uint8Array;
     /**
      * Calculates a hash code for a static instance of KeySign.
      * @param {KeySign | null | undefined} obj - The object to hash.
@@ -416,7 +431,7 @@ export abstract class KeySign extends Key implements ToString  {
 /**
  * Represents the abstract KeySignPrivate structure.
  */
-export abstract class KeySignPrivate extends KeySign implements ToString  {
+export abstract class KeySignPrivate extends KeySign implements ToString, FastMetaHierarchyType  {
     public override getAetherTypeId(): number  {
         return -1;
         
@@ -429,6 +444,7 @@ export abstract class KeySignPrivate extends KeySign implements ToString  {
         super();
         
     }
+    public abstract getData(): Uint8Array;
     /**
      * Calculates a hash code for a static instance of KeySignPrivate.
      * @param {KeySignPrivate | null | undefined} obj - The object to hash.
@@ -468,7 +484,7 @@ export abstract class KeySignPrivate extends KeySign implements ToString  {
 /**
  * Represents the abstract KeySignPublic structure.
  */
-export abstract class KeySignPublic extends KeySign implements ToString  {
+export abstract class KeySignPublic extends KeySign implements ToString, FastMetaHierarchyType  {
     public override getAetherTypeId(): number  {
         return -1;
         
@@ -481,6 +497,7 @@ export abstract class KeySignPublic extends KeySign implements ToString  {
         super();
         
     }
+    public abstract getData(): Uint8Array;
     /**
      * Calculates a hash code for a static instance of KeySignPublic.
      * @param {KeySignPublic | null | undefined} obj - The object to hash.
@@ -520,7 +537,7 @@ export abstract class KeySignPublic extends KeySign implements ToString  {
 /**
  * Represents the abstract KeySymmetric structure.
  */
-export abstract class KeySymmetric extends Key implements ToString  {
+export abstract class KeySymmetric extends Key implements ToString, FastMetaHierarchyType  {
     public override getAetherTypeId(): number  {
         return -1;
         
@@ -533,6 +550,7 @@ export abstract class KeySymmetric extends Key implements ToString  {
         super();
         
     }
+    public abstract getData(): Uint8Array;
     /**
      * Calculates a hash code for a static instance of KeySymmetric.
      * @param {KeySymmetric | null | undefined} obj - The object to hash.
@@ -572,8 +590,11 @@ export abstract class KeySymmetric extends Key implements ToString  {
 /**
  * Represents the abstract PairKeys structure.
  */
-export abstract class PairKeys implements ToString  {
-    public abstract getAetherTypeId(): number;
+export abstract class PairKeys implements ToString, FastMetaHierarchyType  {
+    public getAetherTypeId(): number  {
+        return -1;
+        
+    }
     public static readonly META: FastMetaType<PairKeys> = new Impl.PairKeysMetaImpl();
     /**
      * Creates an instance of PairKeys.
@@ -620,8 +641,11 @@ export abstract class PairKeys implements ToString  {
 /**
  * Represents the abstract Sign structure.
  */
-export abstract class Sign implements ToString  {
-    public abstract getAetherTypeId(): number;
+export abstract class Sign implements ToString, FastMetaHierarchyType  {
+    public getAetherTypeId(): number  {
+        return -1;
+        
+    }
     public static readonly META: FastMetaType<Sign> = new Impl.SignMetaImpl();
     /**
      * Creates an instance of Sign.
@@ -629,6 +653,7 @@ export abstract class Sign implements ToString  {
     constructor()  {
         
     }
+    public abstract getData(): Uint8Array;
     /**
      * Calculates a hash code for a static instance of Sign.
      * @param {Sign | null | undefined} obj - The object to hash.
@@ -668,8 +693,11 @@ export abstract class Sign implements ToString  {
 /**
  * Represents the abstract Telemetry structure.
  */
-export abstract class Telemetry implements ToString  {
-    public abstract getAetherTypeId(): number;
+export abstract class Telemetry implements ToString, FastMetaHierarchyType  {
+    public getAetherTypeId(): number  {
+        return -1;
+        
+    }
     public static readonly META: FastMetaType<Telemetry> = new Impl.TelemetryMetaImpl();
     /**
      * Creates an instance of Telemetry.
@@ -677,6 +705,11 @@ export abstract class Telemetry implements ToString  {
     constructor()  {
         
     }
+    public abstract getUtm_id(): number;
+    public abstract getBlob(): Uint8Array;
+    public abstract getLib_version(): string;
+    public abstract getOs(): string;
+    public abstract getCompiler(): string;
     /**
      * Calculates a hash code for a static instance of Telemetry.
      * @param {Telemetry | null | undefined} obj - The object to hash.
@@ -716,8 +749,11 @@ export abstract class Telemetry implements ToString  {
 /**
  * Represents the abstract WorkProofConfig structure.
  */
-export abstract class WorkProofConfig implements ToString  {
-    public abstract getAetherTypeId(): number;
+export abstract class WorkProofConfig implements ToString, FastMetaHierarchyType  {
+    public getAetherTypeId(): number  {
+        return -1;
+        
+    }
     public static readonly META: FastMetaType<WorkProofConfig> = new Impl.WorkProofConfigMetaImpl();
     /**
      * Creates an instance of WorkProofConfig.
@@ -725,6 +761,9 @@ export abstract class WorkProofConfig implements ToString  {
     constructor()  {
         
     }
+    public abstract getCostBCrypt(): number;
+    public abstract getPoolSize(): number;
+    public abstract getMaxHashVal(): number;
     /**
      * Calculates a hash code for a static instance of WorkProofConfig.
      * @param {WorkProofConfig | null | undefined} obj - The object to hash.
@@ -910,30 +949,37 @@ export class AccessCheckResult implements ToString  {
  * Represents the AccessGroup structure.
  */
 export class AccessGroup implements ToString  {
+    public readonly id: UUID;
+    public readonly time: number;
     public readonly owner: UUID;
-    public readonly id: bigint;
     public readonly data: UUID[];
     public static readonly META_BODY: FastMetaType<AccessGroup> = new Impl.AccessGroupMetaBodyImpl();
     public static readonly META: FastMetaType<AccessGroup> = AccessGroup.META_BODY;
     /**
      * Creates an instance of AccessGroup.
+     * @param id - UUID
+     * @param time - number
      * @param owner - UUID
-     * @param id - bigint
      * @param data - UUID[]
      */
-    constructor(owner: UUID, id: bigint, data: UUID[])  {
-        this.owner = owner;
+    constructor(id: UUID, time: number, owner: UUID, data: UUID[])  {
         this.id = id;
+        this.time = time;
+        this.owner = owner;
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type AccessGroup.`);
         
     }
-    public getOwner(): UUID  {
-        return this.owner;
+    public getId(): UUID  {
+        return this.id;
         
     }
-    public getId(): bigint  {
-        return this.id;
+    public getTime(): number  {
+        return this.time;
+        
+    }
+    public getOwner(): UUID  {
+        return this.owner;
         
     }
     public getData(): UUID[]  {
@@ -1002,7 +1048,7 @@ export class AetherApiDefinition implements ToString  {
      * @param id - bigint
      * @param nameId - bigint
      * @param methods - AetherMethodDescriptor[]
-     * @param docId - bigint
+     * @param docId - bigint | null
      */
     constructor(id: bigint, nameId: bigint, methods: AetherMethodDescriptor[], docId: bigint | null)  {
         this.id = id;
@@ -1088,7 +1134,7 @@ export class AetherArgumentDescriptor implements ToString  {
      * Creates an instance of AetherArgumentDescriptor.
      * @param nameId - bigint
      * @param typeId - bigint
-     * @param docId - bigint
+     * @param docId - bigint | null
      */
     constructor(nameId: bigint, typeId: bigint, docId: bigint | null)  {
         this.nameId = nameId;
@@ -1156,7 +1202,7 @@ export class AetherArgumentDescriptor implements ToString  {
  *
  * @aetherTypeId 2
  */
-export class AetherArrayType extends AetherTypeDescriptor implements ToString  {
+export class AetherArrayType extends AetherTypeDescriptor implements ToString, FastMetaHierarchyType  {
     public readonly elementTypeId: bigint;
     public override getKind(): string  {
         return "ARRAY";
@@ -1171,7 +1217,7 @@ export class AetherArrayType extends AetherTypeDescriptor implements ToString  {
     /**
      * Creates an instance of AetherArrayType.
      * @param id - bigint
-     * @param docId - bigint
+     * @param docId - bigint | null
      * @param elementTypeId - bigint
      */
     constructor(id: bigint, docId: bigint | null, elementTypeId: bigint)  {
@@ -1231,7 +1277,7 @@ export class AetherArrayType extends AetherTypeDescriptor implements ToString  {
  *
  * @aetherTypeId 1
  */
-export class AetherBaseType extends AetherTypeDescriptor implements ToString  {
+export class AetherBaseType extends AetherTypeDescriptor implements ToString, FastMetaHierarchyType  {
     public readonly nameId: bigint;
     public override getKind(): string  {
         return "BASE";
@@ -1246,7 +1292,7 @@ export class AetherBaseType extends AetherTypeDescriptor implements ToString  {
     /**
      * Creates an instance of AetherBaseType.
      * @param id - bigint
-     * @param docId - bigint
+     * @param docId - bigint | null
      * @param nameId - bigint
      */
     constructor(id: bigint, docId: bigint | null, nameId: bigint)  {
@@ -1314,7 +1360,7 @@ export class AetherFieldDescriptor implements ToString  {
      * Creates an instance of AetherFieldDescriptor.
      * @param nameId - bigint
      * @param typeId - bigint
-     * @param docId - bigint
+     * @param docId - bigint | null
      */
     constructor(nameId: bigint, typeId: bigint, docId: bigint | null)  {
         this.nameId = nameId;
@@ -1392,7 +1438,7 @@ export class AetherMethodDescriptor implements ToString  {
      * @param nameId - bigint
      * @param args - AetherArgumentDescriptor[]
      * @param returnTypeId - bigint
-     * @param docId - bigint
+     * @param docId - bigint | null
      */
     constructor(nameId: bigint, args: AetherArgumentDescriptor[], returnTypeId: bigint, docId: bigint | null)  {
         this.nameId = nameId;
@@ -1573,7 +1619,7 @@ export class AetherModuleDescriptor implements ToString  {
  *
  * @aetherTypeId 4
  */
-export class AetherNullableType extends AetherTypeDescriptor implements ToString  {
+export class AetherNullableType extends AetherTypeDescriptor implements ToString, FastMetaHierarchyType  {
     public readonly wrappedTypeId: bigint;
     public override getKind(): string  {
         return "NULLABLE";
@@ -1588,7 +1634,7 @@ export class AetherNullableType extends AetherTypeDescriptor implements ToString
     /**
      * Creates an instance of AetherNullableType.
      * @param id - bigint
-     * @param docId - bigint
+     * @param docId - bigint | null
      * @param wrappedTypeId - bigint
      */
     constructor(id: bigint, docId: bigint | null, wrappedTypeId: bigint)  {
@@ -1648,7 +1694,7 @@ export class AetherNullableType extends AetherTypeDescriptor implements ToString
  *
  * @aetherTypeId 3
  */
-export class AetherStreamType extends AetherTypeDescriptor implements ToString  {
+export class AetherStreamType extends AetherTypeDescriptor implements ToString, FastMetaHierarchyType  {
     public readonly apiId: bigint;
     public readonly isCrypto: boolean;
     public override getKind(): string  {
@@ -1664,7 +1710,7 @@ export class AetherStreamType extends AetherTypeDescriptor implements ToString  
     /**
      * Creates an instance of AetherStreamType.
      * @param id - bigint
-     * @param docId - bigint
+     * @param docId - bigint | null
      * @param apiId - bigint
      * @param isCrypto - boolean
      */
@@ -1738,9 +1784,9 @@ export class AetherStructDescriptor implements ToString  {
     /**
      * Creates an instance of AetherStructDescriptor.
      * @param baseTypeId - bigint
-     * @param parentTypeId - bigint
+     * @param parentTypeId - bigint | null
      * @param fields - AetherFieldDescriptor[]
-     * @param docId - bigint
+     * @param docId - bigint | null
      */
     constructor(baseTypeId: bigint, parentTypeId: bigint | null, fields: AetherFieldDescriptor[], docId: bigint | null)  {
         this.baseTypeId = baseTypeId;
@@ -1899,7 +1945,7 @@ export class ClientActivity implements ToString  {
      * @param type - ClientActivityType
      * @param clientUid - UUID
      * @param details - string
-     * @param serverId - number
+     * @param serverId - number | null
      */
     constructor(timestamp: bigint, type: ClientActivityType, clientUid: UUID, details: string, serverId: number | null)  {
         this.timestamp = timestamp;
@@ -1987,7 +2033,7 @@ export class ClientConnectionInfo implements ToString  {
     /**
      * Creates an instance of ClientConnectionInfo.
      * @param connectedAt - bigint
-     * @param disconnectedAt - bigint
+     * @param disconnectedAt - bigint | null
      * @param serverId - number
      * @param context - KeyValuePair[]
      * @param protocol - string
@@ -2841,7 +2887,7 @@ export class FinishResultGlobalRegServerApi implements ToString  {
  *
  * @aetherTypeId 1
  */
-export class HydrogenCurvePrivate extends KeyAsymmetricPrivate implements ToString  {
+export class HydrogenCurvePrivate extends KeyAsymmetricPrivate implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 1;
@@ -2857,10 +2903,7 @@ export class HydrogenCurvePrivate extends KeyAsymmetricPrivate implements ToStri
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type HydrogenCurvePrivate.`);
-        if (data.length !== 32) throw new Error(`Array length for field 'data' in type HydrogenCurvePrivate must be 32 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 32) throw new Error(`Array length for field 'data' in type HydrogenCurvePrivate must be 32 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -2919,7 +2962,7 @@ export class HydrogenCurvePrivate extends KeyAsymmetricPrivate implements ToStri
  *
  * @aetherTypeId 2
  */
-export class HydrogenCurvePublic extends KeyAsymmetricPublic implements ToString  {
+export class HydrogenCurvePublic extends KeyAsymmetricPublic implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 2;
@@ -2935,10 +2978,7 @@ export class HydrogenCurvePublic extends KeyAsymmetricPublic implements ToString
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type HydrogenCurvePublic.`);
-        if (data.length !== 32) throw new Error(`Array length for field 'data' in type HydrogenCurvePublic must be 32 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 32) throw new Error(`Array length for field 'data' in type HydrogenCurvePublic must be 32 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -2997,7 +3037,7 @@ export class HydrogenCurvePublic extends KeyAsymmetricPublic implements ToString
  *
  * @aetherTypeId 3
  */
-export class HydrogenSecretBox extends KeySymmetric implements ToString  {
+export class HydrogenSecretBox extends KeySymmetric implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 3;
@@ -3013,10 +3053,7 @@ export class HydrogenSecretBox extends KeySymmetric implements ToString  {
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type HydrogenSecretBox.`);
-        if (data.length !== 32) throw new Error(`Array length for field 'data' in type HydrogenSecretBox must be 32 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 32) throw new Error(`Array length for field 'data' in type HydrogenSecretBox must be 32 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -3075,7 +3112,7 @@ export class HydrogenSecretBox extends KeySymmetric implements ToString  {
  *
  * @aetherTypeId 4
  */
-export class HydrogenSignPrivate extends KeySignPrivate implements ToString  {
+export class HydrogenSignPrivate extends KeySignPrivate implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 4;
@@ -3091,10 +3128,7 @@ export class HydrogenSignPrivate extends KeySignPrivate implements ToString  {
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type HydrogenSignPrivate.`);
-        if (data.length !== 64) throw new Error(`Array length for field 'data' in type HydrogenSignPrivate must be 64 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 64) throw new Error(`Array length for field 'data' in type HydrogenSignPrivate must be 64 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -3153,7 +3187,7 @@ export class HydrogenSignPrivate extends KeySignPrivate implements ToString  {
  *
  * @aetherTypeId 5
  */
-export class HydrogenSignPublic extends KeySignPublic implements ToString  {
+export class HydrogenSignPublic extends KeySignPublic implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 5;
@@ -3169,10 +3203,7 @@ export class HydrogenSignPublic extends KeySignPublic implements ToString  {
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type HydrogenSignPublic.`);
-        if (data.length !== 32) throw new Error(`Array length for field 'data' in type HydrogenSignPublic must be 32 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 32) throw new Error(`Array length for field 'data' in type HydrogenSignPublic must be 32 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -3440,7 +3471,7 @@ export class IPAddressAndPortsList implements ToString  {
  *
  * @aetherTypeId 1
  */
-export class IPAddressV4 extends IPAddress implements ToString  {
+export class IPAddressV4 extends IPAddress implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 1;
@@ -3456,10 +3487,7 @@ export class IPAddressV4 extends IPAddress implements ToString  {
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type IPAddressV4.`);
-        if (data.length !== 4) throw new Error(`Array length for field 'data' in type IPAddressV4 must be 4 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 4) throw new Error(`Array length for field 'data' in type IPAddressV4 must be 4 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -3518,7 +3546,7 @@ export class IPAddressV4 extends IPAddress implements ToString  {
  *
  * @aetherTypeId 2
  */
-export class IPAddressV6 extends IPAddress implements ToString  {
+export class IPAddressV6 extends IPAddress implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 2;
@@ -3534,10 +3562,7 @@ export class IPAddressV6 extends IPAddress implements ToString  {
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type IPAddressV6.`);
-        if (data.length !== 16) throw new Error(`Array length for field 'data' in type IPAddressV6 must be 16 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 16) throw new Error(`Array length for field 'data' in type IPAddressV6 must be 16 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -3596,7 +3621,7 @@ export class IPAddressV6 extends IPAddress implements ToString  {
  *
  * @aetherTypeId 3
  */
-export class IPAddressWeb extends IPAddress implements ToString  {
+export class IPAddressWeb extends IPAddress implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 3;
@@ -4092,7 +4117,7 @@ export class MoneyOperation implements ToString  {
  *
  * @aetherTypeId 1
  */
-export class PairKeysAsym extends PairKeys implements ToString  {
+export class PairKeysAsym extends PairKeys implements ToString, FastMetaHierarchyType  {
     public readonly privateKey: Key;
     public readonly publicKey: Key;
     public override getAetherTypeId(): number  {
@@ -4170,7 +4195,7 @@ export class PairKeysAsym extends PairKeys implements ToString  {
  *
  * @aetherTypeId 2
  */
-export class PairKeysAsymSigned extends PairKeys implements ToString  {
+export class PairKeysAsymSigned extends PairKeys implements ToString, FastMetaHierarchyType  {
     public readonly privateKey: Key;
     public readonly publicKey: SignedKey;
     public override getAetherTypeId(): number  {
@@ -4248,7 +4273,7 @@ export class PairKeysAsymSigned extends PairKeys implements ToString  {
  *
  * @aetherTypeId 3
  */
-export class PairKeysSign extends PairKeys implements ToString  {
+export class PairKeysSign extends PairKeys implements ToString, FastMetaHierarchyType  {
     public readonly privateKey: Key;
     public readonly publicKey: Key;
     public override getAetherTypeId(): number  {
@@ -4316,6 +4341,84 @@ export class PairKeysSign extends PairKeys implements ToString  {
     }
     public toAString(result: AString): AString  {
         PairKeysSign.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the PairKeysSym structure.
+ *
+ * @aetherTypeId 4
+ */
+export class PairKeysSym extends PairKeys implements ToString, FastMetaHierarchyType  {
+    public readonly clientToServer: KeySymmetric;
+    public readonly serverToClient: KeySymmetric;
+    public override getAetherTypeId(): number  {
+        return 4;
+        
+    }
+    public static readonly META_BODY: FastMetaType<PairKeysSym> = new Impl.PairKeysSymMetaBodyImpl();
+    public static readonly META: FastMetaType<PairKeysSym> = new Impl.PairKeysSymMetaImpl();
+    /**
+     * Creates an instance of PairKeysSym.
+     * @param clientToServer - KeySymmetric
+     * @param serverToClient - KeySymmetric
+     */
+    constructor(clientToServer: KeySymmetric, serverToClient: KeySymmetric)  {
+        super();
+        this.clientToServer = clientToServer;
+        this.serverToClient = serverToClient;
+        if (clientToServer === null || clientToServer === undefined) throw new Error(`Field 'clientToServer' cannot be null for type PairKeysSym.`);
+        if (serverToClient === null || serverToClient === undefined) throw new Error(`Field 'serverToClient' cannot be null for type PairKeysSym.`);
+        
+    }
+    public getClientToServer(): KeySymmetric  {
+        return this.clientToServer;
+        
+    }
+    public getServerToClient(): KeySymmetric  {
+        return this.serverToClient;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of PairKeysSym.
+     * @param {PairKeysSym | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: PairKeysSym | null | undefined): number  {
+        return PairKeysSym.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of PairKeysSym with another object.
+     * @param {PairKeysSym | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: PairKeysSym | null | undefined, v2: any | null | undefined): boolean  {
+        return PairKeysSym.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return PairKeysSym.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return PairKeysSym.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        PairKeysSym.META.metaToString(this, result);
         return result;
         
     }
@@ -4396,6 +4499,7 @@ export class ServerDescriptor implements ToString  {
  */
 export class ServerDescriptorWithGeo implements ToString  {
     public readonly id: number;
+    public readonly time: number;
     public readonly ipAddress: IPAddressAndPortsList;
     public readonly latitude: number;
     public readonly longitude: number;
@@ -4405,13 +4509,15 @@ export class ServerDescriptorWithGeo implements ToString  {
     /**
      * Creates an instance of ServerDescriptorWithGeo.
      * @param id - number
+     * @param time - number
      * @param ipAddress - IPAddressAndPortsList
      * @param latitude - number
      * @param longitude - number
      * @param type - ServerType
      */
-    constructor(id: number, ipAddress: IPAddressAndPortsList, latitude: number, longitude: number, type: ServerType)  {
+    constructor(id: number, time: number, ipAddress: IPAddressAndPortsList, latitude: number, longitude: number, type: ServerType)  {
         this.id = id;
+        this.time = time;
         this.ipAddress = ipAddress;
         this.latitude = latitude;
         this.longitude = longitude;
@@ -4422,6 +4528,10 @@ export class ServerDescriptorWithGeo implements ToString  {
     }
     public getId(): number  {
         return this.id;
+        
+    }
+    public getTime(): number  {
+        return this.time;
         
     }
     public getIpAddress(): IPAddressAndPortsList  {
@@ -4488,7 +4598,7 @@ export class ServerDescriptorWithGeo implements ToString  {
  *
  * @aetherTypeId 1
  */
-export class SignAE_ED25519 extends Sign implements ToString  {
+export class SignAE_ED25519 extends Sign implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 1;
@@ -4504,10 +4614,7 @@ export class SignAE_ED25519 extends Sign implements ToString  {
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type SignAE_ED25519.`);
-        if (data.length !== 64) throw new Error(`Array length for field 'data' in type SignAE_ED25519 must be 64 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 64) throw new Error(`Array length for field 'data' in type SignAE_ED25519 must be 64 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -4637,7 +4744,7 @@ export class SignedKey implements ToString  {
  *
  * @aetherTypeId 2
  */
-export class SignHYDROGEN extends Sign implements ToString  {
+export class SignHYDROGEN extends Sign implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 2;
@@ -4653,10 +4760,7 @@ export class SignHYDROGEN extends Sign implements ToString  {
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type SignHYDROGEN.`);
-        if (data.length !== 64) throw new Error(`Array length for field 'data' in type SignHYDROGEN must be 64 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 64) throw new Error(`Array length for field 'data' in type SignHYDROGEN must be 64 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -4715,7 +4819,7 @@ export class SignHYDROGEN extends Sign implements ToString  {
  *
  * @aetherTypeId 6
  */
-export class SodiumChacha20Poly1305 extends KeySymmetric implements ToString  {
+export class SodiumChacha20Poly1305 extends KeySymmetric implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 6;
@@ -4731,10 +4835,7 @@ export class SodiumChacha20Poly1305 extends KeySymmetric implements ToString  {
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type SodiumChacha20Poly1305.`);
-        if (data.length !== 32) throw new Error(`Array length for field 'data' in type SodiumChacha20Poly1305 must be 32 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 32) throw new Error(`Array length for field 'data' in type SodiumChacha20Poly1305 must be 32 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -4793,7 +4894,7 @@ export class SodiumChacha20Poly1305 extends KeySymmetric implements ToString  {
  *
  * @aetherTypeId 7
  */
-export class SodiumCurvePrivate extends KeyAsymmetricPrivate implements ToString  {
+export class SodiumCurvePrivate extends KeyAsymmetricPrivate implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 7;
@@ -4809,10 +4910,7 @@ export class SodiumCurvePrivate extends KeyAsymmetricPrivate implements ToString
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type SodiumCurvePrivate.`);
-        if (data.length !== 32) throw new Error(`Array length for field 'data' in type SodiumCurvePrivate must be 32 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 32) throw new Error(`Array length for field 'data' in type SodiumCurvePrivate must be 32 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -4871,7 +4969,7 @@ export class SodiumCurvePrivate extends KeyAsymmetricPrivate implements ToString
  *
  * @aetherTypeId 8
  */
-export class SodiumCurvePublic extends KeyAsymmetricPublic implements ToString  {
+export class SodiumCurvePublic extends KeyAsymmetricPublic implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 8;
@@ -4887,10 +4985,7 @@ export class SodiumCurvePublic extends KeyAsymmetricPublic implements ToString  
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type SodiumCurvePublic.`);
-        if (data.length !== 32) throw new Error(`Array length for field 'data' in type SodiumCurvePublic must be 32 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 32) throw new Error(`Array length for field 'data' in type SodiumCurvePublic must be 32 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -4949,7 +5044,7 @@ export class SodiumCurvePublic extends KeyAsymmetricPublic implements ToString  
  *
  * @aetherTypeId 9
  */
-export class SodiumSignPrivate extends KeySignPrivate implements ToString  {
+export class SodiumSignPrivate extends KeySignPrivate implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 9;
@@ -4965,10 +5060,7 @@ export class SodiumSignPrivate extends KeySignPrivate implements ToString  {
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type SodiumSignPrivate.`);
-        if (data.length !== 64) throw new Error(`Array length for field 'data' in type SodiumSignPrivate must be 64 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 64) throw new Error(`Array length for field 'data' in type SodiumSignPrivate must be 64 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -5027,7 +5119,7 @@ export class SodiumSignPrivate extends KeySignPrivate implements ToString  {
  *
  * @aetherTypeId 10
  */
-export class SodiumSignPublic extends KeySignPublic implements ToString  {
+export class SodiumSignPublic extends KeySignPublic implements ToString, FastMetaHierarchyType  {
     public readonly data: Uint8Array;
     public override getAetherTypeId(): number  {
         return 10;
@@ -5043,10 +5135,7 @@ export class SodiumSignPublic extends KeySignPublic implements ToString  {
         super();
         this.data = data;
         if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type SodiumSignPublic.`);
-        if (data.length !== 32) throw new Error(`Array length for field 'data' in type SodiumSignPublic must be 32 but was $ {
-            data ? data.length : 'null/undefined'
-        }
-        .`);
+        if (data.length !== 32) throw new Error(`Array length for field 'data' in type SodiumSignPublic must be 32 but was ${data ? data.length : 'null/undefined'}.`);
         
     }
     public getData(): Uint8Array  {
@@ -5105,7 +5194,7 @@ export class SodiumSignPublic extends KeySignPublic implements ToString  {
  *
  * @aetherTypeId 1
  */
-export class TelemetryCPP extends Telemetry implements ToString  {
+export class TelemetryCPP extends Telemetry implements ToString, FastMetaHierarchyType  {
     public readonly utm_id: number;
     public readonly blob: Uint8Array;
     public readonly lib_version: string;
@@ -5425,7 +5514,7 @@ export class WebRtcSession implements ToString  {
  *
  * @aetherTypeId 1
  */
-export class WorkProofBCrypt extends WorkProofConfig implements ToString  {
+export class WorkProofBCrypt extends WorkProofConfig implements ToString, FastMetaHierarchyType  {
     public readonly costBCrypt: number;
     public readonly poolSize: number;
     public readonly maxHashVal: number;
@@ -5683,10 +5772,10 @@ export class ClientApiRegSafeStream implements ToString  {
                     };
                     
                 }
-                this.activeContext = this.parentContext!.findContext(effectiveFactory, this._streamKeys || []);
+                this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (ClientApiRegSafe as any).META.makeLocal_fromDataIn(this.activeContext, new DataInOutStatic(targetData), this.activeContext.getLocalApi());
+            (ClientApiRegSafe as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
             
         }
         
@@ -5706,7 +5795,7 @@ export class ClientApiRegSafeStream implements ToString  {
             return out;
             
         }
-        static sendWithApi<LT extends ClientApiRegSafeRemote>(remoteGenerator: (api: ClientApiRegSafeRemote) => void, factory: (ctx: MetaContext) => LT, ...keys: any[]): Out  {
+        static sendWithApi(remoteGenerator: (api: ClientApiRegSafeRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
             out.deferredRemoteGenerator = remoteGenerator as any;
             out.deferredFactory = factory as any;
@@ -5811,10 +5900,10 @@ export class ClientApiStream implements ToString  {
                     };
                     
                 }
-                this.activeContext = this.parentContext!.findContext(effectiveFactory, this._streamKeys || []);
+                this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (ServerApiByUid as any).META.makeLocal_fromDataIn(this.activeContext, new DataInOutStatic(targetData), this.activeContext.getLocalApi());
+            (ServerApiByUid as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
             
         }
         
@@ -5833,7 +5922,7 @@ export class ClientApiStream implements ToString  {
             return out;
             
         }
-        static sendWithApi<LT extends ServerApiByUidRemote>(remoteGenerator: (api: ServerApiByUidRemote) => void, factory: (ctx: MetaContext) => LT, ...keys: any[]): Out  {
+        static sendWithApi(remoteGenerator: (api: ServerApiByUidRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
             out.deferredRemoteGenerator = remoteGenerator as any;
             out.deferredFactory = factory as any;
@@ -5933,10 +6022,10 @@ export class ClientInteractionClientStream implements ToString  {
                     };
                     
                 }
-                this.activeContext = this.parentContext!.findContext(effectiveFactory, this._streamKeys || []);
+                this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (ServerApiByUidClient as any).META.makeLocal_fromDataIn(this.activeContext, new DataInOutStatic(targetData), this.activeContext.getLocalApi());
+            (ServerApiByUidClient as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
             
         }
         
@@ -5955,7 +6044,7 @@ export class ClientInteractionClientStream implements ToString  {
             return out;
             
         }
-        static sendWithApi<LT extends ServerApiByUidClientRemote>(remoteGenerator: (api: ServerApiByUidClientRemote) => void, factory: (ctx: MetaContext) => LT, ...keys: any[]): Out  {
+        static sendWithApi(remoteGenerator: (api: ServerApiByUidClientRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
             out.deferredRemoteGenerator = remoteGenerator as any;
             out.deferredFactory = factory as any;
@@ -6062,10 +6151,10 @@ export class GlobalApiStream implements ToString  {
                     };
                     
                 }
-                this.activeContext = this.parentContext!.findContext(effectiveFactory, this._streamKeys || []);
+                this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (GlobalRegServerApi as any).META.makeLocal_fromDataIn(this.activeContext, new DataInOutStatic(targetData), this.activeContext.getLocalApi());
+            (GlobalRegServerApi as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
             
         }
         
@@ -6085,7 +6174,7 @@ export class GlobalApiStream implements ToString  {
             return out;
             
         }
-        static sendWithApi<LT extends GlobalRegServerApiRemote>(remoteGenerator: (api: GlobalRegServerApiRemote) => void, factory: (ctx: MetaContext) => LT, ...keys: any[]): Out  {
+        static sendWithApi(remoteGenerator: (api: GlobalRegServerApiRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
             out.deferredRemoteGenerator = remoteGenerator as any;
             out.deferredFactory = factory as any;
@@ -6197,10 +6286,10 @@ export class GlobalRegClientApiStream implements ToString  {
                     };
                     
                 }
-                this.activeContext = this.parentContext!.findContext(effectiveFactory, this._streamKeys || []);
+                this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (GlobalRegClientApi as any).META.makeLocal_fromDataIn(this.activeContext, new DataInOutStatic(targetData), this.activeContext.getLocalApi());
+            (GlobalRegClientApi as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
             
         }
         
@@ -6220,7 +6309,7 @@ export class GlobalRegClientApiStream implements ToString  {
             return out;
             
         }
-        static sendWithApi<LT extends GlobalRegClientApiRemote>(remoteGenerator: (api: GlobalRegClientApiRemote) => void, factory: (ctx: MetaContext) => LT, ...keys: any[]): Out  {
+        static sendWithApi(remoteGenerator: (api: GlobalRegClientApiRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
             out.deferredRemoteGenerator = remoteGenerator as any;
             out.deferredFactory = factory as any;
@@ -6332,10 +6421,10 @@ export class LoginClientStream implements ToString  {
                     };
                     
                 }
-                this.activeContext = this.parentContext!.findContext(effectiveFactory, this._streamKeys || []);
+                this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (ClientApiSafe as any).META.makeLocal_fromDataIn(this.activeContext, new DataInOutStatic(targetData), this.activeContext.getLocalApi());
+            (ClientApiSafe as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
             
         }
         
@@ -6355,7 +6444,7 @@ export class LoginClientStream implements ToString  {
             return out;
             
         }
-        static sendWithApi<LT extends ClientApiSafeRemote>(remoteGenerator: (api: ClientApiSafeRemote) => void, factory: (ctx: MetaContext) => LT, ...keys: any[]): Out  {
+        static sendWithApi(remoteGenerator: (api: ClientApiSafeRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
             out.deferredRemoteGenerator = remoteGenerator as any;
             out.deferredFactory = factory as any;
@@ -6448,7 +6537,8 @@ export class LoginStream implements ToString  {
             
         }
         remoteApi(): ClientApiSafeRemote  {
-            const activeCtx = this.parentContext!.findContext(this.factory!, this._streamKeys || []);
+            if (!this.factory) throw new Error("factory is not set");
+            const activeCtx = this.parentContext!.findContext(this.factory!, ...(this._streamKeys || []));
             return activeCtx.makeRemote((ClientApiSafe as any).META) as ClientApiSafeRemote;
             
         }
@@ -6481,10 +6571,10 @@ export class LoginStream implements ToString  {
                     };
                     
                 }
-                this.activeContext = this.parentContext!.findContext(effectiveFactory, this._streamKeys || []);
+                this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (AuthorizedApi as any).META.makeLocal_fromDataIn(this.activeContext, new DataInOutStatic(targetData), this.activeContext.getLocalApi());
+            (AuthorizedApi as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
             
         }
         
@@ -6504,7 +6594,7 @@ export class LoginStream implements ToString  {
             return out;
             
         }
-        static sendWithApi<LT extends AuthorizedApiRemote>(remoteGenerator: (api: AuthorizedApiRemote) => void, factory: (ctx: MetaContext) => LT, ...keys: any[]): Out  {
+        static sendWithApi(remoteGenerator: (api: AuthorizedApiRemote) => void, factory: (ctx: MetaContext) => ClientApiSafe, ...keys: any[]): Out  {
             const out = new Out();
             out.deferredRemoteGenerator = remoteGenerator as any;
             out.deferredFactory = factory as any;
@@ -6616,10 +6706,10 @@ export class ServerRegistrationApiStream implements ToString  {
                     };
                     
                 }
-                this.activeContext = this.parentContext!.findContext(effectiveFactory, this._streamKeys || []);
+                this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (ServerRegistrationApi as any).META.makeLocal_fromDataIn(this.activeContext, new DataInOutStatic(targetData), this.activeContext.getLocalApi());
+            (ServerRegistrationApi as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
             
         }
         
@@ -6639,7 +6729,7 @@ export class ServerRegistrationApiStream implements ToString  {
             return out;
             
         }
-        static sendWithApi<LT extends ServerRegistrationApiRemote>(remoteGenerator: (api: ServerRegistrationApiRemote) => void, factory: (ctx: MetaContext) => LT, ...keys: any[]): Out  {
+        static sendWithApi(remoteGenerator: (api: ServerRegistrationApiRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
             out.deferredRemoteGenerator = remoteGenerator as any;
             out.deferredFactory = factory as any;
@@ -6662,6 +6752,139 @@ export class ServerRegistrationApiStream implements ToString  {
     }
     
 }
+/**
+ * Represents the ClientApiUnsafeSendSafeApiDataMultiArguments structure.
+ */
+export class ClientApiUnsafeSendSafeApiDataMultiArguments implements ToString  {
+    public readonly backId: number;
+    public readonly data: LoginClientStream;
+    public static readonly META_BODY: FastMetaType<ClientApiUnsafeSendSafeApiDataMultiArguments> = new Impl.ClientApiUnsafeSendSafeApiDataMultiArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiUnsafeSendSafeApiDataMultiArguments> = ClientApiUnsafeSendSafeApiDataMultiArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiUnsafeSendSafeApiDataMultiArguments.
+     * @param backId - number
+     * @param data - LoginClientStream
+     */
+    constructor(backId: number, data: LoginClientStream)  {
+        this.backId = backId;
+        this.data = data;
+        if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type ClientApiUnsafeSendSafeApiDataMultiArguments.`);
+        
+    }
+    public getBackId(): number  {
+        return this.backId;
+        
+    }
+    public getData(): LoginClientStream  {
+        return this.data;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiUnsafeSendSafeApiDataMultiArguments.
+     * @param {ClientApiUnsafeSendSafeApiDataMultiArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiUnsafeSendSafeApiDataMultiArguments | null | undefined): number  {
+        return ClientApiUnsafeSendSafeApiDataMultiArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiUnsafeSendSafeApiDataMultiArguments with another object.
+     * @param {ClientApiUnsafeSendSafeApiDataMultiArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiUnsafeSendSafeApiDataMultiArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiUnsafeSendSafeApiDataMultiArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiUnsafeSendSafeApiDataMultiArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiUnsafeSendSafeApiDataMultiArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiUnsafeSendSafeApiDataMultiArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiUnsafeSendSafeApiDataArguments structure.
+ */
+export class ClientApiUnsafeSendSafeApiDataArguments implements ToString  {
+    public readonly data: LoginClientStream;
+    public static readonly META_BODY: FastMetaType<ClientApiUnsafeSendSafeApiDataArguments> = new Impl.ClientApiUnsafeSendSafeApiDataArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiUnsafeSendSafeApiDataArguments> = ClientApiUnsafeSendSafeApiDataArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiUnsafeSendSafeApiDataArguments.
+     * @param data - LoginClientStream
+     */
+    constructor(data: LoginClientStream)  {
+        this.data = data;
+        if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type ClientApiUnsafeSendSafeApiDataArguments.`);
+        
+    }
+    public getData(): LoginClientStream  {
+        return this.data;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiUnsafeSendSafeApiDataArguments.
+     * @param {ClientApiUnsafeSendSafeApiDataArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiUnsafeSendSafeApiDataArguments | null | undefined): number  {
+        return ClientApiUnsafeSendSafeApiDataArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiUnsafeSendSafeApiDataArguments with another object.
+     * @param {ClientApiUnsafeSendSafeApiDataArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiUnsafeSendSafeApiDataArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiUnsafeSendSafeApiDataArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiUnsafeSendSafeApiDataArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiUnsafeSendSafeApiDataArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiUnsafeSendSafeApiDataArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
 export interface ClientApiUnsafe  {
     /**
      * @param backId - number
@@ -6670,12 +6893,14 @@ export interface ClientApiUnsafe  {
      * @aetherMethodId 3
      */
     sendSafeApiDataMulti(backId: number, data: LoginClientStream): void;
+    sendSafeApiDataMultiArguments?(args: ClientApiUnsafeSendSafeApiDataMultiArguments): void;
     /**
      * @param data - LoginClientStream
      *
      * @aetherMethodId 4
      */
     sendSafeApiData(data: LoginClientStream): void;
+    sendSafeApiDataArguments?(args: ClientApiUnsafeSendSafeApiDataArguments): void;
     
 }
 export namespace ClientApiUnsafe  {
@@ -6704,12 +6929,1301 @@ export abstract class ClientApiUnsafeLocal<RT extends RemoteApi> implements Clie
      * @aetherMethodId 3
      */
     public abstract sendSafeApiDataMulti(backId: number, data: LoginClientStream): void;
+    public sendSafeApiDataMultiArguments(args: ClientApiUnsafeSendSafeApiDataMultiArguments): void  {
+        this.sendSafeApiDataMulti(args.backId, args.data);
+        
+    }
     /**
      * @param data - LoginClientStream
      *
      * @aetherMethodId 4
      */
     public abstract sendSafeApiData(data: LoginClientStream): void;
+    public sendSafeApiDataArguments(args: ClientApiUnsafeSendSafeApiDataArguments): void  {
+        this.sendSafeApiData(args.data);
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeChangeParentArguments structure.
+ */
+export class ClientApiSafeChangeParentArguments implements ToString  {
+    public readonly uid: UUID;
+    public static readonly META_BODY: FastMetaType<ClientApiSafeChangeParentArguments> = new Impl.ClientApiSafeChangeParentArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeChangeParentArguments> = ClientApiSafeChangeParentArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeChangeParentArguments.
+     * @param uid - UUID
+     */
+    constructor(uid: UUID)  {
+        this.uid = uid;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeChangeParentArguments.
+     * @param {ClientApiSafeChangeParentArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeChangeParentArguments | null | undefined): number  {
+        return ClientApiSafeChangeParentArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeChangeParentArguments with another object.
+     * @param {ClientApiSafeChangeParentArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeChangeParentArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeChangeParentArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeChangeParentArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeChangeParentArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeChangeParentArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeChangeAliasArguments structure.
+ */
+export class ClientApiSafeChangeAliasArguments implements ToString  {
+    public readonly alias: UUID;
+    public static readonly META_BODY: FastMetaType<ClientApiSafeChangeAliasArguments> = new Impl.ClientApiSafeChangeAliasArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeChangeAliasArguments> = ClientApiSafeChangeAliasArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeChangeAliasArguments.
+     * @param alias - UUID
+     */
+    constructor(alias: UUID)  {
+        this.alias = alias;
+        
+    }
+    public getAlias(): UUID  {
+        return this.alias;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeChangeAliasArguments.
+     * @param {ClientApiSafeChangeAliasArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeChangeAliasArguments | null | undefined): number  {
+        return ClientApiSafeChangeAliasArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeChangeAliasArguments with another object.
+     * @param {ClientApiSafeChangeAliasArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeChangeAliasArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeChangeAliasArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeChangeAliasArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeChangeAliasArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeChangeAliasArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeNewChildrenArguments structure.
+ */
+export class ClientApiSafeNewChildrenArguments implements ToString  {
+    public readonly uids: UUID[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeNewChildrenArguments> = new Impl.ClientApiSafeNewChildrenArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeNewChildrenArguments> = ClientApiSafeNewChildrenArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeNewChildrenArguments.
+     * @param uids - UUID[]
+     */
+    constructor(uids: UUID[])  {
+        this.uids = uids;
+        if (uids === null || uids === undefined) throw new Error(`Field 'uids' cannot be null for type ClientApiSafeNewChildrenArguments.`);
+        
+    }
+    public getUids(): UUID[]  {
+        return this.uids;
+        
+    }
+    public uidsContains(el: UUID): boolean  {
+        return (this.uids as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeNewChildrenArguments.
+     * @param {ClientApiSafeNewChildrenArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeNewChildrenArguments | null | undefined): number  {
+        return ClientApiSafeNewChildrenArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeNewChildrenArguments with another object.
+     * @param {ClientApiSafeNewChildrenArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeNewChildrenArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeNewChildrenArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeNewChildrenArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeNewChildrenArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeNewChildrenArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeSendMessagesArguments structure.
+ */
+export class ClientApiSafeSendMessagesArguments implements ToString  {
+    public readonly msg: Message[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeSendMessagesArguments> = new Impl.ClientApiSafeSendMessagesArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeSendMessagesArguments> = ClientApiSafeSendMessagesArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeSendMessagesArguments.
+     * @param msg - Message[]
+     */
+    constructor(msg: Message[])  {
+        this.msg = msg;
+        if (msg === null || msg === undefined) throw new Error(`Field 'msg' cannot be null for type ClientApiSafeSendMessagesArguments.`);
+        
+    }
+    public getMsg(): Message[]  {
+        return this.msg;
+        
+    }
+    public msgContains(el: Message): boolean  {
+        return (this.msg as Message[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeSendMessagesArguments.
+     * @param {ClientApiSafeSendMessagesArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeSendMessagesArguments | null | undefined): number  {
+        return ClientApiSafeSendMessagesArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeSendMessagesArguments with another object.
+     * @param {ClientApiSafeSendMessagesArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeSendMessagesArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeSendMessagesArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeSendMessagesArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeSendMessagesArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeSendMessagesArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeSendServerDescriptorArguments structure.
+ */
+export class ClientApiSafeSendServerDescriptorArguments implements ToString  {
+    public readonly serverDescriptor: ServerDescriptor;
+    public static readonly META_BODY: FastMetaType<ClientApiSafeSendServerDescriptorArguments> = new Impl.ClientApiSafeSendServerDescriptorArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeSendServerDescriptorArguments> = ClientApiSafeSendServerDescriptorArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeSendServerDescriptorArguments.
+     * @param serverDescriptor - ServerDescriptor
+     */
+    constructor(serverDescriptor: ServerDescriptor)  {
+        this.serverDescriptor = serverDescriptor;
+        if (serverDescriptor === null || serverDescriptor === undefined) throw new Error(`Field 'serverDescriptor' cannot be null for type ClientApiSafeSendServerDescriptorArguments.`);
+        
+    }
+    public getServerDescriptor(): ServerDescriptor  {
+        return this.serverDescriptor;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeSendServerDescriptorArguments.
+     * @param {ClientApiSafeSendServerDescriptorArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeSendServerDescriptorArguments | null | undefined): number  {
+        return ClientApiSafeSendServerDescriptorArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeSendServerDescriptorArguments with another object.
+     * @param {ClientApiSafeSendServerDescriptorArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeSendServerDescriptorArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeSendServerDescriptorArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeSendServerDescriptorArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeSendServerDescriptorArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeSendServerDescriptorArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeSendServerDescriptorsArguments structure.
+ */
+export class ClientApiSafeSendServerDescriptorsArguments implements ToString  {
+    public readonly serverDescriptors: ServerDescriptor[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeSendServerDescriptorsArguments> = new Impl.ClientApiSafeSendServerDescriptorsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeSendServerDescriptorsArguments> = ClientApiSafeSendServerDescriptorsArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeSendServerDescriptorsArguments.
+     * @param serverDescriptors - ServerDescriptor[]
+     */
+    constructor(serverDescriptors: ServerDescriptor[])  {
+        this.serverDescriptors = serverDescriptors;
+        if (serverDescriptors === null || serverDescriptors === undefined) throw new Error(`Field 'serverDescriptors' cannot be null for type ClientApiSafeSendServerDescriptorsArguments.`);
+        
+    }
+    public getServerDescriptors(): ServerDescriptor[]  {
+        return this.serverDescriptors;
+        
+    }
+    public serverDescriptorsContains(el: ServerDescriptor): boolean  {
+        return (this.serverDescriptors as ServerDescriptor[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeSendServerDescriptorsArguments.
+     * @param {ClientApiSafeSendServerDescriptorsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeSendServerDescriptorsArguments | null | undefined): number  {
+        return ClientApiSafeSendServerDescriptorsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeSendServerDescriptorsArguments with another object.
+     * @param {ClientApiSafeSendServerDescriptorsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeSendServerDescriptorsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeSendServerDescriptorsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeSendServerDescriptorsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeSendServerDescriptorsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeSendServerDescriptorsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeSendCloudArguments structure.
+ */
+export class ClientApiSafeSendCloudArguments implements ToString  {
+    public readonly uidAndCloud: UUIDAndCloud;
+    public static readonly META_BODY: FastMetaType<ClientApiSafeSendCloudArguments> = new Impl.ClientApiSafeSendCloudArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeSendCloudArguments> = ClientApiSafeSendCloudArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeSendCloudArguments.
+     * @param uidAndCloud - UUIDAndCloud
+     */
+    constructor(uidAndCloud: UUIDAndCloud)  {
+        this.uidAndCloud = uidAndCloud;
+        if (uidAndCloud === null || uidAndCloud === undefined) throw new Error(`Field 'uidAndCloud' cannot be null for type ClientApiSafeSendCloudArguments.`);
+        
+    }
+    public getUidAndCloud(): UUIDAndCloud  {
+        return this.uidAndCloud;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeSendCloudArguments.
+     * @param {ClientApiSafeSendCloudArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeSendCloudArguments | null | undefined): number  {
+        return ClientApiSafeSendCloudArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeSendCloudArguments with another object.
+     * @param {ClientApiSafeSendCloudArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeSendCloudArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeSendCloudArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeSendCloudArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeSendCloudArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeSendCloudArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeSendCloudsArguments structure.
+ */
+export class ClientApiSafeSendCloudsArguments implements ToString  {
+    public readonly clouds: UUIDAndCloud[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeSendCloudsArguments> = new Impl.ClientApiSafeSendCloudsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeSendCloudsArguments> = ClientApiSafeSendCloudsArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeSendCloudsArguments.
+     * @param clouds - UUIDAndCloud[]
+     */
+    constructor(clouds: UUIDAndCloud[])  {
+        this.clouds = clouds;
+        if (clouds === null || clouds === undefined) throw new Error(`Field 'clouds' cannot be null for type ClientApiSafeSendCloudsArguments.`);
+        
+    }
+    public getClouds(): UUIDAndCloud[]  {
+        return this.clouds;
+        
+    }
+    public cloudsContains(el: UUIDAndCloud): boolean  {
+        return (this.clouds as UUIDAndCloud[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeSendCloudsArguments.
+     * @param {ClientApiSafeSendCloudsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeSendCloudsArguments | null | undefined): number  {
+        return ClientApiSafeSendCloudsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeSendCloudsArguments with another object.
+     * @param {ClientApiSafeSendCloudsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeSendCloudsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeSendCloudsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeSendCloudsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeSendCloudsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeSendCloudsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeRequestTelemetryArguments structure.
+ */
+export class ClientApiSafeRequestTelemetryArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<ClientApiSafeRequestTelemetryArguments> = new Impl.ClientApiSafeRequestTelemetryArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeRequestTelemetryArguments> = ClientApiSafeRequestTelemetryArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeRequestTelemetryArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeRequestTelemetryArguments.
+     * @param {ClientApiSafeRequestTelemetryArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeRequestTelemetryArguments | null | undefined): number  {
+        return ClientApiSafeRequestTelemetryArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeRequestTelemetryArguments with another object.
+     * @param {ClientApiSafeRequestTelemetryArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeRequestTelemetryArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeRequestTelemetryArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeRequestTelemetryArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeRequestTelemetryArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeRequestTelemetryArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeSendAccessGroupsArguments structure.
+ */
+export class ClientApiSafeSendAccessGroupsArguments implements ToString  {
+    public readonly groups: AccessGroup[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeSendAccessGroupsArguments> = new Impl.ClientApiSafeSendAccessGroupsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeSendAccessGroupsArguments> = ClientApiSafeSendAccessGroupsArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeSendAccessGroupsArguments.
+     * @param groups - AccessGroup[]
+     */
+    constructor(groups: AccessGroup[])  {
+        this.groups = groups;
+        if (groups === null || groups === undefined) throw new Error(`Field 'groups' cannot be null for type ClientApiSafeSendAccessGroupsArguments.`);
+        
+    }
+    public getGroups(): AccessGroup[]  {
+        return this.groups;
+        
+    }
+    public groupsContains(el: AccessGroup): boolean  {
+        return (this.groups as AccessGroup[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeSendAccessGroupsArguments.
+     * @param {ClientApiSafeSendAccessGroupsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeSendAccessGroupsArguments | null | undefined): number  {
+        return ClientApiSafeSendAccessGroupsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeSendAccessGroupsArguments with another object.
+     * @param {ClientApiSafeSendAccessGroupsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeSendAccessGroupsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeSendAccessGroupsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeSendAccessGroupsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeSendAccessGroupsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeSendAccessGroupsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeSendAccessGroupForClientArguments structure.
+ */
+export class ClientApiSafeSendAccessGroupForClientArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly groups: UUID[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeSendAccessGroupForClientArguments> = new Impl.ClientApiSafeSendAccessGroupForClientArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeSendAccessGroupForClientArguments> = ClientApiSafeSendAccessGroupForClientArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeSendAccessGroupForClientArguments.
+     * @param uid - UUID
+     * @param groups - UUID[]
+     */
+    constructor(uid: UUID, groups: UUID[])  {
+        this.uid = uid;
+        this.groups = groups;
+        if (groups === null || groups === undefined) throw new Error(`Field 'groups' cannot be null for type ClientApiSafeSendAccessGroupForClientArguments.`);
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getGroups(): UUID[]  {
+        return this.groups;
+        
+    }
+    public groupsContains(el: UUID): boolean  {
+        return (this.groups as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeSendAccessGroupForClientArguments.
+     * @param {ClientApiSafeSendAccessGroupForClientArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeSendAccessGroupForClientArguments | null | undefined): number  {
+        return ClientApiSafeSendAccessGroupForClientArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeSendAccessGroupForClientArguments with another object.
+     * @param {ClientApiSafeSendAccessGroupForClientArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeSendAccessGroupForClientArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeSendAccessGroupForClientArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeSendAccessGroupForClientArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeSendAccessGroupForClientArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeSendAccessGroupForClientArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeAddItemsToAccessGroupArguments structure.
+ */
+export class ClientApiSafeAddItemsToAccessGroupArguments implements ToString  {
+    public readonly id: UUID;
+    public readonly groups: UUID[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeAddItemsToAccessGroupArguments> = new Impl.ClientApiSafeAddItemsToAccessGroupArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeAddItemsToAccessGroupArguments> = ClientApiSafeAddItemsToAccessGroupArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeAddItemsToAccessGroupArguments.
+     * @param id - UUID
+     * @param groups - UUID[]
+     */
+    constructor(id: UUID, groups: UUID[])  {
+        this.id = id;
+        this.groups = groups;
+        if (groups === null || groups === undefined) throw new Error(`Field 'groups' cannot be null for type ClientApiSafeAddItemsToAccessGroupArguments.`);
+        
+    }
+    public getId(): UUID  {
+        return this.id;
+        
+    }
+    public getGroups(): UUID[]  {
+        return this.groups;
+        
+    }
+    public groupsContains(el: UUID): boolean  {
+        return (this.groups as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeAddItemsToAccessGroupArguments.
+     * @param {ClientApiSafeAddItemsToAccessGroupArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeAddItemsToAccessGroupArguments | null | undefined): number  {
+        return ClientApiSafeAddItemsToAccessGroupArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeAddItemsToAccessGroupArguments with another object.
+     * @param {ClientApiSafeAddItemsToAccessGroupArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeAddItemsToAccessGroupArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeAddItemsToAccessGroupArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeAddItemsToAccessGroupArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeAddItemsToAccessGroupArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeAddItemsToAccessGroupArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeRemoveItemsFromAccessGroupArguments structure.
+ */
+export class ClientApiSafeRemoveItemsFromAccessGroupArguments implements ToString  {
+    public readonly id: UUID;
+    public readonly groups: UUID[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeRemoveItemsFromAccessGroupArguments> = new Impl.ClientApiSafeRemoveItemsFromAccessGroupArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeRemoveItemsFromAccessGroupArguments> = ClientApiSafeRemoveItemsFromAccessGroupArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeRemoveItemsFromAccessGroupArguments.
+     * @param id - UUID
+     * @param groups - UUID[]
+     */
+    constructor(id: UUID, groups: UUID[])  {
+        this.id = id;
+        this.groups = groups;
+        if (groups === null || groups === undefined) throw new Error(`Field 'groups' cannot be null for type ClientApiSafeRemoveItemsFromAccessGroupArguments.`);
+        
+    }
+    public getId(): UUID  {
+        return this.id;
+        
+    }
+    public getGroups(): UUID[]  {
+        return this.groups;
+        
+    }
+    public groupsContains(el: UUID): boolean  {
+        return (this.groups as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeRemoveItemsFromAccessGroupArguments.
+     * @param {ClientApiSafeRemoveItemsFromAccessGroupArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeRemoveItemsFromAccessGroupArguments | null | undefined): number  {
+        return ClientApiSafeRemoveItemsFromAccessGroupArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeRemoveItemsFromAccessGroupArguments with another object.
+     * @param {ClientApiSafeRemoveItemsFromAccessGroupArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeRemoveItemsFromAccessGroupArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeRemoveItemsFromAccessGroupArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeRemoveItemsFromAccessGroupArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeRemoveItemsFromAccessGroupArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeRemoveItemsFromAccessGroupArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeAddAccessGroupsToClientArguments structure.
+ */
+export class ClientApiSafeAddAccessGroupsToClientArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly groups: UUID[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeAddAccessGroupsToClientArguments> = new Impl.ClientApiSafeAddAccessGroupsToClientArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeAddAccessGroupsToClientArguments> = ClientApiSafeAddAccessGroupsToClientArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeAddAccessGroupsToClientArguments.
+     * @param uid - UUID
+     * @param groups - UUID[]
+     */
+    constructor(uid: UUID, groups: UUID[])  {
+        this.uid = uid;
+        this.groups = groups;
+        if (groups === null || groups === undefined) throw new Error(`Field 'groups' cannot be null for type ClientApiSafeAddAccessGroupsToClientArguments.`);
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getGroups(): UUID[]  {
+        return this.groups;
+        
+    }
+    public groupsContains(el: UUID): boolean  {
+        return (this.groups as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeAddAccessGroupsToClientArguments.
+     * @param {ClientApiSafeAddAccessGroupsToClientArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeAddAccessGroupsToClientArguments | null | undefined): number  {
+        return ClientApiSafeAddAccessGroupsToClientArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeAddAccessGroupsToClientArguments with another object.
+     * @param {ClientApiSafeAddAccessGroupsToClientArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeAddAccessGroupsToClientArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeAddAccessGroupsToClientArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeAddAccessGroupsToClientArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeAddAccessGroupsToClientArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeAddAccessGroupsToClientArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeRemoveAccessGroupsFromClientArguments structure.
+ */
+export class ClientApiSafeRemoveAccessGroupsFromClientArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly groups: UUID[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeRemoveAccessGroupsFromClientArguments> = new Impl.ClientApiSafeRemoveAccessGroupsFromClientArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeRemoveAccessGroupsFromClientArguments> = ClientApiSafeRemoveAccessGroupsFromClientArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeRemoveAccessGroupsFromClientArguments.
+     * @param uid - UUID
+     * @param groups - UUID[]
+     */
+    constructor(uid: UUID, groups: UUID[])  {
+        this.uid = uid;
+        this.groups = groups;
+        if (groups === null || groups === undefined) throw new Error(`Field 'groups' cannot be null for type ClientApiSafeRemoveAccessGroupsFromClientArguments.`);
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getGroups(): UUID[]  {
+        return this.groups;
+        
+    }
+    public groupsContains(el: UUID): boolean  {
+        return (this.groups as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeRemoveAccessGroupsFromClientArguments.
+     * @param {ClientApiSafeRemoveAccessGroupsFromClientArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeRemoveAccessGroupsFromClientArguments | null | undefined): number  {
+        return ClientApiSafeRemoveAccessGroupsFromClientArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeRemoveAccessGroupsFromClientArguments with another object.
+     * @param {ClientApiSafeRemoveAccessGroupsFromClientArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeRemoveAccessGroupsFromClientArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeRemoveAccessGroupsFromClientArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeRemoveAccessGroupsFromClientArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeRemoveAccessGroupsFromClientArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeRemoveAccessGroupsFromClientArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeSendAllAccessedClientsArguments structure.
+ */
+export class ClientApiSafeSendAllAccessedClientsArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly accessedClients: UUID[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeSendAllAccessedClientsArguments> = new Impl.ClientApiSafeSendAllAccessedClientsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeSendAllAccessedClientsArguments> = ClientApiSafeSendAllAccessedClientsArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeSendAllAccessedClientsArguments.
+     * @param uid - UUID
+     * @param accessedClients - UUID[]
+     */
+    constructor(uid: UUID, accessedClients: UUID[])  {
+        this.uid = uid;
+        this.accessedClients = accessedClients;
+        if (accessedClients === null || accessedClients === undefined) throw new Error(`Field 'accessedClients' cannot be null for type ClientApiSafeSendAllAccessedClientsArguments.`);
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getAccessedClients(): UUID[]  {
+        return this.accessedClients;
+        
+    }
+    public accessedClientsContains(el: UUID): boolean  {
+        return (this.accessedClients as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeSendAllAccessedClientsArguments.
+     * @param {ClientApiSafeSendAllAccessedClientsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeSendAllAccessedClientsArguments | null | undefined): number  {
+        return ClientApiSafeSendAllAccessedClientsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeSendAllAccessedClientsArguments with another object.
+     * @param {ClientApiSafeSendAllAccessedClientsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeSendAllAccessedClientsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeSendAllAccessedClientsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeSendAllAccessedClientsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeSendAllAccessedClientsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeSendAllAccessedClientsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeSendAccessCheckResultsArguments structure.
+ */
+export class ClientApiSafeSendAccessCheckResultsArguments implements ToString  {
+    public readonly results: AccessCheckResult[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeSendAccessCheckResultsArguments> = new Impl.ClientApiSafeSendAccessCheckResultsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeSendAccessCheckResultsArguments> = ClientApiSafeSendAccessCheckResultsArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeSendAccessCheckResultsArguments.
+     * @param results - AccessCheckResult[]
+     */
+    constructor(results: AccessCheckResult[])  {
+        this.results = results;
+        if (results === null || results === undefined) throw new Error(`Field 'results' cannot be null for type ClientApiSafeSendAccessCheckResultsArguments.`);
+        
+    }
+    public getResults(): AccessCheckResult[]  {
+        return this.results;
+        
+    }
+    public resultsContains(el: AccessCheckResult): boolean  {
+        return (this.results as AccessCheckResult[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeSendAccessCheckResultsArguments.
+     * @param {ClientApiSafeSendAccessCheckResultsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeSendAccessCheckResultsArguments | null | undefined): number  {
+        return ClientApiSafeSendAccessCheckResultsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeSendAccessCheckResultsArguments with another object.
+     * @param {ClientApiSafeSendAccessCheckResultsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeSendAccessCheckResultsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeSendAccessCheckResultsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeSendAccessCheckResultsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeSendAccessCheckResultsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeSendAccessCheckResultsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeSendMessageArguments structure.
+ */
+export class ClientApiSafeSendMessageArguments implements ToString  {
+    public readonly msg: Message;
+    public static readonly META_BODY: FastMetaType<ClientApiSafeSendMessageArguments> = new Impl.ClientApiSafeSendMessageArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeSendMessageArguments> = ClientApiSafeSendMessageArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeSendMessageArguments.
+     * @param msg - Message
+     */
+    constructor(msg: Message)  {
+        this.msg = msg;
+        if (msg === null || msg === undefined) throw new Error(`Field 'msg' cannot be null for type ClientApiSafeSendMessageArguments.`);
+        
+    }
+    public getMsg(): Message  {
+        return this.msg;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeSendMessageArguments.
+     * @param {ClientApiSafeSendMessageArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeSendMessageArguments | null | undefined): number  {
+        return ClientApiSafeSendMessageArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeSendMessageArguments with another object.
+     * @param {ClientApiSafeSendMessageArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeSendMessageArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeSendMessageArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeSendMessageArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeSendMessageArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeSendMessageArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiSafeSendCloudConfigsArguments structure.
+ */
+export class ClientApiSafeSendCloudConfigsArguments implements ToString  {
+    public readonly configs: CloudConfig[];
+    public static readonly META_BODY: FastMetaType<ClientApiSafeSendCloudConfigsArguments> = new Impl.ClientApiSafeSendCloudConfigsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeSendCloudConfigsArguments> = ClientApiSafeSendCloudConfigsArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeSendCloudConfigsArguments.
+     * @param configs - CloudConfig[]
+     */
+    constructor(configs: CloudConfig[])  {
+        this.configs = configs;
+        if (configs === null || configs === undefined) throw new Error(`Field 'configs' cannot be null for type ClientApiSafeSendCloudConfigsArguments.`);
+        
+    }
+    public getConfigs(): CloudConfig[]  {
+        return this.configs;
+        
+    }
+    public configsContains(el: CloudConfig): boolean  {
+        return (this.configs as CloudConfig[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeSendCloudConfigsArguments.
+     * @param {ClientApiSafeSendCloudConfigsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeSendCloudConfigsArguments | null | undefined): number  {
+        return ClientApiSafeSendCloudConfigsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeSendCloudConfigsArguments with another object.
+     * @param {ClientApiSafeSendCloudConfigsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeSendCloudConfigsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeSendCloudConfigsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeSendCloudConfigsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeSendCloudConfigsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeSendCloudConfigsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
     
 }
 export interface ClientApiSafe  {
@@ -6719,93 +8233,108 @@ export interface ClientApiSafe  {
      * @aetherMethodId 3
      */
     changeParent(uid: UUID): void;
+    changeParentArguments?(args: ClientApiSafeChangeParentArguments): void;
     /**
      * @param alias - UUID
      *
      * @aetherMethodId 4
      */
     changeAlias(alias: UUID): void;
+    changeAliasArguments?(args: ClientApiSafeChangeAliasArguments): void;
     /**
      * @param uids - UUID[]
      *
      * @aetherMethodId 5
      */
     newChildren(uids: UUID[]): void;
+    newChildrenArguments?(args: ClientApiSafeNewChildrenArguments): void;
     /**
      * @param msg - Message[]
      *
      * @aetherMethodId 6
      */
     sendMessages(msg: Message[]): void;
+    sendMessagesArguments?(args: ClientApiSafeSendMessagesArguments): void;
     /**
      * @param serverDescriptor - ServerDescriptor
      *
      * @aetherMethodId 7
      */
     sendServerDescriptor(serverDescriptor: ServerDescriptor): void;
+    sendServerDescriptorArguments?(args: ClientApiSafeSendServerDescriptorArguments): void;
     /**
      * @param serverDescriptors - ServerDescriptor[]
      *
      * @aetherMethodId 8
      */
     sendServerDescriptors(serverDescriptors: ServerDescriptor[]): void;
+    sendServerDescriptorsArguments?(args: ClientApiSafeSendServerDescriptorsArguments): void;
     /**
      * @param uidAndCloud - UUIDAndCloud
      *
      * @aetherMethodId 9
      */
     sendCloud(uidAndCloud: UUIDAndCloud): void;
+    sendCloudArguments?(args: ClientApiSafeSendCloudArguments): void;
     /**
      * @param clouds - UUIDAndCloud[]
      *
      * @aetherMethodId 10
      */
     sendClouds(clouds: UUIDAndCloud[]): void;
+    sendCloudsArguments?(args: ClientApiSafeSendCloudsArguments): void;
     /**
      * @aetherMethodId 11
      */
     requestTelemetry(): void;
+    requestTelemetryArguments?(args: ClientApiSafeRequestTelemetryArguments): void;
     /**
      * @param groups - AccessGroup[]
      *
      * @aetherMethodId 12
      */
     sendAccessGroups(groups: AccessGroup[]): void;
+    sendAccessGroupsArguments?(args: ClientApiSafeSendAccessGroupsArguments): void;
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 13
      */
-    sendAccessGroupForClient(uid: UUID, groups: bigint[]): void;
+    sendAccessGroupForClient(uid: UUID, groups: UUID[]): void;
+    sendAccessGroupForClientArguments?(args: ClientApiSafeSendAccessGroupForClientArguments): void;
     /**
-     * @param id - bigint
+     * @param id - UUID
      * @param groups - UUID[]
      *
      * @aetherMethodId 14
      */
-    addItemsToAccessGroup(id: bigint, groups: UUID[]): void;
+    addItemsToAccessGroup(id: UUID, groups: UUID[]): void;
+    addItemsToAccessGroupArguments?(args: ClientApiSafeAddItemsToAccessGroupArguments): void;
     /**
-     * @param id - bigint
+     * @param id - UUID
      * @param groups - UUID[]
      *
      * @aetherMethodId 15
      */
-    removeItemsFromAccessGroup(id: bigint, groups: UUID[]): void;
+    removeItemsFromAccessGroup(id: UUID, groups: UUID[]): void;
+    removeItemsFromAccessGroupArguments?(args: ClientApiSafeRemoveItemsFromAccessGroupArguments): void;
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 16
      */
-    addAccessGroupsToClient(uid: UUID, groups: bigint[]): void;
+    addAccessGroupsToClient(uid: UUID, groups: UUID[]): void;
+    addAccessGroupsToClientArguments?(args: ClientApiSafeAddAccessGroupsToClientArguments): void;
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 17
      */
-    removeAccessGroupsFromClient(uid: UUID, groups: bigint[]): void;
+    removeAccessGroupsFromClient(uid: UUID, groups: UUID[]): void;
+    removeAccessGroupsFromClientArguments?(args: ClientApiSafeRemoveAccessGroupsFromClientArguments): void;
     /**
      * @param uid - UUID
      * @param accessedClients - UUID[]
@@ -6813,24 +8342,28 @@ export interface ClientApiSafe  {
      * @aetherMethodId 18
      */
     sendAllAccessedClients(uid: UUID, accessedClients: UUID[]): void;
+    sendAllAccessedClientsArguments?(args: ClientApiSafeSendAllAccessedClientsArguments): void;
     /**
      * @param results - AccessCheckResult[]
      *
      * @aetherMethodId 19
      */
     sendAccessCheckResults(results: AccessCheckResult[]): void;
+    sendAccessCheckResultsArguments?(args: ClientApiSafeSendAccessCheckResultsArguments): void;
     /**
      * @param msg - Message
      *
      * @aetherMethodId 20
      */
     sendMessage(msg: Message): void;
+    sendMessageArguments?(args: ClientApiSafeSendMessageArguments): void;
     /**
      * @param configs - CloudConfig[]
      *
      * @aetherMethodId 21
      */
     sendCloudConfigs(configs: CloudConfig[]): void;
+    sendCloudConfigsArguments?(args: ClientApiSafeSendCloudConfigsArguments): void;
     
 }
 export namespace ClientApiSafe  {
@@ -6856,93 +8389,153 @@ export abstract class ClientApiSafeLocal<RT extends RemoteApi> implements Client
      * @aetherMethodId 3
      */
     public abstract changeParent(uid: UUID): void;
+    public changeParentArguments(args: ClientApiSafeChangeParentArguments): void  {
+        this.changeParent(args.uid);
+        
+    }
     /**
      * @param alias - UUID
      *
      * @aetherMethodId 4
      */
     public abstract changeAlias(alias: UUID): void;
+    public changeAliasArguments(args: ClientApiSafeChangeAliasArguments): void  {
+        this.changeAlias(args.alias);
+        
+    }
     /**
      * @param uids - UUID[]
      *
      * @aetherMethodId 5
      */
     public abstract newChildren(uids: UUID[]): void;
+    public newChildrenArguments(args: ClientApiSafeNewChildrenArguments): void  {
+        this.newChildren(args.uids);
+        
+    }
     /**
      * @param msg - Message[]
      *
      * @aetherMethodId 6
      */
     public abstract sendMessages(msg: Message[]): void;
+    public sendMessagesArguments(args: ClientApiSafeSendMessagesArguments): void  {
+        this.sendMessages(args.msg);
+        
+    }
     /**
      * @param serverDescriptor - ServerDescriptor
      *
      * @aetherMethodId 7
      */
     public abstract sendServerDescriptor(serverDescriptor: ServerDescriptor): void;
+    public sendServerDescriptorArguments(args: ClientApiSafeSendServerDescriptorArguments): void  {
+        this.sendServerDescriptor(args.serverDescriptor);
+        
+    }
     /**
      * @param serverDescriptors - ServerDescriptor[]
      *
      * @aetherMethodId 8
      */
     public abstract sendServerDescriptors(serverDescriptors: ServerDescriptor[]): void;
+    public sendServerDescriptorsArguments(args: ClientApiSafeSendServerDescriptorsArguments): void  {
+        this.sendServerDescriptors(args.serverDescriptors);
+        
+    }
     /**
      * @param uidAndCloud - UUIDAndCloud
      *
      * @aetherMethodId 9
      */
     public abstract sendCloud(uidAndCloud: UUIDAndCloud): void;
+    public sendCloudArguments(args: ClientApiSafeSendCloudArguments): void  {
+        this.sendCloud(args.uidAndCloud);
+        
+    }
     /**
      * @param clouds - UUIDAndCloud[]
      *
      * @aetherMethodId 10
      */
     public abstract sendClouds(clouds: UUIDAndCloud[]): void;
+    public sendCloudsArguments(args: ClientApiSafeSendCloudsArguments): void  {
+        this.sendClouds(args.clouds);
+        
+    }
     /**
      * @aetherMethodId 11
      */
     public abstract requestTelemetry(): void;
+    public requestTelemetryArguments(args: ClientApiSafeRequestTelemetryArguments): void  {
+        this.requestTelemetry();
+        
+    }
     /**
      * @param groups - AccessGroup[]
      *
      * @aetherMethodId 12
      */
     public abstract sendAccessGroups(groups: AccessGroup[]): void;
+    public sendAccessGroupsArguments(args: ClientApiSafeSendAccessGroupsArguments): void  {
+        this.sendAccessGroups(args.groups);
+        
+    }
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 13
      */
-    public abstract sendAccessGroupForClient(uid: UUID, groups: bigint[]): void;
+    public abstract sendAccessGroupForClient(uid: UUID, groups: UUID[]): void;
+    public sendAccessGroupForClientArguments(args: ClientApiSafeSendAccessGroupForClientArguments): void  {
+        this.sendAccessGroupForClient(args.uid, args.groups);
+        
+    }
     /**
-     * @param id - bigint
+     * @param id - UUID
      * @param groups - UUID[]
      *
      * @aetherMethodId 14
      */
-    public abstract addItemsToAccessGroup(id: bigint, groups: UUID[]): void;
+    public abstract addItemsToAccessGroup(id: UUID, groups: UUID[]): void;
+    public addItemsToAccessGroupArguments(args: ClientApiSafeAddItemsToAccessGroupArguments): void  {
+        this.addItemsToAccessGroup(args.id, args.groups);
+        
+    }
     /**
-     * @param id - bigint
+     * @param id - UUID
      * @param groups - UUID[]
      *
      * @aetherMethodId 15
      */
-    public abstract removeItemsFromAccessGroup(id: bigint, groups: UUID[]): void;
+    public abstract removeItemsFromAccessGroup(id: UUID, groups: UUID[]): void;
+    public removeItemsFromAccessGroupArguments(args: ClientApiSafeRemoveItemsFromAccessGroupArguments): void  {
+        this.removeItemsFromAccessGroup(args.id, args.groups);
+        
+    }
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 16
      */
-    public abstract addAccessGroupsToClient(uid: UUID, groups: bigint[]): void;
+    public abstract addAccessGroupsToClient(uid: UUID, groups: UUID[]): void;
+    public addAccessGroupsToClientArguments(args: ClientApiSafeAddAccessGroupsToClientArguments): void  {
+        this.addAccessGroupsToClient(args.uid, args.groups);
+        
+    }
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 17
      */
-    public abstract removeAccessGroupsFromClient(uid: UUID, groups: bigint[]): void;
+    public abstract removeAccessGroupsFromClient(uid: UUID, groups: UUID[]): void;
+    public removeAccessGroupsFromClientArguments(args: ClientApiSafeRemoveAccessGroupsFromClientArguments): void  {
+        this.removeAccessGroupsFromClient(args.uid, args.groups);
+        
+    }
     /**
      * @param uid - UUID
      * @param accessedClients - UUID[]
@@ -6950,24 +8543,2614 @@ export abstract class ClientApiSafeLocal<RT extends RemoteApi> implements Client
      * @aetherMethodId 18
      */
     public abstract sendAllAccessedClients(uid: UUID, accessedClients: UUID[]): void;
+    public sendAllAccessedClientsArguments(args: ClientApiSafeSendAllAccessedClientsArguments): void  {
+        this.sendAllAccessedClients(args.uid, args.accessedClients);
+        
+    }
     /**
      * @param results - AccessCheckResult[]
      *
      * @aetherMethodId 19
      */
     public abstract sendAccessCheckResults(results: AccessCheckResult[]): void;
+    public sendAccessCheckResultsArguments(args: ClientApiSafeSendAccessCheckResultsArguments): void  {
+        this.sendAccessCheckResults(args.results);
+        
+    }
     /**
      * @param msg - Message
      *
      * @aetherMethodId 20
      */
     public abstract sendMessage(msg: Message): void;
+    public sendMessageArguments(args: ClientApiSafeSendMessageArguments): void  {
+        this.sendMessage(args.msg);
+        
+    }
     /**
      * @param configs - CloudConfig[]
      *
      * @aetherMethodId 21
      */
     public abstract sendCloudConfigs(configs: CloudConfig[]): void;
+    public sendCloudConfigsArguments(args: ClientApiSafeSendCloudConfigsArguments): void  {
+        this.sendCloudConfigs(args.configs);
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiBackIdArguments structure.
+ */
+export class AuthorizedApiBackIdArguments implements ToString  {
+    public readonly id: number;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiBackIdArguments> = new Impl.AuthorizedApiBackIdArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiBackIdArguments> = AuthorizedApiBackIdArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiBackIdArguments.
+     * @param id - number
+     */
+    constructor(id: number)  {
+        this.id = id;
+        
+    }
+    public getId(): number  {
+        return this.id;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiBackIdArguments.
+     * @param {AuthorizedApiBackIdArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiBackIdArguments | null | undefined): number  {
+        return AuthorizedApiBackIdArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiBackIdArguments with another object.
+     * @param {AuthorizedApiBackIdArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiBackIdArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiBackIdArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiBackIdArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiBackIdArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiBackIdArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiPingArguments structure.
+ */
+export class AuthorizedApiPingArguments implements ToString  {
+    public readonly nextConnectMsDuration: bigint;
+    public readonly rxWindowMs: bigint;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiPingArguments> = new Impl.AuthorizedApiPingArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiPingArguments> = AuthorizedApiPingArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiPingArguments.
+     * @param nextConnectMsDuration - bigint
+     * @param rxWindowMs - bigint
+     */
+    constructor(nextConnectMsDuration: bigint, rxWindowMs: bigint)  {
+        this.nextConnectMsDuration = nextConnectMsDuration;
+        this.rxWindowMs = rxWindowMs;
+        
+    }
+    public getNextConnectMsDuration(): bigint  {
+        return this.nextConnectMsDuration;
+        
+    }
+    public getRxWindowMs(): bigint  {
+        return this.rxWindowMs;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiPingArguments.
+     * @param {AuthorizedApiPingArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiPingArguments | null | undefined): number  {
+        return AuthorizedApiPingArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiPingArguments with another object.
+     * @param {AuthorizedApiPingArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiPingArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiPingArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiPingArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiPingArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiPingArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiClientArguments structure.
+ */
+export class AuthorizedApiClientArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly stream: ClientApiStream;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiClientArguments> = new Impl.AuthorizedApiClientArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiClientArguments> = AuthorizedApiClientArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiClientArguments.
+     * @param uid - UUID
+     * @param stream - ClientApiStream
+     */
+    constructor(uid: UUID, stream: ClientApiStream)  {
+        this.uid = uid;
+        this.stream = stream;
+        if (stream === null || stream === undefined) throw new Error(`Field 'stream' cannot be null for type AuthorizedApiClientArguments.`);
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getStream(): ClientApiStream  {
+        return this.stream;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiClientArguments.
+     * @param {AuthorizedApiClientArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiClientArguments | null | undefined): number  {
+        return AuthorizedApiClientArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiClientArguments with another object.
+     * @param {AuthorizedApiClientArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiClientArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiClientArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiClientArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiClientArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiClientArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiSendMessageArguments structure.
+ */
+export class AuthorizedApiSendMessageArguments implements ToString  {
+    public readonly msg: Message;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiSendMessageArguments> = new Impl.AuthorizedApiSendMessageArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiSendMessageArguments> = AuthorizedApiSendMessageArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiSendMessageArguments.
+     * @param msg - Message
+     */
+    constructor(msg: Message)  {
+        this.msg = msg;
+        if (msg === null || msg === undefined) throw new Error(`Field 'msg' cannot be null for type AuthorizedApiSendMessageArguments.`);
+        
+    }
+    public getMsg(): Message  {
+        return this.msg;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiSendMessageArguments.
+     * @param {AuthorizedApiSendMessageArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiSendMessageArguments | null | undefined): number  {
+        return AuthorizedApiSendMessageArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiSendMessageArguments with another object.
+     * @param {AuthorizedApiSendMessageArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiSendMessageArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiSendMessageArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiSendMessageArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiSendMessageArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiSendMessageArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiSendMessagesArguments structure.
+ */
+export class AuthorizedApiSendMessagesArguments implements ToString  {
+    public readonly msg: Message[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiSendMessagesArguments> = new Impl.AuthorizedApiSendMessagesArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiSendMessagesArguments> = AuthorizedApiSendMessagesArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiSendMessagesArguments.
+     * @param msg - Message[]
+     */
+    constructor(msg: Message[])  {
+        this.msg = msg;
+        if (msg === null || msg === undefined) throw new Error(`Field 'msg' cannot be null for type AuthorizedApiSendMessagesArguments.`);
+        
+    }
+    public getMsg(): Message[]  {
+        return this.msg;
+        
+    }
+    public msgContains(el: Message): boolean  {
+        return (this.msg as Message[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiSendMessagesArguments.
+     * @param {AuthorizedApiSendMessagesArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiSendMessagesArguments | null | undefined): number  {
+        return AuthorizedApiSendMessagesArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiSendMessagesArguments with another object.
+     * @param {AuthorizedApiSendMessagesArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiSendMessagesArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiSendMessagesArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiSendMessagesArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiSendMessagesArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiSendMessagesArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiSendMulticastArguments structure.
+ */
+export class AuthorizedApiSendMulticastArguments implements ToString  {
+    public readonly uids: UUID[];
+    public readonly data: Uint8Array;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiSendMulticastArguments> = new Impl.AuthorizedApiSendMulticastArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiSendMulticastArguments> = AuthorizedApiSendMulticastArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiSendMulticastArguments.
+     * @param uids - UUID[]
+     * @param data - Uint8Array
+     */
+    constructor(uids: UUID[], data: Uint8Array)  {
+        this.uids = uids;
+        this.data = data;
+        if (uids === null || uids === undefined) throw new Error(`Field 'uids' cannot be null for type AuthorizedApiSendMulticastArguments.`);
+        if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type AuthorizedApiSendMulticastArguments.`);
+        
+    }
+    public getUids(): UUID[]  {
+        return this.uids;
+        
+    }
+    public uidsContains(el: UUID): boolean  {
+        return (this.uids as UUID[]).includes(el as any);
+        
+    }
+    public getData(): Uint8Array  {
+        return this.data;
+        
+    }
+    public dataContains(el: number): boolean  {
+        return (this.data as Uint8Array).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiSendMulticastArguments.
+     * @param {AuthorizedApiSendMulticastArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiSendMulticastArguments | null | undefined): number  {
+        return AuthorizedApiSendMulticastArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiSendMulticastArguments with another object.
+     * @param {AuthorizedApiSendMulticastArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiSendMulticastArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiSendMulticastArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiSendMulticastArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiSendMulticastArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiSendMulticastArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiSendMessageWithResultArguments structure.
+ */
+export class AuthorizedApiSendMessageWithResultArguments implements ToString  {
+    public readonly msg: Message;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiSendMessageWithResultArguments> = new Impl.AuthorizedApiSendMessageWithResultArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiSendMessageWithResultArguments> = AuthorizedApiSendMessageWithResultArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiSendMessageWithResultArguments.
+     * @param msg - Message
+     */
+    constructor(msg: Message)  {
+        this.msg = msg;
+        if (msg === null || msg === undefined) throw new Error(`Field 'msg' cannot be null for type AuthorizedApiSendMessageWithResultArguments.`);
+        
+    }
+    public getMsg(): Message  {
+        return this.msg;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiSendMessageWithResultArguments.
+     * @param {AuthorizedApiSendMessageWithResultArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiSendMessageWithResultArguments | null | undefined): number  {
+        return AuthorizedApiSendMessageWithResultArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiSendMessageWithResultArguments with another object.
+     * @param {AuthorizedApiSendMessageWithResultArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiSendMessageWithResultArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiSendMessageWithResultArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiSendMessageWithResultArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiSendMessageWithResultArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiSendMessageWithResultArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiCreateAccessGroupArguments structure.
+ */
+export class AuthorizedApiCreateAccessGroupArguments implements ToString  {
+    public readonly owner: UUID;
+    public readonly uids: UUID[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiCreateAccessGroupArguments> = new Impl.AuthorizedApiCreateAccessGroupArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiCreateAccessGroupArguments> = AuthorizedApiCreateAccessGroupArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiCreateAccessGroupArguments.
+     * @param owner - UUID
+     * @param uids - UUID[]
+     */
+    constructor(owner: UUID, uids: UUID[])  {
+        this.owner = owner;
+        this.uids = uids;
+        if (uids === null || uids === undefined) throw new Error(`Field 'uids' cannot be null for type AuthorizedApiCreateAccessGroupArguments.`);
+        
+    }
+    public getOwner(): UUID  {
+        return this.owner;
+        
+    }
+    public getUids(): UUID[]  {
+        return this.uids;
+        
+    }
+    public uidsContains(el: UUID): boolean  {
+        return (this.uids as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiCreateAccessGroupArguments.
+     * @param {AuthorizedApiCreateAccessGroupArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiCreateAccessGroupArguments | null | undefined): number  {
+        return AuthorizedApiCreateAccessGroupArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiCreateAccessGroupArguments with another object.
+     * @param {AuthorizedApiCreateAccessGroupArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiCreateAccessGroupArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiCreateAccessGroupArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiCreateAccessGroupArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiCreateAccessGroupArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiCreateAccessGroupArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiAddToAccessGroupArguments structure.
+ */
+export class AuthorizedApiAddToAccessGroupArguments implements ToString  {
+    public readonly groupId: UUID;
+    public readonly uid: UUID;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiAddToAccessGroupArguments> = new Impl.AuthorizedApiAddToAccessGroupArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiAddToAccessGroupArguments> = AuthorizedApiAddToAccessGroupArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiAddToAccessGroupArguments.
+     * @param groupId - UUID
+     * @param uid - UUID
+     */
+    constructor(groupId: UUID, uid: UUID)  {
+        this.groupId = groupId;
+        this.uid = uid;
+        
+    }
+    public getGroupId(): UUID  {
+        return this.groupId;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiAddToAccessGroupArguments.
+     * @param {AuthorizedApiAddToAccessGroupArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiAddToAccessGroupArguments | null | undefined): number  {
+        return AuthorizedApiAddToAccessGroupArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiAddToAccessGroupArguments with another object.
+     * @param {AuthorizedApiAddToAccessGroupArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiAddToAccessGroupArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiAddToAccessGroupArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiAddToAccessGroupArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiAddToAccessGroupArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiAddToAccessGroupArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiRemoveFromAccessGroupArguments structure.
+ */
+export class AuthorizedApiRemoveFromAccessGroupArguments implements ToString  {
+    public readonly groupId: UUID;
+    public readonly uid: UUID;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiRemoveFromAccessGroupArguments> = new Impl.AuthorizedApiRemoveFromAccessGroupArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiRemoveFromAccessGroupArguments> = AuthorizedApiRemoveFromAccessGroupArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiRemoveFromAccessGroupArguments.
+     * @param groupId - UUID
+     * @param uid - UUID
+     */
+    constructor(groupId: UUID, uid: UUID)  {
+        this.groupId = groupId;
+        this.uid = uid;
+        
+    }
+    public getGroupId(): UUID  {
+        return this.groupId;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiRemoveFromAccessGroupArguments.
+     * @param {AuthorizedApiRemoveFromAccessGroupArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiRemoveFromAccessGroupArguments | null | undefined): number  {
+        return AuthorizedApiRemoveFromAccessGroupArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiRemoveFromAccessGroupArguments with another object.
+     * @param {AuthorizedApiRemoveFromAccessGroupArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiRemoveFromAccessGroupArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiRemoveFromAccessGroupArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiRemoveFromAccessGroupArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiRemoveFromAccessGroupArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiRemoveFromAccessGroupArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiCheckAccessForSendMessageArguments structure.
+ */
+export class AuthorizedApiCheckAccessForSendMessageArguments implements ToString  {
+    public readonly uid: UUID;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiCheckAccessForSendMessageArguments> = new Impl.AuthorizedApiCheckAccessForSendMessageArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiCheckAccessForSendMessageArguments> = AuthorizedApiCheckAccessForSendMessageArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiCheckAccessForSendMessageArguments.
+     * @param uid - UUID
+     */
+    constructor(uid: UUID)  {
+        this.uid = uid;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiCheckAccessForSendMessageArguments.
+     * @param {AuthorizedApiCheckAccessForSendMessageArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiCheckAccessForSendMessageArguments | null | undefined): number  {
+        return AuthorizedApiCheckAccessForSendMessageArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiCheckAccessForSendMessageArguments with another object.
+     * @param {AuthorizedApiCheckAccessForSendMessageArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiCheckAccessForSendMessageArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiCheckAccessForSendMessageArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiCheckAccessForSendMessageArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiCheckAccessForSendMessageArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiCheckAccessForSendMessageArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiResolverServersArguments structure.
+ */
+export class AuthorizedApiResolverServersArguments implements ToString  {
+    public readonly sid: number[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiResolverServersArguments> = new Impl.AuthorizedApiResolverServersArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiResolverServersArguments> = AuthorizedApiResolverServersArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiResolverServersArguments.
+     * @param sid - number[]
+     */
+    constructor(sid: number[])  {
+        this.sid = sid;
+        if (sid === null || sid === undefined) throw new Error(`Field 'sid' cannot be null for type AuthorizedApiResolverServersArguments.`);
+        
+    }
+    public getSid(): number[]  {
+        return this.sid;
+        
+    }
+    public sidContains(el: number): boolean  {
+        return (this.sid as number[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiResolverServersArguments.
+     * @param {AuthorizedApiResolverServersArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiResolverServersArguments | null | undefined): number  {
+        return AuthorizedApiResolverServersArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiResolverServersArguments with another object.
+     * @param {AuthorizedApiResolverServersArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiResolverServersArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiResolverServersArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiResolverServersArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiResolverServersArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiResolverServersArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiResolveCloudsArguments structure.
+ */
+export class AuthorizedApiResolveCloudsArguments implements ToString  {
+    public readonly uids: UUID[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiResolveCloudsArguments> = new Impl.AuthorizedApiResolveCloudsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiResolveCloudsArguments> = AuthorizedApiResolveCloudsArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiResolveCloudsArguments.
+     * @param uids - UUID[]
+     */
+    constructor(uids: UUID[])  {
+        this.uids = uids;
+        if (uids === null || uids === undefined) throw new Error(`Field 'uids' cannot be null for type AuthorizedApiResolveCloudsArguments.`);
+        
+    }
+    public getUids(): UUID[]  {
+        return this.uids;
+        
+    }
+    public uidsContains(el: UUID): boolean  {
+        return (this.uids as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiResolveCloudsArguments.
+     * @param {AuthorizedApiResolveCloudsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiResolveCloudsArguments | null | undefined): number  {
+        return AuthorizedApiResolveCloudsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiResolveCloudsArguments with another object.
+     * @param {AuthorizedApiResolveCloudsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiResolveCloudsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiResolveCloudsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiResolveCloudsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiResolveCloudsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiResolveCloudsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiReportAppliedConfigArguments structure.
+ */
+export class AuthorizedApiReportAppliedConfigArguments implements ToString  {
+    public readonly configs: AppliedConfig[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiReportAppliedConfigArguments> = new Impl.AuthorizedApiReportAppliedConfigArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiReportAppliedConfigArguments> = AuthorizedApiReportAppliedConfigArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiReportAppliedConfigArguments.
+     * @param configs - AppliedConfig[]
+     */
+    constructor(configs: AppliedConfig[])  {
+        this.configs = configs;
+        if (configs === null || configs === undefined) throw new Error(`Field 'configs' cannot be null for type AuthorizedApiReportAppliedConfigArguments.`);
+        
+    }
+    public getConfigs(): AppliedConfig[]  {
+        return this.configs;
+        
+    }
+    public configsContains(el: AppliedConfig): boolean  {
+        return (this.configs as AppliedConfig[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiReportAppliedConfigArguments.
+     * @param {AuthorizedApiReportAppliedConfigArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiReportAppliedConfigArguments | null | undefined): number  {
+        return AuthorizedApiReportAppliedConfigArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiReportAppliedConfigArguments with another object.
+     * @param {AuthorizedApiReportAppliedConfigArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiReportAppliedConfigArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiReportAppliedConfigArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiReportAppliedConfigArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiReportAppliedConfigArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiReportAppliedConfigArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiGetAccessGroupsArguments structure.
+ */
+export class AuthorizedApiGetAccessGroupsArguments implements ToString  {
+    public readonly uid: UUID;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiGetAccessGroupsArguments> = new Impl.AuthorizedApiGetAccessGroupsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiGetAccessGroupsArguments> = AuthorizedApiGetAccessGroupsArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiGetAccessGroupsArguments.
+     * @param uid - UUID
+     */
+    constructor(uid: UUID)  {
+        this.uid = uid;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiGetAccessGroupsArguments.
+     * @param {AuthorizedApiGetAccessGroupsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiGetAccessGroupsArguments | null | undefined): number  {
+        return AuthorizedApiGetAccessGroupsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiGetAccessGroupsArguments with another object.
+     * @param {AuthorizedApiGetAccessGroupsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiGetAccessGroupsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiGetAccessGroupsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiGetAccessGroupsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiGetAccessGroupsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiGetAccessGroupsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiGetAccessGroupArguments structure.
+ */
+export class AuthorizedApiGetAccessGroupArguments implements ToString  {
+    public readonly groupId: UUID;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiGetAccessGroupArguments> = new Impl.AuthorizedApiGetAccessGroupArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiGetAccessGroupArguments> = AuthorizedApiGetAccessGroupArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiGetAccessGroupArguments.
+     * @param groupId - UUID
+     */
+    constructor(groupId: UUID)  {
+        this.groupId = groupId;
+        
+    }
+    public getGroupId(): UUID  {
+        return this.groupId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiGetAccessGroupArguments.
+     * @param {AuthorizedApiGetAccessGroupArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiGetAccessGroupArguments | null | undefined): number  {
+        return AuthorizedApiGetAccessGroupArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiGetAccessGroupArguments with another object.
+     * @param {AuthorizedApiGetAccessGroupArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiGetAccessGroupArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiGetAccessGroupArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiGetAccessGroupArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiGetAccessGroupArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiGetAccessGroupArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiGetAllAccessedClientsArguments structure.
+ */
+export class AuthorizedApiGetAllAccessedClientsArguments implements ToString  {
+    public readonly uid: UUID;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiGetAllAccessedClientsArguments> = new Impl.AuthorizedApiGetAllAccessedClientsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiGetAllAccessedClientsArguments> = AuthorizedApiGetAllAccessedClientsArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiGetAllAccessedClientsArguments.
+     * @param uid - UUID
+     */
+    constructor(uid: UUID)  {
+        this.uid = uid;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiGetAllAccessedClientsArguments.
+     * @param {AuthorizedApiGetAllAccessedClientsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiGetAllAccessedClientsArguments | null | undefined): number  {
+        return AuthorizedApiGetAllAccessedClientsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiGetAllAccessedClientsArguments with another object.
+     * @param {AuthorizedApiGetAllAccessedClientsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiGetAllAccessedClientsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiGetAllAccessedClientsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiGetAllAccessedClientsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiGetAllAccessedClientsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiGetAllAccessedClientsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiCheckAccessForSendMessage2Arguments structure.
+ */
+export class AuthorizedApiCheckAccessForSendMessage2Arguments implements ToString  {
+    public readonly uid1: UUID;
+    public readonly uid2: UUID;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiCheckAccessForSendMessage2Arguments> = new Impl.AuthorizedApiCheckAccessForSendMessage2ArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiCheckAccessForSendMessage2Arguments> = AuthorizedApiCheckAccessForSendMessage2Arguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiCheckAccessForSendMessage2Arguments.
+     * @param uid1 - UUID
+     * @param uid2 - UUID
+     */
+    constructor(uid1: UUID, uid2: UUID)  {
+        this.uid1 = uid1;
+        this.uid2 = uid2;
+        
+    }
+    public getUid1(): UUID  {
+        return this.uid1;
+        
+    }
+    public getUid2(): UUID  {
+        return this.uid2;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiCheckAccessForSendMessage2Arguments.
+     * @param {AuthorizedApiCheckAccessForSendMessage2Arguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiCheckAccessForSendMessage2Arguments | null | undefined): number  {
+        return AuthorizedApiCheckAccessForSendMessage2Arguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiCheckAccessForSendMessage2Arguments with another object.
+     * @param {AuthorizedApiCheckAccessForSendMessage2Arguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiCheckAccessForSendMessage2Arguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiCheckAccessForSendMessage2Arguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiCheckAccessForSendMessage2Arguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiCheckAccessForSendMessage2Arguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiCheckAccessForSendMessage2Arguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiSendTelemetryArguments structure.
+ */
+export class AuthorizedApiSendTelemetryArguments implements ToString  {
+    public readonly telemetry: Telemetry;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiSendTelemetryArguments> = new Impl.AuthorizedApiSendTelemetryArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiSendTelemetryArguments> = AuthorizedApiSendTelemetryArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiSendTelemetryArguments.
+     * @param telemetry - Telemetry
+     */
+    constructor(telemetry: Telemetry)  {
+        this.telemetry = telemetry;
+        if (telemetry === null || telemetry === undefined) throw new Error(`Field 'telemetry' cannot be null for type AuthorizedApiSendTelemetryArguments.`);
+        
+    }
+    public getTelemetry(): Telemetry  {
+        return this.telemetry;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiSendTelemetryArguments.
+     * @param {AuthorizedApiSendTelemetryArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiSendTelemetryArguments | null | undefined): number  {
+        return AuthorizedApiSendTelemetryArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiSendTelemetryArguments with another object.
+     * @param {AuthorizedApiSendTelemetryArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiSendTelemetryArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiSendTelemetryArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiSendTelemetryArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiSendTelemetryArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiSendTelemetryArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiRequestAccessGroupsForClientsArguments structure.
+ */
+export class AuthorizedApiRequestAccessGroupsForClientsArguments implements ToString  {
+    public readonly uids: UUID[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiRequestAccessGroupsForClientsArguments> = new Impl.AuthorizedApiRequestAccessGroupsForClientsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiRequestAccessGroupsForClientsArguments> = AuthorizedApiRequestAccessGroupsForClientsArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiRequestAccessGroupsForClientsArguments.
+     * @param uids - UUID[]
+     */
+    constructor(uids: UUID[])  {
+        this.uids = uids;
+        if (uids === null || uids === undefined) throw new Error(`Field 'uids' cannot be null for type AuthorizedApiRequestAccessGroupsForClientsArguments.`);
+        
+    }
+    public getUids(): UUID[]  {
+        return this.uids;
+        
+    }
+    public uidsContains(el: UUID): boolean  {
+        return (this.uids as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiRequestAccessGroupsForClientsArguments.
+     * @param {AuthorizedApiRequestAccessGroupsForClientsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiRequestAccessGroupsForClientsArguments | null | undefined): number  {
+        return AuthorizedApiRequestAccessGroupsForClientsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiRequestAccessGroupsForClientsArguments with another object.
+     * @param {AuthorizedApiRequestAccessGroupsForClientsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiRequestAccessGroupsForClientsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiRequestAccessGroupsForClientsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiRequestAccessGroupsForClientsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiRequestAccessGroupsForClientsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiRequestAccessGroupsForClientsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiRequestAccessGroupsItemsArguments structure.
+ */
+export class AuthorizedApiRequestAccessGroupsItemsArguments implements ToString  {
+    public readonly ids: UUID[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiRequestAccessGroupsItemsArguments> = new Impl.AuthorizedApiRequestAccessGroupsItemsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiRequestAccessGroupsItemsArguments> = AuthorizedApiRequestAccessGroupsItemsArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiRequestAccessGroupsItemsArguments.
+     * @param ids - UUID[]
+     */
+    constructor(ids: UUID[])  {
+        this.ids = ids;
+        if (ids === null || ids === undefined) throw new Error(`Field 'ids' cannot be null for type AuthorizedApiRequestAccessGroupsItemsArguments.`);
+        
+    }
+    public getIds(): UUID[]  {
+        return this.ids;
+        
+    }
+    public idsContains(el: UUID): boolean  {
+        return (this.ids as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiRequestAccessGroupsItemsArguments.
+     * @param {AuthorizedApiRequestAccessGroupsItemsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiRequestAccessGroupsItemsArguments | null | undefined): number  {
+        return AuthorizedApiRequestAccessGroupsItemsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiRequestAccessGroupsItemsArguments with another object.
+     * @param {AuthorizedApiRequestAccessGroupsItemsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiRequestAccessGroupsItemsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiRequestAccessGroupsItemsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiRequestAccessGroupsItemsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiRequestAccessGroupsItemsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiRequestAccessGroupsItemsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiSendAccessGroupForClientArguments structure.
+ */
+export class AuthorizedApiSendAccessGroupForClientArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly groups: UUID[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiSendAccessGroupForClientArguments> = new Impl.AuthorizedApiSendAccessGroupForClientArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiSendAccessGroupForClientArguments> = AuthorizedApiSendAccessGroupForClientArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiSendAccessGroupForClientArguments.
+     * @param uid - UUID
+     * @param groups - UUID[]
+     */
+    constructor(uid: UUID, groups: UUID[])  {
+        this.uid = uid;
+        this.groups = groups;
+        if (groups === null || groups === undefined) throw new Error(`Field 'groups' cannot be null for type AuthorizedApiSendAccessGroupForClientArguments.`);
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getGroups(): UUID[]  {
+        return this.groups;
+        
+    }
+    public groupsContains(el: UUID): boolean  {
+        return (this.groups as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiSendAccessGroupForClientArguments.
+     * @param {AuthorizedApiSendAccessGroupForClientArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiSendAccessGroupForClientArguments | null | undefined): number  {
+        return AuthorizedApiSendAccessGroupForClientArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiSendAccessGroupForClientArguments with another object.
+     * @param {AuthorizedApiSendAccessGroupForClientArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiSendAccessGroupForClientArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiSendAccessGroupForClientArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiSendAccessGroupForClientArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiSendAccessGroupForClientArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiSendAccessGroupForClientArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiAddItemsToAccessGroupArguments structure.
+ */
+export class AuthorizedApiAddItemsToAccessGroupArguments implements ToString  {
+    public readonly id: UUID;
+    public readonly groups: UUID[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiAddItemsToAccessGroupArguments> = new Impl.AuthorizedApiAddItemsToAccessGroupArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiAddItemsToAccessGroupArguments> = AuthorizedApiAddItemsToAccessGroupArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiAddItemsToAccessGroupArguments.
+     * @param id - UUID
+     * @param groups - UUID[]
+     */
+    constructor(id: UUID, groups: UUID[])  {
+        this.id = id;
+        this.groups = groups;
+        if (groups === null || groups === undefined) throw new Error(`Field 'groups' cannot be null for type AuthorizedApiAddItemsToAccessGroupArguments.`);
+        
+    }
+    public getId(): UUID  {
+        return this.id;
+        
+    }
+    public getGroups(): UUID[]  {
+        return this.groups;
+        
+    }
+    public groupsContains(el: UUID): boolean  {
+        return (this.groups as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiAddItemsToAccessGroupArguments.
+     * @param {AuthorizedApiAddItemsToAccessGroupArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiAddItemsToAccessGroupArguments | null | undefined): number  {
+        return AuthorizedApiAddItemsToAccessGroupArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiAddItemsToAccessGroupArguments with another object.
+     * @param {AuthorizedApiAddItemsToAccessGroupArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiAddItemsToAccessGroupArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiAddItemsToAccessGroupArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiAddItemsToAccessGroupArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiAddItemsToAccessGroupArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiAddItemsToAccessGroupArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiRemoveItemsFromAccessGroupArguments structure.
+ */
+export class AuthorizedApiRemoveItemsFromAccessGroupArguments implements ToString  {
+    public readonly id: UUID;
+    public readonly groups: UUID[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiRemoveItemsFromAccessGroupArguments> = new Impl.AuthorizedApiRemoveItemsFromAccessGroupArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiRemoveItemsFromAccessGroupArguments> = AuthorizedApiRemoveItemsFromAccessGroupArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiRemoveItemsFromAccessGroupArguments.
+     * @param id - UUID
+     * @param groups - UUID[]
+     */
+    constructor(id: UUID, groups: UUID[])  {
+        this.id = id;
+        this.groups = groups;
+        if (groups === null || groups === undefined) throw new Error(`Field 'groups' cannot be null for type AuthorizedApiRemoveItemsFromAccessGroupArguments.`);
+        
+    }
+    public getId(): UUID  {
+        return this.id;
+        
+    }
+    public getGroups(): UUID[]  {
+        return this.groups;
+        
+    }
+    public groupsContains(el: UUID): boolean  {
+        return (this.groups as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiRemoveItemsFromAccessGroupArguments.
+     * @param {AuthorizedApiRemoveItemsFromAccessGroupArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiRemoveItemsFromAccessGroupArguments | null | undefined): number  {
+        return AuthorizedApiRemoveItemsFromAccessGroupArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiRemoveItemsFromAccessGroupArguments with another object.
+     * @param {AuthorizedApiRemoveItemsFromAccessGroupArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiRemoveItemsFromAccessGroupArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiRemoveItemsFromAccessGroupArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiRemoveItemsFromAccessGroupArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiRemoveItemsFromAccessGroupArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiRemoveItemsFromAccessGroupArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiAddAccessGroupsToClientArguments structure.
+ */
+export class AuthorizedApiAddAccessGroupsToClientArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly groups: UUID[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiAddAccessGroupsToClientArguments> = new Impl.AuthorizedApiAddAccessGroupsToClientArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiAddAccessGroupsToClientArguments> = AuthorizedApiAddAccessGroupsToClientArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiAddAccessGroupsToClientArguments.
+     * @param uid - UUID
+     * @param groups - UUID[]
+     */
+    constructor(uid: UUID, groups: UUID[])  {
+        this.uid = uid;
+        this.groups = groups;
+        if (groups === null || groups === undefined) throw new Error(`Field 'groups' cannot be null for type AuthorizedApiAddAccessGroupsToClientArguments.`);
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getGroups(): UUID[]  {
+        return this.groups;
+        
+    }
+    public groupsContains(el: UUID): boolean  {
+        return (this.groups as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiAddAccessGroupsToClientArguments.
+     * @param {AuthorizedApiAddAccessGroupsToClientArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiAddAccessGroupsToClientArguments | null | undefined): number  {
+        return AuthorizedApiAddAccessGroupsToClientArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiAddAccessGroupsToClientArguments with another object.
+     * @param {AuthorizedApiAddAccessGroupsToClientArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiAddAccessGroupsToClientArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiAddAccessGroupsToClientArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiAddAccessGroupsToClientArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiAddAccessGroupsToClientArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiAddAccessGroupsToClientArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiRemoveAccessGroupsFromClientArguments structure.
+ */
+export class AuthorizedApiRemoveAccessGroupsFromClientArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly groups: UUID[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiRemoveAccessGroupsFromClientArguments> = new Impl.AuthorizedApiRemoveAccessGroupsFromClientArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiRemoveAccessGroupsFromClientArguments> = AuthorizedApiRemoveAccessGroupsFromClientArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiRemoveAccessGroupsFromClientArguments.
+     * @param uid - UUID
+     * @param groups - UUID[]
+     */
+    constructor(uid: UUID, groups: UUID[])  {
+        this.uid = uid;
+        this.groups = groups;
+        if (groups === null || groups === undefined) throw new Error(`Field 'groups' cannot be null for type AuthorizedApiRemoveAccessGroupsFromClientArguments.`);
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getGroups(): UUID[]  {
+        return this.groups;
+        
+    }
+    public groupsContains(el: UUID): boolean  {
+        return (this.groups as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiRemoveAccessGroupsFromClientArguments.
+     * @param {AuthorizedApiRemoveAccessGroupsFromClientArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiRemoveAccessGroupsFromClientArguments | null | undefined): number  {
+        return AuthorizedApiRemoveAccessGroupsFromClientArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiRemoveAccessGroupsFromClientArguments with another object.
+     * @param {AuthorizedApiRemoveAccessGroupsFromClientArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiRemoveAccessGroupsFromClientArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiRemoveAccessGroupsFromClientArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiRemoveAccessGroupsFromClientArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiRemoveAccessGroupsFromClientArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiRemoveAccessGroupsFromClientArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiRequestAllAccessedClientsArguments structure.
+ */
+export class AuthorizedApiRequestAllAccessedClientsArguments implements ToString  {
+    public readonly uids: UUID[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiRequestAllAccessedClientsArguments> = new Impl.AuthorizedApiRequestAllAccessedClientsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiRequestAllAccessedClientsArguments> = AuthorizedApiRequestAllAccessedClientsArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiRequestAllAccessedClientsArguments.
+     * @param uids - UUID[]
+     */
+    constructor(uids: UUID[])  {
+        this.uids = uids;
+        if (uids === null || uids === undefined) throw new Error(`Field 'uids' cannot be null for type AuthorizedApiRequestAllAccessedClientsArguments.`);
+        
+    }
+    public getUids(): UUID[]  {
+        return this.uids;
+        
+    }
+    public uidsContains(el: UUID): boolean  {
+        return (this.uids as UUID[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiRequestAllAccessedClientsArguments.
+     * @param {AuthorizedApiRequestAllAccessedClientsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiRequestAllAccessedClientsArguments | null | undefined): number  {
+        return AuthorizedApiRequestAllAccessedClientsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiRequestAllAccessedClientsArguments with another object.
+     * @param {AuthorizedApiRequestAllAccessedClientsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiRequestAllAccessedClientsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiRequestAllAccessedClientsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiRequestAllAccessedClientsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiRequestAllAccessedClientsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiRequestAllAccessedClientsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiRequestAccessCheckArguments structure.
+ */
+export class AuthorizedApiRequestAccessCheckArguments implements ToString  {
+    public readonly requests: AccessCheckPair[];
+    public static readonly META_BODY: FastMetaType<AuthorizedApiRequestAccessCheckArguments> = new Impl.AuthorizedApiRequestAccessCheckArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiRequestAccessCheckArguments> = AuthorizedApiRequestAccessCheckArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiRequestAccessCheckArguments.
+     * @param requests - AccessCheckPair[]
+     */
+    constructor(requests: AccessCheckPair[])  {
+        this.requests = requests;
+        if (requests === null || requests === undefined) throw new Error(`Field 'requests' cannot be null for type AuthorizedApiRequestAccessCheckArguments.`);
+        
+    }
+    public getRequests(): AccessCheckPair[]  {
+        return this.requests;
+        
+    }
+    public requestsContains(el: AccessCheckPair): boolean  {
+        return (this.requests as AccessCheckPair[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiRequestAccessCheckArguments.
+     * @param {AuthorizedApiRequestAccessCheckArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiRequestAccessCheckArguments | null | undefined): number  {
+        return AuthorizedApiRequestAccessCheckArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiRequestAccessCheckArguments with another object.
+     * @param {AuthorizedApiRequestAccessCheckArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiRequestAccessCheckArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiRequestAccessCheckArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiRequestAccessCheckArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiRequestAccessCheckArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiRequestAccessCheckArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiGetClientActivityArguments structure.
+ */
+export class AuthorizedApiGetClientActivityArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly fromTime: bigint;
+    public readonly toTime: bigint;
+    public readonly limit: number;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiGetClientActivityArguments> = new Impl.AuthorizedApiGetClientActivityArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiGetClientActivityArguments> = AuthorizedApiGetClientActivityArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiGetClientActivityArguments.
+     * @param uid - UUID
+     * @param fromTime - bigint
+     * @param toTime - bigint
+     * @param limit - number
+     */
+    constructor(uid: UUID, fromTime: bigint, toTime: bigint, limit: number)  {
+        this.uid = uid;
+        this.fromTime = fromTime;
+        this.toTime = toTime;
+        this.limit = limit;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getFromTime(): bigint  {
+        return this.fromTime;
+        
+    }
+    public getToTime(): bigint  {
+        return this.toTime;
+        
+    }
+    public getLimit(): number  {
+        return this.limit;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiGetClientActivityArguments.
+     * @param {AuthorizedApiGetClientActivityArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiGetClientActivityArguments | null | undefined): number  {
+        return AuthorizedApiGetClientActivityArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiGetClientActivityArguments with another object.
+     * @param {AuthorizedApiGetClientActivityArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiGetClientActivityArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiGetClientActivityArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiGetClientActivityArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiGetClientActivityArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiGetClientActivityArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiSearchClientLogsArguments structure.
+ */
+export class AuthorizedApiSearchClientLogsArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly query: string;
+    public readonly limit: number;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiSearchClientLogsArguments> = new Impl.AuthorizedApiSearchClientLogsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiSearchClientLogsArguments> = AuthorizedApiSearchClientLogsArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiSearchClientLogsArguments.
+     * @param uid - UUID
+     * @param query - string
+     * @param limit - number
+     */
+    constructor(uid: UUID, query: string, limit: number)  {
+        this.uid = uid;
+        this.query = query;
+        this.limit = limit;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getQuery(): string  {
+        return this.query;
+        
+    }
+    public getLimit(): number  {
+        return this.limit;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiSearchClientLogsArguments.
+     * @param {AuthorizedApiSearchClientLogsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiSearchClientLogsArguments | null | undefined): number  {
+        return AuthorizedApiSearchClientLogsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiSearchClientLogsArguments with another object.
+     * @param {AuthorizedApiSearchClientLogsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiSearchClientLogsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiSearchClientLogsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiSearchClientLogsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiSearchClientLogsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiSearchClientLogsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiGetClientConnectionsArguments structure.
+ */
+export class AuthorizedApiGetClientConnectionsArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly limit: number;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiGetClientConnectionsArguments> = new Impl.AuthorizedApiGetClientConnectionsArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiGetClientConnectionsArguments> = AuthorizedApiGetClientConnectionsArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiGetClientConnectionsArguments.
+     * @param uid - UUID
+     * @param limit - number
+     */
+    constructor(uid: UUID, limit: number)  {
+        this.uid = uid;
+        this.limit = limit;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getLimit(): number  {
+        return this.limit;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiGetClientConnectionsArguments.
+     * @param {AuthorizedApiGetClientConnectionsArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiGetClientConnectionsArguments | null | undefined): number  {
+        return AuthorizedApiGetClientConnectionsArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiGetClientConnectionsArguments with another object.
+     * @param {AuthorizedApiGetClientConnectionsArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiGetClientConnectionsArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiGetClientConnectionsArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiGetClientConnectionsArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiGetClientConnectionsArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiGetClientConnectionsArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiGetClientMessagesArguments structure.
+ */
+export class AuthorizedApiGetClientMessagesArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly fromTime: bigint;
+    public readonly toTime: bigint;
+    public readonly limit: number;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiGetClientMessagesArguments> = new Impl.AuthorizedApiGetClientMessagesArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiGetClientMessagesArguments> = AuthorizedApiGetClientMessagesArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiGetClientMessagesArguments.
+     * @param uid - UUID
+     * @param fromTime - bigint
+     * @param toTime - bigint
+     * @param limit - number
+     */
+    constructor(uid: UUID, fromTime: bigint, toTime: bigint, limit: number)  {
+        this.uid = uid;
+        this.fromTime = fromTime;
+        this.toTime = toTime;
+        this.limit = limit;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getFromTime(): bigint  {
+        return this.fromTime;
+        
+    }
+    public getToTime(): bigint  {
+        return this.toTime;
+        
+    }
+    public getLimit(): number  {
+        return this.limit;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiGetClientMessagesArguments.
+     * @param {AuthorizedApiGetClientMessagesArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiGetClientMessagesArguments | null | undefined): number  {
+        return AuthorizedApiGetClientMessagesArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiGetClientMessagesArguments with another object.
+     * @param {AuthorizedApiGetClientMessagesArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiGetClientMessagesArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiGetClientMessagesArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiGetClientMessagesArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiGetClientMessagesArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiGetClientMessagesArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiSetNextReadDelayArguments structure.
+ */
+export class AuthorizedApiSetNextReadDelayArguments implements ToString  {
+    public readonly delayMillis: bigint;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiSetNextReadDelayArguments> = new Impl.AuthorizedApiSetNextReadDelayArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiSetNextReadDelayArguments> = AuthorizedApiSetNextReadDelayArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiSetNextReadDelayArguments.
+     * @param delayMillis - bigint
+     */
+    constructor(delayMillis: bigint)  {
+        this.delayMillis = delayMillis;
+        
+    }
+    public getDelayMillis(): bigint  {
+        return this.delayMillis;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiSetNextReadDelayArguments.
+     * @param {AuthorizedApiSetNextReadDelayArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiSetNextReadDelayArguments | null | undefined): number  {
+        return AuthorizedApiSetNextReadDelayArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiSetNextReadDelayArguments with another object.
+     * @param {AuthorizedApiSetNextReadDelayArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiSetNextReadDelayArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiSetNextReadDelayArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiSetNextReadDelayArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiSetNextReadDelayArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiSetNextReadDelayArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiGetUapArguments structure.
+ */
+export class AuthorizedApiGetUapArguments implements ToString  {
+    public readonly uid: UUID;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiGetUapArguments> = new Impl.AuthorizedApiGetUapArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiGetUapArguments> = AuthorizedApiGetUapArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiGetUapArguments.
+     * @param uid - UUID
+     */
+    constructor(uid: UUID)  {
+        this.uid = uid;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiGetUapArguments.
+     * @param {AuthorizedApiGetUapArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiGetUapArguments | null | undefined): number  {
+        return AuthorizedApiGetUapArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiGetUapArguments with another object.
+     * @param {AuthorizedApiGetUapArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiGetUapArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiGetUapArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiGetUapArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiGetUapArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiGetUapArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiPullMessagesArguments structure.
+ */
+export class AuthorizedApiPullMessagesArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<AuthorizedApiPullMessagesArguments> = new Impl.AuthorizedApiPullMessagesArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiPullMessagesArguments> = AuthorizedApiPullMessagesArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiPullMessagesArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiPullMessagesArguments.
+     * @param {AuthorizedApiPullMessagesArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiPullMessagesArguments | null | undefined): number  {
+        return AuthorizedApiPullMessagesArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiPullMessagesArguments with another object.
+     * @param {AuthorizedApiPullMessagesArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiPullMessagesArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiPullMessagesArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiPullMessagesArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiPullMessagesArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiPullMessagesArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiRequestWebRtcSessionArguments structure.
+ */
+export class AuthorizedApiRequestWebRtcSessionArguments implements ToString  {
+    public readonly uid: UUID;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiRequestWebRtcSessionArguments> = new Impl.AuthorizedApiRequestWebRtcSessionArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiRequestWebRtcSessionArguments> = AuthorizedApiRequestWebRtcSessionArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiRequestWebRtcSessionArguments.
+     * @param uid - UUID
+     */
+    constructor(uid: UUID)  {
+        this.uid = uid;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiRequestWebRtcSessionArguments.
+     * @param {AuthorizedApiRequestWebRtcSessionArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiRequestWebRtcSessionArguments | null | undefined): number  {
+        return AuthorizedApiRequestWebRtcSessionArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiRequestWebRtcSessionArguments with another object.
+     * @param {AuthorizedApiRequestWebRtcSessionArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiRequestWebRtcSessionArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiRequestWebRtcSessionArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiRequestWebRtcSessionArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiRequestWebRtcSessionArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiRequestWebRtcSessionArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiPublishWebRtcSessionArguments structure.
+ */
+export class AuthorizedApiPublishWebRtcSessionArguments implements ToString  {
+    public readonly session: WebRtcSession;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiPublishWebRtcSessionArguments> = new Impl.AuthorizedApiPublishWebRtcSessionArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiPublishWebRtcSessionArguments> = AuthorizedApiPublishWebRtcSessionArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiPublishWebRtcSessionArguments.
+     * @param session - WebRtcSession
+     */
+    constructor(session: WebRtcSession)  {
+        this.session = session;
+        if (session === null || session === undefined) throw new Error(`Field 'session' cannot be null for type AuthorizedApiPublishWebRtcSessionArguments.`);
+        
+    }
+    public getSession(): WebRtcSession  {
+        return this.session;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiPublishWebRtcSessionArguments.
+     * @param {AuthorizedApiPublishWebRtcSessionArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiPublishWebRtcSessionArguments | null | undefined): number  {
+        return AuthorizedApiPublishWebRtcSessionArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiPublishWebRtcSessionArguments with another object.
+     * @param {AuthorizedApiPublishWebRtcSessionArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiPublishWebRtcSessionArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiPublishWebRtcSessionArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiPublishWebRtcSessionArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiPublishWebRtcSessionArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiPublishWebRtcSessionArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiSelfDestructArguments structure.
+ */
+export class AuthorizedApiSelfDestructArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<AuthorizedApiSelfDestructArguments> = new Impl.AuthorizedApiSelfDestructArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiSelfDestructArguments> = AuthorizedApiSelfDestructArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiSelfDestructArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiSelfDestructArguments.
+     * @param {AuthorizedApiSelfDestructArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiSelfDestructArguments | null | undefined): number  {
+        return AuthorizedApiSelfDestructArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiSelfDestructArguments with another object.
+     * @param {AuthorizedApiSelfDestructArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiSelfDestructArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiSelfDestructArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiSelfDestructArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiSelfDestructArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiSelfDestructArguments.META.metaToString(this, result);
+        return result;
+        
+    }
     
 }
 export interface AuthorizedApi  {
@@ -6977,6 +11160,7 @@ export interface AuthorizedApi  {
      * @aetherMethodId 3
      */
     backId(id: number): void;
+    backIdArguments?(args: AuthorizedApiBackIdArguments): void;
     /**
      * @param nextConnectMsDuration - bigint
      * @param rxWindowMs - bigint
@@ -6984,6 +11168,7 @@ export interface AuthorizedApi  {
      * @aetherMethodId 4
      */
     ping(nextConnectMsDuration: bigint, rxWindowMs: bigint): AFuture;
+    pingArguments?(args: AuthorizedApiPingArguments): AFuture;
     /**
      * @param uid - UUID
      * @param stream - ClientApiStream
@@ -6991,18 +11176,21 @@ export interface AuthorizedApi  {
      * @aetherMethodId 5
      */
     client(uid: UUID, stream: ClientApiStream): void;
+    clientArguments?(args: AuthorizedApiClientArguments): void;
     /**
      * @param msg - Message
      *
      * @aetherMethodId 6
      */
     sendMessage(msg: Message): void;
+    sendMessageArguments?(args: AuthorizedApiSendMessageArguments): void;
     /**
      * @param msg - Message[]
      *
      * @aetherMethodId 7
      */
     sendMessages(msg: Message[]): void;
+    sendMessagesArguments?(args: AuthorizedApiSendMessagesArguments): void;
     /**
      * @param uids - UUID[]
      * @param data - Uint8Array
@@ -7010,74 +11198,85 @@ export interface AuthorizedApi  {
      * @aetherMethodId 37
      */
     sendMulticast(uids: UUID[], data: Uint8Array): void;
+    sendMulticastArguments?(args: AuthorizedApiSendMulticastArguments): void;
     /**
      * @param msg - Message
      *
      * @aetherMethodId 39
      */
     sendMessageWithResult(msg: Message): AFuture;
+    sendMessageWithResultArguments?(args: AuthorizedApiSendMessageWithResultArguments): AFuture;
     /**
      * @param owner - UUID
      * @param uids - UUID[]
-     * @returns ARFuture<bigint>
+     * @returns ARFuture<UUID>
      *
      * @aetherMethodId 8
      */
-    createAccessGroup(owner: UUID, uids: UUID[]): ARFuture<bigint>;
+    createAccessGroup(owner: UUID, uids: UUID[]): ARFuture<UUID>;
+    createAccessGroupArguments?(args: AuthorizedApiCreateAccessGroupArguments): ARFuture<UUID>;
     /**
-     * @param groupId - bigint
+     * @param groupId - UUID
      * @param uid - UUID
      * @returns ARFuture<boolean>
      *
      * @aetherMethodId 9
      */
-    addToAccessGroup(groupId: bigint, uid: UUID): ARFuture<boolean>;
+    addToAccessGroup(groupId: UUID, uid: UUID): ARFuture<boolean>;
+    addToAccessGroupArguments?(args: AuthorizedApiAddToAccessGroupArguments): ARFuture<boolean>;
     /**
-     * @param groupId - bigint
+     * @param groupId - UUID
      * @param uid - UUID
      * @returns ARFuture<boolean>
      *
      * @aetherMethodId 10
      */
-    removeFromAccessGroup(groupId: bigint, uid: UUID): ARFuture<boolean>;
+    removeFromAccessGroup(groupId: UUID, uid: UUID): ARFuture<boolean>;
+    removeFromAccessGroupArguments?(args: AuthorizedApiRemoveFromAccessGroupArguments): ARFuture<boolean>;
     /**
      * @param uid - UUID
      *
      * @aetherMethodId 11
      */
     checkAccessForSendMessage(uid: UUID): AFuture;
+    checkAccessForSendMessageArguments?(args: AuthorizedApiCheckAccessForSendMessageArguments): AFuture;
     /**
      * @param sid - number[]
      *
      * @aetherMethodId 12
      */
     resolverServers(sid: number[]): void;
+    resolverServersArguments?(args: AuthorizedApiResolverServersArguments): void;
     /**
      * @param uids - UUID[]
      *
      * @aetherMethodId 13
      */
     resolveClouds(uids: UUID[]): void;
+    resolveCloudsArguments?(args: AuthorizedApiResolveCloudsArguments): void;
     /**
      * @param configs - AppliedConfig[]
      *
      * @aetherMethodId 38
      */
     reportAppliedConfig(configs: AppliedConfig[]): void;
+    reportAppliedConfigArguments?(args: AuthorizedApiReportAppliedConfigArguments): void;
     /**
      * @param uid - UUID
-     * @returns ARFuture<bigint[]>
+     * @returns ARFuture<UUID[]>
      *
      * @aetherMethodId 14
      */
-    getAccessGroups(uid: UUID): ARFuture<bigint[]>;
+    getAccessGroups(uid: UUID): ARFuture<UUID[]>;
+    getAccessGroupsArguments?(args: AuthorizedApiGetAccessGroupsArguments): ARFuture<UUID[]>;
     /**
-     * @param groupId - bigint
+     * @param groupId - UUID
      * @returns ARFuture<AccessGroup>
      *
      * @aetherMethodId 15
      */
-    getAccessGroup(groupId: bigint): ARFuture<AccessGroup>;
+    getAccessGroup(groupId: UUID): ARFuture<AccessGroup>;
+    getAccessGroupArguments?(args: AuthorizedApiGetAccessGroupArguments): ARFuture<AccessGroup>;
     /**
      * @param uid - UUID
      * @returns ARFuture<UUID[]>
@@ -7085,6 +11284,7 @@ export interface AuthorizedApi  {
      * @aetherMethodId 16
      */
     getAllAccessedClients(uid: UUID): ARFuture<UUID[]>;
+    getAllAccessedClientsArguments?(args: AuthorizedApiGetAllAccessedClientsArguments): ARFuture<UUID[]>;
     /**
      * @param uid1 - UUID
      * @param uid2 - UUID
@@ -7093,71 +11293,82 @@ export interface AuthorizedApi  {
      * @aetherMethodId 17
      */
     checkAccessForSendMessage2(uid1: UUID, uid2: UUID): ARFuture<boolean>;
+    checkAccessForSendMessage2Arguments?(args: AuthorizedApiCheckAccessForSendMessage2Arguments): ARFuture<boolean>;
     /**
      * @param telemetry - Telemetry
      *
      * @aetherMethodId 18
      */
     sendTelemetry(telemetry: Telemetry): void;
+    sendTelemetryArguments?(args: AuthorizedApiSendTelemetryArguments): void;
     /**
      * @param uids - UUID[]
      *
      * @aetherMethodId 19
      */
     requestAccessGroupsForClients(uids: UUID[]): void;
+    requestAccessGroupsForClientsArguments?(args: AuthorizedApiRequestAccessGroupsForClientsArguments): void;
     /**
-     * @param ids - bigint[]
+     * @param ids - UUID[]
      *
      * @aetherMethodId 20
      */
-    requestAccessGroupsItems(ids: bigint[]): void;
+    requestAccessGroupsItems(ids: UUID[]): void;
+    requestAccessGroupsItemsArguments?(args: AuthorizedApiRequestAccessGroupsItemsArguments): void;
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 22
      */
-    sendAccessGroupForClient(uid: UUID, groups: bigint[]): void;
+    sendAccessGroupForClient(uid: UUID, groups: UUID[]): void;
+    sendAccessGroupForClientArguments?(args: AuthorizedApiSendAccessGroupForClientArguments): void;
     /**
-     * @param id - bigint
+     * @param id - UUID
      * @param groups - UUID[]
      *
      * @aetherMethodId 23
      */
-    addItemsToAccessGroup(id: bigint, groups: UUID[]): void;
+    addItemsToAccessGroup(id: UUID, groups: UUID[]): void;
+    addItemsToAccessGroupArguments?(args: AuthorizedApiAddItemsToAccessGroupArguments): void;
     /**
-     * @param id - bigint
+     * @param id - UUID
      * @param groups - UUID[]
      *
      * @aetherMethodId 24
      */
-    removeItemsFromAccessGroup(id: bigint, groups: UUID[]): void;
+    removeItemsFromAccessGroup(id: UUID, groups: UUID[]): void;
+    removeItemsFromAccessGroupArguments?(args: AuthorizedApiRemoveItemsFromAccessGroupArguments): void;
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 25
      */
-    addAccessGroupsToClient(uid: UUID, groups: bigint[]): void;
+    addAccessGroupsToClient(uid: UUID, groups: UUID[]): void;
+    addAccessGroupsToClientArguments?(args: AuthorizedApiAddAccessGroupsToClientArguments): void;
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 26
      */
-    removeAccessGroupsFromClient(uid: UUID, groups: bigint[]): void;
+    removeAccessGroupsFromClient(uid: UUID, groups: UUID[]): void;
+    removeAccessGroupsFromClientArguments?(args: AuthorizedApiRemoveAccessGroupsFromClientArguments): void;
     /**
      * @param uids - UUID[]
      *
      * @aetherMethodId 27
      */
     requestAllAccessedClients(uids: UUID[]): void;
+    requestAllAccessedClientsArguments?(args: AuthorizedApiRequestAllAccessedClientsArguments): void;
     /**
      * @param requests - AccessCheckPair[]
      *
      * @aetherMethodId 28
      */
     requestAccessCheck(requests: AccessCheckPair[]): void;
+    requestAccessCheckArguments?(args: AuthorizedApiRequestAccessCheckArguments): void;
     /**
      * @param uid - UUID
      * @param fromTime - bigint
@@ -7168,6 +11379,7 @@ export interface AuthorizedApi  {
      * @aetherMethodId 29
      */
     getClientActivity(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<ClientActivity[]>;
+    getClientActivityArguments?(args: AuthorizedApiGetClientActivityArguments): ARFuture<ClientActivity[]>;
     /**
      * @param uid - UUID
      * @param query - string
@@ -7177,6 +11389,7 @@ export interface AuthorizedApi  {
      * @aetherMethodId 30
      */
     searchClientLogs(uid: UUID, query: string, limit: number): ARFuture<ClientLogEntry[]>;
+    searchClientLogsArguments?(args: AuthorizedApiSearchClientLogsArguments): ARFuture<ClientLogEntry[]>;
     /**
      * @param uid - UUID
      * @param limit - number
@@ -7185,6 +11398,7 @@ export interface AuthorizedApi  {
      * @aetherMethodId 31
      */
     getClientConnections(uid: UUID, limit: number): ARFuture<ClientConnectionInfo[]>;
+    getClientConnectionsArguments?(args: AuthorizedApiGetClientConnectionsArguments): ARFuture<ClientConnectionInfo[]>;
     /**
      * @param uid - UUID
      * @param fromTime - bigint
@@ -7195,12 +11409,14 @@ export interface AuthorizedApi  {
      * @aetherMethodId 32
      */
     getClientMessages(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<MessageInfo[]>;
+    getClientMessagesArguments?(args: AuthorizedApiGetClientMessagesArguments): ARFuture<MessageInfo[]>;
     /**
      * @param delayMillis - bigint
      *
      * @aetherMethodId 33
      */
     setNextReadDelay(delayMillis: bigint): void;
+    setNextReadDelayArguments?(args: AuthorizedApiSetNextReadDelayArguments): void;
     /**
      * @param uid - UUID
      * @returns ARFuture<Uap>
@@ -7208,10 +11424,12 @@ export interface AuthorizedApi  {
      * @aetherMethodId 34
      */
     getUap(uid: UUID): ARFuture<Uap>;
+    getUapArguments?(args: AuthorizedApiGetUapArguments): ARFuture<Uap>;
     /**
      * @aetherMethodId 36
      */
     pullMessages(): void;
+    pullMessagesArguments?(args: AuthorizedApiPullMessagesArguments): void;
     /**
      * @param uid - UUID
      * @returns ARFuture<WebRtcSession>
@@ -7219,12 +11437,19 @@ export interface AuthorizedApi  {
      * @aetherMethodId 40
      */
     requestWebRtcSession(uid: UUID): ARFuture<WebRtcSession>;
+    requestWebRtcSessionArguments?(args: AuthorizedApiRequestWebRtcSessionArguments): ARFuture<WebRtcSession>;
     /**
      * @param session - WebRtcSession
      *
      * @aetherMethodId 41
      */
     publishWebRtcSession(session: WebRtcSession): void;
+    publishWebRtcSessionArguments?(args: AuthorizedApiPublishWebRtcSessionArguments): void;
+    /**
+     * @aetherMethodId 42
+     */
+    selfDestruct(): AFuture;
+    selfDestructArguments?(args: AuthorizedApiSelfDestructArguments): AFuture;
     
 }
 export namespace AuthorizedApi  {
@@ -7251,6 +11476,10 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 3
      */
     public abstract backId(id: number): void;
+    public backIdArguments(args: AuthorizedApiBackIdArguments): void  {
+        this.backId(args.id);
+        
+    }
     /**
      * @param nextConnectMsDuration - bigint
      * @param rxWindowMs - bigint
@@ -7258,6 +11487,10 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 4
      */
     public abstract ping(nextConnectMsDuration: bigint, rxWindowMs: bigint): AFuture;
+    public pingArguments(args: AuthorizedApiPingArguments): AFuture  {
+        return this.ping(args.nextConnectMsDuration, args.rxWindowMs);
+        
+    }
     /**
      * @param uid - UUID
      * @param stream - ClientApiStream
@@ -7265,18 +11498,30 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 5
      */
     public abstract client(uid: UUID, stream: ClientApiStream): void;
+    public clientArguments(args: AuthorizedApiClientArguments): void  {
+        this.client(args.uid, args.stream);
+        
+    }
     /**
      * @param msg - Message
      *
      * @aetherMethodId 6
      */
     public abstract sendMessage(msg: Message): void;
+    public sendMessageArguments(args: AuthorizedApiSendMessageArguments): void  {
+        this.sendMessage(args.msg);
+        
+    }
     /**
      * @param msg - Message[]
      *
      * @aetherMethodId 7
      */
     public abstract sendMessages(msg: Message[]): void;
+    public sendMessagesArguments(args: AuthorizedApiSendMessagesArguments): void  {
+        this.sendMessages(args.msg);
+        
+    }
     /**
      * @param uids - UUID[]
      * @param data - Uint8Array
@@ -7284,74 +11529,118 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 37
      */
     public abstract sendMulticast(uids: UUID[], data: Uint8Array): void;
+    public sendMulticastArguments(args: AuthorizedApiSendMulticastArguments): void  {
+        this.sendMulticast(args.uids, args.data);
+        
+    }
     /**
      * @param msg - Message
      *
      * @aetherMethodId 39
      */
     public abstract sendMessageWithResult(msg: Message): AFuture;
+    public sendMessageWithResultArguments(args: AuthorizedApiSendMessageWithResultArguments): AFuture  {
+        return this.sendMessageWithResult(args.msg);
+        
+    }
     /**
      * @param owner - UUID
      * @param uids - UUID[]
-     * @returns ARFuture<bigint>
+     * @returns ARFuture<UUID>
      *
      * @aetherMethodId 8
      */
-    public abstract createAccessGroup(owner: UUID, uids: UUID[]): ARFuture<bigint>;
+    public abstract createAccessGroup(owner: UUID, uids: UUID[]): ARFuture<UUID>;
+    public createAccessGroupArguments(args: AuthorizedApiCreateAccessGroupArguments): ARFuture<UUID>  {
+        return this.createAccessGroup(args.owner, args.uids);
+        
+    }
     /**
-     * @param groupId - bigint
+     * @param groupId - UUID
      * @param uid - UUID
      * @returns ARFuture<boolean>
      *
      * @aetherMethodId 9
      */
-    public abstract addToAccessGroup(groupId: bigint, uid: UUID): ARFuture<boolean>;
+    public abstract addToAccessGroup(groupId: UUID, uid: UUID): ARFuture<boolean>;
+    public addToAccessGroupArguments(args: AuthorizedApiAddToAccessGroupArguments): ARFuture<boolean>  {
+        return this.addToAccessGroup(args.groupId, args.uid);
+        
+    }
     /**
-     * @param groupId - bigint
+     * @param groupId - UUID
      * @param uid - UUID
      * @returns ARFuture<boolean>
      *
      * @aetherMethodId 10
      */
-    public abstract removeFromAccessGroup(groupId: bigint, uid: UUID): ARFuture<boolean>;
+    public abstract removeFromAccessGroup(groupId: UUID, uid: UUID): ARFuture<boolean>;
+    public removeFromAccessGroupArguments(args: AuthorizedApiRemoveFromAccessGroupArguments): ARFuture<boolean>  {
+        return this.removeFromAccessGroup(args.groupId, args.uid);
+        
+    }
     /**
      * @param uid - UUID
      *
      * @aetherMethodId 11
      */
     public abstract checkAccessForSendMessage(uid: UUID): AFuture;
+    public checkAccessForSendMessageArguments(args: AuthorizedApiCheckAccessForSendMessageArguments): AFuture  {
+        return this.checkAccessForSendMessage(args.uid);
+        
+    }
     /**
      * @param sid - number[]
      *
      * @aetherMethodId 12
      */
     public abstract resolverServers(sid: number[]): void;
+    public resolverServersArguments(args: AuthorizedApiResolverServersArguments): void  {
+        this.resolverServers(args.sid);
+        
+    }
     /**
      * @param uids - UUID[]
      *
      * @aetherMethodId 13
      */
     public abstract resolveClouds(uids: UUID[]): void;
+    public resolveCloudsArguments(args: AuthorizedApiResolveCloudsArguments): void  {
+        this.resolveClouds(args.uids);
+        
+    }
     /**
      * @param configs - AppliedConfig[]
      *
      * @aetherMethodId 38
      */
     public abstract reportAppliedConfig(configs: AppliedConfig[]): void;
+    public reportAppliedConfigArguments(args: AuthorizedApiReportAppliedConfigArguments): void  {
+        this.reportAppliedConfig(args.configs);
+        
+    }
     /**
      * @param uid - UUID
-     * @returns ARFuture<bigint[]>
+     * @returns ARFuture<UUID[]>
      *
      * @aetherMethodId 14
      */
-    public abstract getAccessGroups(uid: UUID): ARFuture<bigint[]>;
+    public abstract getAccessGroups(uid: UUID): ARFuture<UUID[]>;
+    public getAccessGroupsArguments(args: AuthorizedApiGetAccessGroupsArguments): ARFuture<UUID[]>  {
+        return this.getAccessGroups(args.uid);
+        
+    }
     /**
-     * @param groupId - bigint
+     * @param groupId - UUID
      * @returns ARFuture<AccessGroup>
      *
      * @aetherMethodId 15
      */
-    public abstract getAccessGroup(groupId: bigint): ARFuture<AccessGroup>;
+    public abstract getAccessGroup(groupId: UUID): ARFuture<AccessGroup>;
+    public getAccessGroupArguments(args: AuthorizedApiGetAccessGroupArguments): ARFuture<AccessGroup>  {
+        return this.getAccessGroup(args.groupId);
+        
+    }
     /**
      * @param uid - UUID
      * @returns ARFuture<UUID[]>
@@ -7359,6 +11648,10 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 16
      */
     public abstract getAllAccessedClients(uid: UUID): ARFuture<UUID[]>;
+    public getAllAccessedClientsArguments(args: AuthorizedApiGetAllAccessedClientsArguments): ARFuture<UUID[]>  {
+        return this.getAllAccessedClients(args.uid);
+        
+    }
     /**
      * @param uid1 - UUID
      * @param uid2 - UUID
@@ -7367,71 +11660,115 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 17
      */
     public abstract checkAccessForSendMessage2(uid1: UUID, uid2: UUID): ARFuture<boolean>;
+    public checkAccessForSendMessage2Arguments(args: AuthorizedApiCheckAccessForSendMessage2Arguments): ARFuture<boolean>  {
+        return this.checkAccessForSendMessage2(args.uid1, args.uid2);
+        
+    }
     /**
      * @param telemetry - Telemetry
      *
      * @aetherMethodId 18
      */
     public abstract sendTelemetry(telemetry: Telemetry): void;
+    public sendTelemetryArguments(args: AuthorizedApiSendTelemetryArguments): void  {
+        this.sendTelemetry(args.telemetry);
+        
+    }
     /**
      * @param uids - UUID[]
      *
      * @aetherMethodId 19
      */
     public abstract requestAccessGroupsForClients(uids: UUID[]): void;
+    public requestAccessGroupsForClientsArguments(args: AuthorizedApiRequestAccessGroupsForClientsArguments): void  {
+        this.requestAccessGroupsForClients(args.uids);
+        
+    }
     /**
-     * @param ids - bigint[]
+     * @param ids - UUID[]
      *
      * @aetherMethodId 20
      */
-    public abstract requestAccessGroupsItems(ids: bigint[]): void;
+    public abstract requestAccessGroupsItems(ids: UUID[]): void;
+    public requestAccessGroupsItemsArguments(args: AuthorizedApiRequestAccessGroupsItemsArguments): void  {
+        this.requestAccessGroupsItems(args.ids);
+        
+    }
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 22
      */
-    public abstract sendAccessGroupForClient(uid: UUID, groups: bigint[]): void;
+    public abstract sendAccessGroupForClient(uid: UUID, groups: UUID[]): void;
+    public sendAccessGroupForClientArguments(args: AuthorizedApiSendAccessGroupForClientArguments): void  {
+        this.sendAccessGroupForClient(args.uid, args.groups);
+        
+    }
     /**
-     * @param id - bigint
+     * @param id - UUID
      * @param groups - UUID[]
      *
      * @aetherMethodId 23
      */
-    public abstract addItemsToAccessGroup(id: bigint, groups: UUID[]): void;
+    public abstract addItemsToAccessGroup(id: UUID, groups: UUID[]): void;
+    public addItemsToAccessGroupArguments(args: AuthorizedApiAddItemsToAccessGroupArguments): void  {
+        this.addItemsToAccessGroup(args.id, args.groups);
+        
+    }
     /**
-     * @param id - bigint
+     * @param id - UUID
      * @param groups - UUID[]
      *
      * @aetherMethodId 24
      */
-    public abstract removeItemsFromAccessGroup(id: bigint, groups: UUID[]): void;
+    public abstract removeItemsFromAccessGroup(id: UUID, groups: UUID[]): void;
+    public removeItemsFromAccessGroupArguments(args: AuthorizedApiRemoveItemsFromAccessGroupArguments): void  {
+        this.removeItemsFromAccessGroup(args.id, args.groups);
+        
+    }
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 25
      */
-    public abstract addAccessGroupsToClient(uid: UUID, groups: bigint[]): void;
+    public abstract addAccessGroupsToClient(uid: UUID, groups: UUID[]): void;
+    public addAccessGroupsToClientArguments(args: AuthorizedApiAddAccessGroupsToClientArguments): void  {
+        this.addAccessGroupsToClient(args.uid, args.groups);
+        
+    }
     /**
      * @param uid - UUID
-     * @param groups - bigint[]
+     * @param groups - UUID[]
      *
      * @aetherMethodId 26
      */
-    public abstract removeAccessGroupsFromClient(uid: UUID, groups: bigint[]): void;
+    public abstract removeAccessGroupsFromClient(uid: UUID, groups: UUID[]): void;
+    public removeAccessGroupsFromClientArguments(args: AuthorizedApiRemoveAccessGroupsFromClientArguments): void  {
+        this.removeAccessGroupsFromClient(args.uid, args.groups);
+        
+    }
     /**
      * @param uids - UUID[]
      *
      * @aetherMethodId 27
      */
     public abstract requestAllAccessedClients(uids: UUID[]): void;
+    public requestAllAccessedClientsArguments(args: AuthorizedApiRequestAllAccessedClientsArguments): void  {
+        this.requestAllAccessedClients(args.uids);
+        
+    }
     /**
      * @param requests - AccessCheckPair[]
      *
      * @aetherMethodId 28
      */
     public abstract requestAccessCheck(requests: AccessCheckPair[]): void;
+    public requestAccessCheckArguments(args: AuthorizedApiRequestAccessCheckArguments): void  {
+        this.requestAccessCheck(args.requests);
+        
+    }
     /**
      * @param uid - UUID
      * @param fromTime - bigint
@@ -7442,6 +11779,10 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 29
      */
     public abstract getClientActivity(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<ClientActivity[]>;
+    public getClientActivityArguments(args: AuthorizedApiGetClientActivityArguments): ARFuture<ClientActivity[]>  {
+        return this.getClientActivity(args.uid, args.fromTime, args.toTime, args.limit);
+        
+    }
     /**
      * @param uid - UUID
      * @param query - string
@@ -7451,6 +11792,10 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 30
      */
     public abstract searchClientLogs(uid: UUID, query: string, limit: number): ARFuture<ClientLogEntry[]>;
+    public searchClientLogsArguments(args: AuthorizedApiSearchClientLogsArguments): ARFuture<ClientLogEntry[]>  {
+        return this.searchClientLogs(args.uid, args.query, args.limit);
+        
+    }
     /**
      * @param uid - UUID
      * @param limit - number
@@ -7459,6 +11804,10 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 31
      */
     public abstract getClientConnections(uid: UUID, limit: number): ARFuture<ClientConnectionInfo[]>;
+    public getClientConnectionsArguments(args: AuthorizedApiGetClientConnectionsArguments): ARFuture<ClientConnectionInfo[]>  {
+        return this.getClientConnections(args.uid, args.limit);
+        
+    }
     /**
      * @param uid - UUID
      * @param fromTime - bigint
@@ -7469,12 +11818,20 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 32
      */
     public abstract getClientMessages(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<MessageInfo[]>;
+    public getClientMessagesArguments(args: AuthorizedApiGetClientMessagesArguments): ARFuture<MessageInfo[]>  {
+        return this.getClientMessages(args.uid, args.fromTime, args.toTime, args.limit);
+        
+    }
     /**
      * @param delayMillis - bigint
      *
      * @aetherMethodId 33
      */
     public abstract setNextReadDelay(delayMillis: bigint): void;
+    public setNextReadDelayArguments(args: AuthorizedApiSetNextReadDelayArguments): void  {
+        this.setNextReadDelay(args.delayMillis);
+        
+    }
     /**
      * @param uid - UUID
      * @returns ARFuture<Uap>
@@ -7482,10 +11839,18 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 34
      */
     public abstract getUap(uid: UUID): ARFuture<Uap>;
+    public getUapArguments(args: AuthorizedApiGetUapArguments): ARFuture<Uap>  {
+        return this.getUap(args.uid);
+        
+    }
     /**
      * @aetherMethodId 36
      */
     public abstract pullMessages(): void;
+    public pullMessagesArguments(args: AuthorizedApiPullMessagesArguments): void  {
+        this.pullMessages();
+        
+    }
     /**
      * @param uid - UUID
      * @returns ARFuture<WebRtcSession>
@@ -7493,12 +11858,278 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
      * @aetherMethodId 40
      */
     public abstract requestWebRtcSession(uid: UUID): ARFuture<WebRtcSession>;
+    public requestWebRtcSessionArguments(args: AuthorizedApiRequestWebRtcSessionArguments): ARFuture<WebRtcSession>  {
+        return this.requestWebRtcSession(args.uid);
+        
+    }
     /**
      * @param session - WebRtcSession
      *
      * @aetherMethodId 41
      */
     public abstract publishWebRtcSession(session: WebRtcSession): void;
+    public publishWebRtcSessionArguments(args: AuthorizedApiPublishWebRtcSessionArguments): void  {
+        this.publishWebRtcSession(args.session);
+        
+    }
+    /**
+     * @aetherMethodId 42
+     */
+    public abstract selfDestruct(): AFuture;
+    public selfDestructArguments(args: AuthorizedApiSelfDestructArguments): AFuture  {
+        return this.selfDestruct();
+        
+    }
+    
+}
+/**
+ * Represents the LoginApiGetTimeUTCArguments structure.
+ */
+export class LoginApiGetTimeUTCArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<LoginApiGetTimeUTCArguments> = new Impl.LoginApiGetTimeUTCArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<LoginApiGetTimeUTCArguments> = LoginApiGetTimeUTCArguments.META_BODY;
+    /**
+     * Creates an instance of LoginApiGetTimeUTCArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of LoginApiGetTimeUTCArguments.
+     * @param {LoginApiGetTimeUTCArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: LoginApiGetTimeUTCArguments | null | undefined): number  {
+        return LoginApiGetTimeUTCArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of LoginApiGetTimeUTCArguments with another object.
+     * @param {LoginApiGetTimeUTCArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: LoginApiGetTimeUTCArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return LoginApiGetTimeUTCArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return LoginApiGetTimeUTCArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return LoginApiGetTimeUTCArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        LoginApiGetTimeUTCArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the LoginApiLoginByUIDArguments structure.
+ */
+export class LoginApiLoginByUIDArguments implements ToString  {
+    public readonly uid: UUID;
+    public readonly data: LoginStream;
+    public static readonly META_BODY: FastMetaType<LoginApiLoginByUIDArguments> = new Impl.LoginApiLoginByUIDArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<LoginApiLoginByUIDArguments> = LoginApiLoginByUIDArguments.META_BODY;
+    /**
+     * Creates an instance of LoginApiLoginByUIDArguments.
+     * @param uid - UUID
+     * @param data - LoginStream
+     */
+    constructor(uid: UUID, data: LoginStream)  {
+        this.uid = uid;
+        this.data = data;
+        if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type LoginApiLoginByUIDArguments.`);
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    public getData(): LoginStream  {
+        return this.data;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of LoginApiLoginByUIDArguments.
+     * @param {LoginApiLoginByUIDArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: LoginApiLoginByUIDArguments | null | undefined): number  {
+        return LoginApiLoginByUIDArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of LoginApiLoginByUIDArguments with another object.
+     * @param {LoginApiLoginByUIDArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: LoginApiLoginByUIDArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return LoginApiLoginByUIDArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return LoginApiLoginByUIDArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return LoginApiLoginByUIDArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        LoginApiLoginByUIDArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the LoginApiLoginByAliasArguments structure.
+ */
+export class LoginApiLoginByAliasArguments implements ToString  {
+    public readonly alias: UUID;
+    public readonly data: LoginStream;
+    public static readonly META_BODY: FastMetaType<LoginApiLoginByAliasArguments> = new Impl.LoginApiLoginByAliasArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<LoginApiLoginByAliasArguments> = LoginApiLoginByAliasArguments.META_BODY;
+    /**
+     * Creates an instance of LoginApiLoginByAliasArguments.
+     * @param alias - UUID
+     * @param data - LoginStream
+     */
+    constructor(alias: UUID, data: LoginStream)  {
+        this.alias = alias;
+        this.data = data;
+        if (data === null || data === undefined) throw new Error(`Field 'data' cannot be null for type LoginApiLoginByAliasArguments.`);
+        
+    }
+    public getAlias(): UUID  {
+        return this.alias;
+        
+    }
+    public getData(): LoginStream  {
+        return this.data;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of LoginApiLoginByAliasArguments.
+     * @param {LoginApiLoginByAliasArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: LoginApiLoginByAliasArguments | null | undefined): number  {
+        return LoginApiLoginByAliasArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of LoginApiLoginByAliasArguments with another object.
+     * @param {LoginApiLoginByAliasArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: LoginApiLoginByAliasArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return LoginApiLoginByAliasArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return LoginApiLoginByAliasArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return LoginApiLoginByAliasArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        LoginApiLoginByAliasArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the LoginApiGetMyIpArguments structure.
+ */
+export class LoginApiGetMyIpArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<LoginApiGetMyIpArguments> = new Impl.LoginApiGetMyIpArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<LoginApiGetMyIpArguments> = LoginApiGetMyIpArguments.META_BODY;
+    /**
+     * Creates an instance of LoginApiGetMyIpArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of LoginApiGetMyIpArguments.
+     * @param {LoginApiGetMyIpArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: LoginApiGetMyIpArguments | null | undefined): number  {
+        return LoginApiGetMyIpArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of LoginApiGetMyIpArguments with another object.
+     * @param {LoginApiGetMyIpArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: LoginApiGetMyIpArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return LoginApiGetMyIpArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return LoginApiGetMyIpArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return LoginApiGetMyIpArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        LoginApiGetMyIpArguments.META.metaToString(this, result);
+        return result;
+        
+    }
     
 }
 export interface LoginApi  {
@@ -7508,6 +12139,7 @@ export interface LoginApi  {
      * @aetherMethodId 3
      */
     getTimeUTC(): ARFuture<bigint>;
+    getTimeUTCArguments?(args: LoginApiGetTimeUTCArguments): ARFuture<bigint>;
     /**
      * @param uid - UUID
      * @param data - LoginStream
@@ -7515,6 +12147,7 @@ export interface LoginApi  {
      * @aetherMethodId 4
      */
     loginByUID(uid: UUID, data: LoginStream): void;
+    loginByUIDArguments?(args: LoginApiLoginByUIDArguments): void;
     /**
      * @param alias - UUID
      * @param data - LoginStream
@@ -7522,12 +12155,14 @@ export interface LoginApi  {
      * @aetherMethodId 5
      */
     loginByAlias(alias: UUID, data: LoginStream): void;
+    loginByAliasArguments?(args: LoginApiLoginByAliasArguments): void;
     /**
      * @returns ARFuture<IpInfo>
      *
      * @aetherMethodId 6
      */
     getMyIp(): ARFuture<IpInfo>;
+    getMyIpArguments?(args: LoginApiGetMyIpArguments): ARFuture<IpInfo>;
     
 }
 export namespace LoginApi  {
@@ -7555,6 +12190,10 @@ export abstract class LoginApiLocal<RT extends RemoteApi> implements LoginApi  {
      * @aetherMethodId 3
      */
     public abstract getTimeUTC(): ARFuture<bigint>;
+    public getTimeUTCArguments(args: LoginApiGetTimeUTCArguments): ARFuture<bigint>  {
+        return this.getTimeUTC();
+        
+    }
     /**
      * @param uid - UUID
      * @param data - LoginStream
@@ -7562,6 +12201,10 @@ export abstract class LoginApiLocal<RT extends RemoteApi> implements LoginApi  {
      * @aetherMethodId 4
      */
     public abstract loginByUID(uid: UUID, data: LoginStream): void;
+    public loginByUIDArguments(args: LoginApiLoginByUIDArguments): void  {
+        this.loginByUID(args.uid, args.data);
+        
+    }
     /**
      * @param alias - UUID
      * @param data - LoginStream
@@ -7569,12 +12212,20 @@ export abstract class LoginApiLocal<RT extends RemoteApi> implements LoginApi  {
      * @aetherMethodId 5
      */
     public abstract loginByAlias(alias: UUID, data: LoginStream): void;
+    public loginByAliasArguments(args: LoginApiLoginByAliasArguments): void  {
+        this.loginByAlias(args.alias, args.data);
+        
+    }
     /**
      * @returns ARFuture<IpInfo>
      *
      * @aetherMethodId 6
      */
     public abstract getMyIp(): ARFuture<IpInfo>;
+    public getMyIpArguments(args: LoginApiGetMyIpArguments): ARFuture<IpInfo>  {
+        return this.getMyIp();
+        
+    }
     
 }
 export interface ServerApiByUidClient  {
@@ -7602,6 +12253,873 @@ export abstract class ServerApiByUidClientLocal<RT extends RemoteApi> implements
     }
     
 }
+/**
+ * Represents the ServerApiByUidGetBalanceArguments structure.
+ */
+export class ServerApiByUidGetBalanceArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<ServerApiByUidGetBalanceArguments> = new Impl.ServerApiByUidGetBalanceArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidGetBalanceArguments> = ServerApiByUidGetBalanceArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidGetBalanceArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidGetBalanceArguments.
+     * @param {ServerApiByUidGetBalanceArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidGetBalanceArguments | null | undefined): number  {
+        return ServerApiByUidGetBalanceArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidGetBalanceArguments with another object.
+     * @param {ServerApiByUidGetBalanceArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidGetBalanceArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidGetBalanceArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidGetBalanceArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidGetBalanceArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidGetBalanceArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidSetParentArguments structure.
+ */
+export class ServerApiByUidSetParentArguments implements ToString  {
+    public readonly uid: UUID;
+    public static readonly META_BODY: FastMetaType<ServerApiByUidSetParentArguments> = new Impl.ServerApiByUidSetParentArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidSetParentArguments> = ServerApiByUidSetParentArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidSetParentArguments.
+     * @param uid - UUID
+     */
+    constructor(uid: UUID)  {
+        this.uid = uid;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidSetParentArguments.
+     * @param {ServerApiByUidSetParentArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidSetParentArguments | null | undefined): number  {
+        return ServerApiByUidSetParentArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidSetParentArguments with another object.
+     * @param {ServerApiByUidSetParentArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidSetParentArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidSetParentArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidSetParentArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidSetParentArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidSetParentArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidBlockArguments structure.
+ */
+export class ServerApiByUidBlockArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<ServerApiByUidBlockArguments> = new Impl.ServerApiByUidBlockArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidBlockArguments> = ServerApiByUidBlockArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidBlockArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidBlockArguments.
+     * @param {ServerApiByUidBlockArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidBlockArguments | null | undefined): number  {
+        return ServerApiByUidBlockArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidBlockArguments with another object.
+     * @param {ServerApiByUidBlockArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidBlockArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidBlockArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidBlockArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidBlockArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidBlockArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidGetPositionArguments structure.
+ */
+export class ServerApiByUidGetPositionArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<ServerApiByUidGetPositionArguments> = new Impl.ServerApiByUidGetPositionArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidGetPositionArguments> = ServerApiByUidGetPositionArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidGetPositionArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidGetPositionArguments.
+     * @param {ServerApiByUidGetPositionArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidGetPositionArguments | null | undefined): number  {
+        return ServerApiByUidGetPositionArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidGetPositionArguments with another object.
+     * @param {ServerApiByUidGetPositionArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidGetPositionArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidGetPositionArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidGetPositionArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidGetPositionArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidGetPositionArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidGetParentArguments structure.
+ */
+export class ServerApiByUidGetParentArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<ServerApiByUidGetParentArguments> = new Impl.ServerApiByUidGetParentArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidGetParentArguments> = ServerApiByUidGetParentArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidGetParentArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidGetParentArguments.
+     * @param {ServerApiByUidGetParentArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidGetParentArguments | null | undefined): number  {
+        return ServerApiByUidGetParentArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidGetParentArguments with another object.
+     * @param {ServerApiByUidGetParentArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidGetParentArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidGetParentArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidGetParentArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidGetParentArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidGetParentArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidGetBeneficiaryArguments structure.
+ */
+export class ServerApiByUidGetBeneficiaryArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<ServerApiByUidGetBeneficiaryArguments> = new Impl.ServerApiByUidGetBeneficiaryArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidGetBeneficiaryArguments> = ServerApiByUidGetBeneficiaryArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidGetBeneficiaryArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidGetBeneficiaryArguments.
+     * @param {ServerApiByUidGetBeneficiaryArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidGetBeneficiaryArguments | null | undefined): number  {
+        return ServerApiByUidGetBeneficiaryArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidGetBeneficiaryArguments with another object.
+     * @param {ServerApiByUidGetBeneficiaryArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidGetBeneficiaryArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidGetBeneficiaryArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidGetBeneficiaryArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidGetBeneficiaryArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidGetBeneficiaryArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidSetBeneficiaryArguments structure.
+ */
+export class ServerApiByUidSetBeneficiaryArguments implements ToString  {
+    public readonly uid: UUID;
+    public static readonly META_BODY: FastMetaType<ServerApiByUidSetBeneficiaryArguments> = new Impl.ServerApiByUidSetBeneficiaryArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidSetBeneficiaryArguments> = ServerApiByUidSetBeneficiaryArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidSetBeneficiaryArguments.
+     * @param uid - UUID
+     */
+    constructor(uid: UUID)  {
+        this.uid = uid;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidSetBeneficiaryArguments.
+     * @param {ServerApiByUidSetBeneficiaryArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidSetBeneficiaryArguments | null | undefined): number  {
+        return ServerApiByUidSetBeneficiaryArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidSetBeneficiaryArguments with another object.
+     * @param {ServerApiByUidSetBeneficiaryArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidSetBeneficiaryArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidSetBeneficiaryArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidSetBeneficiaryArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidSetBeneficiaryArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidSetBeneficiaryArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidGetBlockTimeArguments structure.
+ */
+export class ServerApiByUidGetBlockTimeArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<ServerApiByUidGetBlockTimeArguments> = new Impl.ServerApiByUidGetBlockTimeArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidGetBlockTimeArguments> = ServerApiByUidGetBlockTimeArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidGetBlockTimeArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidGetBlockTimeArguments.
+     * @param {ServerApiByUidGetBlockTimeArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidGetBlockTimeArguments | null | undefined): number  {
+        return ServerApiByUidGetBlockTimeArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidGetBlockTimeArguments with another object.
+     * @param {ServerApiByUidGetBlockTimeArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidGetBlockTimeArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidGetBlockTimeArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidGetBlockTimeArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidGetBlockTimeArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidGetBlockTimeArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidUnblockArguments structure.
+ */
+export class ServerApiByUidUnblockArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<ServerApiByUidUnblockArguments> = new Impl.ServerApiByUidUnblockArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidUnblockArguments> = ServerApiByUidUnblockArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidUnblockArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidUnblockArguments.
+     * @param {ServerApiByUidUnblockArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidUnblockArguments | null | undefined): number  {
+        return ServerApiByUidUnblockArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidUnblockArguments with another object.
+     * @param {ServerApiByUidUnblockArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidUnblockArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidUnblockArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidUnblockArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidUnblockArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidUnblockArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidCreateTimeArguments structure.
+ */
+export class ServerApiByUidCreateTimeArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<ServerApiByUidCreateTimeArguments> = new Impl.ServerApiByUidCreateTimeArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidCreateTimeArguments> = ServerApiByUidCreateTimeArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidCreateTimeArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidCreateTimeArguments.
+     * @param {ServerApiByUidCreateTimeArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidCreateTimeArguments | null | undefined): number  {
+        return ServerApiByUidCreateTimeArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidCreateTimeArguments with another object.
+     * @param {ServerApiByUidCreateTimeArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidCreateTimeArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidCreateTimeArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidCreateTimeArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidCreateTimeArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidCreateTimeArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidOnlineTimeArguments structure.
+ */
+export class ServerApiByUidOnlineTimeArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<ServerApiByUidOnlineTimeArguments> = new Impl.ServerApiByUidOnlineTimeArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidOnlineTimeArguments> = ServerApiByUidOnlineTimeArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidOnlineTimeArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidOnlineTimeArguments.
+     * @param {ServerApiByUidOnlineTimeArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidOnlineTimeArguments | null | undefined): number  {
+        return ServerApiByUidOnlineTimeArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidOnlineTimeArguments with another object.
+     * @param {ServerApiByUidOnlineTimeArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidOnlineTimeArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidOnlineTimeArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidOnlineTimeArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidOnlineTimeArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidOnlineTimeArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidAddAccessGroupArguments structure.
+ */
+export class ServerApiByUidAddAccessGroupArguments implements ToString  {
+    public readonly groupId: UUID;
+    public static readonly META_BODY: FastMetaType<ServerApiByUidAddAccessGroupArguments> = new Impl.ServerApiByUidAddAccessGroupArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidAddAccessGroupArguments> = ServerApiByUidAddAccessGroupArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidAddAccessGroupArguments.
+     * @param groupId - UUID
+     */
+    constructor(groupId: UUID)  {
+        this.groupId = groupId;
+        
+    }
+    public getGroupId(): UUID  {
+        return this.groupId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidAddAccessGroupArguments.
+     * @param {ServerApiByUidAddAccessGroupArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidAddAccessGroupArguments | null | undefined): number  {
+        return ServerApiByUidAddAccessGroupArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidAddAccessGroupArguments with another object.
+     * @param {ServerApiByUidAddAccessGroupArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidAddAccessGroupArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidAddAccessGroupArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidAddAccessGroupArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidAddAccessGroupArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidAddAccessGroupArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidRemoveAccessGroupArguments structure.
+ */
+export class ServerApiByUidRemoveAccessGroupArguments implements ToString  {
+    public readonly groupId: UUID;
+    public static readonly META_BODY: FastMetaType<ServerApiByUidRemoveAccessGroupArguments> = new Impl.ServerApiByUidRemoveAccessGroupArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidRemoveAccessGroupArguments> = ServerApiByUidRemoveAccessGroupArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidRemoveAccessGroupArguments.
+     * @param groupId - UUID
+     */
+    constructor(groupId: UUID)  {
+        this.groupId = groupId;
+        
+    }
+    public getGroupId(): UUID  {
+        return this.groupId;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidRemoveAccessGroupArguments.
+     * @param {ServerApiByUidRemoveAccessGroupArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidRemoveAccessGroupArguments | null | undefined): number  {
+        return ServerApiByUidRemoveAccessGroupArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidRemoveAccessGroupArguments with another object.
+     * @param {ServerApiByUidRemoveAccessGroupArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidRemoveAccessGroupArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidRemoveAccessGroupArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidRemoveAccessGroupArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidRemoveAccessGroupArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidRemoveAccessGroupArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidSetMsgQueueLimitArguments structure.
+ */
+export class ServerApiByUidSetMsgQueueLimitArguments implements ToString  {
+    public readonly limit: number;
+    public static readonly META_BODY: FastMetaType<ServerApiByUidSetMsgQueueLimitArguments> = new Impl.ServerApiByUidSetMsgQueueLimitArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidSetMsgQueueLimitArguments> = ServerApiByUidSetMsgQueueLimitArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidSetMsgQueueLimitArguments.
+     * @param limit - number
+     */
+    constructor(limit: number)  {
+        this.limit = limit;
+        
+    }
+    public getLimit(): number  {
+        return this.limit;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidSetMsgQueueLimitArguments.
+     * @param {ServerApiByUidSetMsgQueueLimitArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidSetMsgQueueLimitArguments | null | undefined): number  {
+        return ServerApiByUidSetMsgQueueLimitArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidSetMsgQueueLimitArguments with another object.
+     * @param {ServerApiByUidSetMsgQueueLimitArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidSetMsgQueueLimitArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidSetMsgQueueLimitArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidSetMsgQueueLimitArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidSetMsgQueueLimitArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidSetMsgQueueLimitArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerApiByUidSetMsgTimeLimitArguments structure.
+ */
+export class ServerApiByUidSetMsgTimeLimitArguments implements ToString  {
+    public readonly seconds: number;
+    public static readonly META_BODY: FastMetaType<ServerApiByUidSetMsgTimeLimitArguments> = new Impl.ServerApiByUidSetMsgTimeLimitArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerApiByUidSetMsgTimeLimitArguments> = ServerApiByUidSetMsgTimeLimitArguments.META_BODY;
+    /**
+     * Creates an instance of ServerApiByUidSetMsgTimeLimitArguments.
+     * @param seconds - number
+     */
+    constructor(seconds: number)  {
+        this.seconds = seconds;
+        
+    }
+    public getSeconds(): number  {
+        return this.seconds;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerApiByUidSetMsgTimeLimitArguments.
+     * @param {ServerApiByUidSetMsgTimeLimitArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerApiByUidSetMsgTimeLimitArguments | null | undefined): number  {
+        return ServerApiByUidSetMsgTimeLimitArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerApiByUidSetMsgTimeLimitArguments with another object.
+     * @param {ServerApiByUidSetMsgTimeLimitArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerApiByUidSetMsgTimeLimitArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerApiByUidSetMsgTimeLimitArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerApiByUidSetMsgTimeLimitArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerApiByUidSetMsgTimeLimitArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerApiByUidSetMsgTimeLimitArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
 export interface ServerApiByUid  {
     /**
      * @returns ARFuture<bigint>
@@ -7609,88 +13127,103 @@ export interface ServerApiByUid  {
      * @aetherMethodId 3
      */
     getBalance(): ARFuture<bigint>;
+    getBalanceArguments?(args: ServerApiByUidGetBalanceArguments): ARFuture<bigint>;
     /**
      * @param uid - UUID
      *
      * @aetherMethodId 4
      */
     setParent(uid: UUID): AFuture;
+    setParentArguments?(args: ServerApiByUidSetParentArguments): AFuture;
     /**
      * @aetherMethodId 5
      */
     block(): AFuture;
+    blockArguments?(args: ServerApiByUidBlockArguments): AFuture;
     /**
-     * @returns ARFuture<Cloud>
+     * @returns ARFuture<CloudConfig>
      *
      * @aetherMethodId 6
      */
-    getPosition(): ARFuture<Cloud>;
+    getPosition(): ARFuture<CloudConfig>;
+    getPositionArguments?(args: ServerApiByUidGetPositionArguments): ARFuture<CloudConfig>;
     /**
      * @returns ARFuture<UUID>
      *
      * @aetherMethodId 7
      */
     getParent(): ARFuture<UUID>;
+    getParentArguments?(args: ServerApiByUidGetParentArguments): ARFuture<UUID>;
     /**
      * @returns ARFuture<UUID>
      *
      * @aetherMethodId 8
      */
     getBeneficiary(): ARFuture<UUID>;
+    getBeneficiaryArguments?(args: ServerApiByUidGetBeneficiaryArguments): ARFuture<UUID>;
     /**
      * @param uid - UUID
      *
      * @aetherMethodId 9
      */
     setBeneficiary(uid: UUID): AFuture;
+    setBeneficiaryArguments?(args: ServerApiByUidSetBeneficiaryArguments): AFuture;
     /**
      * @returns ARFuture<Date>
      *
      * @aetherMethodId 10
      */
     getBlockTime(): ARFuture<Date>;
+    getBlockTimeArguments?(args: ServerApiByUidGetBlockTimeArguments): ARFuture<Date>;
     /**
      * @aetherMethodId 11
      */
     unblock(): AFuture;
+    unblockArguments?(args: ServerApiByUidUnblockArguments): AFuture;
     /**
      * @returns ARFuture<Date>
      *
      * @aetherMethodId 12
      */
     createTime(): ARFuture<Date>;
+    createTimeArguments?(args: ServerApiByUidCreateTimeArguments): ARFuture<Date>;
     /**
      * @returns ARFuture<Date>
      *
      * @aetherMethodId 13
      */
     onlineTime(): ARFuture<Date>;
+    onlineTimeArguments?(args: ServerApiByUidOnlineTimeArguments): ARFuture<Date>;
     /**
-     * @param groupId - bigint
+     * @param groupId - UUID
      * @returns ARFuture<boolean>
      *
      * @aetherMethodId 14
      */
-    addAccessGroup(groupId: bigint): ARFuture<boolean>;
+    addAccessGroup(groupId: UUID): ARFuture<boolean>;
+    addAccessGroupArguments?(args: ServerApiByUidAddAccessGroupArguments): ARFuture<boolean>;
     /**
-     * @param groupId - bigint
+     * @param groupId - UUID
      * @returns ARFuture<boolean>
      *
      * @aetherMethodId 15
      */
-    removeAccessGroup(groupId: bigint): ARFuture<boolean>;
+    removeAccessGroup(groupId: UUID): ARFuture<boolean>;
+    removeAccessGroupArguments?(args: ServerApiByUidRemoveAccessGroupArguments): ARFuture<boolean>;
     /**
      * @param limit - number
      *
      * @aetherMethodId 16
      */
     setMsgQueueLimit(limit: number): AFuture;
+    setMsgQueueLimitArguments?(args: ServerApiByUidSetMsgQueueLimitArguments): AFuture;
     /**
      * @param seconds - number
      *
      * @aetherMethodId 17
      */
     setMsgTimeLimit(seconds: number): AFuture;
+    setMsgTimeLimitArguments?(args: ServerApiByUidSetMsgTimeLimitArguments): AFuture;
     
 }
 export namespace ServerApiByUid  {
@@ -7716,88 +13249,274 @@ export abstract class ServerApiByUidLocal<RT extends RemoteApi> implements Serve
      * @aetherMethodId 3
      */
     public abstract getBalance(): ARFuture<bigint>;
+    public getBalanceArguments(args: ServerApiByUidGetBalanceArguments): ARFuture<bigint>  {
+        return this.getBalance();
+        
+    }
     /**
      * @param uid - UUID
      *
      * @aetherMethodId 4
      */
     public abstract setParent(uid: UUID): AFuture;
+    public setParentArguments(args: ServerApiByUidSetParentArguments): AFuture  {
+        return this.setParent(args.uid);
+        
+    }
     /**
      * @aetherMethodId 5
      */
     public abstract block(): AFuture;
+    public blockArguments(args: ServerApiByUidBlockArguments): AFuture  {
+        return this.block();
+        
+    }
     /**
-     * @returns ARFuture<Cloud>
+     * @returns ARFuture<CloudConfig>
      *
      * @aetherMethodId 6
      */
-    public abstract getPosition(): ARFuture<Cloud>;
+    public abstract getPosition(): ARFuture<CloudConfig>;
+    public getPositionArguments(args: ServerApiByUidGetPositionArguments): ARFuture<CloudConfig>  {
+        return this.getPosition();
+        
+    }
     /**
      * @returns ARFuture<UUID>
      *
      * @aetherMethodId 7
      */
     public abstract getParent(): ARFuture<UUID>;
+    public getParentArguments(args: ServerApiByUidGetParentArguments): ARFuture<UUID>  {
+        return this.getParent();
+        
+    }
     /**
      * @returns ARFuture<UUID>
      *
      * @aetherMethodId 8
      */
     public abstract getBeneficiary(): ARFuture<UUID>;
+    public getBeneficiaryArguments(args: ServerApiByUidGetBeneficiaryArguments): ARFuture<UUID>  {
+        return this.getBeneficiary();
+        
+    }
     /**
      * @param uid - UUID
      *
      * @aetherMethodId 9
      */
     public abstract setBeneficiary(uid: UUID): AFuture;
+    public setBeneficiaryArguments(args: ServerApiByUidSetBeneficiaryArguments): AFuture  {
+        return this.setBeneficiary(args.uid);
+        
+    }
     /**
      * @returns ARFuture<Date>
      *
      * @aetherMethodId 10
      */
     public abstract getBlockTime(): ARFuture<Date>;
+    public getBlockTimeArguments(args: ServerApiByUidGetBlockTimeArguments): ARFuture<Date>  {
+        return this.getBlockTime();
+        
+    }
     /**
      * @aetherMethodId 11
      */
     public abstract unblock(): AFuture;
+    public unblockArguments(args: ServerApiByUidUnblockArguments): AFuture  {
+        return this.unblock();
+        
+    }
     /**
      * @returns ARFuture<Date>
      *
      * @aetherMethodId 12
      */
     public abstract createTime(): ARFuture<Date>;
+    public createTimeArguments(args: ServerApiByUidCreateTimeArguments): ARFuture<Date>  {
+        return this.createTime();
+        
+    }
     /**
      * @returns ARFuture<Date>
      *
      * @aetherMethodId 13
      */
     public abstract onlineTime(): ARFuture<Date>;
+    public onlineTimeArguments(args: ServerApiByUidOnlineTimeArguments): ARFuture<Date>  {
+        return this.onlineTime();
+        
+    }
     /**
-     * @param groupId - bigint
+     * @param groupId - UUID
      * @returns ARFuture<boolean>
      *
      * @aetherMethodId 14
      */
-    public abstract addAccessGroup(groupId: bigint): ARFuture<boolean>;
+    public abstract addAccessGroup(groupId: UUID): ARFuture<boolean>;
+    public addAccessGroupArguments(args: ServerApiByUidAddAccessGroupArguments): ARFuture<boolean>  {
+        return this.addAccessGroup(args.groupId);
+        
+    }
     /**
-     * @param groupId - bigint
+     * @param groupId - UUID
      * @returns ARFuture<boolean>
      *
      * @aetherMethodId 15
      */
-    public abstract removeAccessGroup(groupId: bigint): ARFuture<boolean>;
+    public abstract removeAccessGroup(groupId: UUID): ARFuture<boolean>;
+    public removeAccessGroupArguments(args: ServerApiByUidRemoveAccessGroupArguments): ARFuture<boolean>  {
+        return this.removeAccessGroup(args.groupId);
+        
+    }
     /**
      * @param limit - number
      *
      * @aetherMethodId 16
      */
     public abstract setMsgQueueLimit(limit: number): AFuture;
+    public setMsgQueueLimitArguments(args: ServerApiByUidSetMsgQueueLimitArguments): AFuture  {
+        return this.setMsgQueueLimit(args.limit);
+        
+    }
     /**
      * @param seconds - number
      *
      * @aetherMethodId 17
      */
     public abstract setMsgTimeLimit(seconds: number): AFuture;
+    public setMsgTimeLimitArguments(args: ServerApiByUidSetMsgTimeLimitArguments): AFuture  {
+        return this.setMsgTimeLimit(args.seconds);
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiRegUnsafeEnterArguments structure.
+ */
+export class ClientApiRegUnsafeEnterArguments implements ToString  {
+    public readonly stream: ClientApiRegSafeStream;
+    public static readonly META_BODY: FastMetaType<ClientApiRegUnsafeEnterArguments> = new Impl.ClientApiRegUnsafeEnterArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiRegUnsafeEnterArguments> = ClientApiRegUnsafeEnterArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiRegUnsafeEnterArguments.
+     * @param stream - ClientApiRegSafeStream
+     */
+    constructor(stream: ClientApiRegSafeStream)  {
+        this.stream = stream;
+        if (stream === null || stream === undefined) throw new Error(`Field 'stream' cannot be null for type ClientApiRegUnsafeEnterArguments.`);
+        
+    }
+    public getStream(): ClientApiRegSafeStream  {
+        return this.stream;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiRegUnsafeEnterArguments.
+     * @param {ClientApiRegUnsafeEnterArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiRegUnsafeEnterArguments | null | undefined): number  {
+        return ClientApiRegUnsafeEnterArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiRegUnsafeEnterArguments with another object.
+     * @param {ClientApiRegUnsafeEnterArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiRegUnsafeEnterArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiRegUnsafeEnterArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiRegUnsafeEnterArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiRegUnsafeEnterArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiRegUnsafeEnterArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ClientApiRegUnsafeEnterGlobalArguments structure.
+ */
+export class ClientApiRegUnsafeEnterGlobalArguments implements ToString  {
+    public readonly stream: GlobalRegClientApiStream;
+    public static readonly META_BODY: FastMetaType<ClientApiRegUnsafeEnterGlobalArguments> = new Impl.ClientApiRegUnsafeEnterGlobalArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiRegUnsafeEnterGlobalArguments> = ClientApiRegUnsafeEnterGlobalArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiRegUnsafeEnterGlobalArguments.
+     * @param stream - GlobalRegClientApiStream
+     */
+    constructor(stream: GlobalRegClientApiStream)  {
+        this.stream = stream;
+        if (stream === null || stream === undefined) throw new Error(`Field 'stream' cannot be null for type ClientApiRegUnsafeEnterGlobalArguments.`);
+        
+    }
+    public getStream(): GlobalRegClientApiStream  {
+        return this.stream;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiRegUnsafeEnterGlobalArguments.
+     * @param {ClientApiRegUnsafeEnterGlobalArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiRegUnsafeEnterGlobalArguments | null | undefined): number  {
+        return ClientApiRegUnsafeEnterGlobalArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiRegUnsafeEnterGlobalArguments with another object.
+     * @param {ClientApiRegUnsafeEnterGlobalArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiRegUnsafeEnterGlobalArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiRegUnsafeEnterGlobalArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiRegUnsafeEnterGlobalArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiRegUnsafeEnterGlobalArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiRegUnsafeEnterGlobalArguments.META.metaToString(this, result);
+        return result;
+        
+    }
     
 }
 export interface ClientApiRegUnsafe  {
@@ -7807,12 +13526,14 @@ export interface ClientApiRegUnsafe  {
      * @aetherMethodId 3
      */
     enter(stream: ClientApiRegSafeStream): void;
+    enterArguments?(args: ClientApiRegUnsafeEnterArguments): void;
     /**
      * @param stream - GlobalRegClientApiStream
      *
      * @aetherMethodId 4
      */
     enterGlobal(stream: GlobalRegClientApiStream): void;
+    enterGlobalArguments?(args: ClientApiRegUnsafeEnterGlobalArguments): void;
     
 }
 export namespace ClientApiRegUnsafe  {
@@ -7840,12 +13561,138 @@ export abstract class ClientApiRegUnsafeLocal<RT extends RemoteApi> implements C
      * @aetherMethodId 3
      */
     public abstract enter(stream: ClientApiRegSafeStream): void;
+    public enterArguments(args: ClientApiRegUnsafeEnterArguments): void  {
+        this.enter(args.stream);
+        
+    }
     /**
      * @param stream - GlobalRegClientApiStream
      *
      * @aetherMethodId 4
      */
     public abstract enterGlobal(stream: GlobalRegClientApiStream): void;
+    public enterGlobalArguments(args: ClientApiRegUnsafeEnterGlobalArguments): void  {
+        this.enterGlobal(args.stream);
+        
+    }
+    
+}
+/**
+ * Represents the GlobalRegServerApiSetMasterKeyArguments structure.
+ */
+export class GlobalRegServerApiSetMasterKeyArguments implements ToString  {
+    public readonly key: Key;
+    public static readonly META_BODY: FastMetaType<GlobalRegServerApiSetMasterKeyArguments> = new Impl.GlobalRegServerApiSetMasterKeyArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<GlobalRegServerApiSetMasterKeyArguments> = GlobalRegServerApiSetMasterKeyArguments.META_BODY;
+    /**
+     * Creates an instance of GlobalRegServerApiSetMasterKeyArguments.
+     * @param key - Key
+     */
+    constructor(key: Key)  {
+        this.key = key;
+        if (key === null || key === undefined) throw new Error(`Field 'key' cannot be null for type GlobalRegServerApiSetMasterKeyArguments.`);
+        
+    }
+    public getKey(): Key  {
+        return this.key;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of GlobalRegServerApiSetMasterKeyArguments.
+     * @param {GlobalRegServerApiSetMasterKeyArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: GlobalRegServerApiSetMasterKeyArguments | null | undefined): number  {
+        return GlobalRegServerApiSetMasterKeyArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of GlobalRegServerApiSetMasterKeyArguments with another object.
+     * @param {GlobalRegServerApiSetMasterKeyArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: GlobalRegServerApiSetMasterKeyArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return GlobalRegServerApiSetMasterKeyArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return GlobalRegServerApiSetMasterKeyArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return GlobalRegServerApiSetMasterKeyArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        GlobalRegServerApiSetMasterKeyArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the GlobalRegServerApiFinishArguments structure.
+ */
+export class GlobalRegServerApiFinishArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<GlobalRegServerApiFinishArguments> = new Impl.GlobalRegServerApiFinishArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<GlobalRegServerApiFinishArguments> = GlobalRegServerApiFinishArguments.META_BODY;
+    /**
+     * Creates an instance of GlobalRegServerApiFinishArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of GlobalRegServerApiFinishArguments.
+     * @param {GlobalRegServerApiFinishArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: GlobalRegServerApiFinishArguments | null | undefined): number  {
+        return GlobalRegServerApiFinishArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of GlobalRegServerApiFinishArguments with another object.
+     * @param {GlobalRegServerApiFinishArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: GlobalRegServerApiFinishArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return GlobalRegServerApiFinishArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return GlobalRegServerApiFinishArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return GlobalRegServerApiFinishArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        GlobalRegServerApiFinishArguments.META.metaToString(this, result);
+        return result;
+        
+    }
     
 }
 export interface GlobalRegServerApi  {
@@ -7855,12 +13702,14 @@ export interface GlobalRegServerApi  {
      * @aetherMethodId 3
      */
     setMasterKey(key: Key): void;
+    setMasterKeyArguments?(args: GlobalRegServerApiSetMasterKeyArguments): void;
     /**
      * @returns ARFuture<FinishResultGlobalRegServerApi>
      *
      * @aetherMethodId 4
      */
     finish(): ARFuture<FinishResultGlobalRegServerApi>;
+    finishArguments?(args: GlobalRegServerApiFinishArguments): ARFuture<FinishResultGlobalRegServerApi>;
     
 }
 export namespace GlobalRegServerApi  {
@@ -7886,12 +13735,312 @@ export abstract class GlobalRegServerApiLocal<RT extends RemoteApi> implements G
      * @aetherMethodId 3
      */
     public abstract setMasterKey(key: Key): void;
+    public setMasterKeyArguments(args: GlobalRegServerApiSetMasterKeyArguments): void  {
+        this.setMasterKey(args.key);
+        
+    }
     /**
      * @returns ARFuture<FinishResultGlobalRegServerApi>
      *
      * @aetherMethodId 4
      */
     public abstract finish(): ARFuture<FinishResultGlobalRegServerApi>;
+    public finishArguments(args: GlobalRegServerApiFinishArguments): ARFuture<FinishResultGlobalRegServerApi>  {
+        return this.finish();
+        
+    }
+    
+}
+/**
+ * Represents the ServerRegistrationApiRegistrationArguments structure.
+ */
+export class ServerRegistrationApiRegistrationArguments implements ToString  {
+    public readonly salt: string;
+    public readonly suffix: string;
+    public readonly passwords: number[];
+    public readonly parent: UUID;
+    public readonly globalApi: GlobalApiStream;
+    public static readonly META_BODY: FastMetaType<ServerRegistrationApiRegistrationArguments> = new Impl.ServerRegistrationApiRegistrationArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerRegistrationApiRegistrationArguments> = ServerRegistrationApiRegistrationArguments.META_BODY;
+    /**
+     * Creates an instance of ServerRegistrationApiRegistrationArguments.
+     * @param salt - string
+     * @param suffix - string
+     * @param passwords - number[]
+     * @param parent - UUID
+     * @param globalApi - GlobalApiStream
+     */
+    constructor(salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApiStream)  {
+        this.salt = salt;
+        this.suffix = suffix;
+        this.passwords = passwords;
+        this.parent = parent;
+        this.globalApi = globalApi;
+        if (passwords === null || passwords === undefined) throw new Error(`Field 'passwords' cannot be null for type ServerRegistrationApiRegistrationArguments.`);
+        if (globalApi === null || globalApi === undefined) throw new Error(`Field 'globalApi' cannot be null for type ServerRegistrationApiRegistrationArguments.`);
+        
+    }
+    public getSalt(): string  {
+        return this.salt;
+        
+    }
+    public getSuffix(): string  {
+        return this.suffix;
+        
+    }
+    public getPasswords(): number[]  {
+        return this.passwords;
+        
+    }
+    public passwordsContains(el: number): boolean  {
+        return (this.passwords as number[]).includes(el as any);
+        
+    }
+    public getParent(): UUID  {
+        return this.parent;
+        
+    }
+    public getGlobalApi(): GlobalApiStream  {
+        return this.globalApi;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerRegistrationApiRegistrationArguments.
+     * @param {ServerRegistrationApiRegistrationArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerRegistrationApiRegistrationArguments | null | undefined): number  {
+        return ServerRegistrationApiRegistrationArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerRegistrationApiRegistrationArguments with another object.
+     * @param {ServerRegistrationApiRegistrationArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerRegistrationApiRegistrationArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerRegistrationApiRegistrationArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerRegistrationApiRegistrationArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerRegistrationApiRegistrationArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerRegistrationApiRegistrationArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerRegistrationApiRequestWorkProofDataArguments structure.
+ */
+export class ServerRegistrationApiRequestWorkProofDataArguments implements ToString  {
+    public readonly parent: UUID;
+    public readonly powMethods: PowMethod;
+    public static readonly META_BODY: FastMetaType<ServerRegistrationApiRequestWorkProofDataArguments> = new Impl.ServerRegistrationApiRequestWorkProofDataArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerRegistrationApiRequestWorkProofDataArguments> = ServerRegistrationApiRequestWorkProofDataArguments.META_BODY;
+    /**
+     * Creates an instance of ServerRegistrationApiRequestWorkProofDataArguments.
+     * @param parent - UUID
+     * @param powMethods - PowMethod
+     */
+    constructor(parent: UUID, powMethods: PowMethod)  {
+        this.parent = parent;
+        this.powMethods = powMethods;
+        if (powMethods === null || powMethods === undefined) throw new Error(`Field 'powMethods' cannot be null for type ServerRegistrationApiRequestWorkProofDataArguments.`);
+        
+    }
+    public getParent(): UUID  {
+        return this.parent;
+        
+    }
+    public getPowMethods(): PowMethod  {
+        return this.powMethods;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerRegistrationApiRequestWorkProofDataArguments.
+     * @param {ServerRegistrationApiRequestWorkProofDataArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerRegistrationApiRequestWorkProofDataArguments | null | undefined): number  {
+        return ServerRegistrationApiRequestWorkProofDataArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerRegistrationApiRequestWorkProofDataArguments with another object.
+     * @param {ServerRegistrationApiRequestWorkProofDataArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerRegistrationApiRequestWorkProofDataArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerRegistrationApiRequestWorkProofDataArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerRegistrationApiRequestWorkProofDataArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerRegistrationApiRequestWorkProofDataArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerRegistrationApiRequestWorkProofDataArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerRegistrationApiResolveServersArguments structure.
+ */
+export class ServerRegistrationApiResolveServersArguments implements ToString  {
+    public readonly serverIds: Cloud;
+    public static readonly META_BODY: FastMetaType<ServerRegistrationApiResolveServersArguments> = new Impl.ServerRegistrationApiResolveServersArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerRegistrationApiResolveServersArguments> = ServerRegistrationApiResolveServersArguments.META_BODY;
+    /**
+     * Creates an instance of ServerRegistrationApiResolveServersArguments.
+     * @param serverIds - Cloud
+     */
+    constructor(serverIds: Cloud)  {
+        this.serverIds = serverIds;
+        if (serverIds === null || serverIds === undefined) throw new Error(`Field 'serverIds' cannot be null for type ServerRegistrationApiResolveServersArguments.`);
+        
+    }
+    public getServerIds(): Cloud  {
+        return this.serverIds;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerRegistrationApiResolveServersArguments.
+     * @param {ServerRegistrationApiResolveServersArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerRegistrationApiResolveServersArguments | null | undefined): number  {
+        return ServerRegistrationApiResolveServersArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerRegistrationApiResolveServersArguments with another object.
+     * @param {ServerRegistrationApiResolveServersArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerRegistrationApiResolveServersArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerRegistrationApiResolveServersArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerRegistrationApiResolveServersArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerRegistrationApiResolveServersArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerRegistrationApiResolveServersArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ServerRegistrationApiSetReturnKeyArguments structure.
+ */
+export class ServerRegistrationApiSetReturnKeyArguments implements ToString  {
+    public readonly key: Key;
+    public static readonly META_BODY: FastMetaType<ServerRegistrationApiSetReturnKeyArguments> = new Impl.ServerRegistrationApiSetReturnKeyArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ServerRegistrationApiSetReturnKeyArguments> = ServerRegistrationApiSetReturnKeyArguments.META_BODY;
+    /**
+     * Creates an instance of ServerRegistrationApiSetReturnKeyArguments.
+     * @param key - Key
+     */
+    constructor(key: Key)  {
+        this.key = key;
+        if (key === null || key === undefined) throw new Error(`Field 'key' cannot be null for type ServerRegistrationApiSetReturnKeyArguments.`);
+        
+    }
+    public getKey(): Key  {
+        return this.key;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ServerRegistrationApiSetReturnKeyArguments.
+     * @param {ServerRegistrationApiSetReturnKeyArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ServerRegistrationApiSetReturnKeyArguments | null | undefined): number  {
+        return ServerRegistrationApiSetReturnKeyArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ServerRegistrationApiSetReturnKeyArguments with another object.
+     * @param {ServerRegistrationApiSetReturnKeyArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ServerRegistrationApiSetReturnKeyArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ServerRegistrationApiSetReturnKeyArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ServerRegistrationApiSetReturnKeyArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ServerRegistrationApiSetReturnKeyArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ServerRegistrationApiSetReturnKeyArguments.META.metaToString(this, result);
+        return result;
+        
+    }
     
 }
 export interface ServerRegistrationApi  {
@@ -7905,6 +14054,7 @@ export interface ServerRegistrationApi  {
      * @aetherMethodId 3
      */
     registration(salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApiStream): void;
+    registrationArguments?(args: ServerRegistrationApiRegistrationArguments): void;
     /**
      * @param parent - UUID
      * @param powMethods - PowMethod
@@ -7913,6 +14063,7 @@ export interface ServerRegistrationApi  {
      * @aetherMethodId 4
      */
     requestWorkProofData(parent: UUID, powMethods: PowMethod): ARFuture<WorkProofDTO>;
+    requestWorkProofDataArguments?(args: ServerRegistrationApiRequestWorkProofDataArguments): ARFuture<WorkProofDTO>;
     /**
      * @param serverIds - Cloud
      * @returns ARFuture<ServerDescriptor[]>
@@ -7920,12 +14071,14 @@ export interface ServerRegistrationApi  {
      * @aetherMethodId 5
      */
     resolveServers(serverIds: Cloud): ARFuture<ServerDescriptor[]>;
+    resolveServersArguments?(args: ServerRegistrationApiResolveServersArguments): ARFuture<ServerDescriptor[]>;
     /**
      * @param key - Key
      *
      * @aetherMethodId 6
      */
     setReturnKey(key: Key): void;
+    setReturnKeyArguments?(args: ServerRegistrationApiSetReturnKeyArguments): void;
     
 }
 export namespace ServerRegistrationApi  {
@@ -7956,6 +14109,10 @@ export abstract class ServerRegistrationApiLocal<RT extends RemoteApi> implement
      * @aetherMethodId 3
      */
     public abstract registration(salt: string, suffix: string, passwords: number[], parent: UUID, globalApi: GlobalApiStream): void;
+    public registrationArguments(args: ServerRegistrationApiRegistrationArguments): void  {
+        this.registration(args.salt, args.suffix, args.passwords, args.parent, args.globalApi);
+        
+    }
     /**
      * @param parent - UUID
      * @param powMethods - PowMethod
@@ -7964,6 +14121,10 @@ export abstract class ServerRegistrationApiLocal<RT extends RemoteApi> implement
      * @aetherMethodId 4
      */
     public abstract requestWorkProofData(parent: UUID, powMethods: PowMethod): ARFuture<WorkProofDTO>;
+    public requestWorkProofDataArguments(args: ServerRegistrationApiRequestWorkProofDataArguments): ARFuture<WorkProofDTO>  {
+        return this.requestWorkProofData(args.parent, args.powMethods);
+        
+    }
     /**
      * @param serverIds - Cloud
      * @returns ARFuture<ServerDescriptor[]>
@@ -7971,12 +14132,209 @@ export abstract class ServerRegistrationApiLocal<RT extends RemoteApi> implement
      * @aetherMethodId 5
      */
     public abstract resolveServers(serverIds: Cloud): ARFuture<ServerDescriptor[]>;
+    public resolveServersArguments(args: ServerRegistrationApiResolveServersArguments): ARFuture<ServerDescriptor[]>  {
+        return this.resolveServers(args.serverIds);
+        
+    }
     /**
      * @param key - Key
      *
      * @aetherMethodId 6
      */
     public abstract setReturnKey(key: Key): void;
+    public setReturnKeyArguments(args: ServerRegistrationApiSetReturnKeyArguments): void  {
+        this.setReturnKey(args.key);
+        
+    }
+    
+}
+/**
+ * Represents the RegistrationRootApiGetAsymmetricPublicKeyArguments structure.
+ */
+export class RegistrationRootApiGetAsymmetricPublicKeyArguments implements ToString  {
+    public readonly cryptoLib: CryptoLib;
+    public static readonly META_BODY: FastMetaType<RegistrationRootApiGetAsymmetricPublicKeyArguments> = new Impl.RegistrationRootApiGetAsymmetricPublicKeyArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<RegistrationRootApiGetAsymmetricPublicKeyArguments> = RegistrationRootApiGetAsymmetricPublicKeyArguments.META_BODY;
+    /**
+     * Creates an instance of RegistrationRootApiGetAsymmetricPublicKeyArguments.
+     * @param cryptoLib - CryptoLib
+     */
+    constructor(cryptoLib: CryptoLib)  {
+        this.cryptoLib = cryptoLib;
+        if (cryptoLib === null || cryptoLib === undefined) throw new Error(`Field 'cryptoLib' cannot be null for type RegistrationRootApiGetAsymmetricPublicKeyArguments.`);
+        
+    }
+    public getCryptoLib(): CryptoLib  {
+        return this.cryptoLib;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of RegistrationRootApiGetAsymmetricPublicKeyArguments.
+     * @param {RegistrationRootApiGetAsymmetricPublicKeyArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: RegistrationRootApiGetAsymmetricPublicKeyArguments | null | undefined): number  {
+        return RegistrationRootApiGetAsymmetricPublicKeyArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of RegistrationRootApiGetAsymmetricPublicKeyArguments with another object.
+     * @param {RegistrationRootApiGetAsymmetricPublicKeyArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: RegistrationRootApiGetAsymmetricPublicKeyArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return RegistrationRootApiGetAsymmetricPublicKeyArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return RegistrationRootApiGetAsymmetricPublicKeyArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return RegistrationRootApiGetAsymmetricPublicKeyArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        RegistrationRootApiGetAsymmetricPublicKeyArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the RegistrationRootApiEnterArguments structure.
+ */
+export class RegistrationRootApiEnterArguments implements ToString  {
+    public readonly cryptoLib: CryptoLib;
+    public readonly stream: ServerRegistrationApiStream;
+    public static readonly META_BODY: FastMetaType<RegistrationRootApiEnterArguments> = new Impl.RegistrationRootApiEnterArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<RegistrationRootApiEnterArguments> = RegistrationRootApiEnterArguments.META_BODY;
+    /**
+     * Creates an instance of RegistrationRootApiEnterArguments.
+     * @param cryptoLib - CryptoLib
+     * @param stream - ServerRegistrationApiStream
+     */
+    constructor(cryptoLib: CryptoLib, stream: ServerRegistrationApiStream)  {
+        this.cryptoLib = cryptoLib;
+        this.stream = stream;
+        if (cryptoLib === null || cryptoLib === undefined) throw new Error(`Field 'cryptoLib' cannot be null for type RegistrationRootApiEnterArguments.`);
+        if (stream === null || stream === undefined) throw new Error(`Field 'stream' cannot be null for type RegistrationRootApiEnterArguments.`);
+        
+    }
+    public getCryptoLib(): CryptoLib  {
+        return this.cryptoLib;
+        
+    }
+    public getStream(): ServerRegistrationApiStream  {
+        return this.stream;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of RegistrationRootApiEnterArguments.
+     * @param {RegistrationRootApiEnterArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: RegistrationRootApiEnterArguments | null | undefined): number  {
+        return RegistrationRootApiEnterArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of RegistrationRootApiEnterArguments with another object.
+     * @param {RegistrationRootApiEnterArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: RegistrationRootApiEnterArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return RegistrationRootApiEnterArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return RegistrationRootApiEnterArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return RegistrationRootApiEnterArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        RegistrationRootApiEnterArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the RegistrationRootApiGetMyIpArguments structure.
+ */
+export class RegistrationRootApiGetMyIpArguments implements ToString  {
+    public static readonly META_BODY: FastMetaType<RegistrationRootApiGetMyIpArguments> = new Impl.RegistrationRootApiGetMyIpArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<RegistrationRootApiGetMyIpArguments> = RegistrationRootApiGetMyIpArguments.META_BODY;
+    /**
+     * Creates an instance of RegistrationRootApiGetMyIpArguments.
+     */
+    constructor()  {
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of RegistrationRootApiGetMyIpArguments.
+     * @param {RegistrationRootApiGetMyIpArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: RegistrationRootApiGetMyIpArguments | null | undefined): number  {
+        return RegistrationRootApiGetMyIpArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of RegistrationRootApiGetMyIpArguments with another object.
+     * @param {RegistrationRootApiGetMyIpArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: RegistrationRootApiGetMyIpArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return RegistrationRootApiGetMyIpArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return RegistrationRootApiGetMyIpArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return RegistrationRootApiGetMyIpArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        RegistrationRootApiGetMyIpArguments.META.metaToString(this, result);
+        return result;
+        
+    }
     
 }
 export interface RegistrationRootApi  {
@@ -7987,6 +14345,7 @@ export interface RegistrationRootApi  {
      * @aetherMethodId 3
      */
     getAsymmetricPublicKey(cryptoLib: CryptoLib): ARFuture<SignedKey>;
+    getAsymmetricPublicKeyArguments?(args: RegistrationRootApiGetAsymmetricPublicKeyArguments): ARFuture<SignedKey>;
     /**
      * @param cryptoLib - CryptoLib
      * @param stream - ServerRegistrationApiStream
@@ -7994,12 +14353,14 @@ export interface RegistrationRootApi  {
      * @aetherMethodId 4
      */
     enter(cryptoLib: CryptoLib, stream: ServerRegistrationApiStream): void;
+    enterArguments?(args: RegistrationRootApiEnterArguments): void;
     /**
      * @returns ARFuture<IpInfo>
      *
      * @aetherMethodId 6
      */
     getMyIp(): ARFuture<IpInfo>;
+    getMyIpArguments?(args: RegistrationRootApiGetMyIpArguments): ARFuture<IpInfo>;
     
 }
 export namespace RegistrationRootApi  {
@@ -8027,6 +14388,10 @@ export abstract class RegistrationRootApiLocal<RT extends RemoteApi> implements 
      * @aetherMethodId 3
      */
     public abstract getAsymmetricPublicKey(cryptoLib: CryptoLib): ARFuture<SignedKey>;
+    public getAsymmetricPublicKeyArguments(args: RegistrationRootApiGetAsymmetricPublicKeyArguments): ARFuture<SignedKey>  {
+        return this.getAsymmetricPublicKey(args.cryptoLib);
+        
+    }
     /**
      * @param cryptoLib - CryptoLib
      * @param stream - ServerRegistrationApiStream
@@ -8034,12 +14399,20 @@ export abstract class RegistrationRootApiLocal<RT extends RemoteApi> implements 
      * @aetherMethodId 4
      */
     public abstract enter(cryptoLib: CryptoLib, stream: ServerRegistrationApiStream): void;
+    public enterArguments(args: RegistrationRootApiEnterArguments): void  {
+        this.enter(args.cryptoLib, args.stream);
+        
+    }
     /**
      * @returns ARFuture<IpInfo>
      *
      * @aetherMethodId 6
      */
     public abstract getMyIp(): ARFuture<IpInfo>;
+    public getMyIpArguments(args: RegistrationRootApiGetMyIpArguments): ARFuture<IpInfo>  {
+        return this.getMyIp();
+        
+    }
     
 }
 export interface ClientApiRegSafe  {

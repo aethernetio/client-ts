@@ -1,1 +1,26 @@
-../../aether-client-java/client/src/main/resources/clienttypes.adsl.yaml
+include:
+  - common
+types:
+  CloudWeight:
+    fields:
+      sid: short
+      weight: long
+  ClientInfo:
+    fields:
+      uid: UUID
+      cloud: Cloud
+      weights: CloudWeight[]
+  ClientStateForSave:
+    fields:
+      registrationUri: URI[]
+      servers: ServerDescriptor[]
+      clients: ClientInfo[]
+      rootSigners: Key[]
+      cryptoLib: CryptoLib
+      pingDuration: long
+      parentUid: UUID
+      countServersForRegistration: int
+      timeoutForConnectToRegistrationServer: long
+      uid: UUID
+      alias: UUID
+      masterKey: Key

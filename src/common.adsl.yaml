@@ -1,1 +1,247 @@
-../../aether/common-api/src/main/resources/common.adsl.yaml
+# File: common.adsl.yaml
+types:
+  Key:
+    abstract: true
+  KeySymmetric:
+    abstract: true
+    parent: Key
+  KeyAsymmetric:
+    abstract: true
+    parent: Key
+  KeyAsymmetricPublic:
+    abstract: true
+    parent: KeyAsymmetric
+  KeyAsymmetricPrivate:
+    abstract: true
+    parent: KeyAsymmetric
+  KeySign:
+    abstract: true
+    parent: Key
+  KeySignPublic:
+    abstract: true
+    parent: KeySign
+  KeySignPrivate:
+    abstract: true
+    parent: KeySign
+  SodiumChacha20Poly1305:
+    id: 6
+    parent: KeySymmetric
+    fields:
+      data: byte[32]
+  HydrogenCurvePrivate:
+    id: 1
+    parent: KeyAsymmetricPrivate
+    fields:
+      data: byte[32]
+  HydrogenCurvePublic:
+    id: 2
+    parent: KeyAsymmetricPublic
+    fields:
+      data: byte[32]
+  HydrogenSecretBox:
+    id: 3
+    parent: KeySymmetric
+    fields:
+      data: byte[32]
+  SodiumCurvePublic:
+    id: 8
+    parent: KeyAsymmetricPublic
+    fields:
+      data: byte[32]
+  SodiumCurvePrivate:
+    id: 7
+    parent: KeyAsymmetricPrivate
+    fields:
+      data: byte[32]
+  SodiumSignPrivate:
+    id: 9
+    parent: KeySignPrivate
+    fields:
+      data: byte[64]
+  SodiumSignPublic:
+    id: 10
+    parent: KeySignPublic
+    fields:
+      data: byte[32]
+  HydrogenSignPrivate:
+    id: 4
+    parent: KeySignPrivate
+    fields:
+      data: byte[64]
+  HydrogenSignPublic:
+    id: 5
+    parent: KeySignPublic
+    fields:
+      data: byte[32]
+  Sign:
+    abstract: true
+  SignAE_ED25519:
+    id: 1
+    parent: Sign
+    fields:
+      data: byte[64]
+  SignHYDROGEN:
+    id: 2
+    parent: Sign
+    fields:
+      data: byte[64]
+  SignedKey:
+    fields:
+      key: Key
+      sign: Sign
+  CryptoLib:
+    enum:
+      - SODIUM
+      - HYDROGEN
+  PowMethod:
+    enum:
+      - AE_BCRYPT_CRC32
+  WorkProofConfig:
+    abstract: true
+  WorkProofBCrypt:
+    id: 1
+    parent: WorkProofConfig
+    fields:
+      costBCrypt: byte
+      poolSize: byte
+      maxHashVal: int
+  WorkProofDTO:
+    fields:
+      salt: String
+      suffix: String
+      poolSize: byte
+      maxHashVal: int
+      globalKey: SignedKey
+  IPAddress:
+    abstract: true
+  IPAddressV4:
+    id: 1
+    parent: IPAddress
+    fields:
+      data: byte[4]
+  IPAddressV6:
+    id: 2
+    parent: IPAddress
+    fields:
+      data: byte[16]
+  IPAddressWeb:
+    id: 3
+    parent: IPAddress
+    fields:
+      data: byte[]
+  AetherCodec:
+    enum:
+      - TCP
+      - UDP
+      - WS
+      - WSS
+  CoderAndPort:
+    fields:
+      codec: AetherCodec
+      port: short
+  IPAddressAndPorts:
+    fields:
+      address: IPAddress
+      coderAndPorts: CoderAndPort[]
+  IPAddressAndPortsList:
+    fields:
+      addresses: IPAddressAndPorts[]
+  ServerDescriptor:
+    fields:
+      id: short
+      ipAddress: IPAddressAndPortsList
+  ServerDescriptorWithGeo:
+    fields:
+      id: short
+      time: int
+      ipAddress: IPAddressAndPortsList
+      latitude: double
+      longitude: double
+      type: ServerType
+  Cloud:
+    fields:
+      data: short[]
+  Status:
+    enum:
+      - PENDING
+      - COMPLETED
+      - FAILED
+  MoneyOperation:
+    fields:
+      id: long
+      from: uuid
+      to: uuid
+      amount: long
+      time: long
+      credit: boolean
+      status: Status
+  AccessGroup:
+    fields:
+      id: uuid
+      time: int
+      owner: uuid
+      data: uuid[]
+  UUIDAndCloud:
+    fields:
+      uid: uuid
+      cloud: Cloud
+
+  CloudConfig:
+    fields:
+      subjectUid: uuid
+      configVersion: long
+      cloud: Cloud
+
+  AppliedConfig:
+    fields:
+      subjectUid: uuid
+      configVersion: long
+
+
+
+  PairKeys:
+    abstract: true
+  PairKeysSign:
+    id: 3
+    parent: PairKeys
+    fields:
+      privateKey: Key
+      publicKey: Key
+  PairKeysAsym:
+    id: 1
+    parent: PairKeys
+    fields:
+      privateKey: Key
+      publicKey: Key
+  PairKeysAsymSigned:
+    id: 2
+    parent: PairKeys
+    fields:
+      privateKey: Key
+      publicKey: SignedKey
+  PairKeysSym:
+    id: 4
+    parent: PairKeys
+    fields:
+      clientToServer: KeySymmetric
+      serverToClient: KeySymmetric
+  AccessCheckPair:
+    fields:
+      sourceUid: UUID
+      targetUid: UUID
+  AccessCheckResult:
+    fields:
+      sourceUid: UUID
+      targetUid: UUID
+      hasAccess: bool
+
+  IpInfo:
+    fields:
+      ip: IPAddress
+      port: short
+      latitude: double
+      longitude: double
+  ServerType:
+    enum:
+      - REG
+      - WORK

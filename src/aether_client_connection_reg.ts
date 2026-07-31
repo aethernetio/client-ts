@@ -55,11 +55,27 @@ export class ConnectionRegistration extends ConnectionBase<ClientApiRegUnsafe, R
 
 
 
+
     public registration(): AFuture {
-        Log.debug("RegConn: Starting async registration process.", { uri: this.uri });
-        this.getAsymmetricPublicKey().to((ce: CryptoEngine) => this.regProcess(ce));
+        Log.debug(
+            "RegConn: Starting async registration process.",
+            {uri: this.uri}
+        );
+
+        this.getAsymmetricPublicKey()
+            .to((ce: CryptoEngine) => this.regProcess(ce))
+            .onError((error: Error) => {
+                Log.error(
+                    "RegConn: Failed to obtain or verify asymmetric key.",
+                    error,
+                    {uri: this.uri}
+                );
+                this.connectFuture.tryError(error);
+            });
+
         return this.connectFuture;
     }
+
 
 
 

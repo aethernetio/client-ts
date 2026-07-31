@@ -151,56 +151,73 @@ export class AetherProtocolGenerator {
         const normalizedFilePath = path.resolve(filePath);
         if (this.processedDslPaths.has(normalizedFilePath)) return;
 
-        const baseName = path.basename(normalizedFilePath).replace(/\.adsl\.(yaml|json)$/, '');
+        const baseName = path.basename(normalizedFilePath)
+            .replace(/\.adsl\.(yaml|json)$/, '');
+
         this.processedDslPaths.add(normalizedFilePath);
         this.fileMap.set(baseName, normalizedFilePath);
 
         const meta = await this.loadMetaFromFile(normalizedFilePath);
 
         if (meta.services) {
-             meta.api = meta.services;
+            meta.api = meta.services;
         }
 
         this.allDslMeta[baseName] = meta;
         meta.baseName = baseName;
 
-        const includes = meta.includes || [];
+        const includes =
+            (meta as any).include
+            ?? (meta as any).includes
+            ?? [];
+
         for (const includeName of includes) {
             const includeBaseDir = path.dirname(normalizedFilePath);
             const possibleExtensions = ['.adsl.yaml', '.adsl.json'];
             let foundInclude = false;
 
             for (const ext of possibleExtensions) {
-                const includePath = path.resolve(includeBaseDir, `${includeName}${ext}`);
-                if (fs.existsSync(includePath)) {
-                    await this.loadAllMetaRecursively(includePath);
+                const includePath = path.resolve(
+                    includeBaseDir,
+                    `${includeName}${ext}`,
+                );
+                if (!fs.existsSync(includePath)) continue;
+
+                await this.loadAllMetaRecursively(includePath);
+                foundInclude = true;
+                break;
+            }
+
+            if (foundInclude) continue;
+
+            for (const ext of possibleExtensions) {
+                const commonPath = path.resolve(
+                    includeBaseDir,
+                    `${includeName}${ext}`,
+                );
+                const siblingPath = path.resolve(
+                    includeBaseDir,
+                    `../${includeName}/${includeName}${ext}`,
+                );
+
+                if (fs.existsSync(commonPath)) {
+                    await this.loadAllMetaRecursively(commonPath);
+                    foundInclude = true;
+                    break;
+                }
+
+                if (fs.existsSync(siblingPath)) {
+                    await this.loadAllMetaRecursively(siblingPath);
                     foundInclude = true;
                     break;
                 }
             }
 
             if (!foundInclude) {
-                 const rootDir = path.dirname(normalizedFilePath);
-
-                 for (const ext of possibleExtensions) {
-                     const siblingPath = path.resolve(rootDir, `../${includeName}/${includeName}${ext}`);
-                     const commonPath = path.resolve(rootDir, `${includeName}${ext}`);
-
-                     if (fs.existsSync(commonPath)) {
-                         await this.loadAllMetaRecursively(commonPath);
-                         foundInclude = true;
-                         break;
-                     }
-                     if (fs.existsSync(siblingPath)) {
-                         await this.loadAllMetaRecursively(siblingPath);
-                         foundInclude = true;
-                         break;
-                     }
-                 }
-
-                 if (!foundInclude) {
-                    console.warn(`Warning: Could not resolve include '${includeName}' from file ${normalizedFilePath}`);
-                 }
+                console.warn(
+                    `Warning: Could not resolve include '${includeName}' `
+                    + `from file ${normalizedFilePath}`,
+                );
             }
         }
     }

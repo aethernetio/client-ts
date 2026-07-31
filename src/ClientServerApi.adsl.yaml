@@ -1,1 +1,581 @@
-../../aether/client-server-work-api/src/main/resources/ClientServerApi.adsl.yaml
+# File: ClientServerApi.adsl.yaml
+# Describes the main API for an authorized client.
+include:
+  - common
+
+types:
+  Telemetry:
+    abstract: true
+  TelemetryCPP:
+    id: 1
+    parent: Telemetry
+    fields:
+      utm_id: int
+      blob: byte[]
+      lib_version: String
+      os: String
+      compiler: String
+
+  LoginStream:
+    stream:
+      api: AuthorizedApi
+      remoteApi: ClientApiSafe
+      crypto: true
+      keys:
+        uid: uuid
+  LoginClientStream:
+    stream:
+      api: ClientApiSafe
+      crypto: true
+
+  ClientInteractionClientStream:
+    stream:
+      api: ServerApiByUidClient
+  Message:
+    fields:
+      uid: uuid
+      data: byte[]
+  ClientApiStream:
+    stream:
+      api: ServerApiByUid
+
+  ClientActivityType:
+    enum:
+      - CONNECT
+      - DISCONNECT
+      - MESSAGE_SEND
+      - MESSAGE_RECEIVE
+      - COMMAND_EXEC
+      - API_CALL
+  ClientActivity:
+    fields:
+      timestamp: long
+      type: ClientActivityType
+      clientUid: UUID
+      details: string
+      serverId: short?
+
+  KeyValuePair:
+    fields:
+      key: string
+      value: string
+
+  ClientLogEntry:
+    fields:
+      timestamp: long
+      level: string
+      message: string
+      context: KeyValuePair[]
+  ClientConnectionInfo:
+    fields:
+      connectedAt: long
+      disconnectedAt: long?
+      serverId: short
+      context: KeyValuePair[]
+      protocol: string
+  MessageInfo:
+    fields:
+      timestamp: long
+      fromUid: UUID
+      toUid: UUID
+      size: int
+      messageId: UUID
+
+
+  Uap:
+    fields:
+      deltaMs: long
+      lastReadTimestamp: long
+
+
+  IceCandidate:
+    fields:
+      data: byte[]
+  WebRtcSession:
+    fields:
+      sdp: byte[]
+      candidates: IceCandidate[]
+api:
+  ClientApiUnsafe:
+    methods:
+      sendSafeApiDataMulti:
+        id: 3
+        params:
+          backId: byte
+          data: LoginClientStream
+      sendSafeApiData:
+        id: 4
+        params:
+          data: LoginClientStream
+
+  ClientApiSafe:
+    methods:
+      changeParent:
+        id: 3
+        params:
+          uid: UUID
+      changeAlias:
+        id: 4
+        params:
+          alias: UUID
+      newChildren:
+        id: 5
+        params:
+          uids: UUID[]
+      sendMessages:
+        id: 6
+        params:
+          msg: Message[]
+      sendServerDescriptor:
+        id: 7
+        params:
+          serverDescriptor: ServerDescriptor
+      sendServerDescriptors:
+        id: 8
+        params:
+          serverDescriptors: ServerDescriptor[]
+      sendCloud:
+        id: 9
+        params:
+          uidAndCloud: UUIDAndCloud
+      sendClouds:
+        id: 10
+        params:
+          clouds: UUIDAndCloud[]
+      requestTelemetry:
+        id: 11
+      sendAccessGroups:
+        id: 12
+        params:
+          groups: AccessGroup[]
+      sendAccessGroupForClient:
+        id: 13
+        params:
+          uid: UUID
+          groups: UUID[]
+      addItemsToAccessGroup:
+        id: 14
+        params:
+          id: UUID
+          groups: UUID[]
+      removeItemsFromAccessGroup:
+        id: 15
+        params:
+          id: UUID
+          groups: UUID[]
+      addAccessGroupsToClient:
+        id: 16
+        params:
+          uid: UUID
+          groups: UUID[]
+      removeAccessGroupsFromClient:
+        id: 17
+        params:
+          uid: UUID
+          groups: UUID[]
+      sendAllAccessedClients:
+        id: 18
+        params:
+          uid: UUID
+          accessedClients: UUID[]
+      sendAccessCheckResults:
+        id: 19
+        params:
+          results: AccessCheckResult[]
+
+      sendMessage:
+        id: 20
+        params:
+          msg: Message
+
+      sendCloudConfigs:
+        id: 21
+        params:
+          configs: CloudConfig[]
+
+
+
+
+
+  AuthorizedApi:
+    methods:
+      backId:
+        id: 3
+        params:
+          id: byte
+
+      ping:
+        id: 4
+        returns: void
+        params:
+          nextConnectMsDuration: long
+          rxWindowMs: long
+
+      client:
+        id: 5
+        params:
+          uid: UUID
+          stream: ClientApiStream
+      sendMessage:
+        id: 6
+        params:
+          msg: Message
+      sendMessages:
+        id: 7
+        params:
+          msg: Message[]
+
+      sendMulticast:
+        id: 37
+        params:
+          uids: UUID[]
+          data: byte[]
+
+      sendMessageWithResult:
+        id: 39
+        returns: void
+        params:
+          msg: Message
+
+
+      createAccessGroup:
+        id: 8
+        returns: UUID
+        params:
+          owner: UUID
+          uids: UUID[]
+      addToAccessGroup:
+        id: 9
+        returns: bool
+        params:
+          groupId: UUID
+          uid: UUID
+      removeFromAccessGroup:
+        id: 10
+        returns: bool
+        params:
+          groupId: UUID
+          uid: UUID
+      checkAccessForSendMessage:
+        id: 11
+        returns: void
+        params:
+          uid: UUID
+      resolverServers:
+        id: 12
+        params:
+          sid: short[]
+      resolveClouds:
+        id: 13
+        params:
+          uids: UUID[]
+
+
+      reportAppliedConfig:
+        id: 38
+        params:
+          configs: AppliedConfig[]
+
+
+      getAccessGroups:
+        id: 14
+        returns: UUID[]
+        params:
+          uid: UUID
+      getAccessGroup:
+        id: 15
+        returns: AccessGroup
+        params:
+          groupId: UUID
+      getAllAccessedClients:
+        id: 16
+        returns: UUID[]
+        params:
+          uid: UUID
+      checkAccessForSendMessage2:
+        id: 17
+        returns: bool
+        params:
+          uid1: UUID
+          uid2: UUID
+      sendTelemetry:
+        id: 18
+        params:
+          telemetry: Telemetry
+      requestAccessGroupsForClients:
+        id: 19
+        params:
+          uids: UUID[]
+      requestAccessGroupsItems:
+        id: 20
+        params:
+          ids: UUID[]
+      sendAccessGroupForClient:
+        id: 22
+        params:
+          uid: UUID
+          groups: UUID[]
+      addItemsToAccessGroup:
+        id: 23
+        params:
+          id: UUID
+          groups: UUID[]
+      removeItemsFromAccessGroup:
+        id: 24
+        params:
+          id: UUID
+          groups: UUID[]
+      addAccessGroupsToClient:
+        id: 25
+        params:
+          uid: UUID
+          groups: UUID[]
+      removeAccessGroupsFromClient:
+        id: 26
+        params:
+          uid: UUID
+          groups: UUID[]
+      requestAllAccessedClients:
+        id: 27
+        params:
+          uids: UUID[]
+      requestAccessCheck:
+        id: 28
+        params:
+          requests: AccessCheckPair[]
+
+      getClientActivity:
+        id: 29
+        returns: ClientActivity[]
+        params:
+          uid: UUID
+          fromTime: long
+          toTime: long
+          limit: int
+      searchClientLogs:
+        id: 30
+        returns: ClientLogEntry[]
+        params:
+          uid: UUID
+          query: string
+          limit: int
+      getClientConnections:
+        id: 31
+        returns: ClientConnectionInfo[]
+        params:
+          uid: UUID
+          limit: int
+      getClientMessages:
+        id: 32
+        returns: MessageInfo[]
+        params:
+          uid: UUID
+          fromTime: long
+          toTime: long
+          limit: int
+
+
+
+      setNextReadDelay:
+        id: 33
+        params:
+          delayMillis: long
+      getUap:
+        id: 34
+        returns: Uap
+        params:
+          uid: UUID
+
+
+
+
+      pullMessages:
+        id: 36
+      requestWebRtcSession:
+        id: 40
+        returns: WebRtcSession
+        params:
+          uid: UUID
+
+      publishWebRtcSession:
+        id: 41
+        params:
+          session: WebRtcSession
+
+
+      selfDestruct:
+        id: 42
+        returns: void
+
+
+  LoginApi:
+    methods:
+      getTimeUTC:
+        id: 3
+        returns: long
+      loginByUID:
+        id: 4
+        params:
+          uid: UUID
+          data: LoginStream
+      loginByAlias:
+        id: 5
+        params:
+          alias: UUID
+          data: LoginStream
+
+      getMyIp:
+        id: 6
+
+        returns: IpInfo
+
+  ServerApiByUidClient:
+
+  ServerApiByUid:
+    methods:
+      getBalance:
+        id: 3
+        returns: long
+      setParent:
+        id: 4
+        returns: void
+        params:
+          uid: UUID
+      block:
+        id: 5
+        returns: void
+      getPosition:
+        id: 6
+        returns: CloudConfig
+      getParent:
+        id: 7
+        returns: UUID
+      getBeneficiary:
+        id: 8
+        returns: UUID
+      setBeneficiary:
+        id: 9
+        returns: void
+        params:
+          uid: UUID
+      getBlockTime:
+        id: 10
+        returns: Date
+      unblock:
+        id: 11
+        returns: void
+      createTime:
+        id: 12
+        returns: Date
+      onlineTime:
+        id: 13
+        returns: Date
+      addAccessGroup:
+        id: 14
+        returns: bool
+        params:
+          groupId: UUID
+      removeAccessGroup:
+        id: 15
+        returns: bool
+        params:
+          groupId: UUID
+      setMsgQueueLimit:
+        id: 16
+        returns: void
+        params:
+          limit: int
+      setMsgTimeLimit:
+        id: 17
+        returns: void
+        params:
+          seconds: int
+
+  # === Registration API (перенесено из ClientServerRegApi) ===
+
+  ClientApiRegUnsafe:
+    methods:
+      enter:
+        id: 3
+        params:
+          stream:
+            name: ClientApiRegSafeStream
+            stream:
+              api: ClientApiRegSafe
+              crypto: true
+      enterGlobal:
+        id: 4
+        params:
+          stream:
+            name: GlobalRegClientApiStream
+            stream:
+              api: GlobalRegClientApi
+              crypto: true
+
+  GlobalRegServerApi:
+    methods:
+      setMasterKey:
+        id: 3
+        params:
+          key: Key
+      finish:
+        id: 4
+        returns:
+          fields:
+            alias: uuid
+            uid: uuid
+            cloud: Cloud
+
+  ServerRegistrationApi:
+    methods:
+      registration:
+        id: 3
+        params:
+          salt: string
+          suffix: string
+          passwords: int[]
+          parent: uuid
+          globalApi:
+            name: GlobalApiStream
+            stream:
+              api: GlobalRegServerApi
+              crypto: true
+      requestWorkProofData:
+        id: 4
+        returns: WorkProofDTO
+        params:
+          parent: uuid
+          powMethods: PowMethod
+      resolveServers:
+        id: 5
+        returns: ServerDescriptor[]
+        params:
+          serverIds: Cloud
+      setReturnKey:
+        id: 6
+        params:
+          key: Key
+
+  RegistrationRootApi:
+    methods:
+      getAsymmetricPublicKey:
+        id: 3
+        returns: SignedKey
+        params:
+          cryptoLib: CryptoLib
+      enter:
+        id: 4
+        params:
+          cryptoLib: CryptoLib
+          stream:
+            name: ServerRegistrationApiStream
+            stream:
+              api: ServerRegistrationApi
+              crypto: true
+      getMyIp:
+        id: 6
+        returns: IpInfo
+
+  ClientApiRegSafe:
+
+  GlobalRegClientApi:

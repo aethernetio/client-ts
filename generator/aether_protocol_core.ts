@@ -6,7 +6,10 @@ export type AetherDslMeta = {
     types?: { [key: string]: any };
     enums?: { [key: string]: any };
     methods?: { [key: string]: any };
+
+    include?: string[];
     includes?: string[];
+
     baseName?: string;
     api?: { [key: string]: any };
 };
@@ -19,6 +22,10 @@ export type TypeDefinition = {
     fields?: { [key: string]: any };
     constants?: { [key: string]: string | number | boolean };
     stream?: { api?: string, crypto?: boolean, name?: string, remoteApi?: string };
+
+    multiplexor?: { channels: string[] };
+    syncmap?: { key: string; value: string };
+
     enum?: string[];
     abstract?: boolean;
     parent?: string;
@@ -124,11 +131,20 @@ export class TypeInfo {
             this.isCollapsible = false;
             return;
         }
+
         let t = type ? type.trim() : "";
 
+        if (t.endsWith(';')) {
+            t = t.substring(0, t.length - 1).trimEnd();
+        }
+
         if (!t) {
-            this.javaType = "void"; this.javaTypeBoxed = "void"; this.arrayStaticSize = 0;
-            this.isNullable = false; this.isArray = false; this.isPack = false;
+            this.javaType = "void";
+            this.javaTypeBoxed = "void";
+            this.arrayStaticSize = 0;
+            this.isNullable = false;
+            this.isArray = false;
+            this.isPack = false;
             this.isCollapsible = false;
             return;
         }
@@ -143,26 +159,19 @@ export class TypeInfo {
         this.isNullable = nullable;
         this.isCollapsible = collapsible;
 
-        if (t.toLowerCase() === "intpack") {
-            this.isPack = true;
-            t = "long";
-        } else if (t.endsWith('(intpack)')) {
-            this.isPack = true;
-            t = t.substring(0, t.length - 9);
-        } else {
-            this.isPack = false;
-        }
-
         const sIndex = t.lastIndexOf("[");
         if (t.endsWith("]") && sIndex > -1) {
             this.isArray = true;
-            const sizeStr = t.substring(sIndex + 1, t.length - 1);
+            const sizeStr =
+                t.substring(sIndex + 1, t.length - 1);
             if (sizeStr === '') {
                 this.arrayStaticSize = 0;
-            } else if (sizeStr.match(/^\d+$/)) {
-                this.arrayStaticSize = parseInt(sizeStr);
+            } else if (/^\d+$/.test(sizeStr)) {
+                this.arrayStaticSize = parseInt(sizeStr, 10);
             } else {
-                this.arrayStaticSize = 0;
+                throw new Error(
+                    `Invalid array size in type: ${type}`,
+                );
             }
             t = t.substring(0, sIndex);
         } else {
@@ -170,22 +179,70 @@ export class TypeInfo {
             this.isArray = false;
         }
 
+        let packed = false;
+        if (t.toLowerCase() === "intpack") {
+            packed = true;
+            t = "long";
+        } else if (t.endsWith('(intpack)')) {
+            packed = true;
+            t = t.substring(0, t.length - 9);
+        }
+        this.isPack = packed;
+
         const lowerType = t.toLowerCase();
         switch (lowerType) {
-            case "byte": this.javaType = 'byte'; this.javaTypeBoxed = 'byte'; break;
-            case "short": this.javaType = 'short'; this.javaTypeBoxed = 'short'; break;
-            case "int": this.javaType = 'int'; this.javaTypeBoxed = 'int'; break;
-            case "long": this.javaType = 'long'; this.javaTypeBoxed = 'long'; break;
-            case "float": this.javaType = 'float'; this.javaTypeBoxed = 'float'; break;
-            case "double": this.javaType = 'double'; this.javaTypeBoxed = 'double'; break;
-            case "boolean": case "bool": this.javaType = 'boolean'; this.javaTypeBoxed = 'boolean'; break;
-            case "string": this.javaType = 'string'; this.javaTypeBoxed = 'string'; break;
-            case "uuid": this.javaType = 'UUID'; this.javaTypeBoxed = 'UUID'; break;
-            case "uri": this.javaType = 'URI'; this.javaTypeBoxed = 'URI'; break;
-            case "date": case "java.util.date": this.javaType = 'Date'; this.javaTypeBoxed = 'Date'; break;
-            default: this.javaType = t; this.javaTypeBoxed = t;
+            case "byte":
+                this.javaType = 'byte';
+                this.javaTypeBoxed = 'byte';
+                break;
+            case "short":
+                this.javaType = 'short';
+                this.javaTypeBoxed = 'short';
+                break;
+            case "int":
+                this.javaType = 'int';
+                this.javaTypeBoxed = 'int';
+                break;
+            case "long":
+                this.javaType = 'long';
+                this.javaTypeBoxed = 'long';
+                break;
+            case "float":
+                this.javaType = 'float';
+                this.javaTypeBoxed = 'float';
+                break;
+            case "double":
+                this.javaType = 'double';
+                this.javaTypeBoxed = 'double';
+                break;
+            case "boolean":
+            case "bool":
+                this.javaType = 'boolean';
+                this.javaTypeBoxed = 'boolean';
+                break;
+            case "string":
+                this.javaType = 'string';
+                this.javaTypeBoxed = 'string';
+                break;
+            case "uuid":
+                this.javaType = 'UUID';
+                this.javaTypeBoxed = 'UUID';
+                break;
+            case "uri":
+                this.javaType = 'URI';
+                this.javaTypeBoxed = 'URI';
+                break;
+            case "date":
+            case "java.util.date":
+                this.javaType = 'Date';
+                this.javaTypeBoxed = 'Date';
+                break;
+            default:
+                this.javaType = t;
+                this.javaTypeBoxed = t;
         }
     }
+
 
 
 
@@ -205,9 +262,14 @@ export class TypeInfo {
      * Gets a TypeInfo for the element type, if this is an array.
      * @returns A new TypeInfo instance for the base type.
      */
+
     getElementType(): TypeInfo {
-        return new TypeInfo(this.javaType, this.isAbstract);
+        return new TypeInfo(
+            this.isPack ? "intpack" : this.javaType,
+            this.isAbstract,
+        );
     }
+
 
     /**
      * Gets the TypeScript code to initialize a future for this type.
@@ -245,13 +307,13 @@ export class TypeInfo {
      * Gets the TypeScript type for a method argument.
      * @returns The TypeScript type.
      */
-    getArgumentType(): string { return this.toTsType(false, false); }
+    getArgumentType(): string { return this.toTsType(true, false); }
 
     /**
      * Gets the TypeScript type for a local variable.
      * @returns The TypeScript type.
      */
-    getLocalVarType(): string { return this.toTsType(false, false); }
+    getLocalVarType(): string { return this.toTsType(true, false); }
 
     /**
      * Converts the DSL type to its TypeScript equivalent.
@@ -404,20 +466,105 @@ export class GeneratorLogic {
      * Analyzes all loaded types and builds the inheritance and dispatch maps.
      */
     private buildTypeHierarchies(): void {
-        const parentToChildren: Map<string, string[]> = new Map();
+        const parentToChildren = new Map<string, string[]>();
+
         this.allTypes.forEach((typeDef, typeName) => {
-            if (typeDef?.parent) {
-                const parent = typeDef.parent as string;
-                if (!parentToChildren.has(parent)) parentToChildren.set(parent, []);
-                parentToChildren.get(parent)!.push(typeName);
+            if (!typeDef?.parent || this.isApiDefinition(typeName)) return;
+
+            const referencedParent = String(typeDef.parent);
+            const parent =
+                this.canonicalTypeNameMap.get(referencedParent.toLowerCase())
+                ?? referencedParent;
+
+            if (!parentToChildren.has(parent)) {
+                parentToChildren.set(parent, []);
+            }
+            parentToChildren.get(parent)!.push(typeName);
+        });
+
+        const findAllTypes = (
+            currentType: string,
+            visited: Set<string>,
+        ): string[] => {
+            if (visited.has(currentType)) return [];
+            visited.add(currentType);
+
+            const result = [currentType];
+            for (const child of parentToChildren.get(currentType) ?? []) {
+                result.push(...findAllTypes(child, visited));
+            }
+            return result;
+        };
+
+        const findConcreteTypes = (
+            currentType: string,
+            visited: Set<string>,
+        ): string[] => {
+            if (visited.has(currentType)) return [];
+            visited.add(currentType);
+
+            const typeDef = this.allTypes.get(currentType);
+            if (!typeDef || this.isApiDefinition(currentType)) return [];
+
+            const result: string[] = typeDef.abstract ? [] : [currentType];
+            for (const child of parentToChildren.get(currentType) ?? []) {
+                result.push(...findConcreteTypes(child, visited));
+            }
+            return Array.from(new Set(result));
+        };
+
+        const rootTypes = new Set<string>();
+        this.allTypes.forEach((typeDef, typeName) => {
+            if (this.isApiDefinition(typeName)) return;
+
+            const referencedParent = typeDef?.parent
+                ? String(typeDef.parent)
+                : null;
+            const parent = referencedParent
+                ? this.canonicalTypeNameMap.get(referencedParent.toLowerCase())
+                    ?? referencedParent
+                : null;
+
+            const hasParent = parent !== null && this.allTypes.has(parent);
+            if (!hasParent && parentToChildren.has(typeName)) {
+                rootTypes.add(typeName);
             }
         });
 
-        const rootTypes = this.findRootTypes(parentToChildren);
+        for (const rootType of rootTypes) {
+            const hierarchyIds = new Map<string, number>();
 
-        rootTypes.forEach(rootType => {
-            this.processRootTypeHierarchy(rootType, parentToChildren);
-        });
+            for (const typeName of findAllTypes(rootType, new Set())) {
+                const typeDef = this.allTypes.get(typeName);
+                if (!typeDef) continue;
+
+                this.typeToRootMap.set(typeName, rootType);
+
+                if (!typeDef.abstract) {
+                    const typeId = typeDef.id as number | undefined;
+                    if (typeId !== undefined && typeId !== null && typeId !== 0) {
+                        for (const [existingType, existingId] of hierarchyIds) {
+                            if (existingId === typeId) {
+                                throw new Error(
+                                    `Duplicate ID in hierarchy '${rootType}': `
+                                    + `'${typeName}' and '${existingType}' both have id: ${typeId}.`,
+                                );
+                            }
+                        }
+                        hierarchyIds.set(typeName, typeId);
+                    }
+                }
+            }
+
+            this.typeHierarchyIds.set(rootType, hierarchyIds);
+        }
+
+        for (const parentType of parentToChildren.keys()) {
+            this.rootToChildrenMap.set(
+                parentType,
+                findConcreteTypes(parentType, new Set()),
+            );
+        }
     }
 
     /**
@@ -813,19 +960,50 @@ export class GeneratorLogic {
      * @param outVar - The name of the DataOut variable.
      * @param allFields - A map of field names (with "this.") to their TypeInfo.
      */
-    generateSerializerFields(sb: string[], serializeContextVar: string, outVar: string, allFields: Map<string, TypeInfo>): void {
-        const nullableFields = new Map([...allFields].filter(([_, v]) => v.isNullable));
+    generateSerializerFields(
+        sb: string[],
+        serializeContextVar: string,
+        outVar: string,
+        allFields: Map<string, TypeInfo>,
+    ): void {
+        const nullableFields = new Map(
+            [...allFields].filter(([_, value]) => value.isNullable),
+        );
         const nullableCount = nullableFields.size;
+
+        if (nullableCount > 64) {
+            throw new Error(
+                `A protocol type cannot contain more than 64 nullable fields; `
+                + `found ${nullableCount}.`,
+            );
+        }
 
         if (nullableCount > 0) {
             const writeMethod = this.getMaskWriteMethod(nullableCount);
-            this.generateNullableMaskSerializer(sb, outVar, nullableFields, writeMethod);
-            this.generateNullableFieldSerializer(sb, serializeContextVar, outVar, allFields);
-        } else {
-            allFields.forEach((fieldType, fieldName) => {
-                this.generateSerializer(sb, serializeContextVar, outVar, fieldName, fieldType);
-            });
+            this.generateNullableMaskSerializer(
+                sb,
+                outVar,
+                nullableFields,
+                writeMethod,
+            );
+            this.generateNullableFieldSerializer(
+                sb,
+                serializeContextVar,
+                outVar,
+                allFields,
+            );
+            return;
         }
+
+        allFields.forEach((fieldType, fieldName) => {
+            this.generateSerializer(
+                sb,
+                serializeContextVar,
+                outVar,
+                fieldName,
+                fieldType,
+            );
+        });
     }
 
     /**
@@ -847,14 +1025,34 @@ export class GeneratorLogic {
      * @param nullableFields - A map of nullable field names to TypeInfo.
      * @param writeMethod - The DataOut method to use (e.g., "writeByte").
      */
-    private generateNullableMaskSerializer(sb: string[], outVar: string, nullableFields: Map<string, TypeInfo>, writeMethod: string): void {
-        sb.push(`let _mask: number = 0;`);
+    private generateNullableMaskSerializer(
+        sb: string[],
+        outVar: string,
+        nullableFields: Map<string, TypeInfo>,
+        writeMethod: string,
+    ): void {
+        const useBigInt = writeMethod === 'writeLong';
+
+        sb.push(
+            useBigInt
+                ? `let _mask: bigint = 0n;`
+                : `let _mask: number = 0;`,
+        );
+
         let bitIndex = 0;
         nullableFields.forEach((_, fieldName) => {
-            const shift = bitIndex === 0 ? "1" : `(1 << ${bitIndex})`;
+            const shift = useBigInt
+                ? bitIndex === 0
+                    ? '1n'
+                    : `(1n << ${bitIndex}n)`
+                : bitIndex === 0
+                    ? '1'
+                    : `(1 << ${bitIndex})`;
+
             sb.push(`if (${fieldName} === null) _mask |= ${shift};`);
             bitIndex++;
         });
+
         sb.push(`${outVar}.${writeMethod}(_mask);`);
     }
 
@@ -884,20 +1082,49 @@ export class GeneratorLogic {
      * @param inVar - The name of the DataIn variable.
      * @param fieldVars - A map of local variable names to their TypeInfo.
      */
-    generateDeserializerFields(sb: string[], serializeContextVar: string, inVar: string, fieldVars: Map<string, TypeInfo>): void {
-        const nullableFields = new Map([...fieldVars].filter(([_, v]) => v.isNullable));
+    generateDeserializerFields(
+        sb: string[],
+        serializeContextVar: string,
+        inVar: string,
+        fieldVars: Map<string, TypeInfo>,
+    ): void {
+        const nullableFields = new Map(
+            [...fieldVars].filter(([_, value]) => value.isNullable),
+        );
         const nullableCount = nullableFields.size;
+
+        if (nullableCount > 64) {
+            throw new Error(
+                `A protocol type cannot contain more than 64 nullable fields; `
+                + `found ${nullableCount}.`,
+            );
+        }
 
         if (nullableCount > 0) {
             const readMethod = this.getMaskReadMethod(nullableCount);
-            const isMaskBigInt = readMethod === "readLong";
+            const isMaskBigInt = readMethod === 'readLong';
+
             sb.push(`const _mask = ${inVar}.${readMethod}();`);
-            this.generateNullableFieldDeserializer(sb, serializeContextVar, inVar, fieldVars, "_mask", isMaskBigInt);
-        } else {
-            fieldVars.forEach((fieldType, varName) => {
-                this.generateDeserializer(sb, serializeContextVar, inVar, varName, fieldType);
-            });
+            this.generateNullableFieldDeserializer(
+                sb,
+                serializeContextVar,
+                inVar,
+                fieldVars,
+                '_mask',
+                isMaskBigInt,
+            );
+            return;
         }
+
+        fieldVars.forEach((fieldType, varName) => {
+            this.generateDeserializer(
+                sb,
+                serializeContextVar,
+                inVar,
+                varName,
+                fieldType,
+            );
+        });
     }
 
     /**

@@ -6,15 +6,18 @@ import { EventConsumer } from './aether_future'; // Предполагая, чт
 
 // Порт из AccessGroupMutable.java
 export class AccessGroupMutable {
-    readonly id: bigint;
+    readonly id: UUID;
+    public time: number = 0;
     public owner: UUID;
     readonly group: RSet<UUID> = RCol.set<UUID>();
 
     constructor(a: AccessGroup);
-    constructor(id: bigint, owner: UUID);
-    constructor(idOrA: bigint | AccessGroup, owner?: UUID) {
+    constructor(id: UUID, owner: UUID);
+
+    constructor(idOrA: UUID | AccessGroup, owner?: UUID) {
         if (idOrA instanceof AccessGroup) {
             this.id = idOrA.getId();
+            this.time = idOrA.getTime();
             this.owner = idOrA.getOwner();
             this.group.addAll(idOrA.getData());
         } else {
@@ -23,17 +26,35 @@ export class AccessGroupMutable {
         }
     }
 
+
+
     public toDTO(): AccessGroup {
-        return new AccessGroup(this.owner, this.id, Array.from(this.group.values()));
+        return new AccessGroup(
+            this.id,
+            this.time,
+            this.owner,
+            Array.from(this.group.values()),
+        );
     }
+
 
     public setOwner(owner: UUID): void {
         this.owner = owner;
     }
 
-    public getId(): bigint {
+
+    public getId(): UUID {
         return this.id;
     }
+
+    public getTime(): number {
+        return this.time;
+    }
+
+    public setTime(time: number): void {
+        this.time = time;
+    }
+
 
     public getOwner(): UUID {
         return this.owner;
@@ -115,13 +136,15 @@ export class AccessGroupListMutable {
         return Array.from(this.all());
     }
 
-    public allGroupIdsAsArray(): bigint[] {
-        const l: bigint[] = [];
-        for (const g of this.groups) {
-            l.push(g.getId());
+
+    public allGroupIdsAsArray(): UUID[] {
+        const ids: UUID[] = [];
+        for (const group of this.groups) {
+            ids.push(group.getId());
         }
-        return l;
+        return ids;
     }
+
 
     public all(): Set<UUID> {
         const res = new Set<UUID>();
@@ -135,17 +158,16 @@ export class AccessGroupListMutable {
         return this.groups.delete(gg); // В RSet<T> удаление по объекту
     }
 
-    public removeById(id: bigint): boolean {
+
+    public removeById(id: UUID): boolean {
         let found: AccessGroupMutable | null = null;
-        for (const g of this.groups) {
-            if (g.id === id) {
-                found = g;
+        for (const group of this.groups) {
+            if (group.id.toString() === id.toString()) {
+                found = group;
                 break;
             }
         }
-        if (found) {
-            return this.groups.delete(found);
-        }
-        return false;
+        return found !== null && this.groups.delete(found);
     }
+
 }

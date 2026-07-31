@@ -69,7 +69,7 @@ class MyClientApiSafe implements ClientApiSafe {
      * @param {bigint[]} groups Group IDs
      * @returns {AFuture} Completion future
      */
-    sendAccessGroupForClient(uid: UUID, groups: bigint[]): AFuture {
+    sendAccessGroupForClient(uid: UUID, groups: UUID[]): AFuture {
         Log.debug("Received AccessGroups for client", { component: "MyClientApiSafe", uid: uid });
         this.client.clientGroups.put(uid, new Set(groups));
         return AFuture.of();
@@ -79,7 +79,7 @@ class MyClientApiSafe implements ClientApiSafe {
      * Confirms addition of items to access group and updates cache.
      * Ported from ConnectionWork.java
      */
-    public addItemsToAccessGroup(id: bigint, groups: UUID[]): AFuture {
+    public addItemsToAccessGroup(id: UUID, groups: UUID[]): AFuture {
         Log.debug("Server confirmed ADD items to group", { id: id.toString() });
         const futures = this.client.accessOperationsAdd.get(id);
         if (futures) {
@@ -98,7 +98,14 @@ class MyClientApiSafe implements ClientApiSafe {
             this.client.accessGroups.getFuture(id).to((group: AccessGroup | null) => {
                 if (group) {
                     const newUuids = new Set([...group.getData(), ...groups]);
-                    const newGroup = new AccessGroup(group.getOwner(), group.getId(), Array.from(newUuids));
+
+                    const newGroup = new AccessGroup(
+                        group.getId(),
+                        RU.timeSeconds(),
+                        group.getOwner(),
+                        Array.from(newUuids),
+                    );
+
                     this.client.accessGroups.put(id, newGroup);
                 }
             });
@@ -109,7 +116,7 @@ class MyClientApiSafe implements ClientApiSafe {
      * Confirms removal of items from access group and updates cache.
      * Ported from ConnectionWork.java
      */
-    public removeItemsFromAccessGroup(id: bigint, groups: UUID[]): AFuture {
+    public removeItemsFromAccessGroup(id: UUID, groups: UUID[]): AFuture {
         Log.debug("Server confirmed REMOVE items from group", { id: id.toString() });
         const futures = this.client.accessOperationsRemove.get(id);
         if (futures) {
@@ -127,7 +134,14 @@ class MyClientApiSafe implements ClientApiSafe {
             if (group) {
                 const currentUuids = new Set(group.getData());
                 for (const uid of groups) currentUuids.delete(uid);
-                const newGroup = new AccessGroup(group.getOwner(), group.getId(), Array.from(currentUuids) as UUID[]);
+
+                const newGroup = new AccessGroup(
+                    group.getId(),
+                    RU.timeSeconds(),
+                    group.getOwner(),
+                    Array.from(currentUuids),
+                );
+
                 this.client.accessGroups.put(id, newGroup);
             }
         });
@@ -150,10 +164,17 @@ class MyClientApiSafe implements ClientApiSafe {
      * @param {bigint[]} groups Group IDs to add
      * @returns {AFuture} Completion future
      */
-    addAccessGroupsToClient(uid: UUID, groups: bigint[]): AFuture {
+    addAccessGroupsToClient(uid: UUID, groups: UUID[]): AFuture {
         Log.debug("Server pushed ADD groups to client", { component: "MyClientApiSafe", uid: uid });
-        this.client.clientGroups.getFuture(uid).to((existingGroups: Set<bigint> | null) => {
-            const newGroups = existingGroups ? new Set(existingGroups) : new Set<bigint>();
+
+        this.client.clientGroups.getFuture(uid).to(
+            (existingGroups: Set<UUID> | null) => {
+
+
+            const newGroups = existingGroups
+                ? new Set(existingGroups)
+                : new Set<UUID>();
+
             for (const g of groups) {
                 newGroups.add(g);
             }
@@ -169,9 +190,12 @@ class MyClientApiSafe implements ClientApiSafe {
      * @param {bigint[]} groups Group IDs to remove
      * @returns {AFuture} Completion future
      */
-    removeAccessGroupsFromClient(uid: UUID, groups: bigint[]): AFuture {
+    removeAccessGroupsFromClient(uid: UUID, groups: UUID[]): AFuture {
         Log.debug("Server pushed REMOVE groups from client", { component: "MyClientApiSafe", uid: uid });
-        this.client.clientGroups.getFuture(uid).to((existingGroups: Set<bigint> | null) => {
+
+        this.client.clientGroups.getFuture(uid).to(
+            (existingGroups: Set<UUID> | null) => {
+
             if (existingGroups) {
                 const newGroups = new Set(existingGroups);
                 for (const g of groups) {
@@ -477,7 +501,7 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
 
         const requestAccessGroups = this.client.accessGroups.pollAllRequests();
         if (requestAccessGroups.length > 0) {
-            const groupIds = requestAccessGroups.map((id: bigint) => id);
+            const groupIds = requestAccessGroups.map((id: UUID) => id);
             a.requestAccessGroupsItems(groupIds);
         }
 

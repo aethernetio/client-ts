@@ -18,6 +18,7 @@ import {
     MetaContextLocal,
     SerializerPackNumber,
     DeserializerPackNumber,
+    SecurityConnectionDropException,
 } from './aether_fastmeta';
 
 
@@ -249,17 +250,24 @@ export namespace FastMetaNet {
          * @description Create FastMeta client, returning MetaContext
          */
 
+
         public makeClient<LT>(
             uri: URI,
             localApiMeta: FastMetaApi<LT, any>,
             localApiFactory: (ctx: MetaContext) => LT
         ): MetaContext {
-            return new FastMetaClientAdapter<LT>(
+            const client =
+                new FastMetaClientWebSocket<LT>();
+
+            client.connect(
                 uri,
                 localApiMeta,
-                localApiFactory
+                localApiFactory,
             );
+
+            return client;
         }
+
 
 
         /**
@@ -354,9 +362,13 @@ export enum ConnectionState {
  * @implements {Destroyable}
  */
 
-class FastMetaClientWebSocket<LT> implements Destroyable {
+
+export class FastMetaClientWebSocket<LT>
+    extends AutoFlushContext
+    implements Destroyable {
+
     public websocket: IUniversalWebSocket | null = null;
-    public context: MetaContextLocal<LT> | null = null;
+    public context: MetaContextLocal<LT>;
     public connectFuture: ARFuture<MetaContextLocal<LT>>;
     public destroyer: Destroyer = new Destroyer("FastMetaClientWebSocket");
     public log: LNode;
@@ -395,23 +407,41 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
      * @param {Partial<ReconnectConfig>} reconnectConfig Reconnection configuration
      */
 
-    constructor(reconnectConfig?: Partial<ReconnectConfig>) {
-        this.log = Log.of({ component: 'FastMetaClientWebSocket' });
-        this.connectFuture = ARFuture.of<MetaContextLocal<LT>>();
+
+    constructor(
+        reconnectConfig?: Partial<ReconnectConfig>,
+    ) {
+        super();
+
+        this.context =
+            this as unknown as MetaContextLocal<LT>;
+        this.log = Log.of({
+            component: 'FastMetaClientWebSocket',
+        });
+        this.connectFuture =
+            ARFuture.of<MetaContextLocal<LT>>();
         this.reconnectConfig = {
             maxAttempts: 0,
             baseDelay: 500,
             maxDelay: 2000,
             backoffMultiplier: 1.5,
-            ...reconnectConfig
+            ...reconnectConfig,
         };
 
         if (this.reconnectConfig.maxDelay > 2000) {
             this.reconnectConfig.maxDelay = 2000;
         }
 
-        Log.info("FastMetaClientWebSocket initialized with infinite reconnection strategy");
+        this.onFlushData((data) => {
+            this.write(data);
+        });
+        this.fireWritable(false);
+
+        Log.info(
+            "FastMetaClientWebSocket initialized with infinite reconnection strategy",
+        );
     }
+
 
 
     private startConnectTimeout(): void {
@@ -447,6 +477,7 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
      * @param {(ctx: MetaContext) => LT} localApiFactory Local API factory function
      * @returns {ARFuture<MetaContextLocal<LT>>} Future resolving to connection context
      */
+
     public connect(
         uri: URI,
         localApiMeta: FastMetaApi<LT, any>,
@@ -455,8 +486,14 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
         Log.info("connect() called", { uri });
 
         try {
-            if (this.websocket || !this.connectFuture.isNotDone()) {
-                Log.warn("Connect called on already connecting or connected client", { uri });
+            if (
+                this.websocket ||
+                !this.connectFuture.isNotDone()
+            ) {
+                Log.warn(
+                    "Connect called on already connecting or connected client",
+                    { uri },
+                );
                 return this.connectFuture;
             }
 
@@ -465,17 +502,43 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
             this.localApiMeta = localApiMeta;
             this.localApiFactory = localApiFactory;
             this.isManualClose = false;
+            this.context =
+                this as unknown as MetaContextLocal<LT>;
 
-            this.setConnectionState(ConnectionState.CONNECTING);
+            const configuredApi =
+                localApiFactory(this);
+            if (
+                configuredApi !== null &&
+                configuredApi !== undefined
+            ) {
+                this.localApi = configuredApi;
+            }
+            if (
+                this.localApi === null ||
+                this.localApi === undefined
+            ) {
+                throw new ClientStartException(
+                    "Local API factory returned null",
+                );
+            }
+
+            this.fireWritable(false);
+            this.setConnectionState(
+                ConnectionState.CONNECTING,
+            );
             this.createWebSocketConnection();
-        this.startConnectTimeout();
+            this.startConnectTimeout();
 
             return this.connectFuture;
         } catch (e) {
-            Log.error("Critical crash inside connect()", e as Error);
+            Log.error(
+                "Critical crash inside connect()",
+                e as Error,
+            );
             throw e;
         }
     }
+
 
 
 
@@ -614,47 +677,145 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
      * @description Process incoming binary data
      * @param {Uint8Array} binaryData Binary data to process
      */
+
     private processBinaryData(binaryData: Uint8Array): void {
-        this.connectionStats.totalBytesReceived += binaryData.length;
+        this.connectionStats.totalBytesReceived +=
+            binaryData.length;
         this.connectionStats.totalMessagesReceived++;
         this.receiveBuffer.write(binaryData);
 
         while (this.receiveBuffer.getSizeForRead() > 0) {
-            const originalReadPos = this.receiveBuffer.getReadPos();
+            const available =
+                this.receiveBuffer.getSizeForRead();
+            const headerProbe = new DataInOut(
+                this.receiveBuffer.toArrayCopy(),
+            );
+
+            let payloadSize: number;
+            let headerSize: number;
+
             try {
-                if (this.receiveBuffer.getSizeForRead() < 4) {
-                    this.receiveBuffer.setReadPos(originalReadPos);
+                payloadSize = Number(
+                    DeserializerPackNumber.INSTANCE.put(
+                        headerProbe,
+                    ),
+                );
+                headerSize =
+                    available -
+                    headerProbe.getSizeForRead();
+            } catch (headerError) {
+                /*
+                 * Packed numbers occupy at most eight bytes.
+                 * Until eight bytes are available, the header
+                 * may simply be split between WebSocket messages.
+                 */
+                if (available < 8) {
                     break;
                 }
-                const payloadSize = Number(DeserializerPackNumber.INSTANCE.put(this.receiveBuffer));
-                if (this.receiveBuffer.getSizeForRead() >= payloadSize) {
-                    const payload = this.receiveBuffer.readBytes(payloadSize);
-                    try {
-                        this.localApiMeta!.makeLocal_fromBytes_ctxLocal(this.context!, payload);
-                    } catch (processingError) {
-                        Log.error("Error processing frame", processingError as Error);
-                    }
-                } else {
-                    this.receiveBuffer.setReadPos(originalReadPos);
-                    break;
-                }
-            } catch (e) {
-                Log.error("Error parsing frame", e as Error);
+
+                Log.error(
+                    "Error parsing frame header",
+                    headerError as Error,
+                );
                 this.receiveBuffer.clear();
+
+                try {
+                    this.websocket?.close(
+                        1002,
+                        "FastMeta protocol error",
+                    );
+                } catch (closeError) {
+                    Log.error(
+                        "Failed to close invalid connection",
+                        closeError as Error,
+                    );
+                }
+
                 break;
+            }
+
+            if (
+                !Number.isSafeInteger(payloadSize) ||
+                payloadSize < 0
+            ) {
+                this.receiveBuffer.clear();
+
+                try {
+                    this.websocket?.close(
+                        1002,
+                        "FastMeta protocol error",
+                    );
+                } catch (closeError) {
+                    Log.error(
+                        "Failed to close invalid connection",
+                        closeError as Error,
+                    );
+                }
+
+                break;
+            }
+
+            if (
+                available <
+                headerSize + payloadSize
+            ) {
+                break;
+            }
+
+            this.receiveBuffer.skipBytes(headerSize);
+            const payload =
+                this.receiveBuffer.readBytes(payloadSize);
+
+            try {
+                this.localApiMeta!
+                    .makeLocal_fromBytes_ctxLocal(
+                        this.context!,
+                        payload,
+                    );
+            } catch (processingError) {
+                Log.error(
+                    "Error processing frame",
+                    processingError as Error,
+                );
+
+                if (
+                    processingError instanceof
+                    SecurityConnectionDropException
+                ) {
+                    this.receiveBuffer.clear();
+
+                    try {
+                        this.websocket?.close(
+                            1002,
+                            "FastMeta protocol error",
+                        );
+                    } catch (closeError) {
+                        Log.error(
+                            "Failed to close invalid connection",
+                            closeError as Error,
+                        );
+                    }
+
+                    break;
+                }
             }
         }
     }
+
 
 
     /**
      * @method handleOpen
      * @description Handle WebSocket open event
      */
+
     private handleOpen(): void {
         this.resetConnectionState();
 
-        this.log = Log.of({ component: 'FastMetaClientWebSocket', connectionUri: this.uri });
+        this.log = Log.of({
+            component: 'FastMetaClientWebSocket',
+            connectionUri: this.uri,
+        });
         Log.info("WebSocket connection established");
         this.reconnectAttempts = 0;
         this.isReconnecting = false;
@@ -662,37 +823,48 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
         this.connectionStats.lastConnectTime = Date.now();
         this.connectionStats.totalReconnects++;
 
-        if (!this.localApiFactory || !this.websocket) {
-            this.connectFuture.error(new ClientStartException("Internal state error"));
+        if (!this.websocket) {
+            if (!this.connectFuture.isFinalStatus()) {
+                this.connectFuture.error(
+                    new ClientStartException(
+                        "Internal state error",
+                    ),
+                );
+            }
             this.close();
             return;
         }
 
         try {
-
-            this.context = new AutoFlushContext() as unknown as MetaContextLocal<LT>;
-            (this.context as MetaContextBase).localApi = this.localApiFactory!(this.context);
-
-            this.context.onFlushData((dataArray) => {
-                if (this.websocket && this.isConnected()) {
-                    const frameBuffer = new DataInOut();
-                    SerializerPackNumber.INSTANCE.put(frameBuffer, dataArray.length);
-                    frameBuffer.write(dataArray);
-                    this.connectionStats.totalBytesSent += frameBuffer.getSizeForRead();
-                    this.connectionStats.totalMessagesSent++;
-                    this.sendWebSocketData(frameBuffer.toArray());
-                }
-            });
-
+            this.context =
+                this as unknown as MetaContextLocal<LT>;
+            this.fireWritable(true);
             this.connectFuture.tryDone(this.context);
-            this.setConnectionState(ConnectionState.CONNECTED);
+            this.setConnectionState(
+                ConnectionState.CONNECTED,
+            );
+            this.clearConnectTimeout();
         } catch (e) {
-            Log.error("Error during connection setup", e as Error);
-            this.connectFuture.error(new ClientStartException("Failed to setup context", e as Error));
+            Log.error(
+                "Error during connection setup",
+                e as Error,
+            );
+            this.fireWritable(false);
+
+            if (!this.connectFuture.isFinalStatus()) {
+                this.connectFuture.error(
+                    new ClientStartException(
+                        "Failed to setup context",
+                        e as Error,
+                    ),
+                );
+            }
+
+            this.clearConnectTimeout();
             this.scheduleReconnect();
-        this.clearConnectTimeout();
         }
     }
+
 
 
 
@@ -729,55 +901,82 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
      * @description Handle WebSocket close event
      * @param {any} event Close event
      */
+
     private handleCloseEvent(event: any): void {
-        Log.info("WebSocket connection closed", { code: event.code });
+        Log.info(
+            "WebSocket connection closed",
+            { code: event.code },
+        );
         this.connectionStats.connected = false;
-        this.setConnectionState(ConnectionState.DISCONNECTED);
+        this.setConnectionState(
+            ConnectionState.DISCONNECTED,
+        );
+        this.fireWritable(false);
+
         if (!this.connectFuture.isFinalStatus()) {
-            this.connectFuture.error(new ClientApiException("WebSocket closed unexpectedly"));
+            this.connectFuture.error(
+                new ClientApiException(
+                    "WebSocket closed unexpectedly",
+                ),
+            );
         }
-        this.context?.close();
-        this.context = null;
+
         this.websocket = null;
+
         if (this.closeFuture) {
             this.closeFuture.tryDone();
             this.closeFuture = null;
         }
-        if (!this.isManualClose && !this.isReconnecting) {
+
+        if (
+            !this.isManualClose &&
+            !this.isReconnecting
+        ) {
             this.scheduleReconnect();
         }
     }
+
 
     /**
      * @method handleConnectionError
      * @description Handle connection error
      * @param {Error} error Error that occurred
      */
-    private handleConnectionError(error: Error): void {
+
+    private handleConnectionError(
+        error: Error,
+    ): void {
         Log.error("Connection error", error);
 
         if (this.isReconnecting) {
-            Log.debug("Already reconnecting, skipping duplicate reconnect");
+            Log.debug(
+                "Already reconnecting, skipping duplicate reconnect",
+            );
             return;
         }
 
         if (!this.connectFuture.isFinalStatus()) {
             this.connectFuture.error(error);
         }
-        if (this.closeFuture && !this.closeFuture.isFinalStatus()) {
+        if (
+            this.closeFuture &&
+            !this.closeFuture.isFinalStatus()
+        ) {
             this.closeFuture.tryError(error);
             this.closeFuture = null;
         }
-        this.connectionStats.connected = false;
-        this.setConnectionState(ConnectionState.DISCONNECTED);
 
-        this.context?.close();
-        this.context = null;
+        this.connectionStats.connected = false;
+        this.setConnectionState(
+            ConnectionState.DISCONNECTED,
+        );
+        this.fireWritable(false);
 
         if (!this.isManualClose) {
             this.scheduleReconnect();
         }
     }
+
 
     /**
      * @method isConnected
@@ -788,21 +987,33 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
         return this.websocket !== null && this.websocket.readyState === 1;
     }
 
+
+    public override isActive(): boolean {
+        return this.isConnected() &&
+            super.isActive();
+    }
+
+
     /**
      * @method resetConnectionState
      * @description Reset connection state for reconnection
      */
+
     private resetConnectionState(): void {
         this.receiveBuffer.clear();
-        this.context?.close();
-        this.context = null;
+        this.fireWritable(false);
+
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = null;
         }
+
         this.isReconnecting = false;
-        Log.info("Connection state reset for reconnection");
+        Log.info(
+            "Connection state reset for reconnection",
+        );
     }
+
 
     /**
      * @method scheduleReconnect
@@ -933,8 +1144,12 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
      * @description Close connection gracefully
      * @returns {AFuture} Future indicating close completion
      */
-    public close(): AFuture {
-        Log.info("Closing FastMetaClientWebSocket", { uri: this.uri });
+
+    public override close(): AFuture {
+        Log.info(
+            "Closing FastMetaClientWebSocket",
+            { uri: this.uri },
+        );
         if (this.closeFuture) {
             return this.closeFuture;
         }
@@ -942,6 +1157,7 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
         this.closeFuture = AFuture.make();
         this.isManualClose = true;
         this.isReconnecting = false;
+        this.fireWritable(false);
 
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
@@ -952,56 +1168,71 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
             this.connectFuture.cancel();
         }
 
-        this.context?.close();
-        this.context = null;
-
         if (this.websocket) {
             try {
                 this.websocket.onopen = null;
                 this.websocket.onerror = null;
                 this.websocket.onmessage = null;
-                this.websocket.onclose = (event: any) => {
-                    Log.debug("WebSocket closed during client close");
+                this.websocket.onclose = () => {
+                    Log.debug(
+                        "WebSocket closed during client close",
+                    );
                     this.websocket = null;
-                    if (this.closeFuture && !this.closeFuture.isFinalStatus()) {
+                    if (
+                        this.closeFuture &&
+                        !this.closeFuture.isFinalStatus()
+                    ) {
                         this.closeFuture.tryDone();
                     }
                 };
-                this.websocket.close(1000, "Client initiated close");
+                this.websocket.close(
+                    1000,
+                    "Client initiated close",
+                );
             } catch (e) {
-                Log.error("Error closing WebSocket", e as Error);
+                Log.error(
+                    "Error closing WebSocket",
+                    e as Error,
+                );
                 this.websocket = null;
-                if (this.closeFuture) {
-                    this.closeFuture.tryDone();
-                }
-            }
-        } else {
-            if (this.closeFuture && !this.closeFuture.isFinalStatus()) {
                 this.closeFuture.tryDone();
             }
+        } else {
+            this.closeFuture.tryDone();
         }
 
         this.connectionStats.connected = false;
-        // Safety timeout to prevent hanging close future
+
         const closeTimeout = setTimeout(() => {
-            if (this.closeFuture && !this.closeFuture.isFinalStatus()) {
-                Log.warn("Close future timed out, forcing completion");
+            if (
+                this.closeFuture &&
+                !this.closeFuture.isFinalStatus()
+            ) {
+                Log.warn(
+                    "Close future timed out, forcing completion",
+                );
                 this.closeFuture.tryDone();
             }
         }, 5000);
+
         this.destroyer.add({
-            destroy: (force: boolean) => {
+            destroy: (_force: boolean) => {
                 clearTimeout(closeTimeout);
                 return AFuture.completed();
-            }
+            },
         });
-        this.closeFuture.to(() => clearTimeout(closeTimeout)).onError(() => clearTimeout(closeTimeout));
+        this.closeFuture
+            .to(() => clearTimeout(closeTimeout))
+            .onError(() => clearTimeout(closeTimeout));
 
         this.reconnectAttempts = 0;
-        this.setConnectionState(ConnectionState.DISCONNECTED);
+        this.setConnectionState(
+            ConnectionState.DISCONNECTED,
+        );
 
         return this.closeFuture;
     }
+
 
     /**
      * @method getConnectionStats
@@ -1028,9 +1259,11 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
      * @description Get local API instance
      * @returns {LT} Local API instance
      */
+
     public getLocalApi(): LT {
-        return this.context!.localApi;
+        return this.localApi as LT;
     }
+
 
 
     /**
@@ -1039,9 +1272,13 @@ class FastMetaClientWebSocket<LT> implements Destroyable {
      * @param {FastMetaApi<any, RT>} remoteApiMeta Remote API metadata
      * @returns {RT} Remote API instance
      */
-    public getRemoteApi<RT extends RemoteApi>(remoteApiMeta: FastMetaApi<any, RT>): RT {
-        return this.context!.makeRemote(remoteApiMeta);
+
+    public getRemoteApi<RT extends RemoteApi>(
+        remoteApiMeta: FastMetaApi<any, RT>,
+    ): RT {
+        return this.makeRemote(remoteApiMeta);
     }
+
 
 
     /**

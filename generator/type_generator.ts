@@ -31,11 +31,61 @@ export class TypeGenerator {
      * @param defn - The definition of the type.
      * @returns The generated TypeScript code as a string.
      */
+
     generateType(name: string, defn: TypeDefinition): string {
         if (defn?.stream) return this.generateStreamClass(name, defn);
+        if (defn?.multiplexor)
+            return this.generateMultiplexorClass(name, defn);
         if (defn?.enum) return this.generateEnum(name, defn);
+        if (defn?.syncmap) return "";
         return this.generateStructure(name, defn || {});
     }
+
+    private getMultiplexorChannels(cfg: TypeDefinition): Array<{
+        name: string;
+        paramName: string;
+        type: string;
+        isSyncMap: boolean;
+    }> {
+        const channels = cfg.multiplexor?.channels;
+        if (!Array.isArray(channels) || channels.length === 0)
+            throw new Error("Multiplexor must declare at least one channel");
+
+
+        return channels.map((rawName) => {
+            const name =
+                this.generatorLogic.resolveCanonicalTypeName(rawName);
+            const defn = this.generatorLogic.findTypeDefinition(name);
+            const paramName =
+                `channel_${name.replace(/[^a-zA-Z0-9_]/g, "_")}`;
+
+            if (!defn?.syncmap)
+                return {
+                    name,
+                    paramName,
+                    type: "MetaContext",
+                    isSyncMap: false,
+                };
+
+
+            const key = this.generatorLogic.resolveCanonicalTypeName(
+                defn.syncmap.key,
+            );
+            const value = this.generatorLogic.resolveCanonicalTypeName(
+                defn.syncmap.value,
+            );
+            return {
+                name,
+                paramName,
+                type:
+                    `SyncMapChannel<${new TypeInfo(key).getArgumentType()}, ` +
+                    `${new TypeInfo(value).getArgumentType()}>`,
+                isSyncMap: true,
+            };
+        });
+    }
+
+
 
     /**
      * Parses the 'fields' map from a TypeDefinition.
@@ -59,6 +109,98 @@ export class TypeGenerator {
         });
         return fieldTypes;
     }
+
+    private generateMultiplexorClass(
+        name: string,
+        cfg: TypeDefinition,
+    ): string {
+        const channels = this.getMultiplexorChannels(cfg);
+        const params = channels
+            .map((c) => `${c.paramName}: ${c.type}`)
+            .join(", ");
+        const sb: string[] = [];
+
+        sb.push(`export class ${name} implements ToString {`);
+        sb.push(`    public data: Uint8Array;`);
+        sb.push(`    constructor(data: Uint8Array = new Uint8Array(0)) { this.data = data; }`);
+        sb.push(`    public asIn(): any { return this as any; }`);
+        sb.push(`    public static readonly In = class In extends ${name} {`);
+        sb.push(`        constructor(data: Uint8Array, public readonly parentContext: MetaContext) { super(data); }`);
+        sb.push(`        public readAll(${params}): void {`);
+        sb.push(`            const input = new DataInOutStatic(this.data);`);
+        sb.push(`            while (input.isReadable()) {`);
+        sb.push(`                const channelId = Number(DeserializerPackNumber.INSTANCE.put(input));`);
+        sb.push(`                if (channelId < 0 || channelId >= ${channels.length}) throw new Error("Unknown multiplexor channel: " + channelId);`);
+        sb.push(`                const channelData = FastMeta.META_ARRAY_BYTE.deserialize(this.parentContext, input);`);
+        sb.push(`                switch (channelId) {`);
+        channels.forEach((c, i) => {
+            sb.push(`                    case ${i}:`);
+            sb.push(c.isSyncMap
+                ? `                        ${c.paramName}.receiveFromMultiplexor(channelData);`
+                : `                        ${c.paramName}.sendToRemote(channelData);`);
+            sb.push(`                        break;`);
+        });
+        sb.push(`                }`);
+        sb.push(`            }`);
+        sb.push(`        }`);
+        sb.push(`    };`);
+        sb.push(`    public static readonly Out = class Out extends ${name} {`);
+        sb.push(`        private readonly channelBuffers: DataInOut[] = Array.from({ length: ${channels.length} }, () => new DataInOut());`);
+        sb.push(`        constructor() { super(); }`);
+        sb.push(`        public writeAll(${params}): void {`);
+        channels.forEach((c, i) =>
+            sb.push(`            ${c.paramName}.onFlushData((data) => this.writeToChannel(${i}, data));`),
+        );
+        sb.push(`        }`);
+        sb.push(`        public writeToChannel(channelId: number, data: Uint8Array): void {`);
+        sb.push(`            if (channelId < 0 || channelId >= ${channels.length} || data.length === 0) return;`);
+        sb.push(`            this.channelBuffers[channelId].write(data);`);
+        sb.push(`        }`);
+        sb.push(`        public toByteArray(): Uint8Array {`);
+        sb.push(`            const packet = new DataInOut();`);
+        sb.push(`            for (let i = 0; i < this.channelBuffers.length; i++) {`);
+        sb.push(`                const channelData = this.channelBuffers[i].toArray();`);
+        sb.push(`                if (channelData.length === 0) continue;`);
+        sb.push(`                SerializerPackNumber.INSTANCE.put(packet, i);`);
+        sb.push(`                FastMeta.META_ARRAY_BYTE.serialize(FastFutureContextStub, channelData, packet);`);
+        sb.push(`            }`);
+        sb.push(`            return packet.toArray();`);
+        sb.push(`        }`);
+        sb.push(`    };`);
+
+        const metaImplName = `${name}MetaImpl`;
+        const impl: string[] = [];
+        impl.push(`export class ${metaImplName} implements FastMetaType<${name}> {`);
+        impl.push(`    serialize(ctx: MetaContext, obj: ${name}, out: DataOut): void {`);
+        impl.push(`        const data = obj instanceof ${name}.Out ? (obj as any).toByteArray() : obj.data;`);
+        impl.push(`        FastMeta.META_ARRAY_BYTE.serialize(ctx, data, out);`);
+        impl.push(`    }`);
+
+        impl.push(`    deserialize(ctx: MetaContext, in_: DataIn): ${name} {`);
+        impl.push(`        try {`);
+        impl.push(`            return new ${name}.In(FastMeta.META_ARRAY_BYTE.deserialize(ctx, in_), ctx) as any as ${name};`);
+        impl.push(`        } catch (e) {`);
+        impl.push(`            throw new SecurityConnectionDropException("Multiplexor error: " + (e instanceof Error ? e.message : String(e)));`);
+        impl.push(`        }`);
+        impl.push(`    }`);
+
+        impl.push(`    metaHashCode(obj: ${name} | null | undefined): number { return FastMeta.META_ARRAY_BYTE.metaHashCode(obj?.data); }`);
+        impl.push(`    metaEquals(v1: ${name} | null | undefined, v2: any): boolean { return FastMeta.META_ARRAY_BYTE.metaEquals(v1?.data, v2 instanceof ${name} ? v2.data : v2); }`);
+        impl.push(`    metaToString(obj: ${name} | null | undefined, res: AString): void { res.add(obj ? '${name}(' : 'null'); if (obj) res.add('data:').add(obj.data).add(')'); }`);
+        impl.push(
+            FAST_META_TYPE_IMPL_STUB_METHODS
+                .replace(/: any/g, `: ${name}`)
+                .replace(/: any {/g, `: ${name} {`),
+        );
+        impl.push(`}`);
+        this.generatorLogic.allImplCode.push(impl.join("\n"));
+
+        sb.push(`    public static readonly META: FastMetaType<${name}> = new Impl.${metaImplName}();`);
+        sb.push(`    public toAString(result: AString): AString { ${name}.META.metaToString(this, result); return result; }`);
+        sb.push(`}`);
+        return sb.join("\n");
+    }
+
 
     /**
      * Recursively collects all fields for a type, including from parent types.
@@ -148,9 +290,11 @@ export class TypeGenerator {
      * @param sb - The string array to append code lines to.
      * @param children - An array of concrete child type names.
      */
+
     private generateAbstractGettersForCommonConstants(
         sb: string[],
         children: string[],
+        generatedGetterNames: Set<string>,
     ): void {
         if (children.length === 0) return;
 
@@ -177,11 +321,72 @@ export class TypeGenerator {
         });
 
         commonConstants.forEach((constInfo) => {
+            const getterName = constInfo.getGetterName();
+            if (generatedGetterNames.has(getterName)) return;
+
+            generatedGetterNames.add(getterName);
             sb.push(
-                `\n    public abstract ${constInfo.getGetterName()}(): ${constInfo.getGetterType()};`,
+                `\n    public abstract ${getterName}(): ${constInfo.getGetterType()};`,
             );
         });
     }
+
+
+    private generateAbstractGettersForCommonFields(
+        sb: string[],
+        children: string[],
+        cfg: TypeDefinition,
+        generatedGetterNames: Set<string>,
+    ): void {
+        if (!cfg.abstract || children.length === 0) return;
+
+        const allChildrenFields = children.map((childName) => {
+            const childCfg =
+                this.generatorLogic.findTypeDefinition(childName);
+            return childCfg
+                ? this.getAllFields(childCfg)
+                : new Map<string, TypeInfo>();
+        });
+
+        if (allChildrenFields.length === 0) return;
+
+        const commonFields = new Map<string, TypeInfo>(
+            allChildrenFields[0],
+        );
+
+        allChildrenFields.slice(1).forEach((childFields) => {
+            for (const [fieldName, typeInfo] of commonFields) {
+                const otherType = childFields.get(fieldName);
+                if (
+                    !otherType ||
+                    typeInfo.isArray !== otherType.isArray ||
+                    typeInfo.javaType !== otherType.javaType
+                ) {
+                    commonFields.delete(fieldName);
+                }
+            }
+        });
+
+        commonFields.forEach((typeInfo, fieldName) => {
+            const isBoolean =
+                typeInfo.javaType === "boolean" &&
+                !typeInfo.isArray &&
+                !typeInfo.isNullable;
+            const getterName =
+                `${isBoolean ? "is" : "get"}` +
+                fieldName.charAt(0).toUpperCase() +
+                fieldName.slice(1);
+
+            if (generatedGetterNames.has(getterName)) return;
+
+            generatedGetterNames.add(getterName);
+            sb.push(
+                `\n    public abstract ${getterName}(): ${typeInfo.getGetterType()};`,
+            );
+        });
+    }
+
+
 
     /**
      * Generates concrete getter methods for a type's constants.
@@ -189,21 +394,28 @@ export class TypeGenerator {
      * @param constants - A Map of constants defined on the current type.
      * @param hasParent - True if this type extends another.
      */
+
     private generateConstantGetters(
         sb: string[],
         constants: Map<string, ConstantInfo>,
         hasParent: boolean,
+        generatedGetterNames: Set<string>,
     ): void {
         constants.forEach((constInfo) => {
+            const getterName = constInfo.getGetterName();
+            if (generatedGetterNames.has(getterName)) return;
+
+            generatedGetterNames.add(getterName);
             const override = hasParent ? "override " : "";
             sb.push(
-                `\n    public ${override}${constInfo.getGetterName()}(): ${constInfo.getGetterType()} {`,
+                `\n    public ${override}${getterName}(): ${constInfo.getGetterType()} {`,
             );
             sb.push(`        return ${constInfo.getTsValue()};`);
             sb.push(`    }`);
         });
         if (constants.size > 0) sb.push(``);
     }
+
 
     /**
      * Generates the code for a structure (a class with fields).
@@ -227,13 +439,19 @@ export class TypeGenerator {
             (fn) => !currentFields.has(fn),
         );
 
+
         const typeId = g.getTypeIdInHierarchy(name);
-        const rootForChildren = g.getRootTypeFor(name) || name;
-        const children = g.getConcreteTypesInHierarchy(rootForChildren);
+        const hierarchyRoot = g.getRootTypeFor(name) || name;
+        const children = g.getConcreteTypesInHierarchy(name);
+
+
+
         const needsTypeIdMethod =
             parent ||
             g.isInTypeHierarchy(name) ||
-            (children.length > 0 && name !== "Message");
+            children.length > 0;
+
+
 
         const doc = (cfg as any).doc;
         const docLines: string[] = [];
@@ -256,13 +474,22 @@ export class TypeGenerator {
         docLines.forEach((line) => sb.push(line));
         sb.push(` */`);
 
+
         sb.push(
-            `export ${isAbstract ? "abstract class" : "class"} ${name}${extendsClause} implements ToString {`,
+            `export ${isAbstract ? "abstract class" : "class"} ${name}${extendsClause} implements ToString${needsTypeIdMethod ? ", FastMetaHierarchyType" : ""} {`,
         );
+        const generatedGetterNames = new Set<string>();
+
+
 
         if (isAbstract) {
-            this.generateAbstractGettersForCommonConstants(sb, children);
+            this.generateAbstractGettersForCommonConstants(
+                sb,
+                children,
+                generatedGetterNames,
+            );
         }
+
 
         currentFields.forEach((typeInfo, fieldName) =>
             sb.push(
@@ -270,8 +497,16 @@ export class TypeGenerator {
             ),
         );
 
-        const currentConstants = this.getConstantTypes(cfg?.constants);
-        this.generateConstantGetters(sb, currentConstants, !!parent);
+
+        const currentConstants =
+            this.getConstantTypes(cfg?.constants);
+        this.generateConstantGetters(
+            sb,
+            currentConstants,
+            !!parent,
+            generatedGetterNames,
+        );
+
 
         if (needsTypeIdMethod) {
             if (parent || g.isInTypeHierarchy(name)) {
@@ -281,7 +516,7 @@ export class TypeGenerator {
                 if (typeId !== undefined) sb.push(`        return ${typeId};`);
                 else sb.push(`        return -1;`);
                 sb.push(`    }`);
-            } else if (children.length > 0 && name !== "Message") {
+            } else if (children.length > 0) {
                 if (isAbstract)
                     sb.push(`    public abstract getAetherTypeId(): number;`);
                 else
@@ -299,10 +534,12 @@ export class TypeGenerator {
             );
         }
 
+
         const hierarchyHasIds =
-            (rootForChildren &&
-                g.getTypeIdInHierarchy(rootForChildren) !== undefined) ||
+            (hierarchyRoot &&
+                g.getTypeIdInHierarchy(hierarchyRoot) !== undefined) ||
             children.some((c) => g.getTypeIdInHierarchy(c) !== undefined);
+
         const needsMeta =
             isAbstract ||
             hierarchyHasIds ||
@@ -348,7 +585,19 @@ export class TypeGenerator {
             superFields,
             parent,
         );
-        this.generateFieldGetters(sb, currentFields);
+
+        this.generateFieldGetters(
+            sb,
+            currentFields,
+            generatedGetterNames,
+        );
+        this.generateAbstractGettersForCommonFields(
+            sb,
+            children,
+            cfg,
+            generatedGetterNames,
+        );
+
         this.generateHashCodeAndEquals(sb, name, allFields, isAbstract);
         this.generateStructureToString(
             sb,
@@ -507,15 +756,17 @@ export class TypeGenerator {
             );
             sbImpl.push(serializeLines.map((l) => `        ${l}`).join("\n"));
         } else {
-            const rootType = g.getRootTypeFor(name);
-            const actualChildren = g.getConcreteTypesInHierarchy(
-                rootType || name,
-            );
+
+            const actualChildren =
+                g.getConcreteTypesInHierarchy(name);
+
+
             const needsDispatch =
                 isAbstract ||
                 (g.isInTypeHierarchy(name) &&
-                    actualChildren.length > 0 &&
-                    name !== "Message");
+                    actualChildren.length > 0);
+
+
 
             if (needsDispatch) {
                 sbImpl.push(
@@ -565,6 +816,7 @@ export class TypeGenerator {
         sbImpl.push(
             `    deserialize(${sCtxDeser}: MetaContext, ${inVar}: DataIn): ${name} {`,
         );
+        sbImpl.push(`        try {`);
         if (isMetaBody) {
             const deserializeLines: string[] = [];
             const fieldsForDeserialize = new Map<string, TypeInfo>();
@@ -588,15 +840,17 @@ export class TypeGenerator {
                 `        return new ${name}(${constructorParams.join(", ")});`,
             );
         } else {
-            const rootType = g.getRootTypeFor(name);
-            const actualChildren = g.getConcreteTypesInHierarchy(
-                rootType || name,
-            );
+
+            const actualChildren =
+                g.getConcreteTypesInHierarchy(name);
+
+
             const needsDispatch =
                 isAbstract ||
                 (g.isInTypeHierarchy(name) &&
-                    actualChildren.length > 0 &&
-                    name !== "Message");
+                    actualChildren.length > 0);
+
+
             if (needsDispatch) {
                 sbImpl.push(`        const typeId = ${inVar}.readUByte();`);
                 sbImpl.push(`        switch(typeId) {`);
@@ -634,7 +888,25 @@ export class TypeGenerator {
                     );
             }
         }
+
+        if (isMetaBody) {
+            sbImpl.push(`        } catch (e) {`);
+            sbImpl.push(
+                `            throw new SecurityConnectionDropException("Body error: " + (e instanceof Error ? e.message : String(e)));`,
+            );
+            sbImpl.push(`        }`);
+        } else {
+            sbImpl.push(`        } catch (e) {`);
+            sbImpl.push(
+                `            if (e instanceof SecurityConnectionDropException) throw e;`,
+            );
+            sbImpl.push(
+                `            throw new SecurityConnectionDropException("Hierarchy error: " + (e instanceof Error ? e.message : String(e)));`,
+            );
+            sbImpl.push(`        }`);
+        }
         sbImpl.push(`    }`);
+
 
         if (isMetaBody) {
             sbImpl.push(
@@ -706,15 +978,17 @@ export class TypeGenerator {
             sbImpl.push(`        res.add(')');`);
             sbImpl.push(`    }`);
         } else {
-            const rootType = g.getRootTypeFor(name);
-            const actualChildren = g.getConcreteTypesInHierarchy(
-                rootType || name,
-            );
+
+            const actualChildren =
+                g.getConcreteTypesInHierarchy(name);
+
+
             const needsDispatch =
                 isAbstract ||
                 (g.isInTypeHierarchy(name) &&
-                    actualChildren.length > 0 &&
-                    name !== "Message");
+                    actualChildren.length > 0);
+
+
 
             if (needsDispatch) {
                 sbImpl.push(
@@ -908,13 +1182,21 @@ export class TypeGenerator {
         );
         sbImpl.push(`    }`);
         sbImpl.push(
+
             `    deserialize(_sCtx: MetaContext, in_: DataIn): ${name} {`,
         );
-        sbImpl.push(`        const ordinal = in_.readUByte();`);
+        sbImpl.push(`        try {`);
+        sbImpl.push(`            const ordinal = in_.readUByte();`);
         sbImpl.push(
-            `        if (ordinal < 0 || ordinal >= this.values.length) throw new Error(\`Invalid ordinal \${ordinal} for enum ${name}\`);`,
+            `            if (ordinal < 0 || ordinal >= this.values.length) throw new Error(\`Invalid ordinal \${ordinal} for enum ${name}\`);`,
         );
-        sbImpl.push(`        return this.values[ordinal] as ${name};`);
+        sbImpl.push(`            return this.values[ordinal] as ${name};`);
+        sbImpl.push(`        } catch (e) {`);
+        sbImpl.push(
+            `            throw new SecurityConnectionDropException("Enum error: " + (e instanceof Error ? e.message : String(e)));`,
+        );
+        sbImpl.push(`        }`);
+
         sbImpl.push(`    }`);
 
         const stringMetaAccessor = this.generatorLogic.generateAccessMeta(
@@ -960,17 +1242,27 @@ export class TypeGenerator {
 
     private generateStreamClass(name: string, cfg: TypeDefinition): string {
         const sb: string[] = [];
-        const hasApi = cfg.stream?.api as string;
-        const apiType = hasApi
-            ? this.generatorLogic.resolveCanonicalTypeName(hasApi)
-            : undefined;
+
+        const stream = cfg.stream;
+        if (!stream || typeof stream.api !== "string") {
+            throw new Error(`Api type is not String for: ${name}`);
+        }
+        const apiType =
+            this.generatorLogic.resolveCanonicalTypeName(stream.api);
+        if (!apiType) {
+            throw new Error(`Api type is not specified for: ${name}`);
+        }
+
         const remoteApiType = cfg.stream?.remoteApi
             ? this.generatorLogic.resolveCanonicalTypeName(
                   cfg.stream.remoteApi as string,
               )
             : undefined;
         const hasCrypto = !!cfg.stream?.crypto;
-        const apiRemoteType = apiType ? `${apiType}Remote` : "unknown";
+
+        const apiRemoteType = `${apiType}Remote`;
+        const factoryApiType = remoteApiType ?? 'any';
+
 
         const doc = (cfg as any).doc;
         if (doc) {
@@ -1060,8 +1352,13 @@ export class TypeGenerator {
         // remoteApi
         if (remoteApiType) {
             sb.push(`        remoteApi(): ${remoteApiType}Remote {`);
+
             sb.push(
-                `            const activeCtx = this.parentContext!.findContext(this.factory!, this._streamKeys || []);`,
+                `            if (!this.factory) throw new Error("factory is not set");`,
+            );
+
+            sb.push(
+                `            const activeCtx = this.parentContext!.findContext(this.factory!, ...(this._streamKeys || []));`,
             );
             sb.push(
                 `            return activeCtx.makeRemote((${remoteApiType} as any).META) as ${remoteApiType}Remote;`,
@@ -1115,12 +1412,12 @@ export class TypeGenerator {
         sb.push(`                    };`);
         sb.push(`                }`);
         sb.push(
-            `                this.activeContext = this.parentContext!.findContext(effectiveFactory, this._streamKeys || []);`,
+                `                this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));`,
         );
         sb.push(`            }`);
         if (apiType) {
             sb.push(
-                `            (${apiType} as any).META.makeLocal_fromDataIn(this.activeContext, new DataInOutStatic(targetData), this.activeContext.getLocalApi());`,
+                `            (${apiType} as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));`,
             );
         } else {
             sb.push(
@@ -1155,7 +1452,7 @@ export class TypeGenerator {
 
         // send(Consumer, factory, keys)
 
-        sb.push(`        static sendWithApi<LT extends ${apiRemoteType}>(remoteGenerator: (api: ${apiRemoteType}) => void, factory: (ctx: MetaContext) => LT, ...keys: any[]): Out {`);
+        sb.push(`        static sendWithApi(remoteGenerator: (api: ${apiRemoteType}) => void, factory: (ctx: MetaContext) => ${factoryApiType}, ...keys: any[]): Out {`);
         sb.push(`            const out = new Out();`);
         sb.push(`            out.deferredRemoteGenerator = remoteGenerator as any;`);
         sb.push(`            out.deferredFactory = factory as any;`);
@@ -1191,27 +1488,36 @@ export class TypeGenerator {
         sbImpl.push(`            const outObj = obj as any;`);
         sbImpl.push(`            if (outObj.deferredFactory) {`);
         if (apiType) {
+
             sbImpl.push(
-                `                const childCtx = ctx.findContext(outObj.deferredFactory, outObj.deferredKeys || []);`,
+                `                const childCtx = ctx.findContext(outObj.deferredFactory, ...(outObj.deferredKeys || []));`,
             );
             sbImpl.push(
-                `                const remoteApi = childCtx.makeRemote((${apiType} as any).META);`,
+                `                const childLock = childCtx.lock();`,
+            );
+            sbImpl.push(`                try {`);
+            sbImpl.push(
+                `                    const remoteApi = childCtx.makeRemote((${apiType} as any).META);`,
             );
             sbImpl.push(
-                `                outObj.deferredRemoteGenerator(remoteApi);`,
+                `                    outObj.deferredRemoteGenerator(remoteApi);`,
             );
             if (hasCrypto) {
                 sbImpl.push(
-                    `                const raw = childCtx.remoteDataToArrayAsArray();`,
+                    `                    const raw = childCtx.remoteDataToArrayAsArray();`,
                 );
                 sbImpl.push(
-                    `                outObj.data = outObj.cryptoConverter ? outObj.cryptoConverter(raw) : raw;`,
+                    `                    outObj.data = outObj.cryptoConverter ? outObj.cryptoConverter(raw) : raw;`,
                 );
             } else {
                 sbImpl.push(
-                    `                outObj.data = childCtx.remoteDataToArrayAsArray();`,
+                    `                    outObj.data = childCtx.remoteDataToArrayAsArray();`,
                 );
             }
+            sbImpl.push(`                } finally {`);
+            sbImpl.push(`                    childLock?.close();`);
+            sbImpl.push(`                }`);
+
         } else {
             sbImpl.push(
                 `                throw new Error("API type not defined for stream serialize");`,
@@ -1235,7 +1541,7 @@ export class TypeGenerator {
         );
         sbImpl.push(`        } catch (e) {`);
         sbImpl.push(
-            `            throw new Error("Stream error: " + (e as Error).message);`,
+            `            throw new SecurityConnectionDropException("Stream error: " + (e instanceof Error ? e.message : String(e)));`,
         );
         sbImpl.push(`        }`);
         sbImpl.push(`    }`);
@@ -1288,9 +1594,11 @@ export class TypeGenerator {
      * @param sb - The string array to append code lines to.
      * @param fields - A Map of all fields to generate getters for.
      */
+
     private generateFieldGetters(
         sb: string[],
         fields: Map<string, TypeInfo>,
+        generatedGetterNames: Set<string>,
     ): void {
         fields.forEach((typeInfo, fieldName) => {
             const isBoolean =
@@ -1299,20 +1607,30 @@ export class TypeGenerator {
                 !typeInfo.isNullable;
             const prefix = isBoolean ? "is" : "get";
             const capitalName =
-                fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                fieldName.charAt(0).toUpperCase() +
+                fieldName.slice(1);
+            const getterName = `${prefix}${capitalName}`;
+
+            if (generatedGetterNames.has(getterName)) return;
+            generatedGetterNames.add(getterName);
 
             sb.push(
-                `\n    public ${prefix}${capitalName}(): ${typeInfo.getGetterType()} {`,
+                `\n    public ${getterName}(): ${typeInfo.getGetterType()} {`,
             );
             sb.push(`        return this.${fieldName};`);
             sb.push(`    }`);
 
             if (typeInfo.isArray) {
-                const elType = typeInfo.getElementType().getArgumentType();
+                const elType =
+                    typeInfo.getElementType().getArgumentType();
                 const arrayType =
-                    typeInfo.javaType === "byte" ? `Uint8Array` : `${elType}[]`;
+                    typeInfo.javaType === "byte"
+                        ? `Uint8Array`
+                        : `${elType}[]`;
                 const elTypeForCheck =
-                    typeInfo.javaType === "byte" ? `number` : elType;
+                    typeInfo.javaType === "byte"
+                        ? `number`
+                        : elType;
 
                 sb.push(
                     `\n    public ${fieldName}Contains(el: ${elTypeForCheck}): boolean {`,
@@ -1325,6 +1643,7 @@ export class TypeGenerator {
         });
         sb.push(``);
     }
+
 
     /**
      * Generates hashCode and equals methods for a structure.

@@ -71,14 +71,14 @@ export enum RegStatus {
 }
 
 export interface AccessGroupI {
-    id: bigint;
+    id: UUID;
     owner: UUID;
     data: Set<UUID>;
     contains(uuid: UUID): ARFuture<boolean>;
 }
 
 export class AccessGroupImpl implements AccessGroupI {
-    public id: bigint;
+    public id: UUID;
     public owner: UUID;
     public data: Set<UUID>;
 
@@ -106,8 +106,8 @@ export class AetherCloudClient implements Destroyable {
     private readonly regStatus = { value: RegStatus.NO };
     public readonly servers: BMap<number, ServerDescriptor>;
     public readonly clouds: BMap<UUID, ClientCloud>;
-    public readonly clientGroups: BMap<UUID, Set<bigint>>;
-    public readonly accessGroups: BMap<bigint, AccessGroup | null>;
+    public readonly clientGroups: BMap<UUID, Set<UUID>>;
+    public readonly accessGroups: BMap<UUID, AccessGroup | null>;
     public readonly allAccessedClients: BMap<UUID, Set<UUID>>;
     public readonly accessCheckCache: BMap<AccessCheckPair, boolean>;
     getParent(): UUID {
@@ -124,11 +124,11 @@ export class AetherCloudClient implements Destroyable {
     public readonly onNewChildApi = new EventBiConsumer<UUID, ServerApiByUid>();
 
     public readonly accessOperationsAdd = new Map<
-        bigint,
+        UUID,
         Map<string, ARFuture<boolean>>
     >();
     public readonly accessOperationsRemove = new Map<
-        bigint,
+        UUID,
         Map<string, ARFuture<boolean>>
     >();
 
@@ -182,11 +182,11 @@ export class AetherCloudClient implements Destroyable {
             30000,
             "ServerCache",
         );
-        this.clientGroups = RCol.bMap<UUID, Set<bigint>>(
+        this.clientGroups = RCol.bMap<UUID, Set<UUID>>(
             30000,
             "ClientGroupsCache",
         );
-        this.accessGroups = RCol.bMap<bigint, AccessGroup | null>(
+        this.accessGroups = RCol.bMap<UUID, AccessGroup | null>(
             30000,
             "AccessGroupsCache",
         );
@@ -534,7 +534,7 @@ export class AetherCloudClient implements Destroyable {
         });
     }
 
-    public getClientGroups(uid: UUID): ARFuture<Set<bigint>> {
+    public getClientGroups(uid: UUID): ARFuture<Set<UUID>> {
         return this.clientGroups.getFuture(uid);
     }
 
@@ -549,7 +549,7 @@ export class AetherCloudClient implements Destroyable {
         return this.createAccessGroupWithOwner(this.getUid()!, ...uids);
     }
 
-    public getGroup(groupId: bigint): ARFuture<AccessGroup> {
+    public getGroup(groupId: UUID): ARFuture<AccessGroup> {
         return this.accessGroups.getFuture(groupId) as ARFuture<AccessGroup>;
     }
 
@@ -835,7 +835,12 @@ export class AetherCloudClient implements Destroyable {
         ...uids: UUID[]
     ): ARFuture<AccessGroupI> {
         return this.getAuthApi1((c) => c.createAccessGroup(owner, uids)).map(
-            (id) => new AccessGroupImpl(new AccessGroup(owner, id, uids)),
+
+            (id) =>
+                new AccessGroupImpl(
+                    new AccessGroup(id, RU.timeSeconds(), owner, uids),
+                ),
+
         );
     }
 

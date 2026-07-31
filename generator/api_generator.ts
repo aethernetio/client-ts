@@ -10,6 +10,7 @@ import {
     TypeDefinition,
     TypeInfo,
 } from "./aether_protocol_core";
+import { TypeGenerator } from "./type_generator";
 
 /**
  * Responsible for generating TypeScript code for DSL API definitions
@@ -32,26 +33,35 @@ export class ApiGenerator {
      * @param apiDef - The TypeDefinition for the API.
      * @returns A map containing the generated code, keyed by API name.
      */
+
     generateApi(
         apiName: string,
         apiDef: TypeDefinition,
     ): { [key: string]: string } {
         const methods = this.getAllMethods(apiName, apiDef);
+        const argumentTypesCode = this.prepareArgumentsTypes(methods);
 
         const metaImplName = `${apiName}MetaImpl`;
         this.generateApiMetaImpl(apiName, metaImplName, methods);
 
-        let apiCode = this.generateApiInterface(
+        let apiCode = argumentTypesCode.join("\n\n");
+        if (apiCode.length > 0) apiCode += "\n\n";
+
+        apiCode += this.generateApiInterface(
             apiName,
             apiDef,
             methods,
             metaImplName,
         );
         apiCode += "\n\n" + this.generateApiRemote(apiName, apiDef);
-        apiCode += "\n\n" + this.generateApiLocal(apiName, apiDef);
+
+        apiCode +=
+            "\n\n" + this.generateApiLocal(apiName, apiDef, methods);
+
 
         return { [apiName]: apiCode };
     }
+
 
     /**
      * Recursively collects all methods for an API, including from parent APIs.
@@ -115,7 +125,10 @@ export class ApiGenerator {
                 params: {},
                 returns: null,
                 throws: null,
+
                 parent: parent,
+                apiName: apiName,
+
             };
             const mDef = m as TypeDefinition;
             if (!mDef) return;
@@ -235,7 +248,14 @@ export class ApiGenerator {
             `export class ${metaImplName} implements FastMetaApi<${apiName}, ${apiName}Remote> {`,
         );
 
-        this.generateMetaMakeLocal_fromDataIn(sbImpl, apiName, methods);
+
+        this.generateMetaMakeLocal(sbImpl, apiName);
+        this.generateMetaMakeLocal_fromDataIn(
+            sbImpl,
+            apiName,
+            methods,
+        );
+
         this.generateMetaMakeLocal_fromBytes_ctxLocal(sbImpl, apiName);
         this.generateMetaMakeLocal_fromBytes_ctx(sbImpl, apiName);
         this.generateMetaMakeRemote(sbImpl, apiName, methods);
@@ -305,6 +325,96 @@ export class ApiGenerator {
         return sb;
     }
 
+    private prepareArgumentsTypes(methods: Map<string, any>): string[] {
+        const generatedCode: string[] = [];
+        const typeGenerator = new TypeGenerator(this.generatorLogic);
+
+        methods.forEach((methodDef) => {
+            const ownerApiName = methodDef.apiName as string;
+            const methodName = methodDef.name as string;
+            const capitalMethodName =
+                methodName.charAt(0).toUpperCase() + methodName.slice(1);
+            const argumentsType =
+                `${ownerApiName}${capitalMethodName}Arguments`;
+
+            methodDef.argumentsType = argumentsType;
+
+            if (methodDef.parent) return;
+
+            const fields: { [name: string]: any } = {};
+            Object.entries(methodDef.params || {}).forEach(
+                ([paramName, paramType]) => {
+                    fields[paramName] = paramType;
+                },
+            );
+
+            const typeDefinition: TypeDefinition = {
+                name: argumentsType,
+                fields,
+            };
+
+            this.generatorLogic.declaredTypeNames.add(argumentsType);
+            this.generatorLogic.canonicalTypeNameMap.set(
+                argumentsType.toLowerCase(),
+                argumentsType,
+            );
+            this.generatorLogic.allTypes.set(argumentsType, typeDefinition);
+
+            generatedCode.push(
+                typeGenerator.generateType(argumentsType, typeDefinition),
+            );
+        });
+
+        return generatedCode;
+    }
+
+    private getMethodReturnType(m: any): string {
+        if (m.returns != null) {
+            const returnTypeStrRaw =
+                typeof m.returns === "object" &&
+                m.returns !== null &&
+                (m.returns as TypeDefinition).stream?.name
+                    ? (m.returns as TypeDefinition).stream!.name!
+                    : (m.returns as string);
+            const returnTypeStr =
+                this.generatorLogic.resolveCanonicalTypeName(returnTypeStrRaw);
+
+            if (returnTypeStr === "void") return "AFuture";
+            return new TypeInfo(returnTypeStr).getAsReturnType();
+        }
+
+        if (m.throws != null) return "AFuture";
+        return "void";
+    }
+
+    private generateArgumentsMethod(sb: string[], m: any): void {
+        const finalReturns = this.getMethodReturnType(m);
+        sb.push(
+            `    ${m.name}Arguments?(args: ${m.argumentsType}): ${finalReturns};`,
+        );
+    }
+
+    private generateApiLocalArgumentsMethod(
+        sb: string[],
+        m: any,
+    ): void {
+        const finalReturns = this.getMethodReturnType(m);
+        const argumentAccessors = Object.keys(m.params || {}).map(
+            (paramName) => `args.${paramName}`,
+        );
+        const returnsValue = m.returns != null || m.throws != null;
+
+        sb.push(
+            `    public ${m.name}Arguments(args: ${m.argumentsType}): ${finalReturns} {`,
+        );
+        sb.push(
+            `        ${returnsValue ? "return " : ""}this.${m.name}(${argumentAccessors.join(", ")});`,
+        );
+        sb.push(`    }`);
+    }
+
+
+
     /**
      * Generates the main API interface and its `META` namespace.
      * @param apiName - The name of the API.
@@ -336,10 +446,13 @@ export class ApiGenerator {
         }
 
         sb.push(`export interface ${apiName}${extendsClause} {`);
+
         methods.forEach((m) => {
             if (m.parent) return;
             this.generateApiInterfaceMethod(sb, m);
+            this.generateArgumentsMethod(sb, m);
         });
+
 
         sb.push(`}`);
         sb.push(`export namespace ${apiName} {`);
@@ -471,9 +584,13 @@ export class ApiGenerator {
      * @param apiDef - The TypeDefinition for the API.
      * @returns The generated TypeScript code as a string.
      */
-    private generateApiLocal(apiName: string, apiDef: TypeDefinition): string {
+
+    private generateApiLocal(
+        apiName: string,
+        apiDef: TypeDefinition,
+        methods: Map<string, any>,
+    ): string {
         const sb: string[] = [];
-        const remoteType = `${apiName}Remote`;
 
         sb.push(
             `export abstract class ${apiName}Local<RT extends RemoteApi> implements ${apiName} {`,
@@ -484,14 +601,15 @@ export class ApiGenerator {
             `    protected constructor(remoteApi: RT) { this.remoteApi = remoteApi; }`,
         );
 
-        const methods = this.getAllMethods(apiName, apiDef);
         methods.forEach((m) => {
             this.generateApiLocalMethod(sb, m);
+            this.generateApiLocalArgumentsMethod(sb, m);
         });
 
         sb.push(`}`);
         return sb.join("\n");
     }
+
 
     /**
      * Generates a single abstract method for the `Local` base class.
@@ -545,6 +663,21 @@ export class ApiGenerator {
         );
     }
 
+
+    private generateMetaMakeLocal(
+        sb: string[],
+        apiName: string,
+    ): void {
+        sb.push(
+            `    makeLocal(ctx: MetaContext, dataIn: DataIn): void {`,
+        );
+        sb.push(
+            `        this.makeLocal_fromDataIn(ctx, dataIn, ctx.getLocalApi() as ${apiName});`,
+        );
+        sb.push(`    }`);
+    }
+
+
     /**
      * Generates the `makeLocal_fromDataIn` method for the API `META`.
      * @param sb - The string array to append code lines to.
@@ -576,7 +709,7 @@ export class ApiGenerator {
         });
 
         sb.push(
-            `            default: throw new Error(\`Unknown command ID: \${commandId}\`);`,
+            `            default: throw new SecurityConnectionDropException(\`Unknown command ID: \${commandId}\`);`,
         );
         sb.push(`        }}`);
         sb.push(`    }`);
@@ -651,6 +784,12 @@ export class ApiGenerator {
         );
         deserLines.forEach((l) => sb.push(`                ${l}`));
 
+        const argumentsVar = g.getUniqueVarName("argsObject");
+        sb.push(
+            `                const ${argumentsVar} = new ${m.argumentsType}(${paramVars.join(", ")});`,
+        );
+
+
         const argsNamesVar = g.getUniqueVarName("argsNames");
         const argsValuesVar = g.getUniqueVarName("argsValues");
         sb.push(
@@ -663,7 +802,13 @@ export class ApiGenerator {
             `                ctx.invokeLocalMethodBefore("${m.name}", ${argsNamesVar}, ${argsValuesVar});`,
         );
 
-        const call = `${localApiVar}.${m.name}(${paramVars.join(", ")})`;
+
+        const objectMethodName = `${m.name}Arguments`;
+        const call =
+            `(typeof (${localApiVar} as any).${objectMethodName} === "function" `
+            + `? (${localApiVar} as any).${objectMethodName}(${argumentsVar}) `
+            + `: ${localApiVar}.${m.name}(${paramVars.join(", ")}))`;
+
         if (throwsTypeStr) sb.push(`                try {`);
 
         const callIndent = throwsTypeStr ? "    " : "";
@@ -775,6 +920,11 @@ export class ApiGenerator {
         sb.push(`    makeRemote(${sCtx}: MetaContext): ${apiName}Remote {`);
         this.generateCollapsibleStates(sb, g, methods, sCtx);
         sb.push(`        const remoteApiImpl = {`);
+
+        sb.push(
+            `            destroy: (_force: boolean): AFuture => { ${sCtx}.close(); return AFuture.completed(); },`,
+        );
+
 
         sb.push(`            flush: (): void => {`);
         sb.push(`                ${sCtx}.flush();`);
@@ -969,7 +1119,7 @@ export class ApiGenerator {
                 );
             } else {
                 sb.push(
-                    `                        ${resultVar}.error(new Error("Remote call failed without a typed exception"));`,
+                    `                        ${resultVar}.error(new AetherException("Remote call failed without a typed exception"));`,
                 );
             }
 

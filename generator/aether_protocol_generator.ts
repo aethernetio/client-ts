@@ -69,7 +69,15 @@ export class AetherDslMetaProcessor {
     AFuture,
     ARFuture,
     DataInOutStatic,
+    DataInOut,
     FastMetaType,
+
+    FastMeta,
+    SerializerPackNumber,
+    DeserializerPackNumber,
+    FastFutureContextStub,
+    SyncMapChannel,
+
     MetaContext,
     RemoteApi,
     FastMetaApi,
@@ -78,6 +86,7 @@ export class AetherDslMetaProcessor {
     URI,
     AConsumer,
     ToString,
+    FastMetaHierarchyType,
     AString
 } from '${this.importPrefix}';
 import * as Impl from './aether_api_impl'; // This is always relative
@@ -110,10 +119,14 @@ import * as Impl from './aether_api_impl'; // This is always relative
     FastMeta,
     SerializerPackNumber,
     DeserializerPackNumber,
+
     RemoteApi,
     FastMetaApi,
     FastFutureContextStub,
+    SecurityConnectionDropException,
+    AetherException,
     UUID,
+
     URI,
     AString,
 
@@ -150,7 +163,14 @@ import {
             if (defA.parent === b) return 1;
             if (defB.parent === a) return -1;
             const typeRank = (def: TypeDefinition | undefined): number => {
-                if (!def) return 4; if (def.enum) return 0; if (def.abstract) return 1; if (def.stream) return 3; return 2;
+
+                if (!def) return 5;
+                if (def.enum) return 0;
+                if (def.abstract) return 1;
+                if (def.syncmap) return 5;
+                if (def.stream || def.multiplexor) return 3;
+                return 2;
+
             };
             const rankA = typeRank(defA);
             const rankB = typeRank(defB);
@@ -161,6 +181,18 @@ import {
 
         this.generateSortedTypes(sortedTypeNames, enums, abstracts, concretes, streams);
         this.generateApiCode(apisCode);
+
+        this.generatorLogic.allTypes.forEach((defn, name) => {
+
+            if (
+                !this.generatorLogic.isApiDefinition(name) &&
+                !defn.syncmap
+            ) {
+
+                this.generatedTypes.add(name);
+            }
+        });
+
 
         this.generatedCode = this.assembleGeneratedFile(
             enums, abstracts, concretes, streams, apisCode
@@ -214,12 +246,23 @@ import {
             const defn = this.generatorLogic.allTypes.get(name);
             const isApi = this.generatorLogic.isApiDefinition(name);
 
-            if (!defn || this.generatedTypes.has(name) || isApi) return;
+
+            if (
+                !defn ||
+                this.generatedTypes.has(name) ||
+                isApi ||
+                !!defn.syncmap
+            )
+                return;
+
 
             const code = this.typeGenerator.generateType(name, defn);
             if (defn.enum) enums.push(code);
             else if (defn.abstract) abstracts.push(code);
-            else if (defn.stream) streams.push(code);
+
+            else if (defn.stream || defn.multiplexor)
+                streams.push(code);
+
             else concretes.push(code);
             this.generatedTypes.add(name);
         });

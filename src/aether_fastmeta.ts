@@ -10,7 +10,7 @@ import {
 import { AFuture, ARFuture } from './aether_future';
 import { DataIn, DataInOut, DataInOutStatic, DataOut } from './aether_datainout';
 import { Log, LNode, LogData } from './aether_logging';
-import { AString } from './aether_astring';
+import { AString, ToString } from './aether_astring';
 
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER_UTF8 = new TextDecoder('utf-8');
@@ -103,16 +103,37 @@ export interface FutureRec {
     onError(dataIn: DataIn): void;
 }
 
+
+export class SecurityConnectionDropException extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "SecurityConnectionDropException";
+    }
+}
+
+
+export class AetherException extends Error {
+    constructor(message?: string, cause?: unknown) {
+        super(message);
+        this.name = "AetherException";
+        if (cause !== undefined) {
+            (this as Error & { cause?: unknown }).cause = cause;
+        }
+    }
+}
+
+
+
 /**
  * Interface for the Aether protocol context, managing futures and serialization.
  */
 
-export interface MetaContext {
+export interface MetaContext extends ToString {
     sendToRemote(data: Uint8Array | LazyPacket): void;
 
     regFuture(worker: FutureRec): number;
     regLocalFuture(): void;
-    getFuture(requestId: number): FutureRec | undefined;
+    getFuture(requestId: number): FutureRec;
 
     sendResultToRemote(requestId: number, data: Uint8Array): void;
     sendResultToRemoteNoData(requestId: number): void;
@@ -133,8 +154,12 @@ export interface MetaContext {
     findContext(factory: (ctx: MetaContext) => any, ...keys: any[]): MetaContext;
     getProperty(key: number): any;
     getLocalApi(): any;
+
     onWritable(listener: (writable: boolean) => void): void;
+    onFirstWritable(listener: () => void): void;
     fireWritable(writable: boolean): void;
+    connectionContext(): MetaContext;
+
 
     invokeLocalMethodBefore(methodName: string, argsNames: string[], argsValues: any[]): void;
     invokeLocalMethodAfter(methodName: string, result: any, argsNames: string[], argsValues: any[]): void;
@@ -164,6 +189,12 @@ export namespace LazyPacket {
     }
 }
 
+export interface SyncMapChannel<K, V> {
+    onFlushData(c: (data: Uint8Array) => void): void;
+    receiveFromMultiplexor(data: Uint8Array): void;
+}
+
+
 export interface CollapsiblePacket extends LazyPacket {
     collapsibleKey(): unknown;
 }
@@ -176,9 +207,16 @@ export interface CollapsiblePacket extends LazyPacket {
  */
 
 export const FastFutureContextStub: MetaContext = {
-    sendToRemote: (_data: Uint8Array | LazyPacket) => { throw new Error("Context is a stub and cannot send data."); },
-    sendResultToRemote: (requestId: number, data: Uint8Array) => { throw new Error("Context is a stub and cannot send result."); },
-    sendResultToRemoteNoData: (requestId: number) => { throw new Error("Context is a stub and cannot send result."); },
+
+    sendToRemote: (_data: Uint8Array | LazyPacket) => {},
+    sendResultToRemote: (
+        _requestId: number,
+        _data: Uint8Array,
+    ) => {},
+    sendResultToRemoteNoData: (
+        _requestId: number,
+    ) => {},
+
     regFuture: (worker: FutureRec) => 0,
     regLocalFuture: () => { /* no-op */ },
     getProperty: (_key: number) => null,
@@ -194,15 +232,32 @@ export const FastFutureContextStub: MetaContext = {
     lock: () => null,
     onFlush: (_flushAction: () => void) => {},
     onFlushData: (_c: (data: Uint8Array) => void) => {},
-    findContext: (_factory: (ctx: MetaContext) => any, ..._keys: any[]) => { throw new Error("UnsupportedOperationException"); },
+
+    findContext: (
+        _factory: (ctx: MetaContext) => any,
+        ..._keys: any[]
+    ) => null as unknown as MetaContext,
+
     getLocalApi: () => null,
+
     onWritable: (_listener: (writable: boolean) => void) => {},
+    onFirstWritable: (_listener: () => void) => {},
     fireWritable: (_writable: boolean) => {},
+    connectionContext: () => FastFutureContextStub,
+
+    toAString: (s: AString) =>
+        s.add("FastApiCtx(qs:0)"),
+
+
     invokeLocalMethodBefore: (_methodName, _argsNames, _argsValues) => { /* no-op */ },
     invokeLocalMethodAfter: (_methodName, _result, _argsNames, _argsValues) => { /* no-op */ },
 
     invokeRemoteMethodAfter: (_methodName, _result, _argsNames, _argsValues) => { /* no-op */ },
-    makeRemote: <RT extends RemoteApi, RT2 extends RemoteApi>(_meta: FastMetaApi<RT, RT2>): RT2 => { throw new Error("UnsupportedOperationException"); },
+
+    makeRemote: <RT, RT2 extends RemoteApi>(
+        meta: FastMetaApi<RT, RT2>,
+    ): RT2 => meta.makeRemote(FastFutureContextStub),
+
 }
 
 
@@ -226,32 +281,63 @@ export interface FastMetaType<T> {
     metaToString(obj: T | null | undefined, res: AString): void;
 }
 
+
+export interface FastMetaHierarchyType {
+    getAetherTypeId(): number;
+}
+
+
 /**
  * Interface for a remote API endpoint.
  */
 
+
 export interface RemoteApi {
+    destroy(force: boolean): AFuture;
     flush(): void;
     getFastMetaContext(): MetaContext;
 }
+
 
 
 /**
  * Interface for API metadata, handling remote/local creation.
  */
 
+
 export interface FastMetaApi<T, R extends RemoteApi> {
-    makeRemote(localApi: MetaContext): R;
-    makeLocal_fromDataIn(ctx: MetaContext, dataIn: DataIn, localApi: T): void;
-    makeLocal_fromBytes_ctxLocal(ctx: MetaContextLocal<T>, data: Uint8Array): void;
-    makeLocal_fromBytes_ctx(ctx: MetaContext, data: Uint8Array, localApi: T): void;
+    makeRemote(ctx: MetaContext): R;
+    makeLocal(ctx: MetaContext, dataIn: DataIn): void;
+    isValidCommand(commandId: number): boolean;
+    makeLocal_fromDataIn(
+        ctx: MetaContext,
+        dataIn: DataIn,
+        localApi: T,
+    ): void;
+    makeLocal_fromBytes_ctxLocal(
+        ctx: MetaContextLocal<T>,
+        data: Uint8Array,
+    ): void;
+    makeLocal_fromBytes_ctx(
+        ctx: MetaContext,
+        data: Uint8Array,
+        localApi: T,
+    ): void;
 }
+
 
 
 /**
  * A function type for converting byte arrays.
  */
 export type BytesConverter = (data: Uint8Array) => Uint8Array;
+
+
+export interface DataInOutPool {
+    acquire(): DataInOut | null;
+    release(data: DataInOut): void;
+}
+
 
 
 /**
@@ -304,14 +390,24 @@ class UniversalMetaArrayImpl<T> implements FastMetaType<T[]> {
     metaHashCode(obj: T[] | null | undefined): number {
         if (obj === null || obj === undefined) return 0;
 
+
         if (this.elementMeta === FastMeta.META_BYTE) {
             const arr = obj as unknown as Uint8Array;
             let hash = 1;
+
             for (let i = 0; i < arr.length; i++) {
-                hash = (31 * hash + arr[i]) | 0;
+                const signedByte =
+                    arr[i] > 127
+                        ? arr[i] - 256
+                        : arr[i];
+                hash = (
+                    31 * hash +
+                    signedByte
+                ) | 0;
             }
             return hash;
         }
+
 
         let hash = 1;
         for (const el of obj) {
@@ -320,29 +416,42 @@ class UniversalMetaArrayImpl<T> implements FastMetaType<T[]> {
         return hash;
     }
 
-    metaEquals(v1: T[] | null | undefined, v2: any | null | undefined): boolean {
+
+    metaEquals(
+        v1: T[] | null | undefined,
+        v2: any | null | undefined,
+    ): boolean {
         if (v1 === v2) return true;
-        if (v1 === null || v1 === undefined) return (v2 === null || v2 === undefined);
-        if (v2 === null || v2 === undefined || !Array.isArray(v2)) return false;
+        if (v1 === null || v1 === undefined) {
+            return v2 === null || v2 === undefined;
+        }
+        if (v2 === null || v2 === undefined) return false;
 
         if (this.elementMeta === FastMeta.META_BYTE) {
-            const arr1 = v1 as unknown as Uint8Array;
-            const arr2 = v2 as unknown as Uint8Array;
-            if (!(v2 instanceof Uint8Array)) return false;
-            if (arr1.length !== arr2.length) return false;
-            for (let i = 0; i < arr1.length; i++) {
-                if (arr1[i] !== arr2[i]) return false;
+            if (
+                !(v1 instanceof Uint8Array) ||
+                !(v2 instanceof Uint8Array)
+            ) {
+                return false;
+            }
+            if (v1.length !== v2.length) return false;
+            for (let i = 0; i < v1.length; i++) {
+                if (v1[i] !== v2[i]) return false;
             }
             return true;
         }
 
-        if (v1.length !== v2.length) return false;
-
+        if (!Array.isArray(v2) || v1.length !== v2.length) {
+            return false;
+        }
         for (let i = 0; i < v1.length; i++) {
-            if (!this.elementMeta.metaEquals(v1[i], v2[i])) return false;
+            if (!this.elementMeta.metaEquals(v1[i], v2[i])) {
+                return false;
+            }
         }
         return true;
     }
+
 
     metaToString(obj: T[] | null | undefined, res: AString): void {
         if (obj === null || obj === undefined) { res.add('null'); return; }
@@ -541,25 +650,74 @@ export class FastMeta {
         loadFromFile(_file: string): Date { throw new Error("UnsupportedOperationException"); }
     };
 
-    public static readonly META_PACK: FastMetaType<number> = new class implements FastMetaType<number> {
-        serialize(_ctx: MetaContext, obj: number, out: DataOut): void { SerializerPackNumber.INSTANCE.put(out, obj); }
-        deserialize(_ctx: MetaContext, dataIn: DataIn): number { return Number(DeserializerPackNumber.INSTANCE.put(dataIn)); }
-        metaHashCode(obj: number | null | undefined): number {
-            if (obj === null || obj === undefined) return 0;
-            return (obj | 0);
-        }
-        metaEquals(v1: number | null | undefined, v2: any | null | undefined): boolean {
-            return v1 === v2;
-        }
-        metaToString(obj: number | null | undefined, res: AString): void { res.add(String(obj)); }
-        serializeToBytes(obj: number): Uint8Array {
-            const d = new DataInOut(); this.serialize(FastFutureContextStub, obj, d); return d.toArray();
-        }
-        deserializeFromBytes(data: Uint8Array): number {
-            const d = new DataInOutStatic(data); return this.deserialize(FastFutureContextStub, d);
-        }
-        loadFromFile(_file: string): number { throw new Error("UnsupportedOperationException"); }
-    };
+
+    public static readonly META_PACK:
+        FastMetaType<bigint> =
+        new class implements FastMetaType<bigint> {
+            serialize(
+                _ctx: MetaContext,
+                obj: bigint,
+                out: DataOut,
+            ): void {
+                SerializerPackNumber.INSTANCE.put(out, obj);
+            }
+
+            deserialize(
+                _ctx: MetaContext,
+                dataIn: DataIn,
+            ): bigint {
+                return DeserializerPackNumber.INSTANCE.put(dataIn);
+            }
+
+            metaHashCode(
+                obj: bigint | null | undefined,
+            ): number {
+                if (obj === null || obj === undefined) return 0;
+                const hash = obj ^ (obj >> 32n);
+                return Number(hash & 0xFFFFFFFFn) | 0;
+            }
+
+            metaEquals(
+                v1: bigint | null | undefined,
+                v2: any | null | undefined,
+            ): boolean {
+                return v1 === v2;
+            }
+
+            metaToString(
+                obj: bigint | null | undefined,
+                res: AString,
+            ): void {
+                res.add(String(obj));
+            }
+
+            serializeToBytes(obj: bigint): Uint8Array {
+                const data = new DataInOut();
+                this.serialize(
+                    FastFutureContextStub,
+                    obj,
+                    data,
+                );
+                return data.toArray();
+            }
+
+            deserializeFromBytes(
+                data: Uint8Array,
+            ): bigint {
+                const input = new DataInOutStatic(data);
+                return this.deserialize(
+                    FastFutureContextStub,
+                    input,
+                );
+            }
+
+            loadFromFile(_file: string): bigint {
+                throw new Error(
+                    "UnsupportedOperationException",
+                );
+            }
+        };
+
 
     public static readonly META_STRING: FastMetaType<string> = new class implements FastMetaType<string> {
         serialize(_ctx: MetaContext, obj: string, out: DataOut): void {
@@ -715,7 +873,21 @@ export class FastMeta {
 
     public static readonly META_REQUEST_ID: FastMetaType<number> = new class implements FastMetaType<number> {
         serialize(_ctx: MetaContext, ar: number, out: DataOut): void { out.writeInt(ar); }
-        deserialize(_ctx: MetaContext, dataIn: DataIn): number { return dataIn.readInt(); }
+
+        deserialize(
+            _ctx: MetaContext,
+            dataIn: DataIn,
+        ): number {
+            try {
+                return dataIn.readInt();
+            } catch (_error) {
+                throw new SecurityConnectionDropException(
+                    "bad buffer for read request id. Data: " +
+                        String(dataIn),
+                );
+            }
+        }
+
         metaHashCode(obj: number | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             return (obj | 0);
@@ -735,7 +907,20 @@ export class FastMeta {
 
     public static readonly META_COMMAND: FastMetaType<number> = new class implements FastMetaType<number> {
         serialize(_ctx: MetaContext, ar: number, out: DataOut): void { out.writeByte(ar); }
-        deserialize(_ctx: MetaContext, dataIn: DataIn): number { return dataIn.readUByte(); }
+
+        deserialize(
+            _ctx: MetaContext,
+            dataIn: DataIn,
+        ): number {
+            try {
+                return dataIn.readUByte();
+            } catch (_error) {
+                throw new SecurityConnectionDropException(
+                    "bad buffer",
+                );
+            }
+        }
+
         metaHashCode(obj: number | null | undefined): number {
             if (obj === null || obj === undefined) return 0;
             return (obj | 0);
@@ -776,7 +961,137 @@ export class FastMeta {
     public static get META_ARRAY_BYTE(): FastMetaType<Uint8Array> {
         return this.getMetaArray(this.META_BYTE) as FastMetaType<Uint8Array>;
     }
+
+
+    public static get META_ARRAY_BOOLEAN():
+        FastMetaType<boolean[]> {
+        return this.getMetaArray(this.META_BOOLEAN);
+    }
+
+    public static get META_ARRAY_SHORT():
+        FastMetaType<number[]> {
+        return this.getMetaArray(this.META_SHORT);
+    }
+
+    public static get META_ARRAY_INT():
+        FastMetaType<number[]> {
+        return this.getMetaArray(this.META_INT);
+    }
+
+    public static get META_ARRAY_LONG():
+        FastMetaType<bigint[]> {
+        return this.getMetaArray(this.META_LONG);
+    }
+
+    public static get META_ARRAY_UUID():
+        FastMetaType<UUID[]> {
+        return this.getMetaArray(this.META_UUID);
+    }
+
+    public static get META_ARRAY_URI():
+        FastMetaType<URI[]> {
+        return this.getMetaArray(this.META_URI);
+    }
+
+
+    public static readonly META_SET_LONG:
+        FastMetaType<Set<bigint>> =
+        new class implements FastMetaType<Set<bigint>> {
+            serialize(
+                ctx: MetaContext,
+                obj: Set<bigint>,
+                out: DataOut,
+            ): void {
+                FastMeta.META_ARRAY_LONG.serialize(
+                    ctx,
+                    Array.from(obj),
+                    out,
+                );
+            }
+
+            deserialize(
+                ctx: MetaContext,
+                dataIn: DataIn,
+            ): Set<bigint> {
+                return new Set(
+                    FastMeta.META_ARRAY_LONG.deserialize(
+                        ctx,
+                        dataIn,
+                    ),
+                );
+            }
+
+            metaHashCode(
+                obj: Set<bigint> | null | undefined,
+            ): number {
+                if (obj === null || obj === undefined) return 0;
+
+                let hash = 0;
+                for (const value of obj) {
+                    hash = (
+                        hash +
+                        FastMeta.META_LONG.metaHashCode(value)
+                    ) | 0;
+                }
+                return hash;
+            }
+
+            metaEquals(
+                v1: Set<bigint> | null | undefined,
+                v2: any | null | undefined,
+            ): boolean {
+                if (v1 === v2) return true;
+                if (
+                    v1 === null ||
+                    v1 === undefined ||
+                    !(v2 instanceof Set) ||
+                    v1.size !== v2.size
+                ) {
+                    return false;
+                }
+
+                for (const value of v1) {
+                    if (!v2.has(value)) return false;
+                }
+                return true;
+            }
+
+            metaToString(
+                obj: Set<bigint> | null | undefined,
+                res: AString,
+            ): void {
+                if (obj === null || obj === undefined) {
+                    res.add("null");
+                    return;
+                }
+
+                res
+                    .add("[")
+                    .add(Array.from(obj).map(String).join(", "))
+                    .add("]");
+            }
+
+            serializeToBytes(obj: Set<bigint>): Uint8Array {
+                const data = new DataInOut();
+                this.serialize(FastFutureContextStub, obj, data);
+                return data.toArray();
+            }
+
+            deserializeFromBytes(
+                data: Uint8Array,
+            ): Set<bigint> {
+                return this.deserialize(
+                    FastFutureContextStub,
+                    new DataInOutStatic(data),
+                );
+            }
+
+            loadFromFile(_file: string): Set<bigint> {
+                throw new Error("UnsupportedOperationException");
+            }
+        };
 }
+
 
 
 /**
@@ -789,28 +1104,67 @@ export class MetaContextBase implements MetaContext {
     protected toRemote: ConcurrentLinkedQueue_C<LazyPacket> = new ConcurrentLinkedQueue_C();
     protected returnTasks: AtomicInteger = new AtomicInteger(0);
     protected sizeBytes: AtomicInteger = new AtomicInteger(0);
-    private childContexts: Map<string, MetaContextBase> = new Map();
+
+    private childContexts:
+        Array<{ keys: any[]; context: MetaContextBase }> = [];
+    private childContextCreations: any[][] = [];
     private _lock: (() => void) | null = null;
-    private writableListener: ((writable: boolean) => void) | null = null;
+    private writableListener:
+        ((writable: boolean) => void) | null = null;
+    private firstWritableFlag = false;
     private flushAction: (() => void) | null = null;
+
     public localApi: any = null;
     protected parent: MetaContextBase | null = null;
+    private retired = false;
 
     public getLocalApi(): any { return this.localApi; }
+
+    public setLocalApi(localApi: any): void {
+        if (localApi === null || localApi === undefined) {
+            throw new Error("Local API must not be null");
+        }
+        this.localApi = localApi;
+    }
+
+    public toAString(sb: AString): AString {
+        return sb
+            .add("FastApiCtx(qs:")
+            .add(this.toRemote.size())
+            .add(")");
+    }
+
     public getProperty(_key: number): any { return null; }
 
-    public isActive(): boolean { return this.parent === null || this.parent.isActive(); }
+
+    public isActive(): boolean {
+        return !this.retired &&
+            (this.parent === null || this.parent.isActive());
+    }
+
 
     public isLocked(): boolean { return this._lock !== null; }
+
 
     public lock(): AutoCloseable | null {
         if (this.isLocked()) {
             throw new Error("Already locked");
         }
-        const unlock = () => { this._lock = null; };
+
+        let closed = false;
+        const unlock = () => {
+            if (closed) return;
+            closed = true;
+            if (this._lock !== unlock) return;
+
+            this._lock = null;
+            if (!this.isEmpty()) this.notifyDataAdded();
+        };
+
         this._lock = unlock;
         return { close: unlock };
     }
+
 
     public onFlush(flushAction: () => void): void {
         this.flushAction = flushAction;
@@ -825,30 +1179,109 @@ export class MetaContextBase implements MetaContext {
         });
     }
 
-    public findContext(factory: (ctx: MetaContext) => any, ...keys: any[]): MetaContext {
-        const keyStr = JSON.stringify(keys);
-        let ctx = this.childContexts.get(keyStr);
-        if (!ctx) {
-            ctx = this.createChildContext();
-            ctx.parent = this;
-            ctx.localApi = factory(ctx);
-            this.childContexts.set(keyStr, ctx);
+
+    public findContext(
+        factory: (ctx: MetaContext) => any,
+        ...keys: any[]
+    ): MetaContext {
+        if (typeof factory !== "function") {
+            throw new Error("Context factory must not be null");
         }
-        return ctx;
+
+        const existing = this.childContexts.find((entry) =>
+            this.contextKeysEqual(entry.keys, keys),
+        );
+        if (existing) return existing.context;
+
+        if (this.childContextCreations.some((activeKeys) =>
+            this.contextKeysEqual(activeKeys, keys),
+        )) {
+            throw new Error(
+                "Recursive context initialization for the same key",
+            );
+        }
+
+        const storedKeys = keys.slice();
+        this.childContextCreations.push(storedKeys);
+        try {
+            const ctx = this.createChildContext();
+            if (!ctx) {
+                throw new Error("createChildContext() returned null");
+            }
+
+            ctx.parent = this;
+            const configuredApi = factory(ctx);
+            if (configuredApi !== null && configuredApi !== undefined) {
+                ctx.localApi = configuredApi;
+            }
+            if (ctx.localApi === null || ctx.localApi === undefined) {
+                throw new Error(
+                    "Context factory did not configure local API",
+                );
+            }
+
+            this.childContexts.push({
+                keys: storedKeys,
+                context: ctx,
+            });
+            return ctx;
+        } finally {
+            this.childContextCreations.pop();
+        }
     }
+
+    private contextKeysEqual(left: any[], right: any[]): boolean {
+        if (left.length !== right.length) return false;
+
+        for (let i = 0; i < left.length; i++) {
+            if (left[i] === right[i]) continue;
+            if (left[i] === null || left[i] === undefined) return false;
+            if (
+                typeof left[i].equals !== "function" ||
+                !left[i].equals(right[i])
+            ) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 
     protected createChildContext(): MetaContextBase {
         return new MetaContextBase();
     }
 
+
     public onWritable(listener: (writable: boolean) => void): void {
         this.writableListener = listener;
+        listener(this.isActive());
+    }
+
+    public onFirstWritable(listener: () => void): void {
+        this.onWritable((writable) => {
+            if (writable && !this.firstWritableFlag) {
+                this.firstWritableFlag = true;
+                listener();
+            }
+        });
     }
 
     public fireWritable(writable: boolean): void {
-        const l = this.writableListener;
-        if (l) l(writable);
+        const listener = this.writableListener;
+        if (listener) listener(writable);
+
+        for (const entry of this.childContexts) {
+            entry.context.fireWritable(writable);
+        }
     }
+
+    public connectionContext(): MetaContext {
+        return this.parent === null
+            ? this
+            : this.parent.connectionContext();
+    }
+
 
     public flush(): void {
         if (this.isLocked()) return;
@@ -861,21 +1294,39 @@ export class MetaContextBase implements MetaContext {
 
     protected runFlushLifecycle(): void {
         if (this.isLocked()) return;
-        for (const child of this.childContexts.values()) {
-            if (!child.isEmpty()) {
-                child.runFlushLifecycle();
+
+        for (const entry of this.childContexts) {
+            if (!entry.context.isEmpty()) {
+                entry.context.runFlushLifecycle();
             }
         }
+
         if (this.flushAction) {
             this.flushAction();
         }
     }
 
-    public getFuture(requestId: number): FutureRec | undefined {
-        const future = this.futures.get(requestId);
-        this.futures.delete(requestId);
+
+    public getFuture(requestId: number): FutureRec {
+        if (requestId <= 0) {
+            throw new SecurityConnectionDropException(
+                `Invalid response request ID: ${requestId}`,
+            );
+        }
+
+        const registry = this.futureRegistry();
+        const future = registry.futures.get(requestId);
+        registry.futures.delete(requestId);
+
+        if (!future) {
+            throw new SecurityConnectionDropException(
+                `Unknown or duplicate response request ID: ${requestId}`,
+            );
+        }
+
         return future;
     }
+
 
     public regLocalFuture(): void { this.returnTasks.incrementAndGet(); }
 
@@ -898,13 +1349,33 @@ export class MetaContextBase implements MetaContext {
 
 
 
-    public sendToRemote(data: Uint8Array | LazyPacket): void {
-        const packet = data instanceof Uint8Array
-            ? LazyPacket.fromBytes(data)
+
+    public sendToRemote(
+        data: Uint8Array | LazyPacket,
+    ): void {
+        if (data === null || data === undefined) {
+            throw new Error("Packet must not be null");
+        }
+        if (this.retired) return;
+
+        const source = data instanceof Uint8Array
+            ? LazyPacket.fromBytes(data.slice())
             : data;
-        this.toRemote.add(packet);
+        const guardedPacket: LazyPacket = {
+            size: () => source.size(),
+            serialize: (out: DataOut): void => {
+                if (!this.retired) source.serialize(out);
+            },
+        };
+
+        this.toRemote.add(guardedPacket);
+        if (this.retired) {
+            this.toRemote.remove(guardedPacket);
+            return;
+        }
         this.notifyDataAdded();
     }
+
 
 
     protected notifyDataAdded(): void {
@@ -914,33 +1385,54 @@ export class MetaContextBase implements MetaContext {
     }
 
 
+
     public isEmpty(): boolean {
-        if (this.isLocked()) return true;
+        if (this.retired || this.isLocked()) return true;
         if (!this.toRemote.isEmpty()) return false;
-        for (const child of this.childContexts.values()) {
-            if (!child.isEmpty()) return false;
+        for (const entry of this.childContexts) {
+            if (!entry.context.isEmpty()) return false;
         }
         return true;
     }
 
 
+
+
     public size(): number {
+        if (this.retired) return 0;
         let s = 0;
         for (const packet of this.toRemote.values()) {
             s += packet.size();
         }
-        for (const child of this.childContexts.values()) {
-            s += child.size();
+        for (const entry of this.childContexts) {
+            s += entry.context.size();
         }
         return s;
     }
 
 
-    public remoteDataToArrayAsArray(): Uint8Array {
-        const out = new DataInOut();
-        this.remoteDataToArray(out);
-        return out.toArray();
+    protected acquireDataOut(): DataInOut {
+        return new DataInOut();
     }
+
+    protected releaseDataOut(_out: DataInOut): void {
+    }
+
+
+
+
+
+    public remoteDataToArrayAsArray(): Uint8Array {
+        const out = this.acquireDataOut();
+
+        try {
+            this.remoteDataToArray(out);
+            return out.toArray();
+        } finally {
+            this.releaseDataOut(out);
+        }
+    }
+
 
 
     public remoteDataToArray(out: DataOut): void {
@@ -952,23 +1444,58 @@ export class MetaContextBase implements MetaContext {
     }
 
 
+
     public regFuture(worker: FutureRec): number {
-        const r = this.futuresCounter.incrementAndGet();
-        this.futures.set(r, worker);
-        return r;
+        if (!worker) throw new Error("Future callback must not be null");
+        const registry = this.futureRegistry();
+
+        for (let attempts = 0; attempts < 0x7fffffff; attempts++) {
+            let requestId = registry.futuresCounter.incrementAndGet();
+            if (requestId > 0x7fffffff || requestId <= 0) {
+                registry.futuresCounter.set(1);
+                requestId = 1;
+            }
+            if (!registry.futures.has(requestId)) {
+                registry.futures.set(requestId, worker);
+                return requestId;
+            }
+        }
+
+        throw new Error("No free FastMeta request IDs are available");
     }
 
-    public close(): AFuture {
-        this.futures.clear();
+    private futureRegistry(): MetaContextBase {
+        let registry: MetaContextBase = this;
+        const visited = new Set<MetaContextBase>();
+
+        while (registry.parent instanceof MetaContextBase) {
+            if (visited.has(registry)) {
+                throw new Error("MetaContext parent cycle detected");
+            }
+            visited.add(registry);
+            registry = registry.parent;
+        }
+
+        return registry;
+    }
+
+
+    public retire(): void {
+        if (this.retired) return;
+
+        this.retired = true;
         this.toRemote.clear();
         this.sizeBytes.set(0);
-        this.returnTasks.set(0);
-        this.childContexts.clear();
-        this.flushAction = null;
-        this.writableListener = null;
-        this._lock = null;
-        return AFuture.of();
+        this.fireWritable(false);
     }
+
+
+
+
+    public close(): AFuture {
+        return AFuture.completed();
+    }
+
 
     public makeRemote<RT, RT2 extends RemoteApi>(meta: FastMetaApi<RT, RT2>): RT2 {
         return meta.makeRemote(this);
@@ -1010,18 +1537,27 @@ export class MetaContextBase implements MetaContext {
  * Используется для WebSocket-соединений чтобы не дёргать flush() вручную.
  */
 export class AutoFlushContext extends MetaContextBase {
+
     private readonly minPeriodMs: number;
+    private readonly maxPeriodMs: number;
     private readonly maxSize: number;
     private lastDataTime: number = Date.now();
     private flushTask: ReturnType<typeof setTimeout> | null = null;
+    private flushTaskGeneration = 0;
     private writable: boolean = true;
 
-    constructor(minPeriodMs: number = 1, maxSize: number = 65536) {
+    constructor(
+        minPeriodMs: number = 1,
+        maxPeriodMs: number = 100,
+        maxSize: number = 65536,
+    ) {
         super();
         this.minPeriodMs = minPeriodMs;
+        this.maxPeriodMs = maxPeriodMs;
         this.maxSize = maxSize;
         this.startFlushTimer();
     }
+
 
     protected override notifyDataAdded(): void {
         this.lastDataTime = Date.now();
@@ -1029,34 +1565,46 @@ export class AutoFlushContext extends MetaContextBase {
         super.notifyDataAdded();
     }
 
-    public override sendToRemote(data: Uint8Array): void {
-        super.sendToRemote(data);
-    }
 
     public override isActive(): boolean {
         return this.size() < this.maxSize;
     }
 
+
+
     private startFlushTimer(): void {
-        if (!this.writable) return;
-        if (this.flushTask !== null) return;
+        if (!this.writable || this.flushTask !== null) {
+            return;
+        }
 
+        const generation = ++this.flushTaskGeneration;
         const flushAction = () => {
-            if (this.isEmpty()) {
+            try {
+                if (!this.isEmpty()) {
+                    this.flush();
+                }
+            } finally {
+                if (
+                    generation !==
+                    this.flushTaskGeneration
+                ) {
+                    return;
+                }
+
                 this.flushTask = null;
-                return;
-            }
 
-            this.flush();
-
-            this.flushTask = null;
-            if (!this.isEmpty()) {
-                this.startFlushTimer();
+                if (this.writable && !this.isEmpty()) {
+                    this.startFlushTimer();
+                }
             }
         };
 
-        this.flushTask = setTimeout(flushAction, this.minPeriodMs);
+        this.flushTask = setTimeout(
+            flushAction,
+            this.minPeriodMs,
+        );
     }
+
 
     public override fireWritable(w: boolean): void {
         this.writable = w;
@@ -1069,13 +1617,67 @@ export class AutoFlushContext extends MetaContextBase {
         super.fireWritable(w);
     }
 
+
+
     private stopFlushTimer(): void {
-        if (this.flushTask !== null) {
-            clearTimeout(this.flushTask);
-            this.flushTask = null;
+        ++this.flushTaskGeneration;
+
+        const old = this.flushTask;
+        this.flushTask = null;
+
+        if (old !== null) {
+            clearTimeout(old);
         }
     }
+
 }
+
+export class PooledAutoFlushContext
+    extends AutoFlushContext {
+    private readonly bufferPool: DataInOutPool;
+
+    constructor(
+        _destroyer: unknown,
+        bufferPool: DataInOutPool,
+        minPeriodMs: number = 1,
+        maxPeriodMs: number = 100,
+        maxSize: number = 65536,
+    ) {
+        super(minPeriodMs, maxPeriodMs, maxSize);
+        this.bufferPool = bufferPool;
+    }
+
+    protected override acquireDataOut(): DataInOut {
+        return this.bufferPool.acquire() ??
+            super.acquireDataOut();
+    }
+
+    protected override releaseDataOut(
+        out: DataInOut,
+    ): void {
+        this.bufferPool.release(out);
+    }
+
+    protected override createChildContext():
+        MetaContextBase {
+        const pool = this.bufferPool;
+
+        return new class extends MetaContextBase {
+            protected override acquireDataOut():
+                DataInOut {
+                return pool.acquire() ??
+                    super.acquireDataOut();
+            }
+
+            protected override releaseDataOut(
+                out: DataInOut,
+            ): void {
+                pool.release(out);
+            }
+        }();
+    }
+}
+
 
 
 
