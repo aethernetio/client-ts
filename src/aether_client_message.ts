@@ -8,7 +8,12 @@ import {
     MetaContext,
 } from './aether_fastmeta';
 import { MessageNodeWebRtcPeer } from './aether_fastmeta_webrtc';
-import { AFuture, EventConsumer } from './aether_future';
+
+import {
+    AFuture,
+    EventConsumerWithQueue,
+} from './aether_future';
+
 import { Log } from './aether_logging';
 import { AConsumer, UUID } from './aether_types';
 import { Queue } from './aether_utils';
@@ -56,7 +61,10 @@ export class MessageNode {
 
     public readonly connectionsOut = new Set<ConnectionWork>();
     public readonly bufferOut = new Queue<BufferedMessage>();
-    public readonly bufferIn = new EventConsumer<{ data: Uint8Array }>();
+
+    public readonly bufferIn =
+        new EventConsumerWithQueue<Uint8Array>();
+
     public readonly consumerUUID: UUID;
     public readonly client: AetherCloudClient;
     public strategy: MessageEventListener;
@@ -94,6 +102,14 @@ export class MessageNode {
         }
 
         this.enqueue({ data: Uint8Array.from(data), future: sendFuture });
+
+        Log.info("MessageNode outgoing data queued", {
+            uid: this.consumerUUID.toAString().toString(),
+            dataLength: data.length,
+            bufferedMessages: this.bufferOut.size(),
+            connections: this.connectionsOut.size
+        });
+
         this.client.flush();
         return sendFuture;
     }
@@ -126,6 +142,14 @@ export class MessageNode {
     public addConsumerConnectionOut(connection: ConnectionWork): void {
         if (this.connectionsOut.has(connection)) return;
         this.connectionsOut.add(connection);
+
+        Log.info("MessageNode connection added", {
+            uid: this.consumerUUID.toAString().toString(),
+            connection: connection.toAString(),
+            connections: this.connectionsOut.size,
+            bufferedMessages: this.bufferOut.size()
+        });
+
         this.client.flush();
     }
 
@@ -136,20 +160,40 @@ export class MessageNode {
         }
     }
 
-    public sendMessageFromServerToClient(data: Uint8Array): void {
+
+    public sendMessageFromServerToClient(
+        data: Uint8Array,
+    ): void {
+        Log.trace(
+            "sendMessageFromServerToClient",
+        );
+
         try {
-            this.bufferIn.fire({ data: Uint8Array.from(data) });
+            this.bufferIn.fire(
+                Uint8Array.from(data),
+            );
         } catch (error) {
-            Log.error('MessageNode incoming message failed', error as Error, {
-                uid: this.consumerUUID.toAString().toString(),
-            });
+            Log.warn(
+                "Read message exception",
+                { error },
+            );
         }
     }
 
-    public toConsumer(consumer: AConsumer<Uint8Array>): void {
-        if (this.bufferIn.hasListener()) throw new Error('Already add listener');
-        this.bufferIn.add((message) => consumer(message.data));
+
+
+    public toConsumer(
+        consumer: AConsumer<Uint8Array>,
+    ): void {
+        if (this.bufferIn.hasListener()) {
+            throw new Error(
+                "Already add listener",
+            );
+        }
+
+        this.bufferIn.add(consumer);
     }
+
 
     public getConsumerUUID(): UUID {
         return this.consumerUUID;
@@ -162,19 +206,30 @@ export class MessageNode {
         }
     }
 
+
     public toApiWithCtx<LT>(
         ctx: MetaContext,
         metaLt: FastMetaApi<LT, any>,
-        localApi: LT,
+        _localApi: LT,
     ): void {
-        this.bufferIn.add((message) => {
-            metaLt.makeLocal_fromDataIn(
-                ctx,
-                new DataInOutStatic(message.data),
-                localApi,
-            );
-        });
+        this.toConsumer(
+            (data: Uint8Array) => {
+                try {
+                    metaLt.makeLocal(
+                        ctx,
+                        new DataInOutStatic(data),
+                    );
+                } catch (error) {
+                    Log.error(
+                        "Read message api exception",
+                        error as Error,
+                        { data },
+                    );
+                }
+            },
+        );
     }
+
 
     public toApiWithFactory<LT>(
         metaLt: FastMetaApi<LT, any>,
@@ -209,11 +264,24 @@ export class MessageNode {
     }
 
     private resolveConsumerCloud(): void {
+        Log.info("MessageNode resolving consumer cloud", {
+            uid: this.consumerUUID.toAString().toString()
+        });
+
         this.client.getCloud(this.consumerUUID)
-            .to((cloud: Cloud) => this.strategy.setConsumerCloud(this, cloud))
+            .to((cloud: Cloud) => {
+                Log.info("MessageNode consumer cloud resolved", {
+                    uid: this.consumerUUID.toAString().toString(),
+                    serverIds: cloud.getData()
+                });
+                this.strategy.setConsumerCloud(this, cloud);
+            })
             .onError((error: Error) => {
+                Log.error("MessageNode consumer cloud resolution failed", error, {
+                    uid: this.consumerUUID.toAString().toString()
+                });
                 this.failBufferedMessages(new Error(
-                    `Failed to get cloud for ${this.consumerUUID.toAString()}: ${error.message}`,
+                    `Failed to get cloud for ${this.consumerUUID.toAString()}: ${error.message}`
                 ));
             });
     }

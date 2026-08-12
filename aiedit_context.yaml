@@ -1,7 +1,56 @@
-lines:
-  roots:
-    MAIN: {path: /home/angel/IdeaProjects/client-ts}
-bash:
-  roots:
-    MAIN: { path: /home/angel/IdeaProjects/client-ts }
-projectId: 0e586af9
+{
+  allow: [
+    '*.java'
+  ]
+  ,
+  outputFilters: [
+    ],
+  ignore: [
+    '*/.git/*',
+    '*/build/*',
+    '*/target/*',
+    '*/node_modules/*',
+    '*/.idea/*',
+    '*/out/*',
+    '*/.gradle/*',
+    '*/*.png',
+    '*/*.jpg',
+    '*/*.jpeg',
+    '*/*.gif',
+    '*/*.ico',
+    '*/*.webp',
+    '*/*.zip',
+    '*/*.jar',
+    '*/*.tar',
+    '*/*.gz',
+    '*/*.7z',
+    '*/*.rar',
+    '*/*.class',
+    '*/*.exe',
+    '*/*.dll',
+    '*/*.so',
+    '*/*.pyc',
+    '*/*.bin'
+  ]
+  ,
+  bash: {
+    roots: {
+      MAIN: {
+        path: /home/angel/IdeaProjects/client-ts
+      }
+    }
+  },
+  roots: [
+    /home/angel/projects/client-ts,
+    /home/angel/projects/aether
+  ]
+  ,
+  lines: {
+    roots: {
+      MAIN: {
+        path: /home/angel/IdeaProjects/client-ts
+      }
+    }
+  },
+  projectId: 0e586af9
+}

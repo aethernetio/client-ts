@@ -49,7 +49,7 @@ describe('PointToPointCommunication', () => {
         }
     });
 
-    const registrationUri: URI[] = ["ws://localhost:9011"];
+    const registrationUri: URI[] = ["ws://localhost:9012"];
     const defaultPingDuration = 10; // 100ms
 
     /**

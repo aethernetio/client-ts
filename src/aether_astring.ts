@@ -4,12 +4,12 @@
 // ported from the AString.java implementation. (FIXED: Corrected TS overloads)
 // =============================================================================================
 
-import {
+
+import type {
     AFunction,
     ABiConsumer,
-    UUID,
-    AtomicReference,
 } from './aether_types';
+
 
 /**
  * @file JSDoc mock for Java's java.text.DateFormat.
@@ -907,11 +907,6 @@ export class AString {
             });
         }
 
-        // Handle AtomicReference
-        put<AtomicReference<any>>(AtomicReference, (v, s) => {
-             const vv = v.get();
-             s.add(vv);
-        });
 
     }
 }

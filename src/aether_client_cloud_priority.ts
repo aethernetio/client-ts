@@ -1,7 +1,7 @@
 
 import { UUID } from './aether_types';
 import { AppliedConfig, Cloud, CloudConfig } from './aether_api';
-import { BMap } from './aether_rcollection';
+import { BMap, CustomHashMap } from './aether_rcollection';
 import { ToString, AString } from './aether_astring';
 
 
@@ -53,44 +53,109 @@ export class ClientCloud implements ToString {
         return list;
     }
 
+
     public promote(sid: number): void {
-        const current = this.weights.get(sid) || 0;
-        this.weights.set(sid, current + 50);
+        const current =
+            this.weights.get(sid) ?? 0;
+
+        this.weights.set(
+            sid,
+            current + 60,
+        );
     }
+
+
 
     public demote(sid: number): void {
-        const current = this.weights.get(sid) || 0;
-        this.weights.set(sid, current - 100);
+        const current =
+            this.weights.get(sid) ?? 0;
+
+        this.weights.set(
+            sid,
+            current - 90,
+        );
     }
 
 
-    public smartMerge(newCloud: Cloud): void {
-        const newData = newCloud.getData();
-        // 1. Forgetting (10%)
-        for (const [sid, weight] of this.weights.entries()) {
-            this.weights.set(sid, Math.floor(weight * 0.9));
+
+
+    public smartMerge(
+        newCloud: Cloud,
+    ): void {
+        const newData =
+            newCloud.getData();
+
+        for (
+            const [sid, weight]
+            of this.weights.entries()
+        ) {
+            this.weights.set(
+                sid,
+                Math.trunc(weight * 0.92),
+            );
         }
-        // 2. Avg score
-        let sum = 0; this.weights.forEach(w => sum += w);
-        const avg = Math.floor(sum / Math.max(1, this.weights.size));
-        // 3. Integration
+
+        let sum = 0;
+        for (
+            const weight
+            of this.weights.values()
+        ) {
+            sum += weight;
+        }
+
+        const average = Math.trunc(
+            sum
+            / Math.max(
+                1,
+                this.weights.size,
+            ),
+        );
+
         for (const sid of newData) {
-            if (!this.weights.has(sid)) this.weights.set(sid, avg);
-        }
-        const newDataEntries = new Set(newData);
-        for (const sid of this.weights.keys()) {
-            if (!newDataEntries.has(sid)) this.weights.delete(sid);
-        }
-        // 4. Normalization (Sync with Java)
-        const weightsArray = Array.from(this.weights.values());
-        const min = weightsArray.length > 0 ? Math.min(...weightsArray) : 0;
-        if (min !== 0) {
-            for (const [sid, weight] of this.weights.entries()) {
-                this.weights.set(sid, weight - min);
+            if (!this.weights.has(sid)) {
+                this.weights.set(
+                    sid,
+                    average,
+                );
             }
         }
+
+        const newSids =
+            new Set(newData);
+
+        for (
+            const sid
+            of this.weights.keys()
+        ) {
+            if (!newSids.has(sid)) {
+                this.weights.delete(sid);
+            }
+        }
+
+        const values =
+            Array.from(
+                this.weights.values(),
+            );
+        const minimum =
+            values.length === 0
+                ? 0
+                : Math.min(...values);
+
+        if (minimum !== 0) {
+            for (
+                const [sid, weight]
+                of this.weights.entries()
+            ) {
+                this.weights.set(
+                    sid,
+                    weight - minimum,
+                );
+            }
+        }
+
         this.sids = newData;
     }
+
 
     public getWeights(): Map<number, number> {
         return new Map(this.weights);
@@ -138,33 +203,59 @@ export class ClientCloud implements ToString {
 }
 
 export class CloudPriorityManager {
-    private clouds: Map<string, ClientCloud> = new Map();
-    public updateCloudFromWork(uid: UUID, cloud: Cloud): ClientCloud {
-         const key = uid.toAString().toString();
-        let cc = this.clouds.get(key);
-        if (!cc) { 
-            cc = new ClientCloud(uid, cloud); 
-            this.clouds.set(key, cc); 
-        } else { 
-            cc.smartMerge(cloud); 
+
+private clouds =
+        new CustomHashMap<UUID, ClientCloud>();
+
+
+    public updateCloudFromWork(
+        uid: UUID,
+        cloud: Cloud,
+    ): ClientCloud {
+        let clientCloud =
+            this.clouds.get(uid);
+
+        if (!clientCloud) {
+            clientCloud =
+                new ClientCloud(
+                    uid,
+                    cloud,
+                );
+            this.clouds.set(
+                uid,
+                clientCloud,
+            );
         }
-        return cc; // Теперь возвращаем объект для удобства
+
+        clientCloud.smartMerge(cloud);
+        return clientCloud;
     }
 
-    public getClientCloud(uid: UUID): ClientCloud | undefined {
-        return this.clouds.get(uid.toAString().toString());
+
+    public getClientCloud(
+        uid: UUID,
+    ): ClientCloud | undefined {
+        return this.clouds.get(uid);
     }
 
     public promote(uid: UUID, sid: number): void {
-        this.clouds.get(uid.toAString().toString())?.promote(sid);
+        this.clouds.get(uid)?.promote(sid);
     }
+
     public demote(uid: UUID, sid: number): void {
-        this.clouds.get(uid.toAString().toString())?.demote(sid);
+        this.clouds.get(uid)?.demote(sid);
     }
-    public getOrderedSids(uid: UUID, raw: Cloud): number[] {
-         const key = uid.toAString().toString();
-        let cc = this.clouds.get(key);
-        if (!cc) { cc = new ClientCloud(uid, raw); this.clouds.set(key, cc); }
-        return cc.getOrderedSids();
+
+    public getOrderedSids(
+        uid: UUID,
+        raw: Cloud,
+    ): number[] {
+        let clientCloud = this.clouds.get(uid);
+        if (!clientCloud) {
+            clientCloud = new ClientCloud(uid, raw);
+            this.clouds.set(uid, clientCloud);
+        }
+        return clientCloud.getOrderedSids();
     }
+
 }

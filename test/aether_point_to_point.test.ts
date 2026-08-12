@@ -63,7 +63,12 @@ describe('PointToPointCommunication', () => {
 
     // Общие конфигурации для тестов
     // Убедитесь, что этот URI указывает на ваш запущенный Java-сервер (AetherMockServer или полный)
-    const registrationUri: URI[] = ["ws://localhost:9011"];
+
+    const registrationUri: URI[] = [
+        (globalThis as any).process?.env?.API_BASE_URL
+            ?? "ws://localhost:9012",
+    ];
+
     const defaultPingDuration = 10; // 100ms
 
     /**
@@ -339,4 +344,65 @@ describe('PointToPointCommunication', () => {
 
         // Очистка всех трех клиентов в afterEach
     }, 45000);
+
+    test('P2P_05: Should deliver queued message after recipient reconnects', async () => {
+        const parent = UUID.fromString(
+            "D1401D8C-674D-4948-8D41-C395334AD391",
+        );
+
+        const stateA = new ClientStateInMemory(
+            parent,
+            registrationUri,
+            undefined,
+            CryptoLib.SODIUM,
+        );
+        const stateB = new ClientStateInMemory(
+            parent,
+            registrationUri,
+            undefined,
+            CryptoLib.SODIUM,
+        );
+
+        stateA.getPingDuration().set(defaultPingDuration);
+        stateB.getPingDuration().set(defaultPingDuration);
+
+        client1 = new AetherCloudClient(stateA, "offline-sender");
+        client2 = new AetherCloudClient(stateB, "offline-recipient");
+
+        await AFuture.all(
+            client1.connect(),
+            client2.connect(),
+        ).toPromise(25000);
+
+        const senderUid = client1.getUid()!;
+        const recipientUid = client2.getUid()!;
+        const savedRecipientState = stateB.save();
+
+        await client2.destroy(true).toPromise(5000);
+
+        const message = new Uint8Array([9, 8, 7, 6]);
+        await client1
+            .sendMessage(recipientUid, message)
+            .toPromise(5000);
+
+        const restoredState =
+            ClientStateInMemory.load(savedRecipientState);
+        client2 = new AetherCloudClient(
+            restoredState,
+            "offline-recipient-restored",
+        );
+
+        const received = AFuture.make();
+
+        client2.onMessage.add(
+            (actualSenderUid: UUID, actualMessage: Uint8Array) => {
+                expect(actualSenderUid.equals(senderUid)).toBe(true);
+                expect(actualMessage).toEqual(message);
+                received.tryDone();
+            },
+        );
+
+        await client2.connect().toPromise(25000);
+        await received.toPromise(15000);
+    }, 50000);
 });

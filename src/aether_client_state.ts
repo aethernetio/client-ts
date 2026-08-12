@@ -12,7 +12,10 @@ import { DataInOut, DataInOutStatic } from "./aether_datainout";
 import { AMFuture } from "./aether_future";
 import { Log } from "./aether_logging";
 import { URI, UUID } from "./aether_types";
+
 import { StandardUUIDs } from "./aether_utils";
+import { CustomHashMap } from "./aether_rcollection";
+
 
 /**
  * @class ClientStateInMemory
@@ -45,11 +48,17 @@ export class ClientStateInMemory implements ClientState {
      */
     private servers = new Map<number, ClientState.ServerInfo>();
 
-    /**
+
+/**
      * @private
-     * @type {Map<string, ClientState.ClientInfoMutable>}
+     * @type {CustomHashMap<UUID, ClientState.ClientInfoMutable>}
      */
-    private clients = new Map<string, ClientState.ClientInfoMutable>();
+    private clients =
+        new CustomHashMap<
+            UUID,
+            ClientState.ClientInfoMutable
+        >();
+
 
     /**
      * @private
@@ -118,7 +127,12 @@ export class ClientStateInMemory implements ClientState {
             this.parentUid = arg1;
             this.registrationUris = arg2.slice();
             this.uid = null;
-            this.cryptoLib = arg4 ?? CryptoLib.SODIUM;
+
+
+            this.cryptoLib =
+                arg4 ?? CryptoLib.SODIUM;
+
+
 
             if (arg3) {
                 for (const signer of arg3) {
@@ -130,7 +144,12 @@ export class ClientStateInMemory implements ClientState {
             this.parentUid = StandardUUIDs.ANONYMOUS_UID;
             this.registrationUris = arg2.slice();
             this.uid = null;
-            this.cryptoLib = arg4 ?? CryptoLib.SODIUM;
+
+
+            this.cryptoLib =
+                arg4 ?? CryptoLib.SODIUM;
+
+
 
             if (arg3) {
                 for (const signer of arg3) {
@@ -150,7 +169,12 @@ export class ClientStateInMemory implements ClientState {
                 this.parentUid = arg1 as UUID;
                 this.registrationUris = arg2.slice();
                 this.uid = null;
-                this.cryptoLib = arg4 ?? CryptoLib.SODIUM;
+
+
+                this.cryptoLib =
+                    arg4 ?? CryptoLib.SODIUM;
+
+
                 if (arg3) {
                     for (const signer of arg3) {
                         this.addSigner(signer);
@@ -262,13 +286,16 @@ export class ClientStateInMemory implements ClientState {
     }
 
     /** @inheritDoc */
-    getClientInfo(uid: UUID): ClientState.ClientInfoMutable {
-        const key = uid.toAString().toString();
-        if (!this.clients.has(key)) {
-            this.clients.set(key, new ClientState.ClientInfoMutable(uid));
+
+getClientInfo(uid: UUID): ClientState.ClientInfoMutable {
+        let clientInfo = this.clients.get(uid);
+        if (!clientInfo) {
+            clientInfo = new ClientState.ClientInfoMutable(uid);
+            this.clients.set(uid, clientInfo);
         }
-        return this.clients.get(key)!;
+        return clientInfo;
     }
+
 
     /** @inheritDoc */
     getClientInfoAll(): Iterable<ClientState.ClientInfoMutable> {
@@ -397,14 +424,21 @@ export class ClientStateInMemory implements ClientState {
 
 
 
-    public static load(data: Uint8Array): ClientStateInMemory {
+
+    public static load(
+        data: Uint8Array,
+    ): ClientStateInMemory {
         try {
-            const dto: ClientStateForSave = ClientStateForSave.META.deserialize(null, new DataInOutStatic(data));
-            return new ClientStateInMemory(dto as any);
-        } catch (e) {
-            throw new Error(`Unparsable format state: ${(e as Error).message}`);
+            return new ClientStateInMemory(data);
+        } catch (error) {
+            throw new Error(
+                `Unparsable format state: ${
+                    (error as Error).message
+                }`,
+            );
         }
     }
+
 
 
 

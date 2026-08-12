@@ -1,6 +1,6 @@
 {
   "name": "aether-client",
-  "version": "1.0.2",
+  "version": "1.0.5",
   "main": "build/aether_client.js",
   "types": "build/aether_client.d.ts",
   "files": [
@@ -32,7 +32,7 @@
     "test:webrtc": "jest test/message_node_webrtc.test.ts --runInBand",
     "test:browser": "npx webpack --config webpack.config.mjs --env buildTarget=test && CHROME_BIN=/usr/bin/yandex-browser npx karma start karma.conf.js",
     "test:smarthub": "jest smarthub.test.ts",
-    "pub": "npm run build && npm pack && curl -T aether-client-1.0.2.tgz -u deploy:1930 https://nexus.aethernet.io/npm-private/aether-client-1.0.2.tgz"
+    "pub": "npm run build && npm pack && curl -T aether-client-1.0.5.tgz -u deploy:1930 https://nexus.aethernet.io/npm-private/aether-client-1.0.5.tgz"
   },
   "overrides": {
     "chokidar": "3.5.3",

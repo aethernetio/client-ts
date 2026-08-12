@@ -102,64 +102,111 @@ export function ipAddressToString(ipAddr: IPAddress): string | null {
  * @param {AetherCodec} preferredCodec The preferred codec (e.g., WSS).
  * @returns {URI | null} A full URI string (e.g., "wss://[::1]:9010") or null if none found.
  */
-export function getUriFromServerDescriptor(sd: ServerDescriptor, preferredCodec: AetherCodec): URI | null {
-    Log.trace("Getting URI from ServerDescriptor", { serverId: sd?.id, preferredCodec });
-    if (!sd || !sd.ipAddress || !sd.ipAddress.addresses || sd.ipAddress.addresses.length === 0) {
-        Log.warn("Cannot get URI from invalid ServerDescriptor", { serverId: sd?.id });
+
+export function getUriFromServerDescriptor(
+    sd: ServerDescriptor,
+    preferredCodec: AetherCodec,
+): URI | null {
+    Log.trace(
+        "Getting URI from ServerDescriptor",
+        {
+            serverId: sd?.id,
+            preferredCodec,
+        },
+    );
+
+    if (
+        !sd
+        || !sd.ipAddress
+        || !sd.ipAddress.addresses
+        || sd.ipAddress.addresses.length === 0
+    ) {
+        Log.warn(
+            "Cannot get URI from invalid ServerDescriptor",
+            { serverId: sd?.id },
+        );
         return null;
     }
 
-    let fallbackUri: URI | null = null;
-
     for (const addrInfo of sd.ipAddress.addresses) {
-        // Convert to string first to analyze the format
-        const ipString = ipAddressToString(addrInfo.address);
+        const ipString =
+            ipAddressToString(addrInfo.address);
 
         if (!ipString) {
             continue;
         }
 
-        // Heuristic to detect if it's a raw IP or a Domain Name
-        // IPv4 pattern: 4 groups of digits separated by dots
-        const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(ipString);
-        // IPv6 pattern: contains colons (ipAddressToString ensures this format for v6)
+        const isIPv4 =
+            /^(\d{1,3}\.){3}\d{1,3}$/.test(ipString);
         const isIPv6 = ipString.includes(':');
-
         const isRawIP = isIPv4 || isIPv6;
 
         for (const cap of addrInfo.coderAndPorts) {
-            // FILTER: Strict WSS rule.
-            // WSS requires a valid SSL certificate, which implies a Domain Name.
-            // Browsers block WSS to raw IPs.
-            if (cap.codec === AetherCodec.WSS && isRawIP) {
-                Log.trace("Skipping WSS for raw IP address", { ip: ipString, port: cap.port });
+            if (cap.codec !== preferredCodec) {
                 continue;
             }
 
-            // [NOTE] IPAddressWeb (domains) are not IPv6, so no brackets needed.
-            // However, ipAddressToString logic for IPv6 usually handles compression.
-            // We ensure brackets are added ONLY for IPv6 literals.
-            const hostString = isIPv6 ? `[${ipString}]` : ipString;
-            const scheme = cap.codec === AetherCodec.WS ? 'ws' : (cap.codec === AetherCodec.WSS ? 'wss' : 'tcp');
-            const uri = `${scheme}://${hostString}:${cap.port}`;
+            if (
+                cap.codec === AetherCodec.WSS
+                && isRawIP
+            ) {
+                Log.trace(
+                    "Skipping WSS for raw IP address",
+                    {
+                        ip: ipString,
+                        port: cap.port,
+                    },
+                );
+                continue;
+            }
 
-            if (cap.codec === preferredCodec) {
-                Log.trace(`Found preferred URI: ${uri}`, { serverId: sd.id, uri: uri });
-                return uri;
+            const hostString =
+                isIPv6 ? `[${ipString}]` : ipString;
+
+            let scheme: string;
+            switch (cap.codec) {
+                case AetherCodec.WS:
+                    scheme = 'ws';
+                    break;
+                case AetherCodec.WSS:
+                    scheme = 'wss';
+                    break;
+                case AetherCodec.UDP:
+                    scheme = 'udp';
+                    break;
+                case AetherCodec.TCP:
+                    scheme = 'tcp';
+                    break;
+                default:
+                    continue;
             }
-            if (!fallbackUri) {
-                fallbackUri = uri;
-            }
+
+            const uri =
+                `${scheme}://${hostString}:${cap.port}`;
+
+            Log.trace(
+                `Found preferred URI: ${uri}`,
+                {
+                    serverId: sd.id,
+                    uri,
+                },
+            );
+
+            return uri;
         }
     }
 
-    if (!fallbackUri) {
-        Log.warn("No valid URI found in ServerDescriptor", { serverId: sd.id });
-    } else {
-        Log.trace(`Using fallback URI: $fallbackUri`, { serverId: sd.id, fallbackUri: fallbackUri });
-    }
-    return fallbackUri;
+    Log.trace(
+        "Requested codec is absent in ServerDescriptor",
+        {
+            serverId: sd.id,
+            preferredCodec,
+        },
+    );
+
+    return null;
 }
+
 
 
 /**
@@ -184,36 +231,42 @@ export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
 
 
 
+
     public constructor(
         client: AetherCloudClient,
         uri: URI,
         localApiMeta: FastMetaApi<LT, any>,
-        remoteApiMeta: FastMetaApi<any, RT>
+        remoteApiMeta: FastMetaApi<any, RT>,
     ) {
         this.uri = uri;
         this.client = client;
-        this.logCtxData = { uri: uri.toString() };
+        this.logCtxData = {
+            uri: uri.toString(),
+        };
         this.connectFuture = AFuture.make();
 
         if (client.destroyer.isDestroyed()) {
-            this.connectFuture.tryError(new Error("Client is destroyed"));
+            this.connectFuture.tryError(
+                new Error("Client is destroyed"),
+            );
             this.rootApi = null;
             this.metaContext = null;
             return;
         }
 
         client.destroyer.add(this);
+
         const localApi = this as unknown as LT;
 
+        this.rootApi = FastMetaNet.INSTANCE
+            .get()
+            .makeClientWithRemote(
+                uri,
+                localApiMeta,
+                remoteApiMeta,
+                () => localApi,
+            );
 
-
-        const factory = FastMetaNet.INSTANCE.get();
-        this.rootApi = factory.makeClientWithRemote(
-            uri,
-            localApiMeta,
-            remoteApiMeta,
-            (_ctx: MetaContext) => localApi,
-        );
         this.metaContext =
             (this.rootApi as any)
                 .getFastMetaContext();
@@ -223,21 +276,19 @@ export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
                 this.onConnectionStateChanged(
                     isWritable,
                 );
+
                 if (isWritable) {
                     this.connectFuture.tryDone();
+                } else {
+                    Log.trace(
+                        "Connection lost.",
+                        {uri},
+                    );
                 }
-                this.stateListeners.fire(isWritable);
             },
         );
-
-
-        client.destroyer.add({
-            destroy: (_force: boolean) => {
-                this.metaContext?.close();
-                return AFuture.completed();
-            }
-        });
     }
+
 
 
 
@@ -267,8 +318,11 @@ export class ConnectionBase<LT, RT extends RemoteApi> implements Destroyable {
      */
 
     public destroy(_force: boolean): AFuture {
-        this.metaContext?.close();
-        return AFuture.completed();
+        if (this.metaContext === null) {
+            return AFuture.completed();
+        }
+
+        return this.metaContext.close();
     }
 
 

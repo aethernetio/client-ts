@@ -8747,6 +8747,9 @@ export class ClientApiUnsafeMetaImpl implements FastMetaApi<ClientApiUnsafe, Cli
     makeLocal_fromDataIn(ctx: MetaContext, dataIn: DataIn, localApi: ClientApiUnsafe): void  {
         while(dataIn.isReadable())  {
             const commandId = dataIn.readUByte();
+
+
+
             switch(commandId)  {
                 case 0:  {
                     const reqId = FastMeta.META_REQUEST_ID.deserialize(ctx, dataIn);
@@ -8779,6 +8782,9 @@ export class ClientApiUnsafeMetaImpl implements FastMetaApi<ClientApiUnsafe, Cli
                 case 4:  {
                     let data_813: LoginClientStream;
                     data_813 = LoginClientStream.META.deserialize(ctx, dataIn);
+
+
+
                     const argsObject_814 = new ClientApiUnsafeSendSafeApiDataArguments(data_813);
                     const argsNames_815: string[] = ["data"];
                     const argsValues_816: any[] = [data_813];

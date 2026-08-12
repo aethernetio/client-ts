@@ -21,13 +21,11 @@ export class ClientStateInLocalStorage extends ClientStateInMemory {
         this.storageKey = storageKey;
     }
 
+
     saveState(): void {
         if (!this.getUid()) return;
         try {
-            if (typeof localStorage !== 'undefined') {
-                const bytes = this.save();
-                localStorage.setItem(this.storageKey, JSON.stringify(Array.from(bytes)));
-            }
+            this.save();
         } catch (e) {
             // Silently fail
         }
@@ -35,9 +33,16 @@ export class ClientStateInLocalStorage extends ClientStateInMemory {
 
     save(): Uint8Array {
         const result = super.save();
-        this.saveState();
+        try {
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem(this.storageKey, JSON.stringify(Array.from(result)));
+            }
+        } catch (e) {
+            // Silently fail
+        }
         return result;
     }
+
 
     override setCloud(uid: UUID, cloud: ClientCloud): void {
         super.setCloud(uid, cloud);

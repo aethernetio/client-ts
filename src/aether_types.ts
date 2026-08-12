@@ -3,8 +3,11 @@
  * @purpose Contains core, low-level types and functional interface definitions.
  */
 
-import { AFuture } from './aether_future';
-import { AString, ToString } from './aether_astring';
+
+import type { AFuture } from './aether_future';
+import { AString } from './aether_astring';
+import type { ToString } from './aether_astring';
+
 
 /** Basic Types */
 export type Uint8Array = globalThis.Uint8Array;
@@ -216,6 +219,12 @@ export class AtomicReference<T> {
         return false;
     }
 }
+
+AString.putRenderer<AtomicReference<any>>(
+    AtomicReference,
+    (value, output) => output.add(value.get()),
+);
+
 
 export class AtomicLong {
     private value: number;

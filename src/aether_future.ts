@@ -118,53 +118,176 @@ export class EventConsumer<T> {
     public hasListener(): boolean { return this.listeners.size > 0; }
 }
 
+export class EventConsumerWithQueue<T>
+    extends EventConsumer<T> {
+
+    private readonly queue: T[] = [];
+
+
+    public override add(
+        listener: AConsumer<T>,
+    ): void {
+        const wrapped =
+            Log.wrap(listener);
+
+        (wrapped as any).__original =
+            listener;
+        (wrapped as any)["_onceFlag"] =
+            (listener as any)["_onceFlag"];
+
+        this.listeners.add(wrapped);
+
+        const queued =
+            this.queue.splice(
+                0,
+                this.queue.length,
+            );
+
+        const once = Boolean(
+            (wrapped as any)["_onceFlag"],
+        );
+
+        for (const value of queued) {
+            wrapped(value);
+
+            if (once) {
+                this.listeners.delete(
+                    wrapped,
+                );
+                break;
+            }
+        }
+    }
+
+
+    public override fire(value: T): void {
+        this.queue.push(value);
+
+        if (!this.hasListener()) {
+            return;
+        }
+
+        const queued =
+            this.queue.splice(
+                0,
+                this.queue.length,
+            );
+        const listeners =
+            Array.from(this.listeners);
+
+        for (const listener of listeners) {
+            if (
+                !this.listeners.has(listener)
+            ) {
+                continue;
+            }
+
+            if (
+                WeakConsumer_T
+                    .isGarbageCollected(listener)
+            ) {
+                this.listeners.delete(listener);
+                continue;
+            }
+
+            const once = Boolean(
+                (listener as any)["_onceFlag"],
+            );
+
+            for (const queuedValue of queued) {
+                listener(queuedValue);
+
+                if (once) {
+                    break;
+                }
+            }
+
+            if (once) {
+                this.listeners.delete(listener);
+            }
+        }
+    }
+}
+
+
 /**
  * Manages and fires events for two types.
  * @template T1 The type of the first event value.
  * @template T2 The type of the second event value.
  */
+
 export class EventBiConsumer<T1, T2> {
-    private readonly listeners: Set<ABiConsumer<T1, T2>> = new Set();
+    private readonly listeners =
+        new Set<ABiConsumer<T1, T2>>();
 
-    /**
-     * Adds a persistent listener.
-     * @param listener The listener function.
-     */
-    public add(listener: ABiConsumer<T1, T2>): void { this.listeners.add(Log.wrap(listener)); }
+    public constructor(
+        private readonly onFirstListener?:
+            () => void,
+    ) {
+    }
 
-    /**
-     * Removes a listener.
-     * @param listener The listener function to remove.
-     */
-    public remove(listener: ABiConsumer<T1, T2>): void {
-        let toDelete: ABiConsumer<T1, T2> | null = null;
+    public add(
+        listener: ABiConsumer<T1, T2>,
+    ): void {
+        const first =
+            this.listeners.size === 0;
+        const wrapped =
+            Log.wrap(listener);
+
+        (wrapped as any).__original =
+            listener;
+
+        this.listeners.add(wrapped);
+
+        if (first) {
+            this.onFirstListener?.();
+        }
+    }
+
+    public remove(
+        listener: ABiConsumer<T1, T2>,
+    ): void {
+        let toDelete:
+            ABiConsumer<T1, T2>
+            | null = null;
+
         for (const existing of this.listeners) {
-            /** Check for the listener or the original wrapped listener */
-            if (existing === listener || (existing as any).__original === listener) {
+            if (
+                existing === listener
+                || (existing as any).__original
+                    === listener
+            ) {
                 toDelete = existing;
                 break;
             }
         }
-        if (toDelete) { this.listeners.delete(toDelete); }
+
+        if (toDelete) {
+            this.listeners.delete(toDelete);
+        }
     }
 
-    /**
-     * Checks if any listeners are registered.
-     * @returns True if at least one listener exists.
-     */
-    public hasListener(): boolean { return this.listeners.size > 0; }
+    public hasListener(): boolean {
+        return this.listeners.size > 0;
+    }
 
-    /**
-     * Fires the event, notifying all listeners.
-     * @param v1 The first value to pass to the listeners.
-     * @param v2 The second value to pass to the listeners.
-     */
-    public fire(v1: T1, v2: T2): void {
-        this.listeners.forEach(l => {
-            try { l(v1, v2); } catch (e) { console.error("Error firing bi-event listener:", e); }
-        });
+    public fire(
+        value1: T1,
+        value2: T2,
+    ): void {
+        for (const listener of this.listeners) {
+            try {
+                listener(value1, value2);
+            } catch (error) {
+                console.error(
+                    "Error firing bi-event listener:",
+                    error,
+                );
+            }
+        }
     }
 }
+
 
 // --- AMFuture Implementation ---
 

@@ -1,6 +1,6 @@
  {
   "name": "aether-protocol-generator",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Generates TypeScript API from Aether ADSL files",
   "bin": {
     "aether-protocol-gen": "build/AetherProtocolPlugin.js"
@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "pub": "npm run build && npm pack && curl -T aether-protocol-generator-1.0.0.tgz -u \"deploy:1930\" \"https://nexus.aethernet.io/npm-private/aether-protocol-generator-1.0.0.tgz\""
+    "pub": "npm run build && npm pack && curl -T aether-protocol-generator-1.0.2.tgz -u \"deploy:1930\" \"https://nexus.aethernet.io/npm-private/aether-protocol-generator-1.0.2.tgz\""
   },
   "dependencies": {
     "js-yaml": "^4.1.0"

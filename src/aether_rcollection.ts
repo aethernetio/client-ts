@@ -38,7 +38,7 @@ import { Queue, RU } from './aether_utils';
  * @template K The key type.
  * @template V The value type.
  */
-class CustomHashMap<K, V> {
+export class CustomHashMap<K, V> {
     private buckets = new Map<number, Array<[K, V]>>();
     private _size = 0;
 
@@ -234,6 +234,96 @@ class CustomHashMap<K, V> {
         }
     }
 }
+
+export class CustomHashSet<T>
+    implements Set<T> {
+
+    private readonly valuesMap =
+        new CustomHashMap<T, true>();
+
+    public readonly [Symbol.toStringTag] =
+        "CustomHashSet";
+
+    public constructor(
+        values?: Iterable<T>,
+    ) {
+        if (!values) {
+            return;
+        }
+
+        for (const value of values) {
+            this.add(value);
+        }
+    }
+
+    public get size(): number {
+        return this.valuesMap.size;
+    }
+
+    public add(value: T): this {
+        this.valuesMap.set(value, true);
+        return this;
+    }
+
+    public clear(): void {
+        this.valuesMap.clear();
+    }
+
+    public delete(value: T): boolean {
+        return this.valuesMap.delete(value);
+    }
+
+    public has(value: T): boolean {
+        return this.valuesMap.has(value);
+    }
+
+    public entries():
+        SetIterator<[T, T]> {
+        const values =
+            this.valuesMap.keys();
+
+        return (function* () {
+            for (const value of values) {
+                yield [value, value] as [T, T];
+            }
+        })() as SetIterator<[T, T]>;
+    }
+
+    public keys(): SetIterator<T> {
+        return this.valuesMap
+            .keys() as SetIterator<T>;
+    }
+
+    public values(): SetIterator<T> {
+        return this.valuesMap
+            .keys() as SetIterator<T>;
+    }
+
+    public forEach(
+        callback:
+            (
+                value: T,
+                value2: T,
+                set: Set<T>,
+            ) => void,
+        thisArg?: unknown,
+    ): void {
+        for (const value of this.valuesMap.keys()) {
+            callback.call(
+                thisArg,
+                value,
+                value,
+                this,
+            );
+        }
+    }
+
+    public [Symbol.iterator]():
+        SetIterator<T> {
+        return this.values();
+    }
+}
+
 
 
 // =============================================================================================

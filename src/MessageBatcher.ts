@@ -5,15 +5,38 @@ import { AuthorizedApiRemote, Message } from './aether_api';
 export class MessageBatcher {
     private groups = new Map<string, { data: Uint8Array; uids: UUID[] }>();
 
-    add(uid: UUID, data: Uint8Array): void {
-        const key = this.bytesToKey(data);
-        const entry = this.groups.get(key);
+
+    add(
+        uid: UUID,
+        data: Uint8Array,
+    ): void {
+        const key =
+            this.bytesToKey(data);
+        const entry =
+            this.groups.get(key);
+
         if (entry) {
-            entry.uids.push(uid);
-        } else {
-            this.groups.set(key, { data, uids: [uid] });
+            const alreadyAdded =
+                entry.uids.some(
+                    existing =>
+                        existing.equals(uid),
+                );
+
+            if (!alreadyAdded) {
+                entry.uids.push(uid);
+            }
+            return;
         }
+
+        this.groups.set(
+            key,
+            {
+                data,
+                uids: [uid],
+            },
+        );
     }
+
 
     flush(api: AuthorizedApiRemote): void {
         for (const entry of this.groups.values()) {

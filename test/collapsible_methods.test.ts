@@ -27,6 +27,25 @@ import {
 } from '../src/aether_fastmeta_net';
 
 
+import {
+    AetherCodec,
+    CoderAndPort,
+    IPAddressAndPorts,
+    IPAddressAndPortsList,
+    IPAddressV4,
+    Message,
+    ServerDescriptor,
+} from '../src/aether_api';
+import {
+    getUriFromServerDescriptor,
+} from '../src/aether_client_connection_base';
+import {
+    MyClientApiSafe,
+} from '../src/aether_client_connection_work';
+
+
+
+
 describe('collapsible methods', () => {
     test('parses nullable and collapsible modifiers in either order', () => {
         const nullableThenCollapsible = new TypeInfo('string?~');
@@ -1261,6 +1280,91 @@ describe('collapsible methods', () => {
             jest.useRealTimers();
         }
     });
+
+
+    test('delivers a single ClientApiSafe message', () => {
+        const senderUid = {
+            toString: () => 'sender',
+        } as any;
+        const data = new Uint8Array([1, 2, 3]);
+        const deliver =
+            jest.fn<void, [Uint8Array]>();
+
+        const client = {
+            getUid: jest.fn((): null => null),
+            getMessageNode: jest.fn(() => ({
+                sendMessageFromServerToClient: deliver,
+            })),
+        } as any;
+        const connection = {} as any;
+
+        const api =
+            new MyClientApiSafe(client, connection);
+
+        api.sendMessage(
+            new Message(senderUid, data),
+        );
+
+        expect(client.getMessageNode)
+            .toHaveBeenCalledWith(senderUid);
+        expect(deliver)
+            .toHaveBeenCalledWith(data);
+    });
+
+
+    test(
+        'selects WS instead of a TCP fallback',
+        () => {
+            const descriptor =
+                new ServerDescriptor(
+                    21,
+                    new IPAddressAndPortsList([
+                        new IPAddressAndPorts(
+                            new IPAddressV4(
+                                new Uint8Array([
+                                    127,
+                                    0,
+                                    0,
+                                    1,
+                                ]),
+                            ),
+                            [
+                                new CoderAndPort(
+                                    AetherCodec.UDP,
+                                    9020,
+                                ),
+                                new CoderAndPort(
+                                    AetherCodec.WS,
+                                    9022,
+                                ),
+                                new CoderAndPort(
+                                    AetherCodec.TCP,
+                                    9020,
+                                ),
+                            ],
+                        ),
+                    ]),
+                );
+
+            expect(
+                getUriFromServerDescriptor(
+                    descriptor,
+                    AetherCodec.WSS,
+                ),
+            ).toBeNull();
+
+            expect(
+                getUriFromServerDescriptor(
+                    descriptor,
+                    AetherCodec.WS,
+                ),
+            ).toBe(
+                'ws://127.0.0.1:9022',
+            );
+        },
+    );
+
+
 
 
 

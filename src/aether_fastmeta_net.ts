@@ -597,10 +597,24 @@ export class FastMetaClientWebSocket<LT>
         this.websocket.onclose = (event: any) => this.handleCloseEvent(event);
         this.websocket.onmessage = (event: any) => this.handleUniversalMessage(event);
 
-        if (WebSocketFactory.isNodeEnv() && this.websocket instanceof NodeWebSocketWrapper) {
-            this.websocket.attachNodeErrorListener((error: Error) => {
-                this.handleConnectionError(new ClientApiException(`WebSocket error (Node.js): ${error.message}`, error));
-            });
+
+        if (
+            WebSocketFactory.isNodeEnv()
+            && this.websocket
+                instanceof NodeWebSocketWrapper
+        ) {
+            this.websocket.attachNodeErrorListener(
+                (error: Error) => {
+                    this.handleConnectionError(
+                        new ClientApiException(
+                            `WebSocket error (Node.js): ${
+                                error.message
+                            }`,
+                            error,
+                        ),
+                    );
+                },
+            );
         }
     }
 
@@ -609,8 +623,17 @@ export class FastMetaClientWebSocket<LT>
      * @description Handle incoming WebSocket messages
      * @param {MessageEvent} event Message event
      */
-    private handleUniversalMessage(event: MessageEvent): void {
+
+    private handleUniversalMessage(
+        event: MessageEvent,
+    ): void {
         if (!this.context || !this.localApiMeta) {
+            Log.warn(
+                "WebSocket message ignored before context initialization",
+                {
+                    uri: this.uri,
+                },
+            );
             return;
         }
 
@@ -618,35 +641,128 @@ export class FastMetaClientWebSocket<LT>
             let binaryData: Uint8Array;
             const data = event.data;
 
+            const rawLength =
+                typeof Buffer !== "undefined"
+                && data instanceof Buffer
+                    ? data.length
+                    : data instanceof ArrayBuffer
+                        ? data.byteLength
+                        : data
+                            && typeof data === "object"
+                            && typeof data.byteLength === "number"
+                                ? data.byteLength
+                                : -1;
+
+            Log.info(
+                "Raw WebSocket message received",
+                {
+                    uri: this.uri,
+                    dataType:
+                        data === null
+                            ? "null"
+                            : data?.constructor?.name
+                                ?? typeof data,
+                    rawLength,
+                },
+            );
+
             if (WebSocketFactory.isNodeEnv()) {
-                if (typeof Buffer !== 'undefined' && data instanceof Buffer) {
+                if (
+                    typeof Buffer !== "undefined"
+                    && data instanceof Buffer
+                ) {
                     binaryData = new Uint8Array(data);
                 } else if (data instanceof ArrayBuffer) {
                     binaryData = new Uint8Array(data);
-                } else if (data && typeof data === 'object' && data.buffer instanceof ArrayBuffer) {
-                    binaryData = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-                } else if (data && typeof data === 'object' && typeof data.byteLength === 'number') {
+                } else if (
+                    data
+                    && typeof data === "object"
+                    && data.buffer instanceof ArrayBuffer
+                ) {
+                    binaryData = new Uint8Array(
+                        data.buffer,
+                        data.byteOffset,
+                        data.byteLength,
+                    );
+                } else if (
+                    data
+                    && typeof data === "object"
+                    && typeof data.byteLength === "number"
+                ) {
                     binaryData = new Uint8Array(data);
                 } else {
+                    Log.warn(
+                        "WebSocket message ignored because binary type is unsupported",
+                        {
+                            uri: this.uri,
+                            dataType:
+                                data === null
+                                    ? "null"
+                                    : data?.constructor?.name
+                                        ?? typeof data,
+                        },
+                    );
                     return;
                 }
             } else {
                 if (data instanceof ArrayBuffer) {
                     binaryData = new Uint8Array(data);
-                } else if (typeof Blob !== 'undefined' && data instanceof Blob) {
+                } else if (
+                    typeof Blob !== "undefined"
+                    && data instanceof Blob
+                ) {
                     this.convertBlobToArrayBuffer(data);
                     return;
-                } else if (data && typeof data === 'object' && data.buffer instanceof ArrayBuffer) {
-                    binaryData = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+                } else if (
+                    data
+                    && typeof data === "object"
+                    && data.buffer instanceof ArrayBuffer
+                ) {
+                    binaryData = new Uint8Array(
+                        data.buffer,
+                        data.byteOffset,
+                        data.byteLength,
+                    );
                 } else {
+                    Log.warn(
+                        "WebSocket message ignored because binary type is unsupported",
+                        {
+                            uri: this.uri,
+                            dataType:
+                                data === null
+                                    ? "null"
+                                    : data?.constructor?.name
+                                        ?? typeof data,
+                        },
+                    );
                     return;
                 }
             }
+
+            Log.info(
+                "WebSocket binary message accepted",
+                {
+                    uri: this.uri,
+                    binaryLength: binaryData.length,
+                    bufferedBefore:
+                        this.receiveBuffer.getSizeForRead(),
+                },
+            );
+
             this.processBinaryData(binaryData);
-        } catch (e) {
-            Log.error("Error processing WebSocket message", e as Error);
+        } catch (error) {
+            Log.error(
+                "Error processing WebSocket message",
+                error instanceof Error
+                    ? error
+                    : new Error(String(error)),
+                {
+                    uri: this.uri,
+                },
+            );
         }
     }
+
 
     /**
      * @method convertBlobToArrayBuffer
@@ -765,6 +881,11 @@ export class FastMetaClientWebSocket<LT>
             this.receiveBuffer.skipBytes(headerSize);
             const payload =
                 this.receiveBuffer.readBytes(payloadSize);
+
+
+
+
+
 
             try {
                 this.localApiMeta!
@@ -943,9 +1064,29 @@ export class FastMetaClientWebSocket<LT>
      * @param {Error} error Error that occurred
      */
 
+
     private handleConnectionError(
         error: Error,
     ): void {
+        if (this.isManualClose) {
+            this.clearConnectTimeout();
+            this.connectionStats.connected = false;
+            this.setConnectionState(
+                ConnectionState.DISCONNECTED,
+            );
+            this.fireWritable(false);
+            this.websocket = null;
+
+            if (
+                this.closeFuture &&
+                !this.closeFuture.isFinalStatus()
+            ) {
+                this.closeFuture.tryDone();
+            }
+
+            return;
+        }
+
         Log.error("Connection error", error);
 
         if (this.isReconnecting) {
@@ -958,6 +1099,7 @@ export class FastMetaClientWebSocket<LT>
         if (!this.connectFuture.isFinalStatus()) {
             this.connectFuture.error(error);
         }
+
         if (
             this.closeFuture &&
             !this.closeFuture.isFinalStatus()
@@ -971,11 +1113,9 @@ export class FastMetaClientWebSocket<LT>
             ConnectionState.DISCONNECTED,
         );
         this.fireWritable(false);
-
-        if (!this.isManualClose) {
-            this.scheduleReconnect();
-        }
+        this.scheduleReconnect();
     }
+
 
 
     /**
@@ -1154,12 +1294,15 @@ export class FastMetaClientWebSocket<LT>
             return this.closeFuture;
         }
 
+
         this.closeFuture = AFuture.make();
         this.isManualClose = true;
         this.isReconnecting = false;
         this.fireWritable(false);
+        this.clearConnectTimeout();
 
         if (this.reconnectTimeout) {
+
             clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = null;
         }

@@ -389,8 +389,7 @@ api:
 
 
 
-      pullMessages:
-        id: 36
+
       requestWebRtcSession:
         id: 40
         returns: WebRtcSession

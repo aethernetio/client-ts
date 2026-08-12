@@ -115,14 +115,31 @@ export class ConnectionRegistration extends ConnectionBase<ClientApiRegUnsafe, R
                 try {
                     this.globalApi.setMasterKey(CryptoUtils.aKeyToDtoKey(this.client.getMasterKey()));
                     this.globalApi.finish()
+
+
                         .to((d: FinishResult) => {
-                            Log.trace("RegConn: registration step finish.");
+                            Log.trace(
+                                "RegConn: registration step finish.",
+                            );
+
                             this.client.confirmRegistration(d);
-                            Log.info("RegConn: Registration confirmed.");
-                            this.resolveCloud(d.getCloud(), asymCE).to(() => {
-                                Log.info("RegConn: resolve cloud.");
+
+                            Log.info(
+                                "RegConn: Registration confirmed.",
+                            );
+
+                            this.resolveCloud(
+                                d.getCloud(),
+                                asymCE,
+                            ).to(() => {
+                                Log.info(
+                                    "RegConn: resolve cloud.",
+                                );
                             });
-                        }).addListener((f: any) => {
+                        })
+
+
+                        .addListener((f: any) => {
                             if (!f.isDone()) {
                                 Log.error("flush task canceled 1! " + f);
                             } else {
@@ -143,28 +160,76 @@ export class ConnectionRegistration extends ConnectionBase<ClientApiRegUnsafe, R
         return res;
     }
 
-    private resolveCloud(cloud: Cloud, asymCE: CryptoEngine): AFuture {
-        if (!this.client.isRecoveryInProgress.value) {
-            this.client.isRecoveryInProgress.value = true;
-        }
-        const result = this.client.recoveryFuture;
-        Log.debug("Resolving cloud: " + cloud.data);
 
-        this.safeApi!.resolveServers(cloud)
-            .to((ss: ServerDescriptor[]) => {
-                Log.debug("Received server descriptors: " + ss.map(s => s.id).join(','));
-                for (const s of ss) {
-                    this.client.putServerDescriptor(s);
-                }
-                result.tryDone();
-                Log.info("RegConn: Server descriptors resolved.");
-            })
-            .onError((e: Error) => {
-                Log.error("Failed to resolve servers", e);
-                result.tryError(e);
+    private resolveCloud(
+        cloud: Cloud,
+        _asymCE: CryptoEngine,
+    ): AFuture {
+        if (
+            this.client
+                .isRecoveryInProgress
+                .value
+        ) {
+            Log.debug(
+                "recovery procedure abort",
+            );
+            return this.client.recoveryFuture;
+        }
+
+        this.client
+            .isRecoveryInProgress
+            .value = true;
+
+        const result =
+            this.client.recoveryFuture;
+
+        Log.debug(
+            "Resolving cloud: "
+            + cloud.data,
+        );
+
+        this.safeApi!
+            .resolveServers(cloud)
+            .to(
+                (
+                    descriptors:
+                        ServerDescriptor[],
+                ) => {
+                    Log.debug(
+                        "Received server descriptors: "
+                        + descriptors
+                            .map(value => value.id)
+                            .join(","),
+                    );
+
+                    for (
+                        const descriptor
+                        of descriptors
+                    ) {
+                        this.client
+                            .putServerDescriptor(
+                                descriptor,
+                            );
+                    }
+
+                    result.tryDone();
+
+                    Log.info(
+                        "RegConn: Server descriptors resolved.",
+                    );
+                },
+            )
+            .onError((error: Error) => {
+                Log.error(
+                    "Failed to resolve servers",
+                    error,
+                );
+                result.tryError(error);
             });
+
         return result;
     }
+
 
     public enterGlobal(stream: GlobalRegClientApiStream): void {
         stream.asIn()
