@@ -66,6 +66,73 @@ export default async (env) => {
         ]
     };
 
+
+
+    const browserConfig = {
+        ...commonConfig,
+        target: 'web',
+        mode: 'production',
+        devtool: false,
+        performance: {
+            hints: false
+        },
+        module: {
+            rules: [
+                {
+                    test: /\.tsx?$/,
+                    use: [
+                        {
+                            loader: 'ts-loader',
+                            options: {
+                                configFile: 'tsconfig.browser.json',
+                                transpileOnly: true
+                            }
+                        }
+                    ],
+                    exclude: /node_modules/,
+                    include: [
+                        resolve(__dirname, 'src')
+                    ]
+                }
+            ]
+        },
+        entry: {
+            browser: './src/aether_browser.ts'
+        },
+        resolve: {
+            ...commonConfig.resolve,
+            fallback: {
+                ...commonConfig.resolve.fallback,
+                "console": false,
+                "http": false,
+                "http2": false,
+                "process": false
+            }
+        },
+        optimization: {
+            minimize: true
+        },
+
+        output: {
+            path: resolve(
+                __dirname,
+                'build/browser'
+            ),
+            filename: 'aether-client.min.js',
+            clean: true,
+
+            library: {
+                name: 'Aether',
+                type: 'window'
+            }
+        },
+        plugins: []
+    };
+
+
+
+
+
     const testConfig = {
         ...commonConfig,
         entry: {
@@ -102,10 +169,20 @@ export default async (env) => {
     };
 
 
+
+    if (env && env.buildTarget === 'browser') {
+        console.log('Building Browser Library...');
+        return browserConfig;
+    }
+
+
+
+
     if (env && env.buildTarget === 'test') {
         console.log('Building Test Bundle...');
         return testConfig;
     }
+
 
     console.log('Building Main Bundle...');
     return mainConfig;

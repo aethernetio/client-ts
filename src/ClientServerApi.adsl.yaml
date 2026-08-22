@@ -193,6 +193,13 @@ api:
         params:
           configs: CloudConfig[]
 
+      clientInteraction:
+        id: 22
+        params:
+          uid: UUID
+          stream: ClientInteractionClientStream
+
+
 
 
 
@@ -236,6 +243,8 @@ api:
         returns: void
         params:
           msg: Message
+
+
 
 
       createAccessGroup:
@@ -406,6 +415,11 @@ api:
         id: 42
         returns: void
 
+      getServers:
+        id: 43
+        returns: ServerDescriptorWithGeo[]
+
+
 
   LoginApi:
     methods:
@@ -489,6 +503,18 @@ api:
         returns: void
         params:
           seconds: int
+
+      addServersToCloud:
+        id: 18
+        returns: void
+        params:
+          sids: short[]
+      removeServersFromCloud:
+        id: 19
+        returns: void
+        params:
+          sids: short[]
+
 
   # === Registration API (перенесено из ClientServerRegApi) ===
 

@@ -774,38 +774,92 @@ abstract class AFutureBaseImpl<Self extends AFutureBaseImpl<Self>> {
      * @param text The error message to use.
      * @returns This future instance.
      */
+
     public timeoutError(seconds: number, text: string): Self {
-        const ms = seconds * 1000;
-        const timerDisposer = RU.schedule(null, ms, () => {
-            if (!this.isFinalStatus()) {
-                this.error(new Error(`Timeout: ${text} after ${seconds}s`));
-            }
-        });
-        /** Clean up the timer if the future completes first */
-        this.addListener(_ => timerDisposer.destroy(true));
+        if (this.isFinalStatus()) {
+            return this as unknown as Self;
+        }
+
+        const timerDisposer = RU.schedule(
+            null,
+            seconds * 1000,
+            () => {
+                if (this.isFinalStatus()) {
+                    return;
+                }
+
+                const error = new Error(text);
+                error.name = "TimeoutException";
+                this.setError(error);
+            },
+        );
+
+        this.addListener(() => timerDisposer.destroy(true));
         return this as unknown as Self;
     }
 
     public timeout(seconds: number, task: ARunnable): Self {
-        return this.timeoutMs(seconds * 1000, task);
-    }
-    /**
-     * Sets a timeout to execute a task and cancel the future.
-     * @param ms The timeout duration in milliseconds.
-     * @param task The task to run on timeout.
-     * @returns This future instance.
-     */
-    public timeoutMs(ms: number, task: ARunnable, destroyer:Destroyer =null): Self {
-        const timerDisposer = RU.schedule(destroyer, ms, () => {
-            if (!this.isFinalStatus()) {
-                try { task(); } catch (e) { Log.error("Error in future timeout task", e as Error); }
-                this.cancel(); /** Cancel after task */
-            }
-        });
-        /** Clean up the timer if the future completes first */
-        this.addListener(_ => timerDisposer.destroy(true));
+        if (this.isFinalStatus()) {
+            return this as unknown as Self;
+        }
+
+        const timerDisposer = RU.schedule(
+            null,
+            seconds * 1000,
+            () => {
+                if (this.isFinalStatus()) {
+                    return;
+                }
+
+                try {
+                    task();
+                } finally {
+                    const error = new Error(
+                        `Future timeout after ${seconds} seconds`,
+                    );
+                    error.name = "TimeoutException";
+                    this.tryError(error);
+                }
+            },
+        );
+
+        this.addListener(() => timerDisposer.destroy(true));
         return this as unknown as Self;
     }
+
+    public timeoutMs(
+        ms: number,
+        task: ARunnable,
+        destroyer: Destroyer = null,
+    ): Self {
+        if (this.isFinalStatus()) {
+            return this as unknown as Self;
+        }
+
+        const timerDisposer = RU.schedule(
+            destroyer,
+            ms,
+            () => {
+                if (this.isFinalStatus()) {
+                    return;
+                }
+
+                try {
+                    task();
+                } finally {
+                    const error = new Error(
+                        `Future timeout after ${ms} ms`,
+                    );
+                    error.name = "TimeoutException";
+                    this.tryError(error);
+                }
+            },
+        );
+
+        this.addListener(() => timerDisposer.destroy(true));
+        return this as unknown as Self;
+    }
+
 
     /**
      * Converts this future to a native JavaScript Promise.
@@ -1267,20 +1321,18 @@ export class ARFuture<T> extends AFutureBaseImpl<ARFuture<T>> {
         return this;
     }
 
+
     /** Explicitly handle result with a timeout */
-    public toTimeout(task: AConsumer<T>, timeout: number, onTimeout: ARunnable): ARFuture<T> {
-        const timeoutMs = timeout > 1000000 ? timeout : timeout * 1000;
-        let timedOut = false;
-        const timerDisposer = RU.schedule(null, timeoutMs, () => {
-            timedOut = true;
-            try { onTimeout(); } catch (e) { Log.error("Error in .to() timeout task", e as Error); }
-        });
-        this.addListener(f => {
-            timerDisposer.destroy(true);
-            if (!timedOut && f.isDone()) task(f.getNow()!);
-        });
+    public toTimeout(
+        task: AConsumer<T>,
+        timeout: number,
+        onTimeout: ARunnable,
+    ): ARFuture<T> {
+        this.toConsumer(task);
+        this.timeout(timeout, onTimeout);
         return this;
     }
+
 
 
     public to(...args: any[]): ARFuture<T> {

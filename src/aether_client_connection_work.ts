@@ -9,6 +9,10 @@ import {
     AuthorizedApi,
     AuthorizedApiRemote,
     ClientApiSafe,
+
+    ClientInteractionClientStream,
+    ServerApiByUidClient,
+
     ClientApiUnsafe,
     Cloud,
     CloudConfig,
@@ -24,7 +28,7 @@ import {
 
 
 import { AtomicLong, AtomicReference,  ClientStartException, UUID } from './aether_types';
-import { AFuture } from './aether_future';
+import { AFuture, ARFuture } from './aether_future';
 import { Log } from './aether_logging';
 import { MetaContextBase, RemoteApiFuture } from './aether_fastmeta';
 import { CryptoEngine } from './aether_crypto';
@@ -384,14 +388,14 @@ const remaining =
         Log.info(
             "ClientApiSafe.sendMessage received",
             {
+
                 localUid:
                     this.client.getUid()
-                        ?.toAString()
-                        .toString(),
+                        ?.toString(),
                 remoteUid:
                     message.getUid()
-                        .toAString()
                         .toString(),
+
                 dataLength:
                     message.getData().length,
             },
@@ -534,9 +538,26 @@ const remaining =
                         config.getCloud(),
                     ),
                 );
+
             }
         }
     }
+
+
+    public clientInteraction(
+        uid: UUID,
+        stream: ClientInteractionClientStream,
+    ): void {
+        stream
+            .asIn()
+            .keys(
+                () => ServerApiByUidClient.EMPTY,
+                "byClient",
+                uid,
+            )
+            .accept();
+    }
+
 
 }
 
@@ -849,6 +870,68 @@ const uidsToRemove = Array.from(uidsMap.keys());
     public lifeTime(): number {
         return RU.time() - this.lastBackPing.get();
     }
+
+
+    public measurePingMs(): ARFuture<number> {
+        const result = ARFuture.make<number>();
+        const waitDeadline = RU.time() + 5_000;
+
+        const tryStart = (): void => {
+            if (!this.inProcess.compareAndSet(false, true)) {
+                if (RU.time() >= waitDeadline) {
+                    result.tryError(
+                        new Error(
+                            "Timeout waiting for idle connection before measured ping",
+                        ),
+                    );
+                    return;
+                }
+
+                RU.schedule(null, 1, tryStart);
+                return;
+            }
+
+            let pingInterval = this.client.getPingTime();
+            if (pingInterval <= 0) {
+                pingInterval = 6_000;
+            }
+
+            const advertisedUapDuration = Math.max(
+                pingInterval * 5,
+                5_000,
+            );
+
+            this.lastWorkTime = RU.time();
+            const startedMs = performance.now();
+
+            try {
+                this.authorizedApi.ping(
+                    BigInt(advertisedUapDuration),
+                    BigInt(advertisedUapDuration),
+                ).to(() => {
+                    this.firstAuth = true;
+                    this.inProcess.set(false);
+                    result.tryDone(performance.now() - startedMs);
+                }).onError((error: Error) => {
+                    this.firstAuth = false;
+                    this.inProcess.set(false);
+                    result.tryError(error);
+                });
+            } catch (error) {
+                this.firstAuth = false;
+                this.inProcess.set(false);
+                result.tryError(
+                    error instanceof Error
+                        ? error
+                        : new Error(String(error)),
+                );
+            }
+        };
+
+        tryStart();
+        return result;
+    }
+
 
     public scheduledWork(): void {
         const now = RU.time();

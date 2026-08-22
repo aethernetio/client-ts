@@ -117,12 +117,11 @@ export class ConnectionRegistration extends ConnectionBase<ClientApiRegUnsafe, R
                     this.globalApi.finish()
 
 
+
                         .to((d: FinishResult) => {
                             Log.trace(
                                 "RegConn: registration step finish.",
                             );
-
-                            this.client.confirmRegistration(d);
 
                             Log.info(
                                 "RegConn: Registration confirmed.",
@@ -135,8 +134,10 @@ export class ConnectionRegistration extends ConnectionBase<ClientApiRegUnsafe, R
                                 Log.info(
                                     "RegConn: resolve cloud.",
                                 );
+                                this.client.confirmRegistration(d);
                             });
                         })
+
 
 
                         .addListener((f: any) => {

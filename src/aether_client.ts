@@ -40,6 +40,10 @@ import {
     AccessGroup,
     AuthorizedApiRemote,
     ServerApiByUid,
+
+    ServerApiByUidClient,
+    ServerDescriptorWithGeo,
+
     AccessCheckPair,
     CryptoLib,
 
@@ -640,6 +644,70 @@ public readonly accessOperationsAdd =
     }
 
 
+
+    /**
+     * Ensures that connections for all supplied server descriptors are created
+     * before returning.
+     *
+     * ConnectionWork starts its transport connection from the constructor, so
+     * creating the whole set first allows independent WebSocket handshakes to
+     * proceed concurrently instead of being serialized by caller-side work.
+     */
+
+    public connectServers(
+        serverDescriptors: ServerDescriptor[],
+    ): ConnectionWork[] {
+        const connections: ConnectionWork[] = [];
+
+        for (const serverDescriptor of serverDescriptors) {
+            connections.push(
+                this.getConnection(serverDescriptor),
+            );
+        }
+
+        /*
+         * getConnection() caches every descriptor in ClientState.
+         * Persist the whole batch only after every transport has
+         * already been started so storage I/O cannot serialize
+         * WebSocket startup.
+         */
+        if (
+            serverDescriptors.length > 0
+            && this.state
+        ) {
+            this.state.saveState();
+        }
+
+        return connections;
+    }
+
+    /**
+     * Returns server descriptors restored from persistent client state.
+     *
+     * Applications may use these descriptors to speculatively start
+     * transports while refreshing the authoritative server list.
+     */
+    public getKnownServerDescriptors(): ServerDescriptor[] {
+        const descriptors: ServerDescriptor[] = [];
+
+        for (
+            const serverInfo
+            of this.state.getServerInfoAll()
+        ) {
+            const descriptor =
+                serverInfo.getDescriptor();
+
+            if (descriptor) {
+                descriptors.push(descriptor);
+            }
+        }
+
+        return descriptors;
+    }
+
+
+
+
     public getAnyConnection(): ARFuture<
         ConnectionWork | ConnectionRegistration
     > {
@@ -804,76 +872,212 @@ public readonly accessOperationsAdd =
         this.state.getServerInfo(s.id).setDescriptor(s);
     }
 
+
+    public getServers(): ARFuture<ServerDescriptorWithGeo[]> {
+        return this.getAuthApi1(
+            (api: AuthorizedApiRemote) => api.getServers(),
+        );
+    }
+
+
+
+
+    public measureServerPingMs(sid: number): ARFuture<number> {
+        const connection = this.connections.get(sid);
+        if (!connection || !connection.isWritable()) {
+            return ARFuture.ofThrow(
+                new Error(
+                    `No writable connection for SID ${sid}.`,
+                ),
+            );
+        }
+
+        return connection.measurePingMs();
+    }
+
+
+
+
     public getMyIp(): ARFuture<IpInfo> {
         const result = ARFuture.make<IpInfo>();
         this.getMyIp0(result);
         return result;
     }
 
-    private getMyIp0(result: ARFuture<IpInfo>): void {
-        const timeout = ARFuture.make<IpInfo>();
-        timeout.timeoutMs(
-            2000,
-            () => {
+    private requestMyIp(
+        connection:
+            ConnectionWork
+            | ConnectionRegistration,
+        result: ARFuture<IpInfo>,
+    ): void {
+        if (result.isDone()) {
+            return;
+        }
+
+        const api = connection.getRootApi();
+
+        if (
+            !api
+            || !connection.isWritable()
+        ) {
+            this.retryGetMyIp(result);
+            return;
+        }
+
+        api.getMyIp()
+            .to((ipInfo: IpInfo) => {
+                result.tryDone(ipInfo);
+            })
+            .onError(() => {
                 if (!result.isDone()) {
                     this.retryGetMyIp(result);
                 }
-            },
-            this.destroyer,
-        );
-        for (const conn of this.connections.values()) {
-            if (conn.isWritable()) {
-                conn.getRootApi()!
-                    .getMyIp()
-                    .to((r: IpInfo) => {
-                        if (result.tryDone(r)) timeout.cancel();
-                    })
-                    .onError(() => {
-                        if (!result.isDone()) this.retryGetMyIp(result);
-                    });
+            });
+    }
+
+    private getMyIp0(result: ARFuture<IpInfo>): void {
+        if (
+            result.isDone()
+            || this.destroyer.isDestroyed()
+        ) {
+            return;
+        }
+
+        const connections =
+            Array.from(
+                this.connections.values(),
+            );
+
+        for (const connection of connections) {
+            if (connection.isWritable()) {
+                this.requestMyIp(
+                    connection,
+                    result,
+                );
                 return;
             }
         }
+
+        const pendingConnections =
+            connections.filter(
+                connection =>
+                    !connection
+                        .connectFuture
+                        .isFinalStatus(),
+            );
+
+
+        if (pendingConnections.length > 0) {
+            const firstWritable =
+                AFuture.make();
+
+            let failedConnections = 0;
+
+            for (
+                const connection
+                of pendingConnections
+            ) {
+                connection.connectFuture
+                    .toRunnable(() => {
+                        firstWritable.tryDone();
+                    })
+                    .onError(() => {
+                        failedConnections++;
+
+                        if (
+                            failedConnections
+                            === pendingConnections.length
+                        ) {
+                            firstWritable.tryError(
+                                new Error(
+                                    "All pending connections failed while waiting for getMyIp."
+                                )
+                            );
+                        }
+                    });
+            }
+
+            firstWritable
+                .toRunnable(() => {
+                    if (!result.isDone()) {
+                        this.getMyIp0(result);
+                    }
+                })
+                .onError(() => {
+                    if (!result.isDone()) {
+                        this.retryGetMyIp(result);
+                    }
+                });
+
+            return;
+
+        }
+
         this.getAnyConnection()
-            .to((c: ConnectionWork | ConnectionRegistration) => {
-                if (c instanceof ConnectionWork && c.isWritable()) {
-                    c.getRootApi()!
-                        .getMyIp()
-                        .to((r: IpInfo) => {
-                            if (result.tryDone(r)) timeout.cancel();
-                        })
-                        .onError(() => {
-                            if (!result.isDone()) this.retryGetMyIp(result);
-                        });
-                } else if (
-                    c instanceof ConnectionRegistration &&
-                    c.isWritable()
-                ) {
-                    c.getRootApi()!
-                        .getMyIp()
-                        .to((r: IpInfo) => {
-                            if (result.tryDone(r)) timeout.cancel();
-                        })
-                        .onError(() => {
-                            if (!result.isDone()) this.retryGetMyIp(result);
-                        });
-                } else {
-                    if (!result.isDone()) this.retryGetMyIp(result);
-                }
-            })
+            .to(
+                (
+                    connection:
+                        ConnectionWork
+                        | ConnectionRegistration,
+                ) => {
+                    if (result.isDone()) {
+                        return;
+                    }
+
+                    if (connection.isWritable()) {
+                        this.requestMyIp(
+                            connection,
+                            result,
+                        );
+                        return;
+                    }
+
+                    if (
+                        !connection
+                            .connectFuture
+                            .isFinalStatus()
+                    ) {
+                        connection.connectFuture
+                            .toRunnable(() => {
+                                if (!result.isDone()) {
+                                    this.getMyIp0(result);
+                                }
+                            })
+                            .onError(() => {
+                                if (!result.isDone()) {
+                                    this.retryGetMyIp(
+                                        result,
+                                    );
+                                }
+                            });
+
+                        return;
+                    }
+
+                    this.retryGetMyIp(result);
+                },
+            )
             .onError(() => {
-                if (!result.isDone()) this.retryGetMyIp(result);
+                if (!result.isDone()) {
+                    this.retryGetMyIp(result);
+                }
             });
     }
 
     private retryGetMyIp(result: ARFuture<IpInfo>): void {
         if (this.destroyer.isDestroyed()) return;
-        RU.schedule(this.destroyer, 500, () => {
-            if (!result.isDone()) {
-                this.getMyIp0(result);
-            }
-        });
+
+        RU.schedule(
+            this.destroyer,
+            500,
+            () => {
+                if (!result.isDone()) {
+                    this.getMyIp0(result);
+                }
+            },
+        );
     }
+
 
     public reportAppliedConfig(configs: AppliedConfig[]): void {
         for (const ac of configs) {
@@ -971,15 +1175,45 @@ public readonly accessOperationsAdd =
 
 
 
-    /**
-     * @deprecated Use getMessageNode instead
-     */
-    public getClientApi(uid: UUID, callback: AConsumer<ServerApiByUid>): void {
-        // TODO: rewrite after Connection/ConnectionWork refactoring
-        throw new Error(
-            "getClientApi is deprecated, use getMessageNode instead",
+
+
+    public getClientApi(uid: UUID): ARFuture<ServerApiByUid>;
+    public getClientApi(
+        uid: UUID,
+        callback: AConsumer<ServerApiByUid>,
+    ): void;
+    public getClientApi(
+        uid: UUID,
+        callback?: AConsumer<ServerApiByUid>,
+    ): ARFuture<ServerApiByUid> | void {
+        if (callback) {
+            this.getAuthApi((api: AuthorizedApiRemote) => {
+                callback(
+                    api.openClient(
+                        uid,
+                        () => ServerApiByUidClient.EMPTY,
+                        (data: Uint8Array) => data,
+                        "byClient",
+                        uid,
+                    ),
+                );
+            });
+            return;
+        }
+
+        const result = ARFuture.make<ServerApiByUid>();
+        this.getClientApi(
+            uid,
+            (api: ServerApiByUid) => result.tryDone(api),
         );
+        result.timeoutError(
+            8,
+            "Timeout waiting for ServerApiByUid.",
+        );
+        return result;
     }
+
+
 
     public getAuthApi(t: AConsumer<AuthorizedApiRemote>): void {
         if (!this.destroyer.isDestroyed()) {

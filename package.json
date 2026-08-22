@@ -1,11 +1,16 @@
 {
   "name": "aether-client",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "main": "build/aether_client.js",
   "types": "build/aether_client.d.ts",
+
   "files": [
-    "build"
+    "build/*.js",
+    "build/*.d.ts",
+    "build/*.js.map",
+    "build/browser/aether-client.min.js"
   ],
+
   "dependencies": {
     "@types/libsodium-wrappers": "^0.7.14",
     "assert": "^2.1.0",
@@ -32,6 +37,12 @@
     "test:webrtc": "jest test/message_node_webrtc.test.ts --runInBand",
     "test:browser": "npx webpack --config webpack.config.mjs --env buildTarget=test && CHROME_BIN=/usr/bin/yandex-browser npx karma start karma.conf.js",
     "test:smarthub": "jest smarthub.test.ts",
+
+    "build:browser": "npx webpack --config webpack.config.mjs --env buildTarget=browser",
+    "deploy:browser-site": "node -e \"const fs=require('fs'),path=require('path');const src=path.resolve('build/browser/aether-client.min.js');const site=path.resolve('../main-site');const index=path.join(site,'index.html');const dst=path.join(site,'aether-client.min.js');if(!fs.existsSync(src))throw new Error('Missing browser build: '+src);if(!fs.existsSync(index))throw new Error('main-site not found: '+site);fs.copyFileSync(src,dst);if(!fs.readFileSync(src).equals(fs.readFileSync(dst)))throw new Error('Browser bundle copy verification failed');console.log('Published '+dst);\" ",
+    "prepub": "npm run build:browser",
+    "postpub": "npm run deploy:browser-site",
+
     "pub": "npm run build && npm pack && curl -T aether-client-1.0.5.tgz -u deploy:1930 https://nexus.aethernet.io/npm-private/aether-client-1.0.5.tgz"
   },
   "overrides": {

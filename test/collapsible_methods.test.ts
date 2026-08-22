@@ -43,6 +43,10 @@ import {
     MyClientApiSafe,
 } from '../src/aether_client_connection_work';
 
+import { ARFuture } from '../src/aether_future';
+
+
+
 
 
 
@@ -1310,6 +1314,93 @@ describe('collapsible methods', () => {
         expect(deliver)
             .toHaveBeenCalledWith(data);
     });
+
+
+
+    test('timeoutMs completes future with TimeoutException', () => {
+        jest.useFakeTimers();
+
+        try {
+            const future = ARFuture.make<number>();
+            const onTimeout = jest.fn();
+
+            future.timeoutMs(25, onTimeout);
+            jest.advanceTimersByTime(25);
+
+            expect(onTimeout).toHaveBeenCalledTimes(1);
+            expect(future.isError()).toBe(true);
+
+            expect(future.getError()?.message)
+                .not.toBe("CancellationException");
+
+            expect(future.getError()?.name)
+                .toBe("TimeoutException");
+            expect(future.getError()?.message)
+                .toBe("Future timeout after 25 ms");
+            expect(future.tryDone(123)).toBe(false);
+        } finally {
+            jest.clearAllTimers();
+            jest.useRealTimers();
+        }
+    });
+
+    test('timeoutError preserves Java timeout error text', () => {
+        jest.useFakeTimers();
+
+        try {
+            const future = ARFuture.make<number>();
+
+            future.timeoutError(2, "registration timeout");
+            jest.advanceTimersByTime(2000);
+
+            expect(future.isError()).toBe(true);
+
+            expect(future.getError()?.message)
+                .not.toBe("CancellationException");
+
+            expect(future.getError()?.name)
+                .toBe("TimeoutException");
+            expect(future.getError()?.message)
+                .toBe("registration timeout");
+        } finally {
+            jest.clearAllTimers();
+            jest.useRealTimers();
+        }
+    });
+
+    test(
+        'to(task, timeout, onTimeout) matches Java timeout semantics',
+        () => {
+            jest.useFakeTimers();
+
+            try {
+                const future = ARFuture.make<number>();
+                const onDone = jest.fn();
+                const onTimeout = jest.fn();
+
+                future.to(onDone, 6, onTimeout);
+                jest.advanceTimersByTime(6000);
+
+                expect(onTimeout).toHaveBeenCalledTimes(1);
+                expect(onDone).not.toHaveBeenCalled();
+                expect(future.isError()).toBe(true);
+
+                expect(future.getError()?.message)
+                    .not.toBe("CancellationException");
+
+                expect(future.getError()?.name)
+                    .toBe("TimeoutException");
+                expect(future.getError()?.message)
+                    .toBe("Future timeout after 6 seconds");
+
+                expect(future.tryDone(777)).toBe(false);
+                expect(onDone).not.toHaveBeenCalled();
+            } finally {
+                jest.clearAllTimers();
+                jest.useRealTimers();
+            }
+        },
+    );
 
 
     test(

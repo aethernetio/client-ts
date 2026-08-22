@@ -168,22 +168,26 @@ describe('PointToPointCommunication', () => {
             // Нас интересует только стрим от client1
             if (streamNode.consumerUUID.equals(uid1)) {
                 // Слушаем входящие данные в этом стриме (эквивалент toConsumer)
-                streamNode.bufferIn.add((msg: { data: Uint8Array }) => {
+
+                streamNode.bufferIn.add((msg: Uint8Array) => {
                     Log.debug("Client2 received, sending back...");
-                    expect(msg.data).toEqual(message);
+                    expect(msg).toEqual(message);
                     // Отправляем ответ по тому же стриму
                     streamNode.send(messageBack, AFuture.make());
                 });
+
             }
         });
 
         client1.onClientStreamCreated.add((streamNode: MessageNode) => {
             if (streamNode.consumerUUID.equals(uid2)) {
-                streamNode.bufferIn.add((msg: { data: Uint8Array }) => {
-                    expect(msg.data).toEqual(messageBack);
+
+                streamNode.bufferIn.add((msg: Uint8Array) => {
+                    expect(msg).toEqual(messageBack);
                     checkReceiveMessageBack.tryDone();
                     Log.debug("Client1 received back-message.");
                 });
+
             }
         });
 

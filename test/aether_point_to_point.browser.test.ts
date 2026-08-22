@@ -136,21 +136,25 @@ describe('PointToPointCommunication', () => {
 
         client2.onClientStreamCreated.add((streamNode: MessageNode) => {
             if (streamNode.consumerUUID.equals(uid1)) {
-                streamNode.bufferIn.add((msg: { data: Uint8Array }) => {
+
+                streamNode.bufferIn.add((msg: Uint8Array) => {
                     Log.debug("Client2 received, sending back...");
-                    expect(msg.data).to.deep.equal(message); // .toEqual -> .to.deep.equal
+                    expect(msg).to.deep.equal(message);
                     streamNode.send(messageBack, AFuture.make());
                 });
+
             }
         });
 
         client1.onClientStreamCreated.add((streamNode: MessageNode) => {
             if (streamNode.consumerUUID.equals(uid2)) {
-                streamNode.bufferIn.add((msg: { data: Uint8Array }) => {
-                    expect(msg.data).to.deep.equal(messageBack); // .toEqual -> .to.deep.equal
+
+                streamNode.bufferIn.add((msg: Uint8Array) => {
+                    expect(msg).to.deep.equal(messageBack);
                     checkReceiveMessageBack.tryDone();
                     Log.debug("Client1 received back-message.");
                 });
+
             }
         });
 
