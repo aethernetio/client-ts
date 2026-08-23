@@ -27,7 +27,7 @@ import {
 } from './aether_api';
 
 
-import { AtomicLong, AtomicReference,  ClientStartException, UUID } from './aether_types';
+import { AtomicLong, ClientStartException, UUID } from './aether_types';
 import { AFuture, ARFuture } from './aether_future';
 import { Log } from './aether_logging';
 import { MetaContextBase, RemoteApiFuture } from './aether_fastmeta';
@@ -35,6 +35,14 @@ import { CryptoEngine } from './aether_crypto';
 import { RU } from './aether_utils';
 import { MessageNode } from './aether_client_message';
 import { ClientCloud } from './aether_client_cloud_priority';
+
+
+import {
+    PingAttemptGate,
+    PingRttHistory,
+} from './aether_client_ping_rtt';
+
+
 
 import {
     CustomHashMap,
@@ -573,11 +581,22 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
 
     readonly cryptoEngine: CryptoEngine;
     readonly authorizedApi: AuthorizedApiRemote;
+
     private readonly serverDescriptor: ServerDescriptor;
-    private readonly inProcess = new AtomicReference<boolean>(false);
+
     basicStatus: boolean;
-    lastWorkTime: number = 0;
+
+    private readonly pingRttHistory =
+        new PingRttHistory();
+
+    private readonly pingAttemptGate =
+        new PingAttemptGate();
+
+    private nextPingAtMs = 0;
+
     firstAuth: boolean = false;
+
+
 
 
     protected override onConnectionStateChanged(
@@ -592,7 +611,7 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
         }
 
         if (isWritable) {
-            this.lastWorkTime = 0;
+            this.nextPingAtMs = 0;
             this.firstAuth = false;
 
             Log.info(
@@ -601,11 +620,12 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
             );
         } else {
             this.firstAuth = false;
-            this.inProcess.set(false);
+            this.pingAttemptGate.reset();
         }
 
         this.stateListeners.fire(isWritable);
     }
+
 
     /**
      * @constructor
@@ -872,13 +892,133 @@ const uidsToRemove = Array.from(uidsMap.keys());
     }
 
 
+
+    private resolvedPingIntervalMs(): number {
+        const pingInterval =
+            this.client.getPingTime();
+
+        return pingInterval > 0
+            ? pingInterval
+            : 6_000;
+    }
+
+    private scheduleNextPing(
+        sentAtMs: number,
+        fullPingIntervalMs: number,
+    ): void {
+        const delayMs =
+            this.pingRttHistory.nextPingDelayMs(
+                fullPingIntervalMs,
+            );
+
+        this.nextPingAtMs =
+            sentAtMs + delayMs;
+    }
+
+    private recordSuccessfulPingRtt(
+        startedMs: number,
+        sentAtMs: number,
+        fullPingIntervalMs: number,
+    ): number {
+        const rttMs =
+            Math.max(
+                0.001,
+                performance.now() - startedMs,
+            );
+
+        this.pingRttHistory.record(
+            rttMs,
+        );
+
+        this.scheduleNextPing(
+            sentAtMs,
+            fullPingIntervalMs,
+        );
+
+        return rttMs;
+    }
+
+    private measuredRxWindowMs(
+        fullPingIntervalMs: number,
+    ): number {
+        return Math.max(
+            fullPingIntervalMs * 5,
+            5_000,
+        );
+    }
+
+    private backgroundRxWindowMs(
+        fullPingIntervalMs: number,
+    ): number {
+        const isBrowser =
+            typeof window !== 'undefined'
+            || typeof self !== 'undefined';
+
+        return isBrowser
+            ? Math.max(
+                fullPingIntervalMs * 5,
+                60_000,
+            )
+            : fullPingIntervalMs;
+    }
+
+
+
+
+
+    private beginPingAttempt(): number | null {
+        return this.pingAttemptGate.begin();
+    }
+
+    private completePingAttempt(
+        token: number,
+    ): boolean {
+        return this.pingAttemptGate.complete(
+            token,
+        );
+    }
+
+    private startPingTimeout(
+        token: number,
+        onTimeout: () => void,
+    ): void {
+        RU.schedule(
+            null,
+            5_000,
+            () => {
+                if (
+                    !this.completePingAttempt(
+                        token,
+                    )
+                ) {
+                    return;
+                }
+
+                this.firstAuth = false;
+
+                onTimeout();
+            },
+        );
+    }
+
+
+
+
     public measurePingMs(): ARFuture<number> {
-        const result = ARFuture.make<number>();
-        const waitDeadline = RU.time() + 5_000;
+        const result =
+            ARFuture.make<number>();
+
+        const waitDeadline =
+            RU.time() + 5_000;
 
         const tryStart = (): void => {
-            if (!this.inProcess.compareAndSet(false, true)) {
-                if (RU.time() >= waitDeadline) {
+            const pingToken =
+                this.beginPingAttempt();
+
+            if (pingToken == null) {
+                if (
+                    RU.time() >= waitDeadline
+                ) {
                     result.tryError(
                         new Error(
                             "Timeout waiting for idle connection before measured ping",
@@ -887,134 +1027,241 @@ const uidsToRemove = Array.from(uidsMap.keys());
                     return;
                 }
 
-                RU.schedule(null, 1, tryStart);
+                RU.schedule(
+                    null,
+                    1,
+                    tryStart,
+                );
                 return;
             }
 
-            let pingInterval = this.client.getPingTime();
-            if (pingInterval <= 0) {
-                pingInterval = 6_000;
-            }
+            const fullPingIntervalMs =
+                this.resolvedPingIntervalMs();
 
-            const advertisedUapDuration = Math.max(
-                pingInterval * 5,
-                5_000,
+            const rxWindowMs =
+                this.measuredRxWindowMs(
+                    fullPingIntervalMs,
+                );
+
+            const sentAtMs =
+                RU.time();
+
+            const startedMs =
+                performance.now();
+
+            this.scheduleNextPing(
+                sentAtMs,
+                fullPingIntervalMs,
             );
 
-            this.lastWorkTime = RU.time();
-            const startedMs = performance.now();
+            this.startPingTimeout(
+                pingToken,
+                () => result.tryError(
+                    new Error(
+                        "Timeout waiting for measured ping response",
+                    ),
+                ),
+            );
 
             try {
                 this.authorizedApi.ping(
-                    BigInt(advertisedUapDuration),
-                    BigInt(advertisedUapDuration),
+                    BigInt(
+                        fullPingIntervalMs,
+                    ),
+                    BigInt(
+                        rxWindowMs,
+                    ),
                 ).to(() => {
+                    if (
+                        !this.completePingAttempt(
+                            pingToken,
+                        )
+                    ) {
+                        return;
+                    }
+
+                    const rttMs =
+                        this.recordSuccessfulPingRtt(
+                            startedMs,
+                            sentAtMs,
+                            fullPingIntervalMs,
+                        );
+
                     this.firstAuth = true;
-                    this.inProcess.set(false);
-                    result.tryDone(performance.now() - startedMs);
-                }).onError((error: Error) => {
-                    this.firstAuth = false;
-                    this.inProcess.set(false);
-                    result.tryError(error);
-                });
+
+                    result.tryDone(
+                        rttMs,
+                    );
+                }).onError(
+                    (error: Error) => {
+                        if (
+                            !this.completePingAttempt(
+                                pingToken,
+                            )
+                        ) {
+                            return;
+                        }
+
+                        this.firstAuth = false;
+                        result.tryError(error);
+                    },
+                );
             } catch (error) {
+                if (
+                    !this.completePingAttempt(
+                        pingToken,
+                    )
+                ) {
+                    return;
+                }
+
                 this.firstAuth = false;
-                this.inProcess.set(false);
+
                 result.tryError(
                     error instanceof Error
                         ? error
-                        : new Error(String(error)),
+                        : new Error(
+                            String(error),
+                        ),
                 );
             }
         };
 
         tryStart();
+
         return result;
     }
 
 
+
+
+
+
     public scheduledWork(): void {
-        const now = RU.time();
-
-        let pingInterval =
-            this.client.getPingTime();
-
-        if (pingInterval <= 0) {
-            pingInterval = 6_000;
-        }
+        const now =
+            RU.time();
 
         if (
-            this.lastWorkTime !== 0
-            && now - this.lastWorkTime < pingInterval
+            this.nextPingAtMs !== 0
+            && now < this.nextPingAtMs
         ) {
             return;
         }
 
-        if (
-            !this.isWritable()
-            || !this.inProcess.compareAndSet(false, true)
-        ) {
+        if (!this.isWritable()) {
             return;
         }
 
+        const pingToken =
+            this.beginPingAttempt();
 
-        this.lastWorkTime = now;
+        if (pingToken == null) {
+            return;
+        }
 
-        const isBrowser =
-            typeof window !== 'undefined'
-            || typeof self !== 'undefined';
+        const fullPingIntervalMs =
+            this.resolvedPingIntervalMs();
 
-        const advertisedUapDuration =
-            isBrowser
-                ? Math.max(
-                    pingInterval * 5,
-                    60_000,
-                )
-                : pingInterval;
+        const rxWindowMs =
+            this.backgroundRxWindowMs(
+                fullPingIntervalMs,
+            );
 
-        const advertisedUapDurationBigInt =
-            BigInt(advertisedUapDuration);
+        const sentAtMs =
+            RU.time();
 
+        const startedMs =
+            performance.now();
+
+        this.scheduleNextPing(
+            sentAtMs,
+            fullPingIntervalMs,
+        );
+
+        this.startPingTimeout(
+            pingToken,
+            () => Log.warn(
+                "Ping response timed out, will retry after ping interval",
+            ),
+        );
 
         try {
             this.authorizedApi.ping(
-
-                advertisedUapDurationBigInt,
-                advertisedUapDurationBigInt,
-
+                BigInt(
+                    fullPingIntervalMs,
+                ),
+                BigInt(
+                    rxWindowMs,
+                ),
             ).to(() => {
+                if (
+                    !this.completePingAttempt(
+                        pingToken,
+                    )
+                ) {
+                    return;
+                }
+
+                const rttMs =
+                    this.recordSuccessfulPingRtt(
+                        startedMs,
+                        sentAtMs,
+                        fullPingIntervalMs,
+                    );
+
                 this.firstAuth = true;
-                this.inProcess.set(false);
 
                 Log.debug(
                     "Ping response received",
                     {
-
-                        nextConnectMsDuration: advertisedUapDuration,
-                        rxWindowMs: advertisedUapDuration,
-
+                        nextConnectMsDuration:
+                            fullPingIntervalMs,
+                        rxWindowMs,
+                        rttMs,
+                        nextPingAtMs:
+                            this.nextPingAtMs,
                     },
                 );
-            }).onError((error: Error) => {
-                this.firstAuth = false;
-                this.inProcess.set(false);
+            }).onError(
+                (error: Error) => {
+                    if (
+                        !this.completePingAttempt(
+                            pingToken,
+                        )
+                    ) {
+                        return;
+                    }
 
-                Log.warn(
-                    "Ping failed, will retry after ping interval",
-                    error,
-                );
-            });
+                    this.firstAuth = false;
+
+                    Log.warn(
+                        "Ping failed, will retry after ping interval",
+                        error,
+                    );
+                },
+            );
         } catch (error) {
+            if (
+                !this.completePingAttempt(
+                    pingToken,
+                )
+            ) {
+                return;
+            }
+
             this.firstAuth = false;
-            this.inProcess.set(false);
 
             Log.warn(
                 "Failed to send ping, will retry after ping interval",
                 error instanceof Error
                     ? error
-                    : new Error(String(error)),
+                    : new Error(
+                        String(error),
+                    ),
             );
         }
     }
+
+
 
 }
