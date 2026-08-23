@@ -3,3 +3,6 @@
 !.gitignore
 build/
 **/node_modules
+
+# NPM package archives
+*.tgz
