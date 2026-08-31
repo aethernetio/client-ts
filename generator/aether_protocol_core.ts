@@ -21,7 +21,15 @@ export type TypeDefinition = {
     doc?: string;
     fields?: { [key: string]: any };
     constants?: { [key: string]: string | number | boolean };
-    stream?: { api?: string, crypto?: boolean, name?: string, remoteApi?: string };
+
+    stream?: {
+        api?: string;
+        remoteApi?: string;
+        apis?: Array<{ api: string; remoteApi?: string }>;
+        crypto?: boolean;
+        name?: string;
+    };
+
 
     multiplexor?: { channels: string[] };
     syncmap?: { key: string; value: string };

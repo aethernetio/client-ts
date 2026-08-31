@@ -313,12 +313,24 @@ import {
                     if (!dslMeta.types) dslMeta.types = {};
                     dslMeta.types[anonName] = typeDef as TypeDefinition;
                 }
-                if (isStream && typeDef.stream?.api) {
-                    this.generatorLogic.streamApiMap.set(anonName, typeDef.stream.api as string);
-                    if (typeDef.stream.remoteApi) {
-                        this.generatorLogic.streamRemoteApiMap.set(anonName, typeDef.stream.remoteApi as string);
+
+                const defaultStreamApi =
+                    typeDef.stream?.api ?? typeDef.stream?.apis?.[0]?.api;
+                const defaultStreamRemoteApi =
+                    typeDef.stream?.remoteApi ?? typeDef.stream?.apis?.[0]?.remoteApi;
+                if (isStream && defaultStreamApi) {
+                    this.generatorLogic.streamApiMap.set(
+                        anonName,
+                        defaultStreamApi as string,
+                    );
+                    if (defaultStreamRemoteApi) {
+                        this.generatorLogic.streamRemoteApiMap.set(
+                            anonName,
+                            defaultStreamRemoteApi as string,
+                        );
                     }
                 }
+
                 return anonName;
             }
             return typeDef;

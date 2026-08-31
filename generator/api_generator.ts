@@ -146,7 +146,12 @@ export class ApiGenerator {
                             (paramType as any).stream
                         ) {
                             // Stream type that wasn't pre-processed (shouldn't happen, but handle)
+
                             const streamDef = (paramType as any).stream;
+                            const defaultStreamApi =
+                                streamDef.api ?? streamDef.apis?.[0]?.api;
+                            const defaultStreamRemoteApi =
+                                streamDef.remoteApi ?? streamDef.apis?.[0]?.remoteApi;
                             const anonymeTypeName =
                                 this.generatorLogic.declareAnonymType(
                                     [paramName + "Stream", methodName, apiName],
@@ -158,13 +163,14 @@ export class ApiGenerator {
                             methodDef.streamParams[paramName] = true;
                             methodDef.streamApiTypes =
                                 methodDef.streamApiTypes || {};
-                            methodDef.streamApiTypes[paramName] = streamDef.api;
-                            if (streamDef.remoteApi) {
+                            methodDef.streamApiTypes[paramName] = defaultStreamApi;
+                            if (defaultStreamRemoteApi) {
                                 methodDef.streamRemoteApiTypes =
                                     methodDef.streamRemoteApiTypes || {};
                                 methodDef.streamRemoteApiTypes[paramName] =
-                                    streamDef.remoteApi;
+                                    defaultStreamRemoteApi;
                             }
+
                         } else if (
                             typeof paramType === "object" &&
                             paramType !== null &&
@@ -185,7 +191,11 @@ export class ApiGenerator {
                                 methodDef.streamParams =
                                     methodDef.streamParams || {};
                                 methodDef.streamParams[paramName] = true;
-                                const api = streamApi || typeDef?.stream?.api;
+
+                                const api =
+                                    streamApi ||
+                                    typeDef?.stream?.api ||
+                                    typeDef?.stream?.apis?.[0]?.api;
                                 methodDef.streamApiTypes =
                                     methodDef.streamApiTypes || {};
                                 methodDef.streamApiTypes[paramName] =
@@ -193,13 +203,16 @@ export class ApiGenerator {
                                 const streamRemoteApi =
                                     this.generatorLogic.streamRemoteApiMap.get(
                                         typeName,
-                                    ) || typeDef?.stream?.remoteApi;
+                                    ) ||
+                                    typeDef?.stream?.remoteApi ||
+                                    typeDef?.stream?.apis?.[0]?.remoteApi;
                                 if (streamRemoteApi) {
                                     methodDef.streamRemoteApiTypes =
                                         methodDef.streamRemoteApiTypes || {};
                                     methodDef.streamRemoteApiTypes[paramName] =
                                         streamRemoteApi;
                                 }
+
                             }
                         }
                     },
@@ -711,7 +724,17 @@ export class ApiGenerator {
         sb.push(
             `            default: throw new SecurityConnectionDropException(\`Unknown command ID: \${commandId}\`);`,
         );
-        sb.push(`        }}`);
+
+        sb.push(`        }`);
+        sb.push(`            const switchedMeta = ctx.applyLocalApiSwitch();`);
+        sb.push(`            if (switchedMeta !== null) {`);
+        sb.push(`                if (dataIn.isReadable()) {`);
+        sb.push(`                    switchedMeta.makeLocal(ctx, dataIn);`);
+        sb.push(`                }`);
+        sb.push(`                return;`);
+        sb.push(`            }`);
+        sb.push(`        }`);
+
         sb.push(`    }`);
     }
 
@@ -931,6 +954,12 @@ export class ApiGenerator {
         sb.push(`            },`);
 
         sb.push(`            getFastMetaContext: () => ${sCtx},`);
+
+
+        sb.push(
+            `            as: <T, R extends RemoteApi>(meta: FastMetaApi<T, R>): R => ${sCtx}.makeRemote(meta),`,
+        );
+
 
         methods.forEach((m) => {
             this.generateRemoteApiMethodImpl(sb, g, m, sCtx);

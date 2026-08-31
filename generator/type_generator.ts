@@ -1243,25 +1243,48 @@ export class TypeGenerator {
     private generateStreamClass(name: string, cfg: TypeDefinition): string {
         const sb: string[] = [];
 
+
         const stream = cfg.stream;
-        if (!stream || typeof stream.api !== "string") {
-            throw new Error(`Api type is not String for: ${name}`);
-        }
-        const apiType =
-            this.generatorLogic.resolveCanonicalTypeName(stream.api);
-        if (!apiType) {
-            throw new Error(`Api type is not specified for: ${name}`);
+        if (!stream) {
+            throw new Error(`Stream definition is not specified for: ${name}`);
         }
 
-        const remoteApiType = cfg.stream?.remoteApi
-            ? this.generatorLogic.resolveCanonicalTypeName(
-                  cfg.stream.remoteApi as string,
-              )
-            : undefined;
-        const hasCrypto = !!cfg.stream?.crypto;
+
+        const rawApiPairs = Array.isArray(stream.apis)
+            ? stream.apis
+            : typeof stream.api === "string"
+              ? [{ api: stream.api, remoteApi: stream.remoteApi }]
+              : null;
+        if (rawApiPairs === null) {
+            throw new Error(`Api type is not String for: ${name}`);
+        }
+        if (rawApiPairs.length === 0) {
+            throw new Error(`stream.apis must be a non-empty list for: ${name}`);
+        }
+
+
+        const apiPairs = rawApiPairs.map((pair, index) => {
+            if (!pair || typeof pair.api !== "string") {
+                throw new Error(
+                    `stream.apis[${index}].api must be a String for: ${name}`,
+                );
+            }
+
+            return {
+                api: this.generatorLogic.resolveCanonicalTypeName(pair.api),
+                remoteApi: pair.remoteApi
+                    ? this.generatorLogic.resolveCanonicalTypeName(pair.remoteApi)
+                    : undefined,
+            };
+        });
+
+        const apiType = apiPairs[0].api;
+        const remoteApiType = apiPairs[0].remoteApi;
+        const hasCrypto = !!stream.crypto;
 
         const apiRemoteType = `${apiType}Remote`;
         const factoryApiType = remoteApiType ?? 'any';
+
 
 
         const doc = (cfg as any).doc;
@@ -1280,10 +1303,82 @@ export class TypeGenerator {
 
         sb.push(`    public asIn(): any { return this as any; }`);
 
+
+        apiPairs.forEach((pair, index) => {
+            const variantApiType = pair.api;
+            const variantRemoteApiType = pair.remoteApi;
+
+            sb.push(`    public static readonly V${index} = class V${index} {`);
+            sb.push(
+                `        static api(source: MetaContext | RemoteApi): ${variantApiType}Remote {`,
+            );
+            sb.push(
+                `            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;`,
+            );
+            sb.push(
+                `            return ctx.makeRemote((${variantApiType} as any).META) as ${variantApiType}Remote;`,
+            );
+            sb.push(`        }`);
+
+            if (variantRemoteApiType) {
+                sb.push(
+                    `        static remoteApi(source: MetaContext | RemoteApi): ${variantRemoteApiType}Remote {`,
+                );
+                sb.push(
+                    `            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;`,
+                );
+                sb.push(
+                    `            return ctx.makeRemote((${variantRemoteApiType} as any).META) as ${variantRemoteApiType}Remote;`,
+                );
+                sb.push(`        }`);
+            }
+
+            sb.push(
+                `        static switchLocalApi(ctx: MetaContext, localApi: ${variantApiType}): void {`,
+            );
+            sb.push(
+                `            ctx.switchLocalApi(localApi, (${variantApiType} as any).META);`,
+            );
+            sb.push(`        }`);
+
+            if (variantRemoteApiType) {
+                sb.push(
+                    `        static in(in_: any, source: MetaContext | ((api: ${variantRemoteApiType}Remote) => ${variantApiType}), ...keys: any[]): any {`,
+                );
+                sb.push(`            if (typeof source === "function") {`);
+                sb.push(
+                    `                in_.factory = (ctx: MetaContext) => source(ctx.makeRemote((${variantRemoteApiType} as any).META) as ${variantRemoteApiType}Remote);`,
+                );
+                sb.push(`                in_._streamKeys = keys;`);
+                sb.push(`            } else {`);
+                sb.push(`                in_.activeContext = source;`);
+                sb.push(`            }`);
+                sb.push(
+                    `            in_.localMeta = (${variantApiType} as any).META;`,
+                );
+                sb.push(`            return in_;`);
+                sb.push(`        }`);
+
+                sb.push(
+                    `        static send(remoteGenerator: (api: ${variantApiType}Remote) => void, factory: (ctx: MetaContext) => ${variantRemoteApiType}, ...keys: any[]): any {`,
+                );
+                sb.push(
+                    `            return ${name}.Out.sendWithMeta((${variantApiType} as any).META, remoteGenerator, factory, ...keys);`,
+                );
+                sb.push(`        }`);
+            }
+
+            sb.push(`    };`);
+        });
+
+
         sb.push(`    public static readonly In = class In extends ${name} {`);
         sb.push(`        public parentContext: MetaContext | null = null;`);
         sb.push(`        public activeContext: MetaContext | null = null;`);
-            sb.push(`        public factory: ((ctx: MetaContext) => ${apiType}) | null = null;`);
+        sb.push(`        public factory: ((ctx: MetaContext) => any) | null = null;`);
+
+        sb.push(`        public localMeta: FastMetaApi<any, any> = (${apiType} as any).META;`);
+
         sb.push(`        public _streamKeys: any[] | null = null;`);
         sb.push(
             `        public onFlushC: ((cc: MetaContext) => void) | null = null;`,
@@ -1417,7 +1512,7 @@ export class TypeGenerator {
         sb.push(`            }`);
         if (apiType) {
             sb.push(
-                `            (${apiType} as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));`,
+                `            this.localMeta.makeLocal(this.activeContext!, new DataInOutStatic(targetData));`,
             );
         } else {
             sb.push(
@@ -1429,9 +1524,14 @@ export class TypeGenerator {
 
         // === Out (client-side) ===
         sb.push(`    public static readonly Out = class Out extends ${name} {`);
+
         sb.push(
             `        public deferredRemoteGenerator: ((api: any) => void) | null = null;`,
         );
+        sb.push(
+            `        public deferredApiMeta: FastMetaApi<any, any> = (${apiType} as any).META;`,
+        );
+
         sb.push(
             `        public deferredFactory: ((ctx: MetaContext) => any) | null = null;`,
         );
@@ -1452,13 +1552,19 @@ export class TypeGenerator {
 
         // send(Consumer, factory, keys)
 
+
         sb.push(`        static sendWithApi(remoteGenerator: (api: ${apiRemoteType}) => void, factory: (ctx: MetaContext) => ${factoryApiType}, ...keys: any[]): Out {`);
+        sb.push(`            return this.sendWithMeta((${apiType} as any).META, remoteGenerator, factory, ...keys);`);
+        sb.push(`        }`);
+        sb.push(`        static sendWithMeta(meta: FastMetaApi<any, any>, remoteGenerator: (api: any) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out {`);
         sb.push(`            const out = new Out();`);
-        sb.push(`            out.deferredRemoteGenerator = remoteGenerator as any;`);
-        sb.push(`            out.deferredFactory = factory as any;`);
+        sb.push(`            out.deferredApiMeta = meta;`);
+        sb.push(`            out.deferredRemoteGenerator = remoteGenerator;`);
+        sb.push(`            out.deferredFactory = factory;`);
         sb.push(`            out.deferredKeys = keys;`);
         sb.push(`            return out;`);
         sb.push(`        }`);
+
 
 
 
@@ -1497,7 +1603,7 @@ export class TypeGenerator {
             );
             sbImpl.push(`                try {`);
             sbImpl.push(
-                `                    const remoteApi = childCtx.makeRemote((${apiType} as any).META);`,
+                `                    const remoteApi = outObj.deferredApiMeta.makeRemote(childCtx);`,
             );
             sbImpl.push(
                 `                    outObj.deferredRemoteGenerator(remoteApi);`,

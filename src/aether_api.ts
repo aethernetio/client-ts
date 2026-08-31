@@ -5693,10 +5693,23 @@ export class ClientApiRegSafeStream implements ToString  {
         return this as any;
         
     }
+    public static readonly V0 = class V0  {
+        static api(source: MetaContext | RemoteApi): ClientApiRegSafeRemote  {
+            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
+            return ctx.makeRemote((ClientApiRegSafe as any).META) as ClientApiRegSafeRemote;
+            
+        }
+        static switchLocalApi(ctx: MetaContext, localApi: ClientApiRegSafe): void  {
+            ctx.switchLocalApi(localApi, (ClientApiRegSafe as any).META);
+            
+        }
+        
+    };
     public static readonly In = class In extends ClientApiRegSafeStream  {
         public parentContext: MetaContext | null = null;
         public activeContext: MetaContext | null = null;
-        public factory: ((ctx: MetaContext) => ClientApiRegSafe) | null = null;
+        public factory: ((ctx: MetaContext) => any) | null = null;
+        public localMeta: FastMetaApi<any, any> = (ClientApiRegSafe as any).META;
         public _streamKeys: any[] | null = null;
         public onFlushC: ((cc: MetaContext) => void) | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -5775,13 +5788,14 @@ export class ClientApiRegSafeStream implements ToString  {
                 this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (ClientApiRegSafe as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
+            this.localMeta.makeLocal(this.activeContext!, new DataInOutStatic(targetData));
             
         }
         
     };
     public static readonly Out = class Out extends ClientApiRegSafeStream  {
         public deferredRemoteGenerator: ((api: any) => void) | null = null;
+        public deferredApiMeta: FastMetaApi<any, any> = (ClientApiRegSafe as any).META;
         public deferredFactory: ((ctx: MetaContext) => any) | null = null;
         public deferredKeys: any[] | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -5796,9 +5810,14 @@ export class ClientApiRegSafeStream implements ToString  {
             
         }
         static sendWithApi(remoteGenerator: (api: ClientApiRegSafeRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
+            return this.sendWithMeta((ClientApiRegSafe as any).META, remoteGenerator, factory, ...keys);
+            
+        }
+        static sendWithMeta(meta: FastMetaApi<any, any>, remoteGenerator: (api: any) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
-            out.deferredRemoteGenerator = remoteGenerator as any;
-            out.deferredFactory = factory as any;
+            out.deferredApiMeta = meta;
+            out.deferredRemoteGenerator = remoteGenerator;
+            out.deferredFactory = factory;
             out.deferredKeys = keys;
             return out;
             
@@ -5828,10 +5847,23 @@ export class ClientApiStream implements ToString  {
         return this as any;
         
     }
+    public static readonly V0 = class V0  {
+        static api(source: MetaContext | RemoteApi): ServerApiByUidRemote  {
+            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
+            return ctx.makeRemote((ServerApiByUid as any).META) as ServerApiByUidRemote;
+            
+        }
+        static switchLocalApi(ctx: MetaContext, localApi: ServerApiByUid): void  {
+            ctx.switchLocalApi(localApi, (ServerApiByUid as any).META);
+            
+        }
+        
+    };
     public static readonly In = class In extends ClientApiStream  {
         public parentContext: MetaContext | null = null;
         public activeContext: MetaContext | null = null;
-        public factory: ((ctx: MetaContext) => ServerApiByUid) | null = null;
+        public factory: ((ctx: MetaContext) => any) | null = null;
+        public localMeta: FastMetaApi<any, any> = (ServerApiByUid as any).META;
         public _streamKeys: any[] | null = null;
         public onFlushC: ((cc: MetaContext) => void) | null = null;
         constructor(data: Uint8Array, parentContext: MetaContext)  {
@@ -5903,13 +5935,14 @@ export class ClientApiStream implements ToString  {
                 this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (ServerApiByUid as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
+            this.localMeta.makeLocal(this.activeContext!, new DataInOutStatic(targetData));
             
         }
         
     };
     public static readonly Out = class Out extends ClientApiStream  {
         public deferredRemoteGenerator: ((api: any) => void) | null = null;
+        public deferredApiMeta: FastMetaApi<any, any> = (ServerApiByUid as any).META;
         public deferredFactory: ((ctx: MetaContext) => any) | null = null;
         public deferredKeys: any[] | null = null;
         constructor()  {
@@ -5923,9 +5956,14 @@ export class ClientApiStream implements ToString  {
             
         }
         static sendWithApi(remoteGenerator: (api: ServerApiByUidRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
+            return this.sendWithMeta((ServerApiByUid as any).META, remoteGenerator, factory, ...keys);
+            
+        }
+        static sendWithMeta(meta: FastMetaApi<any, any>, remoteGenerator: (api: any) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
-            out.deferredRemoteGenerator = remoteGenerator as any;
-            out.deferredFactory = factory as any;
+            out.deferredApiMeta = meta;
+            out.deferredRemoteGenerator = remoteGenerator;
+            out.deferredFactory = factory;
             out.deferredKeys = keys;
             return out;
             
@@ -5950,10 +5988,23 @@ export class ClientInteractionClientStream implements ToString  {
         return this as any;
         
     }
+    public static readonly V0 = class V0  {
+        static api(source: MetaContext | RemoteApi): ServerApiByUidClientRemote  {
+            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
+            return ctx.makeRemote((ServerApiByUidClient as any).META) as ServerApiByUidClientRemote;
+            
+        }
+        static switchLocalApi(ctx: MetaContext, localApi: ServerApiByUidClient): void  {
+            ctx.switchLocalApi(localApi, (ServerApiByUidClient as any).META);
+            
+        }
+        
+    };
     public static readonly In = class In extends ClientInteractionClientStream  {
         public parentContext: MetaContext | null = null;
         public activeContext: MetaContext | null = null;
-        public factory: ((ctx: MetaContext) => ServerApiByUidClient) | null = null;
+        public factory: ((ctx: MetaContext) => any) | null = null;
+        public localMeta: FastMetaApi<any, any> = (ServerApiByUidClient as any).META;
         public _streamKeys: any[] | null = null;
         public onFlushC: ((cc: MetaContext) => void) | null = null;
         constructor(data: Uint8Array, parentContext: MetaContext)  {
@@ -6025,13 +6076,14 @@ export class ClientInteractionClientStream implements ToString  {
                 this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (ServerApiByUidClient as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
+            this.localMeta.makeLocal(this.activeContext!, new DataInOutStatic(targetData));
             
         }
         
     };
     public static readonly Out = class Out extends ClientInteractionClientStream  {
         public deferredRemoteGenerator: ((api: any) => void) | null = null;
+        public deferredApiMeta: FastMetaApi<any, any> = (ServerApiByUidClient as any).META;
         public deferredFactory: ((ctx: MetaContext) => any) | null = null;
         public deferredKeys: any[] | null = null;
         constructor()  {
@@ -6045,9 +6097,14 @@ export class ClientInteractionClientStream implements ToString  {
             
         }
         static sendWithApi(remoteGenerator: (api: ServerApiByUidClientRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
+            return this.sendWithMeta((ServerApiByUidClient as any).META, remoteGenerator, factory, ...keys);
+            
+        }
+        static sendWithMeta(meta: FastMetaApi<any, any>, remoteGenerator: (api: any) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
-            out.deferredRemoteGenerator = remoteGenerator as any;
-            out.deferredFactory = factory as any;
+            out.deferredApiMeta = meta;
+            out.deferredRemoteGenerator = remoteGenerator;
+            out.deferredFactory = factory;
             out.deferredKeys = keys;
             return out;
             
@@ -6072,10 +6129,23 @@ export class GlobalApiStream implements ToString  {
         return this as any;
         
     }
+    public static readonly V0 = class V0  {
+        static api(source: MetaContext | RemoteApi): GlobalRegServerApiRemote  {
+            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
+            return ctx.makeRemote((GlobalRegServerApi as any).META) as GlobalRegServerApiRemote;
+            
+        }
+        static switchLocalApi(ctx: MetaContext, localApi: GlobalRegServerApi): void  {
+            ctx.switchLocalApi(localApi, (GlobalRegServerApi as any).META);
+            
+        }
+        
+    };
     public static readonly In = class In extends GlobalApiStream  {
         public parentContext: MetaContext | null = null;
         public activeContext: MetaContext | null = null;
-        public factory: ((ctx: MetaContext) => GlobalRegServerApi) | null = null;
+        public factory: ((ctx: MetaContext) => any) | null = null;
+        public localMeta: FastMetaApi<any, any> = (GlobalRegServerApi as any).META;
         public _streamKeys: any[] | null = null;
         public onFlushC: ((cc: MetaContext) => void) | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -6154,13 +6224,14 @@ export class GlobalApiStream implements ToString  {
                 this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (GlobalRegServerApi as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
+            this.localMeta.makeLocal(this.activeContext!, new DataInOutStatic(targetData));
             
         }
         
     };
     public static readonly Out = class Out extends GlobalApiStream  {
         public deferredRemoteGenerator: ((api: any) => void) | null = null;
+        public deferredApiMeta: FastMetaApi<any, any> = (GlobalRegServerApi as any).META;
         public deferredFactory: ((ctx: MetaContext) => any) | null = null;
         public deferredKeys: any[] | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -6175,9 +6246,14 @@ export class GlobalApiStream implements ToString  {
             
         }
         static sendWithApi(remoteGenerator: (api: GlobalRegServerApiRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
+            return this.sendWithMeta((GlobalRegServerApi as any).META, remoteGenerator, factory, ...keys);
+            
+        }
+        static sendWithMeta(meta: FastMetaApi<any, any>, remoteGenerator: (api: any) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
-            out.deferredRemoteGenerator = remoteGenerator as any;
-            out.deferredFactory = factory as any;
+            out.deferredApiMeta = meta;
+            out.deferredRemoteGenerator = remoteGenerator;
+            out.deferredFactory = factory;
             out.deferredKeys = keys;
             return out;
             
@@ -6207,10 +6283,23 @@ export class GlobalRegClientApiStream implements ToString  {
         return this as any;
         
     }
+    public static readonly V0 = class V0  {
+        static api(source: MetaContext | RemoteApi): GlobalRegClientApiRemote  {
+            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
+            return ctx.makeRemote((GlobalRegClientApi as any).META) as GlobalRegClientApiRemote;
+            
+        }
+        static switchLocalApi(ctx: MetaContext, localApi: GlobalRegClientApi): void  {
+            ctx.switchLocalApi(localApi, (GlobalRegClientApi as any).META);
+            
+        }
+        
+    };
     public static readonly In = class In extends GlobalRegClientApiStream  {
         public parentContext: MetaContext | null = null;
         public activeContext: MetaContext | null = null;
-        public factory: ((ctx: MetaContext) => GlobalRegClientApi) | null = null;
+        public factory: ((ctx: MetaContext) => any) | null = null;
+        public localMeta: FastMetaApi<any, any> = (GlobalRegClientApi as any).META;
         public _streamKeys: any[] | null = null;
         public onFlushC: ((cc: MetaContext) => void) | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -6289,13 +6378,14 @@ export class GlobalRegClientApiStream implements ToString  {
                 this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (GlobalRegClientApi as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
+            this.localMeta.makeLocal(this.activeContext!, new DataInOutStatic(targetData));
             
         }
         
     };
     public static readonly Out = class Out extends GlobalRegClientApiStream  {
         public deferredRemoteGenerator: ((api: any) => void) | null = null;
+        public deferredApiMeta: FastMetaApi<any, any> = (GlobalRegClientApi as any).META;
         public deferredFactory: ((ctx: MetaContext) => any) | null = null;
         public deferredKeys: any[] | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -6310,9 +6400,14 @@ export class GlobalRegClientApiStream implements ToString  {
             
         }
         static sendWithApi(remoteGenerator: (api: GlobalRegClientApiRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
+            return this.sendWithMeta((GlobalRegClientApi as any).META, remoteGenerator, factory, ...keys);
+            
+        }
+        static sendWithMeta(meta: FastMetaApi<any, any>, remoteGenerator: (api: any) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
-            out.deferredRemoteGenerator = remoteGenerator as any;
-            out.deferredFactory = factory as any;
+            out.deferredApiMeta = meta;
+            out.deferredRemoteGenerator = remoteGenerator;
+            out.deferredFactory = factory;
             out.deferredKeys = keys;
             return out;
             
@@ -6342,10 +6437,23 @@ export class LoginClientStream implements ToString  {
         return this as any;
         
     }
+    public static readonly V0 = class V0  {
+        static api(source: MetaContext | RemoteApi): ClientApiSafeRemote  {
+            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
+            return ctx.makeRemote((ClientApiSafe as any).META) as ClientApiSafeRemote;
+            
+        }
+        static switchLocalApi(ctx: MetaContext, localApi: ClientApiSafe): void  {
+            ctx.switchLocalApi(localApi, (ClientApiSafe as any).META);
+            
+        }
+        
+    };
     public static readonly In = class In extends LoginClientStream  {
         public parentContext: MetaContext | null = null;
         public activeContext: MetaContext | null = null;
-        public factory: ((ctx: MetaContext) => ClientApiSafe) | null = null;
+        public factory: ((ctx: MetaContext) => any) | null = null;
+        public localMeta: FastMetaApi<any, any> = (ClientApiSafe as any).META;
         public _streamKeys: any[] | null = null;
         public onFlushC: ((cc: MetaContext) => void) | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -6424,13 +6532,14 @@ export class LoginClientStream implements ToString  {
                 this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (ClientApiSafe as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
+            this.localMeta.makeLocal(this.activeContext!, new DataInOutStatic(targetData));
             
         }
         
     };
     public static readonly Out = class Out extends LoginClientStream  {
         public deferredRemoteGenerator: ((api: any) => void) | null = null;
+        public deferredApiMeta: FastMetaApi<any, any> = (ClientApiSafe as any).META;
         public deferredFactory: ((ctx: MetaContext) => any) | null = null;
         public deferredKeys: any[] | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -6445,9 +6554,14 @@ export class LoginClientStream implements ToString  {
             
         }
         static sendWithApi(remoteGenerator: (api: ClientApiSafeRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
+            return this.sendWithMeta((ClientApiSafe as any).META, remoteGenerator, factory, ...keys);
+            
+        }
+        static sendWithMeta(meta: FastMetaApi<any, any>, remoteGenerator: (api: any) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
-            out.deferredRemoteGenerator = remoteGenerator as any;
-            out.deferredFactory = factory as any;
+            out.deferredApiMeta = meta;
+            out.deferredRemoteGenerator = remoteGenerator;
+            out.deferredFactory = factory;
             out.deferredKeys = keys;
             return out;
             
@@ -6477,10 +6591,81 @@ export class LoginStream implements ToString  {
         return this as any;
         
     }
+    public static readonly V0 = class V0  {
+        static api(source: MetaContext | RemoteApi): AuthorizedApiRemote  {
+            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
+            return ctx.makeRemote((AuthorizedApi as any).META) as AuthorizedApiRemote;
+            
+        }
+        static remoteApi(source: MetaContext | RemoteApi): ClientApiSafeRemote  {
+            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
+            return ctx.makeRemote((ClientApiSafe as any).META) as ClientApiSafeRemote;
+            
+        }
+        static switchLocalApi(ctx: MetaContext, localApi: AuthorizedApi): void  {
+            ctx.switchLocalApi(localApi, (AuthorizedApi as any).META);
+            
+        }
+        static in(in_: any, source: MetaContext | ((api: ClientApiSafeRemote) => AuthorizedApi), ...keys: any[]): any  {
+            if (typeof source === "function")  {
+                in_.factory = (ctx: MetaContext) => source(ctx.makeRemote((ClientApiSafe as any).META) as ClientApiSafeRemote);
+                in_._streamKeys = keys;
+                
+            }
+            else  {
+                in_.activeContext = source;
+                
+            }
+            in_.localMeta = (AuthorizedApi as any).META;
+            return in_;
+            
+        }
+        static send(remoteGenerator: (api: AuthorizedApiRemote) => void, factory: (ctx: MetaContext) => ClientApiSafe, ...keys: any[]): any  {
+            return LoginStream.Out.sendWithMeta((AuthorizedApi as any).META, remoteGenerator, factory, ...keys);
+            
+        }
+        
+    };
+    public static readonly V1 = class V1  {
+        static api(source: MetaContext | RemoteApi): AuthorizedApiV2Remote  {
+            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
+            return ctx.makeRemote((AuthorizedApiV2 as any).META) as AuthorizedApiV2Remote;
+            
+        }
+        static remoteApi(source: MetaContext | RemoteApi): ClientApiSafeRemote  {
+            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
+            return ctx.makeRemote((ClientApiSafe as any).META) as ClientApiSafeRemote;
+            
+        }
+        static switchLocalApi(ctx: MetaContext, localApi: AuthorizedApiV2): void  {
+            ctx.switchLocalApi(localApi, (AuthorizedApiV2 as any).META);
+            
+        }
+        static in(in_: any, source: MetaContext | ((api: ClientApiSafeRemote) => AuthorizedApiV2), ...keys: any[]): any  {
+            if (typeof source === "function")  {
+                in_.factory = (ctx: MetaContext) => source(ctx.makeRemote((ClientApiSafe as any).META) as ClientApiSafeRemote);
+                in_._streamKeys = keys;
+                
+            }
+            else  {
+                in_.activeContext = source;
+                
+            }
+            in_.localMeta = (AuthorizedApiV2 as any).META;
+            return in_;
+            
+        }
+        static send(remoteGenerator: (api: AuthorizedApiV2Remote) => void, factory: (ctx: MetaContext) => ClientApiSafe, ...keys: any[]): any  {
+            return LoginStream.Out.sendWithMeta((AuthorizedApiV2 as any).META, remoteGenerator, factory, ...keys);
+            
+        }
+        
+    };
     public static readonly In = class In extends LoginStream  {
         public parentContext: MetaContext | null = null;
         public activeContext: MetaContext | null = null;
-        public factory: ((ctx: MetaContext) => AuthorizedApi) | null = null;
+        public factory: ((ctx: MetaContext) => any) | null = null;
+        public localMeta: FastMetaApi<any, any> = (AuthorizedApi as any).META;
         public _streamKeys: any[] | null = null;
         public onFlushC: ((cc: MetaContext) => void) | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -6574,13 +6759,14 @@ export class LoginStream implements ToString  {
                 this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (AuthorizedApi as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
+            this.localMeta.makeLocal(this.activeContext!, new DataInOutStatic(targetData));
             
         }
         
     };
     public static readonly Out = class Out extends LoginStream  {
         public deferredRemoteGenerator: ((api: any) => void) | null = null;
+        public deferredApiMeta: FastMetaApi<any, any> = (AuthorizedApi as any).META;
         public deferredFactory: ((ctx: MetaContext) => any) | null = null;
         public deferredKeys: any[] | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -6595,9 +6781,14 @@ export class LoginStream implements ToString  {
             
         }
         static sendWithApi(remoteGenerator: (api: AuthorizedApiRemote) => void, factory: (ctx: MetaContext) => ClientApiSafe, ...keys: any[]): Out  {
+            return this.sendWithMeta((AuthorizedApi as any).META, remoteGenerator, factory, ...keys);
+            
+        }
+        static sendWithMeta(meta: FastMetaApi<any, any>, remoteGenerator: (api: any) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
-            out.deferredRemoteGenerator = remoteGenerator as any;
-            out.deferredFactory = factory as any;
+            out.deferredApiMeta = meta;
+            out.deferredRemoteGenerator = remoteGenerator;
+            out.deferredFactory = factory;
             out.deferredKeys = keys;
             return out;
             
@@ -6627,10 +6818,23 @@ export class ServerRegistrationApiStream implements ToString  {
         return this as any;
         
     }
+    public static readonly V0 = class V0  {
+        static api(source: MetaContext | RemoteApi): ServerRegistrationApiRemote  {
+            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
+            return ctx.makeRemote((ServerRegistrationApi as any).META) as ServerRegistrationApiRemote;
+            
+        }
+        static switchLocalApi(ctx: MetaContext, localApi: ServerRegistrationApi): void  {
+            ctx.switchLocalApi(localApi, (ServerRegistrationApi as any).META);
+            
+        }
+        
+    };
     public static readonly In = class In extends ServerRegistrationApiStream  {
         public parentContext: MetaContext | null = null;
         public activeContext: MetaContext | null = null;
-        public factory: ((ctx: MetaContext) => ServerRegistrationApi) | null = null;
+        public factory: ((ctx: MetaContext) => any) | null = null;
+        public localMeta: FastMetaApi<any, any> = (ServerRegistrationApi as any).META;
         public _streamKeys: any[] | null = null;
         public onFlushC: ((cc: MetaContext) => void) | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -6709,13 +6913,14 @@ export class ServerRegistrationApiStream implements ToString  {
                 this.activeContext = this.parentContext!.findContext(effectiveFactory, ...(this._streamKeys || []));
                 
             }
-            (ServerRegistrationApi as any).META.makeLocal(this.activeContext, new DataInOutStatic(targetData));
+            this.localMeta.makeLocal(this.activeContext!, new DataInOutStatic(targetData));
             
         }
         
     };
     public static readonly Out = class Out extends ServerRegistrationApiStream  {
         public deferredRemoteGenerator: ((api: any) => void) | null = null;
+        public deferredApiMeta: FastMetaApi<any, any> = (ServerRegistrationApi as any).META;
         public deferredFactory: ((ctx: MetaContext) => any) | null = null;
         public deferredKeys: any[] | null = null;
         public cryptoConverter: ((data: Uint8Array) => Uint8Array) | null = null;
@@ -6730,9 +6935,14 @@ export class ServerRegistrationApiStream implements ToString  {
             
         }
         static sendWithApi(remoteGenerator: (api: ServerRegistrationApiRemote) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
+            return this.sendWithMeta((ServerRegistrationApi as any).META, remoteGenerator, factory, ...keys);
+            
+        }
+        static sendWithMeta(meta: FastMetaApi<any, any>, remoteGenerator: (api: any) => void, factory: (ctx: MetaContext) => any, ...keys: any[]): Out  {
             const out = new Out();
-            out.deferredRemoteGenerator = remoteGenerator as any;
-            out.deferredFactory = factory as any;
+            out.deferredApiMeta = meta;
+            out.deferredRemoteGenerator = remoteGenerator;
+            out.deferredFactory = factory;
             out.deferredKeys = keys;
             return out;
             
@@ -11243,6 +11453,68 @@ export class AuthorizedApiGetServersArguments implements ToString  {
     }
     
 }
+/**
+ * Represents the AuthorizedApiSwitchVersionArguments structure.
+ */
+export class AuthorizedApiSwitchVersionArguments implements ToString  {
+    public readonly version: number;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiSwitchVersionArguments> = new Impl.AuthorizedApiSwitchVersionArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiSwitchVersionArguments> = AuthorizedApiSwitchVersionArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiSwitchVersionArguments.
+     * @param version - number
+     */
+    constructor(version: number)  {
+        this.version = version;
+        
+    }
+    public getVersion(): number  {
+        return this.version;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiSwitchVersionArguments.
+     * @param {AuthorizedApiSwitchVersionArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiSwitchVersionArguments | null | undefined): number  {
+        return AuthorizedApiSwitchVersionArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiSwitchVersionArguments with another object.
+     * @param {AuthorizedApiSwitchVersionArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiSwitchVersionArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiSwitchVersionArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiSwitchVersionArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiSwitchVersionArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiSwitchVersionArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
 export interface AuthorizedApi  {
     /**
      * @param id - number
@@ -11542,6 +11814,13 @@ export interface AuthorizedApi  {
      */
     getServers(): ARFuture<ServerDescriptorWithGeo[]>;
     getServersArguments?(args: AuthorizedApiGetServersArguments): ARFuture<ServerDescriptorWithGeo[]>;
+    /**
+     * @param version - number
+     *
+     * @aetherMethodId 44
+     */
+    switchVersion(version: number): void;
+    switchVersionArguments?(args: AuthorizedApiSwitchVersionArguments): void;
     
 }
 export namespace AuthorizedApi  {
@@ -11972,6 +12251,460 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
     public abstract getServers(): ARFuture<ServerDescriptorWithGeo[]>;
     public getServersArguments(args: AuthorizedApiGetServersArguments): ARFuture<ServerDescriptorWithGeo[]>  {
         return this.getServers();
+        
+    }
+    /**
+     * @param version - number
+     *
+     * @aetherMethodId 44
+     */
+    public abstract switchVersion(version: number): void;
+    public switchVersionArguments(args: AuthorizedApiSwitchVersionArguments): void  {
+        this.switchVersion(args.version);
+        
+    }
+    
+}
+export interface AuthorizedApiV2 extends AuthorizedApi  {
+    
+}
+export namespace AuthorizedApiV2  {
+    export const META: FastMetaApi<AuthorizedApiV2, AuthorizedApiV2Remote> = new Impl.AuthorizedApiV2MetaImpl();
+    
+}
+export interface AuthorizedApiV2Remote extends AuthorizedApiV2, RemoteApi, AuthorizedApiRemote  {
+    
+}
+export abstract class AuthorizedApiV2Local<RT extends RemoteApi> implements AuthorizedApiV2  {
+    protected readonly remoteApi: RT;
+    public getRemoteApi(): RT  {
+        return this.remoteApi;
+        
+    }
+    protected constructor(remoteApi: RT)  {
+        this.remoteApi = remoteApi;
+        
+    }
+    /**
+     * @param id - number
+     *
+     * @aetherMethodId 3
+     */
+    public abstract backId(id: number): void;
+    public backIdArguments(args: AuthorizedApiBackIdArguments): void  {
+        this.backId(args.id);
+        
+    }
+    /**
+     * @param nextConnectMsDuration - bigint
+     * @param rxWindowMs - bigint
+     *
+     * @aetherMethodId 4
+     */
+    public abstract ping(nextConnectMsDuration: bigint, rxWindowMs: bigint): AFuture;
+    public pingArguments(args: AuthorizedApiPingArguments): AFuture  {
+        return this.ping(args.nextConnectMsDuration, args.rxWindowMs);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @param stream - ClientApiStream
+     *
+     * @aetherMethodId 5
+     */
+    public abstract client(uid: UUID, stream: ClientApiStream): void;
+    public clientArguments(args: AuthorizedApiClientArguments): void  {
+        this.client(args.uid, args.stream);
+        
+    }
+    /**
+     * @param msg - Message
+     *
+     * @aetherMethodId 6
+     */
+    public abstract sendMessage(msg: Message): void;
+    public sendMessageArguments(args: AuthorizedApiSendMessageArguments): void  {
+        this.sendMessage(args.msg);
+        
+    }
+    /**
+     * @param msg - Message[]
+     *
+     * @aetherMethodId 7
+     */
+    public abstract sendMessages(msg: Message[]): void;
+    public sendMessagesArguments(args: AuthorizedApiSendMessagesArguments): void  {
+        this.sendMessages(args.msg);
+        
+    }
+    /**
+     * @param uids - UUID[]
+     * @param data - Uint8Array
+     *
+     * @aetherMethodId 37
+     */
+    public abstract sendMulticast(uids: UUID[], data: Uint8Array): void;
+    public sendMulticastArguments(args: AuthorizedApiSendMulticastArguments): void  {
+        this.sendMulticast(args.uids, args.data);
+        
+    }
+    /**
+     * @param msg - Message
+     *
+     * @aetherMethodId 39
+     */
+    public abstract sendMessageWithResult(msg: Message): AFuture;
+    public sendMessageWithResultArguments(args: AuthorizedApiSendMessageWithResultArguments): AFuture  {
+        return this.sendMessageWithResult(args.msg);
+        
+    }
+    /**
+     * @param owner - UUID
+     * @param uids - UUID[]
+     * @returns ARFuture<UUID>
+     *
+     * @aetherMethodId 8
+     */
+    public abstract createAccessGroup(owner: UUID, uids: UUID[]): ARFuture<UUID>;
+    public createAccessGroupArguments(args: AuthorizedApiCreateAccessGroupArguments): ARFuture<UUID>  {
+        return this.createAccessGroup(args.owner, args.uids);
+        
+    }
+    /**
+     * @param groupId - UUID
+     * @param uid - UUID
+     * @returns ARFuture<boolean>
+     *
+     * @aetherMethodId 9
+     */
+    public abstract addToAccessGroup(groupId: UUID, uid: UUID): ARFuture<boolean>;
+    public addToAccessGroupArguments(args: AuthorizedApiAddToAccessGroupArguments): ARFuture<boolean>  {
+        return this.addToAccessGroup(args.groupId, args.uid);
+        
+    }
+    /**
+     * @param groupId - UUID
+     * @param uid - UUID
+     * @returns ARFuture<boolean>
+     *
+     * @aetherMethodId 10
+     */
+    public abstract removeFromAccessGroup(groupId: UUID, uid: UUID): ARFuture<boolean>;
+    public removeFromAccessGroupArguments(args: AuthorizedApiRemoveFromAccessGroupArguments): ARFuture<boolean>  {
+        return this.removeFromAccessGroup(args.groupId, args.uid);
+        
+    }
+    /**
+     * @param uid - UUID
+     *
+     * @aetherMethodId 11
+     */
+    public abstract checkAccessForSendMessage(uid: UUID): AFuture;
+    public checkAccessForSendMessageArguments(args: AuthorizedApiCheckAccessForSendMessageArguments): AFuture  {
+        return this.checkAccessForSendMessage(args.uid);
+        
+    }
+    /**
+     * @param sid - number[]
+     *
+     * @aetherMethodId 12
+     */
+    public abstract resolverServers(sid: number[]): void;
+    public resolverServersArguments(args: AuthorizedApiResolverServersArguments): void  {
+        this.resolverServers(args.sid);
+        
+    }
+    /**
+     * @param uids - UUID[]
+     *
+     * @aetherMethodId 13
+     */
+    public abstract resolveClouds(uids: UUID[]): void;
+    public resolveCloudsArguments(args: AuthorizedApiResolveCloudsArguments): void  {
+        this.resolveClouds(args.uids);
+        
+    }
+    /**
+     * @param configs - AppliedConfig[]
+     *
+     * @aetherMethodId 38
+     */
+    public abstract reportAppliedConfig(configs: AppliedConfig[]): void;
+    public reportAppliedConfigArguments(args: AuthorizedApiReportAppliedConfigArguments): void  {
+        this.reportAppliedConfig(args.configs);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @returns ARFuture<UUID[]>
+     *
+     * @aetherMethodId 14
+     */
+    public abstract getAccessGroups(uid: UUID): ARFuture<UUID[]>;
+    public getAccessGroupsArguments(args: AuthorizedApiGetAccessGroupsArguments): ARFuture<UUID[]>  {
+        return this.getAccessGroups(args.uid);
+        
+    }
+    /**
+     * @param groupId - UUID
+     * @returns ARFuture<AccessGroup>
+     *
+     * @aetherMethodId 15
+     */
+    public abstract getAccessGroup(groupId: UUID): ARFuture<AccessGroup>;
+    public getAccessGroupArguments(args: AuthorizedApiGetAccessGroupArguments): ARFuture<AccessGroup>  {
+        return this.getAccessGroup(args.groupId);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @returns ARFuture<UUID[]>
+     *
+     * @aetherMethodId 16
+     */
+    public abstract getAllAccessedClients(uid: UUID): ARFuture<UUID[]>;
+    public getAllAccessedClientsArguments(args: AuthorizedApiGetAllAccessedClientsArguments): ARFuture<UUID[]>  {
+        return this.getAllAccessedClients(args.uid);
+        
+    }
+    /**
+     * @param uid1 - UUID
+     * @param uid2 - UUID
+     * @returns ARFuture<boolean>
+     *
+     * @aetherMethodId 17
+     */
+    public abstract checkAccessForSendMessage2(uid1: UUID, uid2: UUID): ARFuture<boolean>;
+    public checkAccessForSendMessage2Arguments(args: AuthorizedApiCheckAccessForSendMessage2Arguments): ARFuture<boolean>  {
+        return this.checkAccessForSendMessage2(args.uid1, args.uid2);
+        
+    }
+    /**
+     * @param telemetry - Telemetry
+     *
+     * @aetherMethodId 18
+     */
+    public abstract sendTelemetry(telemetry: Telemetry): void;
+    public sendTelemetryArguments(args: AuthorizedApiSendTelemetryArguments): void  {
+        this.sendTelemetry(args.telemetry);
+        
+    }
+    /**
+     * @param uids - UUID[]
+     *
+     * @aetherMethodId 19
+     */
+    public abstract requestAccessGroupsForClients(uids: UUID[]): void;
+    public requestAccessGroupsForClientsArguments(args: AuthorizedApiRequestAccessGroupsForClientsArguments): void  {
+        this.requestAccessGroupsForClients(args.uids);
+        
+    }
+    /**
+     * @param ids - UUID[]
+     *
+     * @aetherMethodId 20
+     */
+    public abstract requestAccessGroupsItems(ids: UUID[]): void;
+    public requestAccessGroupsItemsArguments(args: AuthorizedApiRequestAccessGroupsItemsArguments): void  {
+        this.requestAccessGroupsItems(args.ids);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @param groups - UUID[]
+     *
+     * @aetherMethodId 22
+     */
+    public abstract sendAccessGroupForClient(uid: UUID, groups: UUID[]): void;
+    public sendAccessGroupForClientArguments(args: AuthorizedApiSendAccessGroupForClientArguments): void  {
+        this.sendAccessGroupForClient(args.uid, args.groups);
+        
+    }
+    /**
+     * @param id - UUID
+     * @param groups - UUID[]
+     *
+     * @aetherMethodId 23
+     */
+    public abstract addItemsToAccessGroup(id: UUID, groups: UUID[]): void;
+    public addItemsToAccessGroupArguments(args: AuthorizedApiAddItemsToAccessGroupArguments): void  {
+        this.addItemsToAccessGroup(args.id, args.groups);
+        
+    }
+    /**
+     * @param id - UUID
+     * @param groups - UUID[]
+     *
+     * @aetherMethodId 24
+     */
+    public abstract removeItemsFromAccessGroup(id: UUID, groups: UUID[]): void;
+    public removeItemsFromAccessGroupArguments(args: AuthorizedApiRemoveItemsFromAccessGroupArguments): void  {
+        this.removeItemsFromAccessGroup(args.id, args.groups);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @param groups - UUID[]
+     *
+     * @aetherMethodId 25
+     */
+    public abstract addAccessGroupsToClient(uid: UUID, groups: UUID[]): void;
+    public addAccessGroupsToClientArguments(args: AuthorizedApiAddAccessGroupsToClientArguments): void  {
+        this.addAccessGroupsToClient(args.uid, args.groups);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @param groups - UUID[]
+     *
+     * @aetherMethodId 26
+     */
+    public abstract removeAccessGroupsFromClient(uid: UUID, groups: UUID[]): void;
+    public removeAccessGroupsFromClientArguments(args: AuthorizedApiRemoveAccessGroupsFromClientArguments): void  {
+        this.removeAccessGroupsFromClient(args.uid, args.groups);
+        
+    }
+    /**
+     * @param uids - UUID[]
+     *
+     * @aetherMethodId 27
+     */
+    public abstract requestAllAccessedClients(uids: UUID[]): void;
+    public requestAllAccessedClientsArguments(args: AuthorizedApiRequestAllAccessedClientsArguments): void  {
+        this.requestAllAccessedClients(args.uids);
+        
+    }
+    /**
+     * @param requests - AccessCheckPair[]
+     *
+     * @aetherMethodId 28
+     */
+    public abstract requestAccessCheck(requests: AccessCheckPair[]): void;
+    public requestAccessCheckArguments(args: AuthorizedApiRequestAccessCheckArguments): void  {
+        this.requestAccessCheck(args.requests);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @param fromTime - bigint
+     * @param toTime - bigint
+     * @param limit - number
+     * @returns ARFuture<ClientActivity[]>
+     *
+     * @aetherMethodId 29
+     */
+    public abstract getClientActivity(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<ClientActivity[]>;
+    public getClientActivityArguments(args: AuthorizedApiGetClientActivityArguments): ARFuture<ClientActivity[]>  {
+        return this.getClientActivity(args.uid, args.fromTime, args.toTime, args.limit);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @param query - string
+     * @param limit - number
+     * @returns ARFuture<ClientLogEntry[]>
+     *
+     * @aetherMethodId 30
+     */
+    public abstract searchClientLogs(uid: UUID, query: string, limit: number): ARFuture<ClientLogEntry[]>;
+    public searchClientLogsArguments(args: AuthorizedApiSearchClientLogsArguments): ARFuture<ClientLogEntry[]>  {
+        return this.searchClientLogs(args.uid, args.query, args.limit);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @param limit - number
+     * @returns ARFuture<ClientConnectionInfo[]>
+     *
+     * @aetherMethodId 31
+     */
+    public abstract getClientConnections(uid: UUID, limit: number): ARFuture<ClientConnectionInfo[]>;
+    public getClientConnectionsArguments(args: AuthorizedApiGetClientConnectionsArguments): ARFuture<ClientConnectionInfo[]>  {
+        return this.getClientConnections(args.uid, args.limit);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @param fromTime - bigint
+     * @param toTime - bigint
+     * @param limit - number
+     * @returns ARFuture<MessageInfo[]>
+     *
+     * @aetherMethodId 32
+     */
+    public abstract getClientMessages(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<MessageInfo[]>;
+    public getClientMessagesArguments(args: AuthorizedApiGetClientMessagesArguments): ARFuture<MessageInfo[]>  {
+        return this.getClientMessages(args.uid, args.fromTime, args.toTime, args.limit);
+        
+    }
+    /**
+     * @param delayMillis - bigint
+     *
+     * @aetherMethodId 33
+     */
+    public abstract setNextReadDelay(delayMillis: bigint): void;
+    public setNextReadDelayArguments(args: AuthorizedApiSetNextReadDelayArguments): void  {
+        this.setNextReadDelay(args.delayMillis);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @returns ARFuture<Uap>
+     *
+     * @aetherMethodId 34
+     */
+    public abstract getUap(uid: UUID): ARFuture<Uap>;
+    public getUapArguments(args: AuthorizedApiGetUapArguments): ARFuture<Uap>  {
+        return this.getUap(args.uid);
+        
+    }
+    /**
+     * @param uid - UUID
+     * @returns ARFuture<WebRtcSession>
+     *
+     * @aetherMethodId 40
+     */
+    public abstract requestWebRtcSession(uid: UUID): ARFuture<WebRtcSession>;
+    public requestWebRtcSessionArguments(args: AuthorizedApiRequestWebRtcSessionArguments): ARFuture<WebRtcSession>  {
+        return this.requestWebRtcSession(args.uid);
+        
+    }
+    /**
+     * @param session - WebRtcSession
+     *
+     * @aetherMethodId 41
+     */
+    public abstract publishWebRtcSession(session: WebRtcSession): void;
+    public publishWebRtcSessionArguments(args: AuthorizedApiPublishWebRtcSessionArguments): void  {
+        this.publishWebRtcSession(args.session);
+        
+    }
+    /**
+     * @aetherMethodId 42
+     */
+    public abstract selfDestruct(): AFuture;
+    public selfDestructArguments(args: AuthorizedApiSelfDestructArguments): AFuture  {
+        return this.selfDestruct();
+        
+    }
+    /**
+     * @returns ARFuture<ServerDescriptorWithGeo[]>
+     *
+     * @aetherMethodId 43
+     */
+    public abstract getServers(): ARFuture<ServerDescriptorWithGeo[]>;
+    public getServersArguments(args: AuthorizedApiGetServersArguments): ARFuture<ServerDescriptorWithGeo[]>  {
+        return this.getServers();
+        
+    }
+    /**
+     * @param version - number
+     *
+     * @aetherMethodId 44
+     */
+    public abstract switchVersion(version: number): void;
+    public switchVersionArguments(args: AuthorizedApiSwitchVersionArguments): void  {
+        this.switchVersion(args.version);
         
     }
     

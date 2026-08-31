@@ -155,6 +155,11 @@ export interface MetaContext extends ToString {
     getProperty(key: number): any;
     getLocalApi(): any;
 
+
+    switchLocalApi<T, R extends RemoteApi>(localApi: T, meta: FastMetaApi<T, R>): void;
+    applyLocalApiSwitch(): FastMetaApi<any, any> | null;
+
+
     onWritable(listener: (writable: boolean) => void): void;
     onFirstWritable(listener: () => void): void;
     fireWritable(writable: boolean): void;
@@ -165,7 +170,7 @@ export interface MetaContext extends ToString {
     invokeLocalMethodAfter(methodName: string, result: any, argsNames: string[], argsValues: any[]): void;
 
     invokeRemoteMethodAfter(methodName: string, result: any, argsNames: string[], argsValues: any[]): void;
-    makeRemote<RT extends RemoteApi, RT2 extends RemoteApi>(meta: FastMetaApi<RT, RT2>): RT2;
+    makeRemote<T, R extends RemoteApi>(meta: FastMetaApi<T, R>): R;
 }
 
 
@@ -240,6 +245,13 @@ export const FastFutureContextStub: MetaContext = {
 
     getLocalApi: () => null,
 
+
+    switchLocalApi: (_localApi: any, _meta: FastMetaApi<any, any>) => {
+        throw new Error("Local API switching is not supported by this context");
+    },
+    applyLocalApiSwitch: () => null,
+
+
     onWritable: (_listener: (writable: boolean) => void) => {},
     onFirstWritable: (_listener: () => void) => {},
     fireWritable: (_writable: boolean) => {},
@@ -296,6 +308,10 @@ export interface RemoteApi {
     destroy(force: boolean): AFuture;
     flush(): void;
     getFastMetaContext(): MetaContext;
+
+    as<T, R extends RemoteApi>(meta: FastMetaApi<T, R>): R;
+
+
 }
 
 
@@ -1114,6 +1130,13 @@ export class MetaContextBase implements MetaContext {
     private firstWritableFlag = false;
     private flushAction: (() => void) | null = null;
 
+
+    private pendingLocalApiSwitch: {
+        localApi: any;
+        meta: FastMetaApi<any, any>;
+    } | null = null;
+
+
     public localApi: any = null;
     protected parent: MetaContextBase | null = null;
     private retired = false;
@@ -1126,6 +1149,41 @@ export class MetaContextBase implements MetaContext {
         }
         this.localApi = localApi;
     }
+
+
+    public switchLocalApi<T, R extends RemoteApi>(
+        localApi: T,
+        meta: FastMetaApi<T, R>,
+    ): void {
+        if (localApi === null || localApi === undefined) {
+            throw new Error("Local API must not be null");
+        }
+        if (meta === null || meta === undefined) {
+            throw new Error("Local API META must not be null");
+        }
+        if (this.pendingLocalApiSwitch !== null) {
+            throw new Error("Local API switch is already pending");
+        }
+
+        this.pendingLocalApiSwitch = {
+            localApi,
+            meta: meta as FastMetaApi<any, any>,
+        };
+    }
+
+    public applyLocalApiSwitch(): FastMetaApi<any, any> | null {
+        const next = this.pendingLocalApiSwitch;
+        if (next === null) return null;
+
+        this.pendingLocalApiSwitch = null;
+
+        // Preserve the Java invariant: bytes produced by the old API must be
+        // flushed while routing still observes the old local implementation.
+        this.flush();
+        this.localApi = next.localApi;
+        return next.meta;
+    }
+
 
     public toAString(sb: AString): AString {
         return sb

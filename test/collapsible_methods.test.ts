@@ -566,10 +566,97 @@ describe('collapsible methods', () => {
         expect(impl).toContain(
             'destroy: (_force: boolean): AFuture => { sCtx_0.close(); return AFuture.completed(); },',
         );
+
         expect(api).toContain(
-            'ProbeApi as any).META.makeLocal(this.activeContext',
+            'this.localMeta.makeLocal(this.activeContext!',
         );
+
     });
+
+
+    test('switches local API at a command boundary and continues the same payload', () => {
+        const ctx = new MetaContextBase();
+        const calls: string[] = [];
+        const flushedWith: any[] = [];
+
+        const makeMeta = (
+            expectedCommandId: number,
+            invoke: (localApi: any) => void,
+        ): any => {
+            const meta: any = {
+                makeLocal: (context: any, dataIn: any): void => {
+                    meta.makeLocal_fromDataIn(
+                        context,
+                        dataIn,
+                        context.getLocalApi(),
+                    );
+                },
+                makeLocal_fromDataIn: (
+                    context: any,
+                    dataIn: any,
+                    localApi: any,
+                ): void => {
+                    while (dataIn.isReadable()) {
+                        const commandId = dataIn.readUByte();
+                        if (commandId !== expectedCommandId) {
+                            throw new Error(`Unexpected command ID: ${commandId}`);
+                        }
+
+                        invoke(localApi);
+
+                        const switchedMeta = context.applyLocalApiSwitch();
+                        if (switchedMeta !== null) {
+                            if (dataIn.isReadable()) {
+                                switchedMeta.makeLocal(context, dataIn);
+                            }
+                            return;
+                        }
+                    }
+                },
+            };
+            return meta;
+        };
+
+        const v1Local = {
+
+            command: (): void => {
+                calls.push('v1');
+            },
+
+        };
+        const v1Meta = makeMeta(
+            2,
+            (localApi) => localApi.command(),
+        );
+
+        const v0Local = {
+            command: (): void => {
+                calls.push('v0');
+                ctx.sendToRemote(new Uint8Array([9]));
+                ctx.switchLocalApi(v1Local, v1Meta);
+            },
+        };
+        const v0Meta = makeMeta(
+            1,
+            (localApi) => localApi.command(),
+        );
+
+        ctx.setLocalApi(v0Local);
+        ctx.onFlush(() => {
+            flushedWith.push(ctx.getLocalApi());
+            ctx.remoteDataToArrayAsArray();
+        });
+
+        v0Meta.makeLocal(
+            ctx,
+            new DataInOutStatic(new Uint8Array([1, 2])),
+        );
+
+        expect(calls).toEqual(['v0', 'v1']);
+        expect(flushedWith).toEqual([v0Local]);
+        expect(ctx.getLocalApi()).toBe(v1Local);
+    });
+
 
     test('compares byte arrays by content', () => {
         expect(

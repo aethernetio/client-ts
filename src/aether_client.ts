@@ -200,6 +200,9 @@ public readonly accessOperationsAdd =
         new Set<ConnectionRegistration>();
     private beginConnect = false;
     private name: string | null;
+
+    private readonly loginApiVersion: number;
+
     private readonly lastSecond: number;
 
 
@@ -208,7 +211,13 @@ public readonly accessOperationsAdd =
     }
 
 
-    constructor(state?: ClientState, name?: string | null) {
+
+    constructor(
+        state?: ClientState,
+        name?: string | null,
+        loginApiVersion: number = 0,
+    ) {
+
         if (!state) {
             if (typeof localStorage !== "undefined") {
                 state = new ClientStateInLocalStorage(
@@ -222,8 +231,19 @@ public readonly accessOperationsAdd =
             }
         }
 
+
+        if (loginApiVersion < 0) {
+            throw new Error(
+                `loginApiVersion must be non-negative: ${loginApiVersion}`,
+            );
+        }
+
+
         this.state = state;
         this.name = name ?? null;
+
+        this.loginApiVersion = loginApiVersion;
+
         this.lastSecond = Math.floor(RU.time() / 1000);
         this.logClientContext = Log.of({
             component: "Client",
@@ -787,6 +807,12 @@ public readonly accessOperationsAdd =
     public getName(): string | null {
         return this.name;
     }
+
+
+    public getLoginApiVersion(): number {
+        return this.loginApiVersion;
+    }
+
 
     public setName(name: string): void {
         this.name = name;

@@ -18,8 +18,13 @@ types:
 
   LoginStream:
     stream:
-      api: AuthorizedApi
-      remoteApi: ClientApiSafe
+
+      apis:
+        - api: AuthorizedApi
+          remoteApi: ClientApiSafe
+        - api: AuthorizedApiV2
+          remoteApi: ClientApiSafe
+
       crypto: true
       keys:
         uid: uuid
@@ -418,6 +423,16 @@ api:
       getServers:
         id: 43
         returns: ServerDescriptorWithGeo[]
+
+      switchVersion:
+        id: 44
+        params:
+          version: int
+
+  AuthorizedApiV2:
+    parents:
+      - AuthorizedApi
+
 
 
 

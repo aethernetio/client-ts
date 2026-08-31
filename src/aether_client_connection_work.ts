@@ -580,7 +580,11 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
     public readonly lastBackPing = new AtomicLong(Number.MAX_SAFE_INTEGER);
 
     readonly cryptoEngine: CryptoEngine;
-    readonly authorizedApi: AuthorizedApiRemote;
+
+    readonly authorizedApiV0: AuthorizedApiRemote;
+    authorizedApi: AuthorizedApiRemote;
+    private negotiatedLoginApiVersion = -1;
+
 
     private readonly serverDescriptor: ServerDescriptor;
 
@@ -599,9 +603,52 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
 
 
 
+
+    private negotiateLoginApiVersion(): void {
+        if (this.negotiatedLoginApiVersion !== -1) {
+            return;
+        }
+
+        const v0 = this.authorizedApiV0;
+        if (v0 == null) {
+            return;
+        }
+
+        const version = this.client.getLoginApiVersion();
+
+        if (version === 0) {
+            this.authorizedApi = v0;
+            this.negotiatedLoginApiVersion = 0;
+            return;
+        }
+
+        if (version === 1) {
+            v0.switchVersion(1);
+            this.authorizedApi = LoginStream.V1.api(v0);
+            this.negotiatedLoginApiVersion = 1;
+            return;
+        }
+
+        throw new Error(
+            `Unsupported LoginStream API version: ${version}`,
+        );
+    }
+
+
+
     protected override onConnectionStateChanged(
         isWritable: boolean,
     ): void {
+
+        this.firstAuth = false;
+
+        if (!isWritable) {
+            this.negotiatedLoginApiVersion = -1;
+            if (this.authorizedApiV0 != null) {
+                this.authorizedApi = this.authorizedApiV0;
+            }
+        }
+
         if (this.cryptoEngine == null) {
             Log.warn(
                 "onConnectionStateChanged called before cryptoEngine initialized, deferring flush",
@@ -612,16 +659,19 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
 
         if (isWritable) {
             this.nextPingAtMs = 0;
-            this.firstAuth = false;
+            this.negotiateLoginApiVersion();
 
             Log.info(
                 "Network restored. Resetting auth state and forcing flush.",
-                {uri: this.uri},
+                {
+                    uri: this.uri,
+                    loginApiVersion: this.negotiatedLoginApiVersion,
+                },
             );
         } else {
-            this.firstAuth = false;
             this.pingAttemptGate.reset();
         }
+
 
         this.stateListeners.fire(isWritable);
     }
@@ -658,10 +708,16 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
         }
         this.serverDescriptor = s;
         this.basicStatus = false;
-        this.authorizedApi = this.getRootApi()!.openLoginByAlias(client.getAlias()!, 
-            () => new MyClientApiSafe(client, this), 
-            (data: Uint8Array) => this.cryptoEngine.encrypt(data), 
-            "loginByAlias");
+
+        this.authorizedApiV0 = this.getRootApi()!.openLoginByAlias(
+            client.getAlias()!,
+            () => new MyClientApiSafe(client, this),
+            (data: Uint8Array) => this.cryptoEngine.encrypt(data),
+            "loginByAlias",
+        );
+        this.authorizedApi = this.authorizedApiV0;
+        this.negotiateLoginApiVersion();
+
 
 
     }
