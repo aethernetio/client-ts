@@ -1,0 +1,163 @@
+name: Decouple generated API from full client runtime
+
+on:
+  push:
+    branches:
+      - browser-lite-analysis-20260902
+    paths:
+      - '.github/workflows/decouple-generated-api-runtime.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: browser-lite-analysis-20260902
+          fetch-depth: 1
+
+      - name: Replace aggregator imports with direct runtime imports
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          api=Path('src/aether_api.ts')
+          s=api.read_text(encoding='utf-8')
+          old="""import  {
+              AFuture, ARFuture, DataInOutStatic, DataInOut, FastMetaType, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastFutureContextStub, SyncMapChannel, MetaContext, RemoteApi, FastMetaApi, BytesConverter, UUID, URI, AConsumer, ToString, FastMetaHierarchyType, AString
+          }
+          from './aether_client';
+          """
+          new="""import { AFuture, ARFuture } from './aether_future';
+          import { DataInOutStatic, DataInOut } from './aether_datainout';
+          import {
+              FastMetaType, FastMeta, SerializerPackNumber, DeserializerPackNumber,
+              FastFutureContextStub, SyncMapChannel, MetaContext, RemoteApi,
+              FastMetaApi, BytesConverter, FastMetaHierarchyType,
+          } from './aether_fastmeta';
+          import { UUID, URI, AConsumer } from './aether_types';
+          import { ToString, AString } from './aether_astring';
+          """
+          if old not in s:
+              raise SystemExit('aether_api.ts aggregator import not found exactly')
+          api.write_text(s.replace(old,new,1),encoding='utf-8')
+
+          impl=Path('src/aether_api_impl.ts')
+          s=impl.read_text(encoding='utf-8')
+          old="""import  {
+              AFuture, ARFuture, DataIn, DataOut, DataInOut, DataInOutStatic, FastMetaType, MetaContext, FastMeta, SerializerPackNumber, DeserializerPackNumber, RemoteApi, FastMetaApi, FastFutureContextStub, SecurityConnectionDropException, AetherException, UUID, URI, AString, BytesConverter,
+          }
+          from './aether_client';
+          """
+          new="""import { AFuture, ARFuture } from './aether_future';
+          import { DataIn, DataOut, DataInOut, DataInOutStatic } from './aether_datainout';
+          import {
+              FastMetaType, MetaContext, FastMeta, SerializerPackNumber,
+              DeserializerPackNumber, RemoteApi, FastMetaApi, FastFutureContextStub,
+              SecurityConnectionDropException, AetherException, BytesConverter,
+          } from './aether_fastmeta';
+          import { UUID, URI } from './aether_types';
+          import { AString } from './aether_astring';
+          """
+          if old not in s:
+              raise SystemExit('aether_api_impl.ts aggregator import not found exactly')
+          impl.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+          git diff -- src/aether_api.ts src/aether_api_impl.ts
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile TypeScript
+        run: npm run build
+
+      - name: Build full browser bundle after decoupling
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p decouple-analysis
+          npx webpack --config webpack.config.mjs --env buildTarget=browser --profile --json=decouple-analysis/universal-stats.json
+          cp build/browser/aether-client.min.js decouple-analysis/aether-client-universal.min.js
+
+      - name: Build protocol subset after decoupling
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx webpack --config webpack.protocol-probe.config.mjs --profile --json=decouple-analysis/protocol-stats.json
+          cp build/protocol-probe/aether-protocol-probe.min.js decouple-analysis/aether-protocol-probe.min.js
+
+      - name: Summarize effect
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,json
+          from pathlib import Path
+          root=Path('decouple-analysis')
+          baseline_protocol=1290778
+          baseline_protocol_gzip=316536
+          baseline_universal=1376158
+          baseline_universal_gzip=338318
+          def meta(name):
+              d=(root/name).read_bytes()
+              return {'bytes':len(d),'gzip9Bytes':len(gzip.compress(d,9))}
+          universal=meta('aether-client-universal.min.js')
+          protocol=meta('aether-protocol-probe.min.js')
+          out={
+            'baseline':{
+              'universal':{'bytes':baseline_universal,'gzip9Bytes':baseline_universal_gzip},
+              'protocol':{'bytes':baseline_protocol,'gzip9Bytes':baseline_protocol_gzip},
+            },
+            'decoupled':{'universal':universal,'protocol':protocol},
+            'protocolReduction':{
+              'bytes':baseline_protocol-protocol['bytes'],
+              'percent':round((baseline_protocol-protocol['bytes'])*100/baseline_protocol,2),
+              'gzipBytes':baseline_protocol_gzip-protocol['gzip9Bytes'],
+              'gzipPercent':round((baseline_protocol_gzip-protocol['gzip9Bytes'])*100/baseline_protocol_gzip,2),
+            },
+            'universalDelta':{
+              'bytes':universal['bytes']-baseline_universal,
+              'gzipBytes':universal['gzip9Bytes']-baseline_universal_gzip,
+            }
+          }
+          for label in ('protocol','universal'):
+              st=json.loads((root/f'{label}-stats.json').read_text())
+              names=[]
+              def walk(m):
+                  children=m.get('modules') or []
+                  if children:
+                      for c in children: walk(c)
+                  else: names.append(m.get('name') or m.get('identifier') or '?')
+              for m in st.get('modules') or []: walk(m)
+              out[label+'Includes']={
+                'aetherClient':any('aether_client.ts' in n for n in names),
+                'libsodium':any('node_modules/libsodium/' in n for n in names),
+                'sodiumWrappers':any('libsodium-wrappers' in n for n in names),
+                'webrtc':any('aether_fastmeta_webrtc' in n for n in names),
+                'moduleCount':len(set(names)),
+              }
+          (root/'summary.json').write_text(json.dumps(out,indent=2),encoding='utf-8')
+          print(json.dumps(out,indent=2))
+          PY
+
+      - name: Commit successful proof-of-concept to experiment branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Gorynych'
+          git config user.email '48762816+StevenMagnet@users.noreply.github.com'
+          git add src/aether_api.ts src/aether_api_impl.ts
+          git commit -m 'Decouple generated API from full client aggregator'
+          git push origin HEAD:browser-lite-analysis-20260902
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: generated-api-decoupling-analysis
+          path: decouple-analysis
+          if-no-files-found: error
