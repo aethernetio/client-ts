@@ -378,7 +378,7 @@ import {
         };
 
         Object.entries(dtoDef.fields).forEach(([fieldName, fieldType]) => {
-            dtoDef.fields![fieldName] = processFieldType([fieldName, dtoDef as any], fieldType);
+            dtoDef.fields![fieldName] = processPotentialAnon([fieldName, dtoName], fieldType);
         });
     }
 
@@ -393,7 +393,7 @@ import {
  * Public entry point for generating Aether protocol code.
  * @param meta - A map of all loaded DSL metadata.
  * @param resolver - An include resolver function (not used in this version).
- * @param baseName - The base name of the protocol being generated.
+ * @param baseName - The base name of the protocol to generate.
  * @returns A promise resolving to a map of file names to their code content.
  */
 export async function generateAetherProtocol(
