@@ -1,0 +1,173 @@
+name: Browser bundle composition and map-lite experiment
+
+on:
+  push:
+    branches:
+      - browser-lite-analysis-20260902
+    paths:
+      - 'src/aether_browser_map.ts'
+      - 'webpack.map-lite.config.mjs'
+      - '.github/workflows/browser-lite-bundle-analysis.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: browser-lite-analysis-20260902
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build universal browser bundle with stats
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bundle-analysis
+          npx webpack \
+            --config webpack.config.mjs \
+            --env buildTarget=browser \
+            --profile \
+            --json=bundle-analysis/universal-stats.json
+          cp build/browser/aether-client.min.js bundle-analysis/aether-client-universal.min.js
+
+      - name: Build map-lite browser bundle with stats
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx webpack \
+            --config webpack.map-lite.config.mjs \
+            --profile \
+            --json=bundle-analysis/map-lite-stats.json
+          cp build/map-lite/aether-client-map-lite.min.js bundle-analysis/aether-client-map-lite.min.js
+
+      - name: Capture currently published production bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            'https://aethernet.io/aether-client.min.js?v=20260816-browser-v3' \
+            -o bundle-analysis/aether-client-production.min.js
+
+      - name: Analyze bundle composition
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip, hashlib, json, re
+          from pathlib import Path
+
+          root=Path('bundle-analysis')
+          files={
+              'production': root/'aether-client-production.min.js',
+              'universal': root/'aether-client-universal.min.js',
+              'mapLite': root/'aether-client-map-lite.min.js',
+          }
+
+          def fmeta(path):
+              data=path.read_bytes()
+              return {
+                  'bytes': len(data),
+                  'gzip9Bytes': len(gzip.compress(data, compresslevel=9)),
+                  'sha256': hashlib.sha256(data).hexdigest(),
+              }
+
+          def leaf_modules(stats):
+              out=[]
+              def walk(m):
+                  children=m.get('modules') or []
+                  if children:
+                      for c in children: walk(c)
+                  else:
+                      out.append({
+                          'name': m.get('name') or m.get('identifier') or '?',
+                          'size': m.get('size') or 0,
+                          'chunks': m.get('chunks') or [],
+                      })
+              for m in stats.get('modules') or []: walk(m)
+              # Webpack can expose a leaf both top-level and under a concatenated module.
+              dedup={}
+              for m in out:
+                  key=(m['name'],m['size'])
+                  dedup[key]=m
+              return list(dedup.values())
+
+          def group_name(name):
+              n=name.replace('\\\\','/')
+              if 'node_modules/' in n:
+                  tail=n.split('node_modules/',1)[1]
+                  parts=tail.split('/')
+                  if parts[0].startswith('@') and len(parts)>1:
+                      return 'npm:'+parts[0]+'/'+parts[1]
+                  return 'npm:'+parts[0]
+              m=re.search(r'(?:^|!)(\./src/[^!]+)',n)
+              if m:
+                  return m.group(1).split('?',1)[0]
+              if './src/' in n:
+                  return './src/'+n.split('./src/',1)[1].split('?',1)[0]
+              return 'other'
+
+          result={'bundles': {k:fmeta(v) for k,v in files.items()}}
+          result['productionMatchesCurrentUniversal']=(
+              result['bundles']['production']['sha256']==result['bundles']['universal']['sha256']
+          )
+          u=result['bundles']['universal']['bytes']
+          l=result['bundles']['mapLite']['bytes']
+          result['mapLiteReduction']={
+              'bytes': u-l,
+              'percent': round((u-l)*100/u,2) if u else None,
+              'gzipBytes': result['bundles']['universal']['gzip9Bytes']-result['bundles']['mapLite']['gzip9Bytes'],
+              'gzipPercent': round((result['bundles']['universal']['gzip9Bytes']-result['bundles']['mapLite']['gzip9Bytes'])*100/result['bundles']['universal']['gzip9Bytes'],2) if result['bundles']['universal']['gzip9Bytes'] else None,
+          }
+
+          for label in ('universal','map-lite'):
+              stats=json.loads((root/f'{label}-stats.json').read_text())
+              mods=leaf_modules(stats)
+              mods.sort(key=lambda x:x['size'],reverse=True)
+              groups={}
+              for m in mods:
+                  g=group_name(m['name'])
+                  groups[g]=groups.get(g,0)+m['size']
+              result[label]={
+                  'moduleCount': len(mods),
+                  'topLeafModules': mods[:40],
+                  'topGroups': [
+                      {'name':k,'sourceBytes':v}
+                      for k,v in sorted(groups.items(), key=lambda kv:kv[1], reverse=True)[:30]
+                  ],
+              }
+
+          (root/'summary.json').write_text(json.dumps(result,indent=2),encoding='utf-8')
+          print(json.dumps(result,indent=2))
+          PY
+
+      - name: Verify map-lite exports in Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > bundle-analysis/export-test.html <<'HTML'
+          <!doctype html><meta charset="utf-8">
+          <script src="./aether-client-map-lite.min.js"></script>
+          <script>
+            const required=['AetherCloudClient','ClientStateInLocalStorage','UUID','CryptoLib','ServerDescriptor','applySodium'];
+            window.__result={required,missing:required.filter(k=>!(k in window.Aether)),keys:Object.keys(window.Aether||{}).sort()};
+          </script>
+          HTML
+          npm install --no-save puppeteer-core@24.16.0
+          python3 -m http.server 8000 --directory bundle-analysis >/tmp/http.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:8000/export-test.html >/dev/null && break; sleep 1; done
+          node <<'JS'
+          const puppeteer=require('puppeteer-core');
+          (async()=>{const b=await puppeteer.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});try{const p=await b.newPage();await p.goto('http://127.0.0.1:8000/export-test.html',{waitUntil:'load'});const r=await p.evaluate(()=>window.__result);console.log(JSON.stringify(r,null,2));if(r.missing.length)throw new Error('Missing map-lite exports: '+r.missing.join(','));}finally{await b.close()}})().catch(e=>{console.error(e);process.exit(1)});
+          JS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: browser-lite-bundle-analysis
+          path: bundle-analysis
+          if-no-files-found: error
