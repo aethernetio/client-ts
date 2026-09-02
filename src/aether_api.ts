@@ -1,7 +1,12 @@
-import  {
-    AFuture, ARFuture, DataInOutStatic, DataInOut, FastMetaType, FastMeta, SerializerPackNumber, DeserializerPackNumber, FastFutureContextStub, SyncMapChannel, MetaContext, RemoteApi, FastMetaApi, BytesConverter, UUID, URI, AConsumer, ToString, FastMetaHierarchyType, AString
-}
-from './aether_client';
+import { AFuture, ARFuture } from './aether_future';
+import { DataInOutStatic, DataInOut } from './aether_datainout';
+import {
+    FastMetaType, FastMeta, SerializerPackNumber, DeserializerPackNumber,
+    FastFutureContextStub, SyncMapChannel, MetaContext, RemoteApi,
+    FastMetaApi, BytesConverter, FastMetaHierarchyType,
+} from './aether_fastmeta';
+import { UUID, URI, AConsumer } from './aether_types';
+import { ToString, AString } from './aether_astring';
 import * as Impl from './aether_api_impl';
 // This is always relative
 export enum AetherCodec  {
