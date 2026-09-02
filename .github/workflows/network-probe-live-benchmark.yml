@@ -1,0 +1,64 @@
+name: Network probe live browser benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: Cold/warm pairs per CPU rate
+        required: true
+        default: '5'
+      cpu_rates:
+        description: Comma-separated CPU throttle rates
+        required: true
+        default: '1,4'
+      variant:
+        description: universal, probe, or both
+        required: true
+        default: 'both'
+      allow_not_ready:
+        description: Allow foundation-only probe without failing
+        required: true
+        default: 'false'
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm install --no-save puppeteer-core@24.16.0
+
+      - name: Build universal and probe browser bundles
+        run: |
+          npx webpack --config webpack.config.mjs --env buildTarget=browser
+          npx webpack --config webpack.network-probe.config.mjs
+
+      - name: Run cold warm live benchmark
+        env:
+          RUNS: ${{ inputs.runs }}
+          CPU_RATES: ${{ inputs.cpu_rates }}
+          VARIANT: ${{ inputs.variant }}
+          ALLOW_NOT_READY: ${{ inputs.allow_not_ready }}
+        run: |
+          node scripts/run-network-probe-benchmark.mjs \
+            --variant="$VARIANT" \
+            --runs="$RUNS" \
+            --cpu="$CPU_RATES" \
+            --mode=both \
+            --allow-not-ready="$ALLOW_NOT_READY" \
+            --output=network-probe-benchmark.json
+
+      - name: Upload benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-probe-live-benchmark
+          path: network-probe-benchmark.json
+          if-no-files-found: warn
