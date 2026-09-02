@@ -53,7 +53,7 @@ implements ClientApiUnsafe {
     private readonly localSafeApi = new Proxy<Record<PropertyKey, unknown>>({}, {
         get: (_target, property) => {
             if (property === 'then') return undefined;
-            return (..._args: unknown[]) => undefined;
+            return (..._args: unknown[]): void => undefined;
         },
     }) as unknown as ClientApiSafe;
 
@@ -109,8 +109,6 @@ implements ClientApiUnsafe {
     }
 
     protected override onConnectionStateChanged(isWritable: boolean): void {
-        // The base may receive a transport callback during super() before the
-        // login stream fields are initialized.
         if (!this.authorizedApiV0) return;
         if (!isWritable) {
             this.negotiatedLoginApiVersion = -1;
