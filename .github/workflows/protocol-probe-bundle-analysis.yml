@@ -1,0 +1,84 @@
+name: Network protocol subset bundle analysis
+
+on:
+  push:
+    branches:
+      - browser-lite-analysis-20260902
+    paths:
+      - 'src/aether_browser_protocol_probe.ts'
+      - 'webpack.protocol-probe.config.mjs'
+      - '.github/workflows/protocol-probe-bundle-analysis.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: browser-lite-analysis-20260902
+      - run: npm ci
+      - name: Build protocol subset
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p protocol-probe-analysis
+          npx webpack \
+            --config webpack.protocol-probe.config.mjs \
+            --profile \
+            --json=protocol-probe-analysis/stats.json
+          cp build/protocol-probe/aether-protocol-probe.min.js protocol-probe-analysis/
+      - name: Summarize size and included modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,json
+          from pathlib import Path
+          root=Path('protocol-probe-analysis')
+          data=(root/'aether-protocol-probe.min.js').read_bytes()
+          stats=json.loads((root/'stats.json').read_text())
+          rows=[]
+          def walk(m):
+              ch=m.get('modules') or []
+              if ch:
+                  for x in ch: walk(x)
+              else:
+                  rows.append({'name':m.get('name') or m.get('identifier') or '?','sourceBytes':m.get('size') or 0,'chunks':m.get('chunks') or []})
+          for m in stats.get('modules') or []: walk(m)
+          dedup={(x['name'],x['sourceBytes']):x for x in rows}
+          rows=sorted(dedup.values(),key=lambda x:x['sourceBytes'],reverse=True)
+          out={
+            'bytes':len(data),
+            'gzip9Bytes':len(gzip.compress(data,9)),
+            'moduleCount':len(rows),
+            'topModules':rows[:50],
+          }
+          (root/'summary.json').write_text(json.dumps(out,indent=2))
+          print(json.dumps(out,indent=2))
+          PY
+      - name: Verify expected protocol exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save puppeteer-core@24.16.0
+          cat > protocol-probe-analysis/test.html <<'HTML'
+          <!doctype html><meta charset="utf-8"><script src="./aether-protocol-probe.min.js"></script><script>
+          const required=['AetherCodec','CryptoLib','ServerDescriptor','ServerDescriptorWithGeo','IpInfo','Cloud','LoginApi','LoginStream','AuthorizedApi','ClientApiSafe','ClientApiUnsafe','UUID','URI','AFuture','ARFuture','MetaContextBase','RemoteApiFuture'];
+          window.__r={missing:required.filter(k=>!(k in window.AetherProbeProtocol)),keys:Object.keys(window.AetherProbeProtocol||{}).sort()};
+          </script>
+          HTML
+          python3 -m http.server 8000 --directory protocol-probe-analysis >/tmp/probe-http.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:8000/test.html >/dev/null && break; sleep 1; done
+          node <<'JS'
+          const puppeteer=require('puppeteer-core');
+          (async()=>{const b=await puppeteer.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});try{const p=await b.newPage();await p.goto('http://127.0.0.1:8000/test.html',{waitUntil:'load'});const r=await p.evaluate(()=>window.__r);console.log(JSON.stringify(r,null,2));if(r.missing.length)throw new Error('Missing '+r.missing.join(','));}finally{await b.close()}})().catch(e=>{console.error(e);process.exit(1)});
+          JS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: protocol-probe-bundle-analysis
+          path: protocol-probe-analysis
+          if-no-files-found: error
