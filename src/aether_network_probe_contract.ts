@@ -1,7 +1,7 @@
 import type { IpInfo, ServerDescriptor, ServerDescriptorWithGeo } from './aether_api';
 
 /** Experimental browser-only contract. Not part of the normal SDK barrel. */
-export const NETWORK_PROBE_IMPLEMENTATION_STAGE = 'foundation' as const;
+export const NETWORK_PROBE_IMPLEMENTATION_STAGE = 'live-prototype' as const;
 
 export interface AetherNetworkProbeClientOptions {
     parentUid: string;
@@ -42,7 +42,9 @@ export interface AetherNetworkProbeClientContract {
     getKnownServerDescriptors(): readonly ServerDescriptor[];
     getServers(): Promise<readonly ServerDescriptorWithGeo[]>;
     getMyIp(): Promise<IpInfo>;
-    connectServers(descriptors: readonly ServerDescriptor[]): Promise<void>;
+    connectServers(
+        descriptors: readonly (ServerDescriptor | ServerDescriptorWithGeo)[],
+    ): Promise<void>;
     waitForFirstWorkConnection(): Promise<void>;
     measureServerPingMs(sid: number): Promise<number>;
     persistState(): Promise<void>;
