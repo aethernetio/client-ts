@@ -1,6 +1,5 @@
 import {
     AetherCodec,
-    AuthorizedApi,
     AuthorizedApiRemote,
     ClientApiSafe,
     ClientApiUnsafe,
@@ -13,7 +12,7 @@ import {
     ServerDescriptorWithGeo,
 } from './aether_api';
 import { CryptoEngine } from './aether_crypto';
-import { AFuture, ARFuture } from './aether_future';
+import { ARFuture } from './aether_future';
 import { ClientStartException, UUID } from './aether_types';
 import {
     NetworkProbeConnectionBase,
@@ -41,9 +40,22 @@ implements ClientApiUnsafe {
     private readonly owner: NetworkProbeWorkOwner;
     private readonly serverDescriptor: ServerDescriptor;
     private readonly cryptoEngine: CryptoEngine;
-    private readonly authorizedApiV0: AuthorizedApiRemote;
-    private authorizedApi: AuthorizedApiRemote;
+    private authorizedApiV0!: AuthorizedApiRemote;
+    private authorizedApi!: AuthorizedApiRemote;
     private negotiatedLoginApiVersion = -1;
+
+    /**
+     * Server-to-client safe notifications are irrelevant to a network probe.
+     * A Proxy supplies no-op methods for the generated callback API without
+     * importing the full MyClientApiSafe implementation and its messaging/
+     * access/WebRTC dependency graph.
+     */
+    private readonly localSafeApi = new Proxy<Record<PropertyKey, unknown>>({}, {
+        get: (_target, property) => {
+            if (property === 'then') return undefined;
+            return (..._args: unknown[]) => undefined;
+        },
+    }) as unknown as ClientApiSafe;
 
     constructor(owner: NetworkProbeWorkOwner, descriptor: ServerDescriptor) {
         let uri = probeUriFromServerDescriptor(descriptor, AetherCodec.WSS);
@@ -71,7 +83,7 @@ implements ClientApiUnsafe {
 
         this.authorizedApiV0 = rootApi.openLoginByAlias(
             alias,
-            () => ClientApiSafe.EMPTY,
+            () => this.localSafeApi,
             (data: Uint8Array) => this.cryptoEngine.encrypt(data),
             'networkProbeLoginByAlias',
         );
@@ -80,7 +92,7 @@ implements ClientApiUnsafe {
     }
 
     private negotiateLoginApiVersion(): void {
-        if (this.negotiatedLoginApiVersion !== -1) return;
+        if (!this.authorizedApiV0 || this.negotiatedLoginApiVersion !== -1) return;
         const version = this.owner.getLoginApiVersion();
         if (version === 0) {
             this.authorizedApi = this.authorizedApiV0;
@@ -97,6 +109,9 @@ implements ClientApiUnsafe {
     }
 
     protected override onConnectionStateChanged(isWritable: boolean): void {
+        // The base may receive a transport callback during super() before the
+        // login stream fields are initialized.
+        if (!this.authorizedApiV0) return;
         if (!isWritable) {
             this.negotiatedLoginApiVersion = -1;
             this.authorizedApi = this.authorizedApiV0;
