@@ -2,6 +2,7 @@
 export { NETWORK_PROBE_IMPLEMENTATION_STAGE } from './aether_network_probe_contract';
 export type {
     AetherNetworkProbeClientContract,
+    AetherNetworkProbeClientOptions,
     NetworkProbeSnapshot,
     NetworkProbeStageTimings,
 } from './aether_network_probe_contract';
