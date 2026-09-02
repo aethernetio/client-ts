@@ -1,0 +1,126 @@
+name: Persist API runtime decoupling in generator
+
+on:
+  push:
+    branches:
+      - browser-lite-analysis-20260902
+    paths:
+      - '.github/workflows/persist-api-decoupling-in-generator.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: browser-lite-analysis-20260902
+          fetch-depth: 1
+
+      - name: Make generator preserve direct runtime imports
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('generator/AetherProtocolPlugin.ts')
+          s=p.read_text(encoding='utf-8')
+          old="""            const fixedContent = originalContent
+                .replace(/'\\.\\/aether_future'/g,     \"'aether-client'\")
+                .replace(/'\\.\\/aether_datainout'/g,   \"'aether-client'\")
+                .replace(/'\\.\\/aether_fastmeta'/g,    \"'aether-client'\")
+                .replace(/'\\.\\/aether_types'/g,       \"'aether-client'\")
+                .replace(/'\\.\\/aether_astring'/g,     \"'aether-client'\");
+          """
+          new="""            // Keep generated protocol runtime imports pointed at their
+            // concrete modules. Rewriting them through the public aether-client
+            // barrel creates a circular dependency that forces browser bundles
+            // importing protocol types to pull in the entire client, including
+            // crypto, messaging and WebRTC.
+            const fixedContent = originalContent;
+          """
+          if old not in s:
+              raise SystemExit('generator rewrite block not found')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Regenerate protocol from ADSL
+        run: npm run protocol
+
+      - name: Assert generated API stays decoupled
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -q "from './aether_client'" src/aether_api.ts
+          ! grep -q "from './aether_client'" src/aether_api_impl.ts
+          ! grep -q "from 'aether-client'" src/aether_api.ts
+          ! grep -q "from 'aether-client'" src/aether_api_impl.ts
+          grep -q "from './aether_future'" src/aether_api.ts
+          grep -q "from './aether_fastmeta'" src/aether_api_impl.ts
+          git diff --stat
+
+      - name: Compile and test
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          npm test -- --runInBand
+
+      - name: Rebuild protocol subset and guard size
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p generator-decoupling-validation
+          npx webpack --config webpack.protocol-probe.config.mjs --profile --json=generator-decoupling-validation/stats.json
+          cp build/protocol-probe/aether-protocol-probe.min.js generator-decoupling-validation/
+          python3 - <<'PY'
+          import gzip,json,sys
+          from pathlib import Path
+          p=Path('generator-decoupling-validation/aether-protocol-probe.min.js')
+          d=p.read_bytes()
+          stats=json.loads(Path('generator-decoupling-validation/stats.json').read_text())
+          names=[]
+          def walk(m):
+              ch=m.get('modules') or []
+              if ch:
+                  for x in ch: walk(x)
+              else: names.append(m.get('name') or m.get('identifier') or '?')
+          for m in stats.get('modules') or []: walk(m)
+          out={
+            'bytes':len(d),'gzip9Bytes':len(gzip.compress(d,9)),
+            'aetherClient':any('aether_client.ts' in n for n in names),
+            'libsodium':any('node_modules/libsodium/' in n for n in names),
+            'webrtc':any('aether_fastmeta_webrtc' in n for n in names),
+            'moduleCount':len(set(names)),
+          }
+          Path('generator-decoupling-validation/summary.json').write_text(json.dumps(out,indent=2))
+          print(json.dumps(out,indent=2))
+          if out['bytes']>510000 or out['aetherClient'] or out['libsodium'] or out['webrtc']:
+              sys.exit(1)
+          PY
+
+      - name: Commit generator-level fix to experiment branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Gorynych'
+          git config user.email '48762816+StevenMagnet@users.noreply.github.com'
+          git add generator/AetherProtocolPlugin.ts src/aether_api.ts src/aether_api_impl.ts
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit'
+          else
+            git commit -m 'Preserve direct runtime imports in protocol generator'
+            git push origin HEAD:browser-lite-analysis-20260902
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: generator-decoupling-validation
+          path: generator-decoupling-validation
+          if-no-files-found: error
