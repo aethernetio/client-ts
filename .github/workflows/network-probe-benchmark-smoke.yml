@@ -1,0 +1,38 @@
+name: Smoke test network probe benchmark harness
+
+on:
+  push:
+    branches:
+      - browser-lite-analysis-20260902
+    paths:
+      - '.github/workflows/network-probe-benchmark-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install and build
+        run: |
+          npm ci
+          npm install --no-save puppeteer-core@24.16.0
+          npx webpack --config webpack.config.mjs --env buildTarget=browser
+          npx webpack --config webpack.network-probe.config.mjs
+      - name: Run foundation smoke test
+        run: |
+          node scripts/run-network-probe-benchmark.mjs \
+            --variant=probe \
+            --runs=1 \
+            --cpu=1 \
+            --mode=cold \
+            --allow-not-ready=true \
+            --output=network-probe-smoke.json
+          node -e "const r=require('./network-probe-smoke.json'); const s=r.samples[0]; if(!s || s.status!=='not-ready' || s.stage!=='foundation') process.exit(1); console.log(s)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: network-probe-benchmark-smoke
+          path: network-probe-smoke.json
