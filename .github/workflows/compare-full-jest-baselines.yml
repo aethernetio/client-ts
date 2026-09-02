@@ -1,0 +1,101 @@
+name: Compare full Jest baselines
+
+on:
+  push:
+    branches:
+      - network-probe-live-prototype-20260902
+    paths:
+      - '.github/workflows/compare-full-jest-baselines.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: network-probe-live-prototype-20260902
+
+      - name: Clone three code states
+        run: |
+          git clone --depth 1 --branch main https://github.com/aethernetio/client-ts.git /tmp/full-main
+          git clone --depth 1 --branch browser-lite-analysis-20260902 https://github.com/aethernetio/client-ts.git /tmp/full-foundation
+          git clone --depth 1 --branch network-probe-live-prototype-20260902 https://github.com/aethernetio/client-ts.git /tmp/full-probe
+
+      - name: Run complete Jest suite on each state
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p full-jest-comparison
+          for spec in \
+            'main:/tmp/full-main' \
+            'foundation:/tmp/full-foundation' \
+            'probe:/tmp/full-probe'
+          do
+            name="${spec%%:*}"
+            dir="${spec#*:}"
+            echo "=== FULL $name ==="
+            cd "$dir"
+            npm ci >/tmp/full-npm-$name.log 2>&1 || { cat /tmp/full-npm-$name.log; exit 1; }
+            set +e
+            npm test -- --runInBand --json --outputFile="/tmp/full-$name.json" >"/tmp/full-$name.log" 2>&1
+            code=$?
+            set -e
+            cp "/tmp/full-$name.json" "$GITHUB_WORKSPACE/full-jest-comparison/$name.json"
+            cp "/tmp/full-$name.log" "$GITHUB_WORKSPACE/full-jest-comparison/$name.log"
+            echo "$code" > "$GITHUB_WORKSPACE/full-jest-comparison/$name.exit"
+          done
+
+      - name: Compare failures
+        run: |
+          node - <<'JS'
+          const fs=require('fs');
+          const root='full-jest-comparison';
+          const states=['main','foundation','probe'];
+          const out={};
+          for(const state of states){
+            const j=JSON.parse(fs.readFileSync(`${root}/${state}.json`,'utf8'));
+            const failed=[];
+            for(const suite of j.testResults || []){
+              for(const a of suite.assertionResults || []){
+                if(a.status==='failed') failed.push({file:suite.name.split('/').pop(),title:a.fullName});
+              }
+            }
+            failed.sort((a,b)=>(a.file+'\0'+a.title).localeCompare(b.file+'\0'+b.title));
+            out[state]={
+              numTotalTestSuites:j.numTotalTestSuites,
+              numFailedTestSuites:j.numFailedTestSuites,
+              numTotalTests:j.numTotalTests,
+              numFailedTests:j.numFailedTests,
+              failed
+            };
+          }
+          const key=x=>`${x.file}::${x.title}`;
+          const main=new Set(out.main.failed.map(key));
+          const foundation=new Set(out.foundation.failed.map(key));
+          const probe=new Set(out.probe.failed.map(key));
+          out.comparison={
+            probeOnlyVsMain:[...probe].filter(x=>!main.has(x)),
+            probeOnlyVsFoundation:[...probe].filter(x=>!foundation.has(x)),
+            mainOnlyVsProbe:[...main].filter(x=>!probe.has(x)),
+            foundationOnlyVsProbe:[...foundation].filter(x=>!probe.has(x)),
+            exactMainMatch:probe.size===main.size && [...probe].every(x=>main.has(x)),
+            exactFoundationMatch:probe.size===foundation.size && [...probe].every(x=>foundation.has(x))
+          };
+          fs.writeFileSync(`${root}/summary.json`,JSON.stringify(out,null,2));
+          console.log(JSON.stringify(out,null,2));
+          if(out.comparison.probeOnlyVsMain.length && out.comparison.probeOnlyVsFoundation.length){
+            throw new Error('Probe introduces full-suite failures absent from both baselines');
+          }
+          JS
+
+      - name: Upload full comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-jest-baseline-comparison
+          path: full-jest-comparison
+          if-no-files-found: error
