@@ -46,6 +46,7 @@ implements ClientApiRegUnsafe {
     private readonly tempKey: AKey.Symmetric;
     private readonly tempKeyNative: Key;
     private readonly tempKeyCrypto: CryptoEngine;
+    private readonly registrationFuture: AFuture = AFuture.make();
     private globalCrypto: CryptoEngine | null = null;
     private safeApi: ServerRegistrationApiRemote | null = null;
     private globalApi: GlobalRegServerApiRemote | null = null;
@@ -61,13 +62,13 @@ implements ClientApiRegUnsafe {
     }
 
     public registration(): AFuture {
-        if (this.registrationStarted) return this.connectFuture;
+        if (this.registrationStarted) return this.registrationFuture;
         this.registrationStarted = true;
 
         this.getAsymmetricPublicKey()
             .to((asymmetricCrypto: CryptoEngine) => this.beginRegistration(asymmetricCrypto))
-            .onError((error: Error) => this.connectFuture.tryError(error));
-        return this.connectFuture;
+            .onError((error: Error) => this.registrationFuture.tryError(error));
+        return this.registrationFuture;
     }
 
     private getAsymmetricPublicKey(): ARFuture<CryptoEngine> {
@@ -85,7 +86,7 @@ implements ClientApiRegUnsafe {
     private beginRegistration(asymmetricCrypto: CryptoEngine): void {
         const root = this.getRootApi();
         if (!root) {
-            this.connectFuture.tryError(new Error('Registration root API unavailable'));
+            this.registrationFuture.tryError(new Error('Registration root API unavailable'));
             return;
         }
 
@@ -141,21 +142,21 @@ implements ClientApiRegUnsafe {
                                 this.resolveCloud(finish.getCloud())
                                     .to(() => {
                                         this.owner.confirmRegistration(finish);
-                                        this.connectFuture.tryDone();
+                                        this.registrationFuture.tryDone();
                                     })
-                                    .onError((error: Error) => this.connectFuture.tryError(error));
+                                    .onError((error: Error) => this.registrationFuture.tryError(error));
                             })
-                            .onError((error: Error) => this.connectFuture.tryError(error));
+                            .onError((error: Error) => this.registrationFuture.tryError(error));
                     } finally {
                         lock?.close();
                     }
                 } catch (error) {
-                    this.connectFuture.tryError(
+                    this.registrationFuture.tryError(
                         error instanceof Error ? error : new Error(String(error)),
                     );
                 }
-            }, 6, () => this.connectFuture.tryError(new Error('Registration work-proof timeout')))
-            .onError((error: Error) => this.connectFuture.tryError(error));
+            }, 6, () => this.registrationFuture.tryError(new Error('Registration work-proof timeout')))
+            .onError((error: Error) => this.registrationFuture.tryError(error));
     }
 
     private resolveCloud(cloud: Cloud): AFuture {
