@@ -1,6 +1,12 @@
 import { NETWORK_PROBE_IMPLEMENTATION_STAGE } from '../src/aether_network_probe_contract';
-describe('network probe foundation', () => {
-    it('is explicitly a foundation until live transport is implemented', () => {
-        expect(NETWORK_PROBE_IMPLEMENTATION_STAGE).toBe('foundation');
+import { AetherNetworkProbeClient } from '../src/aether_network_probe_client';
+
+describe('network probe live prototype', () => {
+    it('advertises the live prototype stage', () => {
+        expect(NETWORK_PROBE_IMPLEMENTATION_STAGE).toBe('live-prototype');
+    });
+
+    it('exports a concrete client implementation', () => {
+        expect(typeof AetherNetworkProbeClient).toBe('function');
     });
 });
