@@ -1,4 +1,5 @@
-/** Browser entry reserved for the real lightweight network probe. */
+/** Browser entry for the lightweight Æthernet network probe. */
+export { AetherNetworkProbeClient } from './aether_network_probe_client';
 export { NETWORK_PROBE_IMPLEMENTATION_STAGE } from './aether_network_probe_contract';
 export type {
     AetherNetworkProbeClientContract,
@@ -13,11 +14,6 @@ export {
     ServerDescriptorWithGeo,
     IpInfo,
     Cloud,
-    LoginApi,
-    LoginStream,
-    AuthorizedApi,
-    ClientApiSafe,
-    ClientApiUnsafe,
 } from './aether_api';
 export { UUID } from './aether_types';
 export type { URI } from './aether_types';
