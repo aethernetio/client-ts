@@ -43,10 +43,10 @@ jobs:
           npx webpack --config webpack.network-probe.config.mjs --profile --json=production-soak-validation/probe-stats.json
           cp build/network-probe/aether-network-probe.min.js production-soak-validation/probe-main.js
 
-      - name: Fetch exact website production client
+      - name: Fetch live website production client
         run: |
           curl -fL --retry 3 \
-            https://raw.githubusercontent.com/aethernetio/main-site/main/aether-client.min.js \
+            'https://aethernet.io/aether-client.min.js?v=20260816-browser-v3' \
             -o build/production/aether-client.min.js
           size=$(wc -c < build/production/aether-client.min.js)
           echo "production_size=$size"
