@@ -1,0 +1,131 @@
+name: Validate live network probe prototype
+
+on:
+  push:
+    branches:
+      - network-probe-live-prototype-20260902
+    paths:
+      - '.github/workflows/validate-live-network-probe-prototype.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: network-probe-live-prototype-20260902
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile TypeScript
+        run: npm run build
+
+      - name: Run focused regression tests
+        run: |
+          npx jest \
+            test/network_probe_contract.test.ts \
+            test/aether_client_known_servers.test.ts \
+            test/aether_client_parallel_connections.test.ts \
+            test/ping_attempt_token.test.ts \
+            test/ping_rtt_history.test.ts \
+            --runInBand
+
+      - name: Build universal and live probe bundles
+        run: |
+          mkdir -p /tmp/live-probe
+          npx webpack --config webpack.config.mjs --env buildTarget=browser --profile --json=/tmp/live-probe/universal.json
+          cp build/browser/aether-client.min.js /tmp/live-probe/universal.js
+          npx webpack --config webpack.network-probe.config.mjs --profile --json=/tmp/live-probe/probe.json
+          cp build/network-probe/aether-network-probe.min.js /tmp/live-probe/probe-main.js
+          find build/network-probe -maxdepth 1 -type f -name '*.js' -print -exec wc -c {} \;
+
+      - name: Verify chunk isolation and sizes
+        run: |
+          python3 - <<'PY'
+          import gzip, json
+          from pathlib import Path
+
+          root=Path('/tmp/live-probe')
+          stats=json.loads((root/'probe.json').read_text())
+          universal=(root/'universal.js').read_bytes()
+          main=(root/'probe-main.js').read_bytes()
+
+          entry=stats.get('entrypoints',{}).get('browser',{})
+          entry_chunks=set(entry.get('chunks') or [])
+          initial=[]
+          all_names=[]
+
+          def walk(module):
+              children=module.get('modules') or []
+              if children:
+                  for child in children:
+                      walk(child)
+                  return
+              name=module.get('name') or module.get('identifier') or ''
+              all_names.append(name)
+              chunks=set(module.get('chunks') or [])
+              if chunks & entry_chunks:
+                  initial.append(name)
+
+          for module in stats.get('modules') or []:
+              walk(module)
+
+          forbidden_initial={
+              'fullClient':'aether_client.ts',
+              'oldWork':'aether_client_connection_work.ts',
+              'messageNode':'aether_client_message',
+              'webrtc':'aether_fastmeta_webrtc',
+              'sodium':'node_modules/libsodium/',
+              'sodiumWrappers':'libsodium-wrappers',
+              'bcrypt':'bcryptjs',
+          }
+          leaks={key:any(token in name for name in initial) for key,token in forbidden_initial.items()}
+          async_expected={
+              'sodium':any('libsodium' in name for name in all_names),
+              'registration':any('aether_network_probe_connection_registration' in name for name in all_names),
+              'workProof':any('aether_work_proof' in name for name in all_names),
+          }
+
+          build=Path('build/network-probe')
+          js_assets=[]
+          for path in sorted(build.glob('*.js')):
+              data=path.read_bytes()
+              js_assets.append({
+                  'name':path.name,
+                  'bytes':len(data),
+                  'gzip9Bytes':len(gzip.compress(data,9)),
+              })
+
+          report={
+              'universal':{'bytes':len(universal),'gzip9Bytes':len(gzip.compress(universal,9))},
+              'probeMain':{'bytes':len(main),'gzip9Bytes':len(gzip.compress(main,9))},
+              'probeAllJs':js_assets,
+              'entryChunkIds':sorted(entry_chunks,key=str),
+              'initialModuleCount':len(set(initial)),
+              'forbiddenInitialDependencies':leaks,
+              'asyncDependenciesPresent':async_expected,
+          }
+          print(json.dumps(report,indent=2))
+          Path('/tmp/live-probe/static-summary.json').write_text(json.dumps(report,indent=2))
+
+          if len(universal) != 1376158:
+              raise SystemExit(f'Universal bundle changed: {len(universal)}')
+          if any(leaks.values()):
+              raise SystemExit('Heavy dependency leaked into initial probe chunk')
+          if len(main) >= len(universal):
+              raise SystemExit('Probe initial chunk is not smaller than universal')
+          if not async_expected['sodium'] or not async_expected['registration']:
+              raise SystemExit('Expected deferred crypto/registration chunks were not emitted')
+          PY
+
+      - name: Upload static validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-network-probe-static-validation
+          path: /tmp/live-probe
+          if-no-files-found: error
