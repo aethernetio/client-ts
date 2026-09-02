@@ -55,6 +55,9 @@ implements AetherNetworkProbeClientContract {
 
     public async initializeCrypto(): Promise<void> {
         if (this.cryptoReady) return;
+        // The repository-wide legacy tsc target is ES2015, while the browser
+        // Webpack build intentionally uses import() for a separate crypto chunk.
+        // @ts-ignore TS1323 - Webpack/ts-loader browser build supports import().
         const sodiumModule = await import('./aether_crypto_sodium');
         await sodiumModule.applySodium();
         this.cryptoReady = true;
@@ -116,6 +119,7 @@ implements AetherNetworkProbeClientContract {
 
         // Cold-only dependency. bcrypt/work-proof code must not enter the warm
         // startup chunk.
+        // @ts-ignore TS1323 - Webpack/ts-loader browser build supports import().
         const module = await import('./aether_network_probe_connection_registration');
         const registrations = uris.map(uri =>
             new module.NetworkProbeConnectionRegistration(this, uri),
