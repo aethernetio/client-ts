@@ -378,7 +378,7 @@ import {
         };
 
         Object.entries(dtoDef.fields).forEach(([fieldName, fieldType]) => {
-            dtoDef.fields![fieldName] = processPotentialAnon([fieldName, dtoName], fieldType);
+            dtoDef.fields![fieldName] = processFieldType([fieldName, dtoName], fieldType);
         });
     }
 

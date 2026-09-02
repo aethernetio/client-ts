@@ -16,7 +16,8 @@ export {
   ClientApiUnsafe,
 } from './aether_api';
 
-export { UUID, URI } from './aether_types';
+export { UUID } from './aether_types';
+export type { URI } from './aether_types';
 export {
   AFuture,
   ARFuture,
