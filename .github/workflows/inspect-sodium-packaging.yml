@@ -1,0 +1,66 @@
+name: Inspect Sodium browser packaging
+
+on:
+  push:
+    branches:
+      - browser-lite-analysis-20260902
+    paths:
+      - '.github/workflows/inspect-sodium-packaging.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: browser-lite-analysis-20260902
+      - run: npm ci
+      - name: Inspect libsodium packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p sodium-analysis
+          node <<'JS' | tee sodium-analysis/package-info.json
+          const fs=require('fs'),path=require('path');
+          const pkgs=['libsodium','libsodium-wrappers'];
+          const out={};
+          for(const p of pkgs){
+            const root=path.dirname(require.resolve(p+'/package.json'));
+            const pkg=require(root+'/package.json');
+            const files=[];
+            const walk=d=>{for(const n of fs.readdirSync(d)){const f=path.join(d,n);const s=fs.statSync(f);if(s.isDirectory())walk(f);else files.push({path:path.relative(root,f),bytes:s.size});}};
+            walk(root);files.sort((a,b)=>b.bytes-a.bytes);
+            out[p]={package:pkg,largestFiles:files.slice(0,30),totalBytes:files.reduce((s,x)=>s+x.bytes,0)};
+          }
+          console.log(JSON.stringify(out,null,2));
+          JS
+          grep -RhoE 'crypto_[a-zA-Z0-9_]+' src/aether_crypto_sodium.ts | sort -u | tee sodium-analysis/aether-required-symbols.txt
+          {
+            echo '--- libsodium package files ---'
+            find node_modules/libsodium -maxdepth 4 -type f -printf '%p %s bytes\n' | sort
+            echo '--- wrappers package files ---'
+            find node_modules/libsodium-wrappers -maxdepth 4 -type f -printf '%p %s bytes\n' | sort
+          } > sodium-analysis/file-list.txt
+      - name: Inspect module headers and exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in $(find node_modules/libsodium node_modules/libsodium-wrappers -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.wasm' \) | sort); do
+            echo "===== $f =====" >> sodium-analysis/module-heads.txt
+            if [[ "$f" == *.wasm ]]; then
+              file "$f" >> sodium-analysis/module-heads.txt
+              stat -c '%s bytes' "$f" >> sodium-analysis/module-heads.txt
+            else
+              head -c 1000 "$f" >> sodium-analysis/module-heads.txt || true
+              printf '\n' >> sodium-analysis/module-heads.txt
+            fi
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sodium-packaging-analysis
+          path: sodium-analysis
+          if-no-files-found: error
