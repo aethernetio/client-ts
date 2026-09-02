@@ -1,0 +1,74 @@
+name: Browser lite minified byte ownership
+
+on:
+  push:
+    branches:
+      - browser-lite-analysis-20260902
+    paths:
+      - '.github/workflows/browser-lite-source-map-analysis.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: browser-lite-analysis-20260902
+      - run: npm ci
+      - name: Build map-lite with external source map
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx webpack \
+            --config webpack.map-lite.config.mjs \
+            --devtool source-map \
+            --output-path "$PWD/build/map-lite-sourcemap" \
+            --output-filename aether-client-map-lite.min.js
+          ls -lh build/map-lite-sourcemap
+      - name: Measure generated-byte ownership from source map
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save source-map-explorer@2.5.3
+          mkdir -p source-map-analysis
+          npx source-map-explorer \
+            build/map-lite-sourcemap/aether-client-map-lite.min.js \
+            --json source-map-analysis/ownership.json \
+            --no-border-checks
+          cp build/map-lite-sourcemap/aether-client-map-lite.min.js source-map-analysis/
+          cp build/map-lite-sourcemap/aether-client-map-lite.min.js.map source-map-analysis/
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('source-map-analysis/ownership.json')
+          d=json.loads(p.read_text())
+          bundles=d.get('results') or d
+          # source-map-explorer JSON schema varies slightly by version.
+          if isinstance(bundles,list):
+              entry=bundles[0]
+          elif isinstance(bundles,dict):
+              entry=next(iter(bundles.values())) if 'files' not in bundles else bundles
+          else:
+              raise SystemExit('Unexpected source-map-explorer schema')
+          mapped=entry.get('files') or entry.get('sources') or {}
+          rows=[]
+          if isinstance(mapped,dict):
+              for name,val in mapped.items():
+                  if isinstance(val,(int,float)): size=val
+                  elif isinstance(val,dict): size=val.get('size') or val.get('bytes') or 0
+                  else: size=0
+                  rows.append({'source':name,'bytes':size})
+          rows.sort(key=lambda x:x['bytes'],reverse=True)
+          out={'bundleBytes':Path('source-map-analysis/aether-client-map-lite.min.js').stat().st_size,'topSources':rows[:60],'mappedBytes':sum(x['bytes'] for x in rows)}
+          Path('source-map-analysis/summary.json').write_text(json.dumps(out,indent=2))
+          print(json.dumps(out,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: browser-lite-source-map-analysis
+          path: source-map-analysis
+          if-no-files-found: error
