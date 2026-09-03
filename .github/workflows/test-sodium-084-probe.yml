@@ -1,0 +1,62 @@
+name: Test Sodium 0.8.4 probe
+
+on:
+  push:
+    branches:
+      - network-probe-sodium-084-20260903
+    paths:
+      - '.github/workflows/test-sodium-084-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: network-probe-sodium-084-20260903
+
+      - name: Install baseline dependencies and experimental Sodium
+        run: |
+          npm ci
+          npm install --no-save --package-lock=false libsodium-wrappers@0.8.4
+          npm install --no-save puppeteer-core@24.16.0
+          node -e "console.log(require('libsodium-wrappers/package.json').version)"
+
+      - name: Compile and focused tests
+        run: |
+          npm run build
+          npx jest test/network_probe_contract.test.ts test/aether_client_known_servers.test.ts test/aether_client_parallel_connections.test.ts test/ping_attempt_token.test.ts test/ping_rtt_history.test.ts --runInBand
+
+      - name: Build probe and inspect assets
+        run: |
+          mkdir -p sodium084-results
+          npx webpack --config webpack.network-probe.config.mjs --profile --json=sodium084-results/probe-stats.json
+          python3 - <<'PY'
+          import gzip,json
+          from pathlib import Path
+          assets=[]
+          for p in sorted(Path('build/network-probe').glob('*.js')):
+              b=p.read_bytes(); assets.append({'name':p.name,'bytes':len(b),'gzip9Bytes':len(gzip.compress(b,9))})
+          Path('sodium084-results/assets.json').write_text(json.dumps(assets,indent=2))
+          print(json.dumps(assets,indent=2))
+          PY
+
+      - name: Direct live benchmark
+        run: |
+          node scripts/run-network-probe-benchmark.mjs --variant=probe --runs=3 --cpu=1,4 --mode=both --output=sodium084-results/direct-benchmark.json
+
+      - name: Fetch production client and run compatibility soak
+        run: |
+          mkdir -p build/production
+          curl -fL --retry 3 'https://aethernet.io/aether-client.min.js?v=20260816-browser-v3' -o build/production/aether-client.min.js
+          node scripts/run-network-probe-compat-soak.mjs sodium084-results/compat-soak.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sodium-084-probe-experiment
+          path: sodium084-results
+          if-no-files-found: error
