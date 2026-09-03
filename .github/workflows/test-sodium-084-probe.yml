@@ -19,12 +19,17 @@ jobs:
         with:
           ref: network-probe-sodium-084-20260903
 
-      - name: Install baseline dependencies and experimental Sodium
+      - name: Install baseline dependencies and exact experimental runtime
         run: |
           npm ci
-          npm install --no-save --package-lock=false libsodium-wrappers@0.8.4
-          npm install --no-save puppeteer-core@24.16.0
-          node -e "console.log(require('libsodium-wrappers/package.json').version)"
+          npm install --no-save --package-lock=false libsodium-wrappers@0.8.4 puppeteer-core@24.16.0
+          node - <<'JS'
+          const fs=require('fs');
+          const pkg=JSON.parse(fs.readFileSync('node_modules/libsodium-wrappers/package.json','utf8'));
+          console.log('libsodium-wrappers version:',pkg.version);
+          if(pkg.version!=='0.8.4') throw new Error(`Expected 0.8.4, got ${pkg.version}`);
+          JS
+          git diff --exit-code package.json package-lock.json
 
       - name: Compile and focused tests
         run: |
@@ -57,6 +62,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: sodium-084-probe-experiment
+          name: sodium-084-probe-experiment-v2
           path: sodium084-results
           if-no-files-found: error
