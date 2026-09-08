@@ -16,18 +16,16 @@ types:
       os: String
       compiler: String
 
+
   LoginStream:
     stream:
-
       apis:
         - api: AuthorizedApi
           remoteApi: ClientApiSafe
-        - api: AuthorizedApiV2
-          remoteApi: ClientApiSafe
-
       crypto: true
       keys:
         uid: uuid
+
   LoginClientStream:
     stream:
       api: ClientApiSafe
@@ -100,6 +98,22 @@ types:
     fields:
       sdp: byte[]
       candidates: IceCandidate[]
+
+  ClientTiming:
+    fields:
+      lastActivityDeltaMs: 'long'
+      nextPingDeltaMs: 'long'
+
+  ProbeSample:
+    fields:
+      sequence: int
+      receivedAtMs: long
+  ProbeReport:
+    fields:
+      testId: int
+      firstSequence: int
+      count: int
+      samples: ProbeSample[]
 api:
   ClientApiUnsafe:
     methods:
@@ -209,8 +223,14 @@ api:
 
 
 
+
+      probeReport:
+        id: 23
+        params:
+          report: ProbeReport
   AuthorizedApi:
     methods:
+
       backId:
         id: 3
         params:
@@ -424,18 +444,45 @@ api:
         id: 43
         returns: ServerDescriptorWithGeo[]
 
+
+
+      getClientTiming:
+        id: 35
+        returns: 'ClientTiming'
+        params:
+          uid: 'UUID'
+
+      openReceiveWindow:
+        id: 36
+        returns: void
+        params:
+          durationMs: long
+
+
       switchVersion:
         id: 44
         params:
           version: int
 
-  AuthorizedApiV2:
-    parents:
-      - AuthorizedApi
 
 
-
-
+      setReceiveWindow:
+        id: 45
+        params:
+          startsInMs: long
+          durationMs: long
+      probePacket:
+        id: 46
+        params:
+          testId: int
+          sequence: int
+          payload: byte[]
+      requestProbeReport:
+        id: 47
+        params:
+          testId: int
+          firstSequence: int
+          count: int
   LoginApi:
     methods:
       getTimeUTC:

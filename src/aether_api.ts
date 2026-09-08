@@ -2446,6 +2446,75 @@ export class ClientStateForSave implements ToString  {
     
 }
 /**
+ * Represents the ClientTiming structure.
+ */
+export class ClientTiming implements ToString  {
+    public readonly lastActivityDeltaMs: bigint;
+    public readonly nextPingDeltaMs: bigint;
+    public static readonly META_BODY: FastMetaType<ClientTiming> = new Impl.ClientTimingMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientTiming> = ClientTiming.META_BODY;
+    /**
+     * Creates an instance of ClientTiming.
+     * @param lastActivityDeltaMs - bigint
+     * @param nextPingDeltaMs - bigint
+     */
+    constructor(lastActivityDeltaMs: bigint, nextPingDeltaMs: bigint)  {
+        this.lastActivityDeltaMs = lastActivityDeltaMs;
+        this.nextPingDeltaMs = nextPingDeltaMs;
+        
+    }
+    public getLastActivityDeltaMs(): bigint  {
+        return this.lastActivityDeltaMs;
+        
+    }
+    public getNextPingDeltaMs(): bigint  {
+        return this.nextPingDeltaMs;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientTiming.
+     * @param {ClientTiming | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientTiming | null | undefined): number  {
+        return ClientTiming.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientTiming with another object.
+     * @param {ClientTiming | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientTiming | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientTiming.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientTiming.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientTiming.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientTiming.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
  * Represents the Cloud structure.
  */
 export class Cloud implements ToString  {
@@ -4419,6 +4488,163 @@ export class PairKeysSym extends PairKeys implements ToString, FastMetaHierarchy
     }
     public toAString(result: AString): AString  {
         PairKeysSym.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ProbeReport structure.
+ */
+export class ProbeReport implements ToString  {
+    public readonly testId: number;
+    public readonly firstSequence: number;
+    public readonly count: number;
+    public readonly samples: ProbeSample[];
+    public static readonly META_BODY: FastMetaType<ProbeReport> = new Impl.ProbeReportMetaBodyImpl();
+    public static readonly META: FastMetaType<ProbeReport> = ProbeReport.META_BODY;
+    /**
+     * Creates an instance of ProbeReport.
+     * @param testId - number
+     * @param firstSequence - number
+     * @param count - number
+     * @param samples - ProbeSample[]
+     */
+    constructor(testId: number, firstSequence: number, count: number, samples: ProbeSample[])  {
+        this.testId = testId;
+        this.firstSequence = firstSequence;
+        this.count = count;
+        this.samples = samples;
+        if (samples === null || samples === undefined) throw new Error(`Field 'samples' cannot be null for type ProbeReport.`);
+        
+    }
+    public getTestId(): number  {
+        return this.testId;
+        
+    }
+    public getFirstSequence(): number  {
+        return this.firstSequence;
+        
+    }
+    public getCount(): number  {
+        return this.count;
+        
+    }
+    public getSamples(): ProbeSample[]  {
+        return this.samples;
+        
+    }
+    public samplesContains(el: ProbeSample): boolean  {
+        return (this.samples as ProbeSample[]).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ProbeReport.
+     * @param {ProbeReport | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ProbeReport | null | undefined): number  {
+        return ProbeReport.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ProbeReport with another object.
+     * @param {ProbeReport | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ProbeReport | null | undefined, v2: any | null | undefined): boolean  {
+        return ProbeReport.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ProbeReport.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ProbeReport.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ProbeReport.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the ProbeSample structure.
+ */
+export class ProbeSample implements ToString  {
+    public readonly sequence: number;
+    public readonly receivedAtMs: bigint;
+    public static readonly META_BODY: FastMetaType<ProbeSample> = new Impl.ProbeSampleMetaBodyImpl();
+    public static readonly META: FastMetaType<ProbeSample> = ProbeSample.META_BODY;
+    /**
+     * Creates an instance of ProbeSample.
+     * @param sequence - number
+     * @param receivedAtMs - bigint
+     */
+    constructor(sequence: number, receivedAtMs: bigint)  {
+        this.sequence = sequence;
+        this.receivedAtMs = receivedAtMs;
+        
+    }
+    public getSequence(): number  {
+        return this.sequence;
+        
+    }
+    public getReceivedAtMs(): bigint  {
+        return this.receivedAtMs;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ProbeSample.
+     * @param {ProbeSample | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ProbeSample | null | undefined): number  {
+        return ProbeSample.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ProbeSample with another object.
+     * @param {ProbeSample | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ProbeSample | null | undefined, v2: any | null | undefined): boolean  {
+        return ProbeSample.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ProbeSample.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ProbeSample.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ProbeSample.META.metaToString(this, result);
         return result;
         
     }
@@ -6626,41 +6852,6 @@ export class LoginStream implements ToString  {
         }
         
     };
-    public static readonly V1 = class V1  {
-        static api(source: MetaContext | RemoteApi): AuthorizedApiV2Remote  {
-            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
-            return ctx.makeRemote((AuthorizedApiV2 as any).META) as AuthorizedApiV2Remote;
-            
-        }
-        static remoteApi(source: MetaContext | RemoteApi): ClientApiSafeRemote  {
-            const ctx = typeof (source as any).getFastMetaContext === "function" ? (source as RemoteApi).getFastMetaContext() : source as MetaContext;
-            return ctx.makeRemote((ClientApiSafe as any).META) as ClientApiSafeRemote;
-            
-        }
-        static switchLocalApi(ctx: MetaContext, localApi: AuthorizedApiV2): void  {
-            ctx.switchLocalApi(localApi, (AuthorizedApiV2 as any).META);
-            
-        }
-        static in(in_: any, source: MetaContext | ((api: ClientApiSafeRemote) => AuthorizedApiV2), ...keys: any[]): any  {
-            if (typeof source === "function")  {
-                in_.factory = (ctx: MetaContext) => source(ctx.makeRemote((ClientApiSafe as any).META) as ClientApiSafeRemote);
-                in_._streamKeys = keys;
-                
-            }
-            else  {
-                in_.activeContext = source;
-                
-            }
-            in_.localMeta = (AuthorizedApiV2 as any).META;
-            return in_;
-            
-        }
-        static send(remoteGenerator: (api: AuthorizedApiV2Remote) => void, factory: (ctx: MetaContext) => ClientApiSafe, ...keys: any[]): any  {
-            return LoginStream.Out.sendWithMeta((AuthorizedApiV2 as any).META, remoteGenerator, factory, ...keys);
-            
-        }
-        
-    };
     public static readonly In = class In extends LoginStream  {
         public parentContext: MetaContext | null = null;
         public activeContext: MetaContext | null = null;
@@ -8506,6 +8697,69 @@ export class ClientApiSafeClientInteractionArguments implements ToString  {
     }
     
 }
+/**
+ * Represents the ClientApiSafeProbeReportArguments structure.
+ */
+export class ClientApiSafeProbeReportArguments implements ToString  {
+    public readonly report: ProbeReport;
+    public static readonly META_BODY: FastMetaType<ClientApiSafeProbeReportArguments> = new Impl.ClientApiSafeProbeReportArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<ClientApiSafeProbeReportArguments> = ClientApiSafeProbeReportArguments.META_BODY;
+    /**
+     * Creates an instance of ClientApiSafeProbeReportArguments.
+     * @param report - ProbeReport
+     */
+    constructor(report: ProbeReport)  {
+        this.report = report;
+        if (report === null || report === undefined) throw new Error(`Field 'report' cannot be null for type ClientApiSafeProbeReportArguments.`);
+        
+    }
+    public getReport(): ProbeReport  {
+        return this.report;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of ClientApiSafeProbeReportArguments.
+     * @param {ClientApiSafeProbeReportArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: ClientApiSafeProbeReportArguments | null | undefined): number  {
+        return ClientApiSafeProbeReportArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of ClientApiSafeProbeReportArguments with another object.
+     * @param {ClientApiSafeProbeReportArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: ClientApiSafeProbeReportArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return ClientApiSafeProbeReportArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return ClientApiSafeProbeReportArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return ClientApiSafeProbeReportArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        ClientApiSafeProbeReportArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
 export interface ClientApiSafe  {
     /**
      * @param uid - UUID
@@ -8652,6 +8906,13 @@ export interface ClientApiSafe  {
      */
     clientInteraction(uid: UUID, stream: ClientInteractionClientStream): void;
     clientInteractionArguments?(args: ClientApiSafeClientInteractionArguments): void;
+    /**
+     * @param report - ProbeReport
+     *
+     * @aetherMethodId 23
+     */
+    probeReport(report: ProbeReport): void;
+    probeReportArguments?(args: ClientApiSafeProbeReportArguments): void;
     
 }
 export namespace ClientApiSafe  {
@@ -8875,6 +9136,16 @@ export abstract class ClientApiSafeLocal<RT extends RemoteApi> implements Client
     public abstract clientInteraction(uid: UUID, stream: ClientInteractionClientStream): void;
     public clientInteractionArguments(args: ClientApiSafeClientInteractionArguments): void  {
         this.clientInteraction(args.uid, args.stream);
+        
+    }
+    /**
+     * @param report - ProbeReport
+     *
+     * @aetherMethodId 23
+     */
+    public abstract probeReport(report: ProbeReport): void;
+    public probeReportArguments(args: ClientApiSafeProbeReportArguments): void  {
+        this.probeReport(args.report);
         
     }
     
@@ -11454,6 +11725,130 @@ export class AuthorizedApiGetServersArguments implements ToString  {
     
 }
 /**
+ * Represents the AuthorizedApiGetClientTimingArguments structure.
+ */
+export class AuthorizedApiGetClientTimingArguments implements ToString  {
+    public readonly uid: UUID;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiGetClientTimingArguments> = new Impl.AuthorizedApiGetClientTimingArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiGetClientTimingArguments> = AuthorizedApiGetClientTimingArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiGetClientTimingArguments.
+     * @param uid - UUID
+     */
+    constructor(uid: UUID)  {
+        this.uid = uid;
+        
+    }
+    public getUid(): UUID  {
+        return this.uid;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiGetClientTimingArguments.
+     * @param {AuthorizedApiGetClientTimingArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiGetClientTimingArguments | null | undefined): number  {
+        return AuthorizedApiGetClientTimingArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiGetClientTimingArguments with another object.
+     * @param {AuthorizedApiGetClientTimingArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiGetClientTimingArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiGetClientTimingArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiGetClientTimingArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiGetClientTimingArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiGetClientTimingArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiOpenReceiveWindowArguments structure.
+ */
+export class AuthorizedApiOpenReceiveWindowArguments implements ToString  {
+    public readonly durationMs: bigint;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiOpenReceiveWindowArguments> = new Impl.AuthorizedApiOpenReceiveWindowArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiOpenReceiveWindowArguments> = AuthorizedApiOpenReceiveWindowArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiOpenReceiveWindowArguments.
+     * @param durationMs - bigint
+     */
+    constructor(durationMs: bigint)  {
+        this.durationMs = durationMs;
+        
+    }
+    public getDurationMs(): bigint  {
+        return this.durationMs;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiOpenReceiveWindowArguments.
+     * @param {AuthorizedApiOpenReceiveWindowArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiOpenReceiveWindowArguments | null | undefined): number  {
+        return AuthorizedApiOpenReceiveWindowArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiOpenReceiveWindowArguments with another object.
+     * @param {AuthorizedApiOpenReceiveWindowArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiOpenReceiveWindowArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiOpenReceiveWindowArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiOpenReceiveWindowArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiOpenReceiveWindowArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiOpenReceiveWindowArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
  * Represents the AuthorizedApiSwitchVersionArguments structure.
  */
 export class AuthorizedApiSwitchVersionArguments implements ToString  {
@@ -11510,6 +11905,232 @@ export class AuthorizedApiSwitchVersionArguments implements ToString  {
     }
     public toAString(result: AString): AString  {
         AuthorizedApiSwitchVersionArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiSetReceiveWindowArguments structure.
+ */
+export class AuthorizedApiSetReceiveWindowArguments implements ToString  {
+    public readonly startsInMs: bigint;
+    public readonly durationMs: bigint;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiSetReceiveWindowArguments> = new Impl.AuthorizedApiSetReceiveWindowArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiSetReceiveWindowArguments> = AuthorizedApiSetReceiveWindowArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiSetReceiveWindowArguments.
+     * @param startsInMs - bigint
+     * @param durationMs - bigint
+     */
+    constructor(startsInMs: bigint, durationMs: bigint)  {
+        this.startsInMs = startsInMs;
+        this.durationMs = durationMs;
+        
+    }
+    public getStartsInMs(): bigint  {
+        return this.startsInMs;
+        
+    }
+    public getDurationMs(): bigint  {
+        return this.durationMs;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiSetReceiveWindowArguments.
+     * @param {AuthorizedApiSetReceiveWindowArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiSetReceiveWindowArguments | null | undefined): number  {
+        return AuthorizedApiSetReceiveWindowArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiSetReceiveWindowArguments with another object.
+     * @param {AuthorizedApiSetReceiveWindowArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiSetReceiveWindowArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiSetReceiveWindowArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiSetReceiveWindowArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiSetReceiveWindowArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiSetReceiveWindowArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiProbePacketArguments structure.
+ */
+export class AuthorizedApiProbePacketArguments implements ToString  {
+    public readonly testId: number;
+    public readonly sequence: number;
+    public readonly payload: Uint8Array;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiProbePacketArguments> = new Impl.AuthorizedApiProbePacketArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiProbePacketArguments> = AuthorizedApiProbePacketArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiProbePacketArguments.
+     * @param testId - number
+     * @param sequence - number
+     * @param payload - Uint8Array
+     */
+    constructor(testId: number, sequence: number, payload: Uint8Array)  {
+        this.testId = testId;
+        this.sequence = sequence;
+        this.payload = payload;
+        if (payload === null || payload === undefined) throw new Error(`Field 'payload' cannot be null for type AuthorizedApiProbePacketArguments.`);
+        
+    }
+    public getTestId(): number  {
+        return this.testId;
+        
+    }
+    public getSequence(): number  {
+        return this.sequence;
+        
+    }
+    public getPayload(): Uint8Array  {
+        return this.payload;
+        
+    }
+    public payloadContains(el: number): boolean  {
+        return (this.payload as Uint8Array).includes(el as any);
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiProbePacketArguments.
+     * @param {AuthorizedApiProbePacketArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiProbePacketArguments | null | undefined): number  {
+        return AuthorizedApiProbePacketArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiProbePacketArguments with another object.
+     * @param {AuthorizedApiProbePacketArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiProbePacketArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiProbePacketArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiProbePacketArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiProbePacketArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiProbePacketArguments.META.metaToString(this, result);
+        return result;
+        
+    }
+    
+}
+/**
+ * Represents the AuthorizedApiRequestProbeReportArguments structure.
+ */
+export class AuthorizedApiRequestProbeReportArguments implements ToString  {
+    public readonly testId: number;
+    public readonly firstSequence: number;
+    public readonly count: number;
+    public static readonly META_BODY: FastMetaType<AuthorizedApiRequestProbeReportArguments> = new Impl.AuthorizedApiRequestProbeReportArgumentsMetaBodyImpl();
+    public static readonly META: FastMetaType<AuthorizedApiRequestProbeReportArguments> = AuthorizedApiRequestProbeReportArguments.META_BODY;
+    /**
+     * Creates an instance of AuthorizedApiRequestProbeReportArguments.
+     * @param testId - number
+     * @param firstSequence - number
+     * @param count - number
+     */
+    constructor(testId: number, firstSequence: number, count: number)  {
+        this.testId = testId;
+        this.firstSequence = firstSequence;
+        this.count = count;
+        
+    }
+    public getTestId(): number  {
+        return this.testId;
+        
+    }
+    public getFirstSequence(): number  {
+        return this.firstSequence;
+        
+    }
+    public getCount(): number  {
+        return this.count;
+        
+    }
+    /**
+     * Calculates a hash code for a static instance of AuthorizedApiRequestProbeReportArguments.
+     * @param {AuthorizedApiRequestProbeReportArguments | null | undefined} obj - The object to hash.
+     * @returns {number} The hash code.
+     */
+    public static staticHashCode(obj: AuthorizedApiRequestProbeReportArguments | null | undefined): number  {
+        return AuthorizedApiRequestProbeReportArguments.META.metaHashCode(obj);
+        
+    }
+    /**
+     * Compares a static instance of AuthorizedApiRequestProbeReportArguments with another object.
+     * @param {AuthorizedApiRequestProbeReportArguments | null | undefined} v1 - The first object.
+     * @param {any | null | undefined} v2 - The second object.
+     * @returns {boolean} True if the objects are equal.
+     */
+    public static staticEquals(v1: AuthorizedApiRequestProbeReportArguments | null | undefined, v2: any | null | undefined): boolean  {
+        return AuthorizedApiRequestProbeReportArguments.META.metaEquals(v1, v2);
+        
+    }
+    /**
+     * Calculates a hash code for this object.
+     * @returns {number} The hash code.
+     */
+    public hashCode(): number  {
+        return AuthorizedApiRequestProbeReportArguments.staticHashCode(this);
+        
+    }
+    /**
+     * Checks if this object is equal to another.
+     * @param {any} other - The object to compare with.
+     * @returns {boolean} True if the objects are equal, false otherwise.
+     */
+    public equals(other: any): boolean  {
+        return AuthorizedApiRequestProbeReportArguments.staticEquals(this, other);
+        
+    }
+    public toAString(result: AString): AString  {
+        AuthorizedApiRequestProbeReportArguments.META.metaToString(this, result);
         return result;
         
     }
@@ -11815,12 +12436,53 @@ export interface AuthorizedApi  {
     getServers(): ARFuture<ServerDescriptorWithGeo[]>;
     getServersArguments?(args: AuthorizedApiGetServersArguments): ARFuture<ServerDescriptorWithGeo[]>;
     /**
+     * @param uid - UUID
+     * @returns ARFuture<ClientTiming>
+     *
+     * @aetherMethodId 35
+     */
+    getClientTiming(uid: UUID): ARFuture<ClientTiming>;
+    getClientTimingArguments?(args: AuthorizedApiGetClientTimingArguments): ARFuture<ClientTiming>;
+    /**
+     * @param durationMs - bigint
+     *
+     * @aetherMethodId 36
+     */
+    openReceiveWindow(durationMs: bigint): AFuture;
+    openReceiveWindowArguments?(args: AuthorizedApiOpenReceiveWindowArguments): AFuture;
+    /**
      * @param version - number
      *
      * @aetherMethodId 44
      */
     switchVersion(version: number): void;
     switchVersionArguments?(args: AuthorizedApiSwitchVersionArguments): void;
+    /**
+     * @param startsInMs - bigint
+     * @param durationMs - bigint
+     *
+     * @aetherMethodId 45
+     */
+    setReceiveWindow(startsInMs: bigint, durationMs: bigint): void;
+    setReceiveWindowArguments?(args: AuthorizedApiSetReceiveWindowArguments): void;
+    /**
+     * @param testId - number
+     * @param sequence - number
+     * @param payload - Uint8Array
+     *
+     * @aetherMethodId 46
+     */
+    probePacket(testId: number, sequence: number, payload: Uint8Array): void;
+    probePacketArguments?(args: AuthorizedApiProbePacketArguments): void;
+    /**
+     * @param testId - number
+     * @param firstSequence - number
+     * @param count - number
+     *
+     * @aetherMethodId 47
+     */
+    requestProbeReport(testId: number, firstSequence: number, count: number): void;
+    requestProbeReportArguments?(args: AuthorizedApiRequestProbeReportArguments): void;
     
 }
 export namespace AuthorizedApi  {
@@ -12254,447 +12916,24 @@ export abstract class AuthorizedApiLocal<RT extends RemoteApi> implements Author
         
     }
     /**
-     * @param version - number
-     *
-     * @aetherMethodId 44
-     */
-    public abstract switchVersion(version: number): void;
-    public switchVersionArguments(args: AuthorizedApiSwitchVersionArguments): void  {
-        this.switchVersion(args.version);
-        
-    }
-    
-}
-export interface AuthorizedApiV2 extends AuthorizedApi  {
-    
-}
-export namespace AuthorizedApiV2  {
-    export const META: FastMetaApi<AuthorizedApiV2, AuthorizedApiV2Remote> = new Impl.AuthorizedApiV2MetaImpl();
-    
-}
-export interface AuthorizedApiV2Remote extends AuthorizedApiV2, RemoteApi, AuthorizedApiRemote  {
-    
-}
-export abstract class AuthorizedApiV2Local<RT extends RemoteApi> implements AuthorizedApiV2  {
-    protected readonly remoteApi: RT;
-    public getRemoteApi(): RT  {
-        return this.remoteApi;
-        
-    }
-    protected constructor(remoteApi: RT)  {
-        this.remoteApi = remoteApi;
-        
-    }
-    /**
-     * @param id - number
-     *
-     * @aetherMethodId 3
-     */
-    public abstract backId(id: number): void;
-    public backIdArguments(args: AuthorizedApiBackIdArguments): void  {
-        this.backId(args.id);
-        
-    }
-    /**
-     * @param nextConnectMsDuration - bigint
-     * @param rxWindowMs - bigint
-     *
-     * @aetherMethodId 4
-     */
-    public abstract ping(nextConnectMsDuration: bigint, rxWindowMs: bigint): AFuture;
-    public pingArguments(args: AuthorizedApiPingArguments): AFuture  {
-        return this.ping(args.nextConnectMsDuration, args.rxWindowMs);
-        
-    }
-    /**
      * @param uid - UUID
-     * @param stream - ClientApiStream
+     * @returns ARFuture<ClientTiming>
      *
-     * @aetherMethodId 5
+     * @aetherMethodId 35
      */
-    public abstract client(uid: UUID, stream: ClientApiStream): void;
-    public clientArguments(args: AuthorizedApiClientArguments): void  {
-        this.client(args.uid, args.stream);
+    public abstract getClientTiming(uid: UUID): ARFuture<ClientTiming>;
+    public getClientTimingArguments(args: AuthorizedApiGetClientTimingArguments): ARFuture<ClientTiming>  {
+        return this.getClientTiming(args.uid);
         
     }
     /**
-     * @param msg - Message
+     * @param durationMs - bigint
      *
-     * @aetherMethodId 6
+     * @aetherMethodId 36
      */
-    public abstract sendMessage(msg: Message): void;
-    public sendMessageArguments(args: AuthorizedApiSendMessageArguments): void  {
-        this.sendMessage(args.msg);
-        
-    }
-    /**
-     * @param msg - Message[]
-     *
-     * @aetherMethodId 7
-     */
-    public abstract sendMessages(msg: Message[]): void;
-    public sendMessagesArguments(args: AuthorizedApiSendMessagesArguments): void  {
-        this.sendMessages(args.msg);
-        
-    }
-    /**
-     * @param uids - UUID[]
-     * @param data - Uint8Array
-     *
-     * @aetherMethodId 37
-     */
-    public abstract sendMulticast(uids: UUID[], data: Uint8Array): void;
-    public sendMulticastArguments(args: AuthorizedApiSendMulticastArguments): void  {
-        this.sendMulticast(args.uids, args.data);
-        
-    }
-    /**
-     * @param msg - Message
-     *
-     * @aetherMethodId 39
-     */
-    public abstract sendMessageWithResult(msg: Message): AFuture;
-    public sendMessageWithResultArguments(args: AuthorizedApiSendMessageWithResultArguments): AFuture  {
-        return this.sendMessageWithResult(args.msg);
-        
-    }
-    /**
-     * @param owner - UUID
-     * @param uids - UUID[]
-     * @returns ARFuture<UUID>
-     *
-     * @aetherMethodId 8
-     */
-    public abstract createAccessGroup(owner: UUID, uids: UUID[]): ARFuture<UUID>;
-    public createAccessGroupArguments(args: AuthorizedApiCreateAccessGroupArguments): ARFuture<UUID>  {
-        return this.createAccessGroup(args.owner, args.uids);
-        
-    }
-    /**
-     * @param groupId - UUID
-     * @param uid - UUID
-     * @returns ARFuture<boolean>
-     *
-     * @aetherMethodId 9
-     */
-    public abstract addToAccessGroup(groupId: UUID, uid: UUID): ARFuture<boolean>;
-    public addToAccessGroupArguments(args: AuthorizedApiAddToAccessGroupArguments): ARFuture<boolean>  {
-        return this.addToAccessGroup(args.groupId, args.uid);
-        
-    }
-    /**
-     * @param groupId - UUID
-     * @param uid - UUID
-     * @returns ARFuture<boolean>
-     *
-     * @aetherMethodId 10
-     */
-    public abstract removeFromAccessGroup(groupId: UUID, uid: UUID): ARFuture<boolean>;
-    public removeFromAccessGroupArguments(args: AuthorizedApiRemoveFromAccessGroupArguments): ARFuture<boolean>  {
-        return this.removeFromAccessGroup(args.groupId, args.uid);
-        
-    }
-    /**
-     * @param uid - UUID
-     *
-     * @aetherMethodId 11
-     */
-    public abstract checkAccessForSendMessage(uid: UUID): AFuture;
-    public checkAccessForSendMessageArguments(args: AuthorizedApiCheckAccessForSendMessageArguments): AFuture  {
-        return this.checkAccessForSendMessage(args.uid);
-        
-    }
-    /**
-     * @param sid - number[]
-     *
-     * @aetherMethodId 12
-     */
-    public abstract resolverServers(sid: number[]): void;
-    public resolverServersArguments(args: AuthorizedApiResolverServersArguments): void  {
-        this.resolverServers(args.sid);
-        
-    }
-    /**
-     * @param uids - UUID[]
-     *
-     * @aetherMethodId 13
-     */
-    public abstract resolveClouds(uids: UUID[]): void;
-    public resolveCloudsArguments(args: AuthorizedApiResolveCloudsArguments): void  {
-        this.resolveClouds(args.uids);
-        
-    }
-    /**
-     * @param configs - AppliedConfig[]
-     *
-     * @aetherMethodId 38
-     */
-    public abstract reportAppliedConfig(configs: AppliedConfig[]): void;
-    public reportAppliedConfigArguments(args: AuthorizedApiReportAppliedConfigArguments): void  {
-        this.reportAppliedConfig(args.configs);
-        
-    }
-    /**
-     * @param uid - UUID
-     * @returns ARFuture<UUID[]>
-     *
-     * @aetherMethodId 14
-     */
-    public abstract getAccessGroups(uid: UUID): ARFuture<UUID[]>;
-    public getAccessGroupsArguments(args: AuthorizedApiGetAccessGroupsArguments): ARFuture<UUID[]>  {
-        return this.getAccessGroups(args.uid);
-        
-    }
-    /**
-     * @param groupId - UUID
-     * @returns ARFuture<AccessGroup>
-     *
-     * @aetherMethodId 15
-     */
-    public abstract getAccessGroup(groupId: UUID): ARFuture<AccessGroup>;
-    public getAccessGroupArguments(args: AuthorizedApiGetAccessGroupArguments): ARFuture<AccessGroup>  {
-        return this.getAccessGroup(args.groupId);
-        
-    }
-    /**
-     * @param uid - UUID
-     * @returns ARFuture<UUID[]>
-     *
-     * @aetherMethodId 16
-     */
-    public abstract getAllAccessedClients(uid: UUID): ARFuture<UUID[]>;
-    public getAllAccessedClientsArguments(args: AuthorizedApiGetAllAccessedClientsArguments): ARFuture<UUID[]>  {
-        return this.getAllAccessedClients(args.uid);
-        
-    }
-    /**
-     * @param uid1 - UUID
-     * @param uid2 - UUID
-     * @returns ARFuture<boolean>
-     *
-     * @aetherMethodId 17
-     */
-    public abstract checkAccessForSendMessage2(uid1: UUID, uid2: UUID): ARFuture<boolean>;
-    public checkAccessForSendMessage2Arguments(args: AuthorizedApiCheckAccessForSendMessage2Arguments): ARFuture<boolean>  {
-        return this.checkAccessForSendMessage2(args.uid1, args.uid2);
-        
-    }
-    /**
-     * @param telemetry - Telemetry
-     *
-     * @aetherMethodId 18
-     */
-    public abstract sendTelemetry(telemetry: Telemetry): void;
-    public sendTelemetryArguments(args: AuthorizedApiSendTelemetryArguments): void  {
-        this.sendTelemetry(args.telemetry);
-        
-    }
-    /**
-     * @param uids - UUID[]
-     *
-     * @aetherMethodId 19
-     */
-    public abstract requestAccessGroupsForClients(uids: UUID[]): void;
-    public requestAccessGroupsForClientsArguments(args: AuthorizedApiRequestAccessGroupsForClientsArguments): void  {
-        this.requestAccessGroupsForClients(args.uids);
-        
-    }
-    /**
-     * @param ids - UUID[]
-     *
-     * @aetherMethodId 20
-     */
-    public abstract requestAccessGroupsItems(ids: UUID[]): void;
-    public requestAccessGroupsItemsArguments(args: AuthorizedApiRequestAccessGroupsItemsArguments): void  {
-        this.requestAccessGroupsItems(args.ids);
-        
-    }
-    /**
-     * @param uid - UUID
-     * @param groups - UUID[]
-     *
-     * @aetherMethodId 22
-     */
-    public abstract sendAccessGroupForClient(uid: UUID, groups: UUID[]): void;
-    public sendAccessGroupForClientArguments(args: AuthorizedApiSendAccessGroupForClientArguments): void  {
-        this.sendAccessGroupForClient(args.uid, args.groups);
-        
-    }
-    /**
-     * @param id - UUID
-     * @param groups - UUID[]
-     *
-     * @aetherMethodId 23
-     */
-    public abstract addItemsToAccessGroup(id: UUID, groups: UUID[]): void;
-    public addItemsToAccessGroupArguments(args: AuthorizedApiAddItemsToAccessGroupArguments): void  {
-        this.addItemsToAccessGroup(args.id, args.groups);
-        
-    }
-    /**
-     * @param id - UUID
-     * @param groups - UUID[]
-     *
-     * @aetherMethodId 24
-     */
-    public abstract removeItemsFromAccessGroup(id: UUID, groups: UUID[]): void;
-    public removeItemsFromAccessGroupArguments(args: AuthorizedApiRemoveItemsFromAccessGroupArguments): void  {
-        this.removeItemsFromAccessGroup(args.id, args.groups);
-        
-    }
-    /**
-     * @param uid - UUID
-     * @param groups - UUID[]
-     *
-     * @aetherMethodId 25
-     */
-    public abstract addAccessGroupsToClient(uid: UUID, groups: UUID[]): void;
-    public addAccessGroupsToClientArguments(args: AuthorizedApiAddAccessGroupsToClientArguments): void  {
-        this.addAccessGroupsToClient(args.uid, args.groups);
-        
-    }
-    /**
-     * @param uid - UUID
-     * @param groups - UUID[]
-     *
-     * @aetherMethodId 26
-     */
-    public abstract removeAccessGroupsFromClient(uid: UUID, groups: UUID[]): void;
-    public removeAccessGroupsFromClientArguments(args: AuthorizedApiRemoveAccessGroupsFromClientArguments): void  {
-        this.removeAccessGroupsFromClient(args.uid, args.groups);
-        
-    }
-    /**
-     * @param uids - UUID[]
-     *
-     * @aetherMethodId 27
-     */
-    public abstract requestAllAccessedClients(uids: UUID[]): void;
-    public requestAllAccessedClientsArguments(args: AuthorizedApiRequestAllAccessedClientsArguments): void  {
-        this.requestAllAccessedClients(args.uids);
-        
-    }
-    /**
-     * @param requests - AccessCheckPair[]
-     *
-     * @aetherMethodId 28
-     */
-    public abstract requestAccessCheck(requests: AccessCheckPair[]): void;
-    public requestAccessCheckArguments(args: AuthorizedApiRequestAccessCheckArguments): void  {
-        this.requestAccessCheck(args.requests);
-        
-    }
-    /**
-     * @param uid - UUID
-     * @param fromTime - bigint
-     * @param toTime - bigint
-     * @param limit - number
-     * @returns ARFuture<ClientActivity[]>
-     *
-     * @aetherMethodId 29
-     */
-    public abstract getClientActivity(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<ClientActivity[]>;
-    public getClientActivityArguments(args: AuthorizedApiGetClientActivityArguments): ARFuture<ClientActivity[]>  {
-        return this.getClientActivity(args.uid, args.fromTime, args.toTime, args.limit);
-        
-    }
-    /**
-     * @param uid - UUID
-     * @param query - string
-     * @param limit - number
-     * @returns ARFuture<ClientLogEntry[]>
-     *
-     * @aetherMethodId 30
-     */
-    public abstract searchClientLogs(uid: UUID, query: string, limit: number): ARFuture<ClientLogEntry[]>;
-    public searchClientLogsArguments(args: AuthorizedApiSearchClientLogsArguments): ARFuture<ClientLogEntry[]>  {
-        return this.searchClientLogs(args.uid, args.query, args.limit);
-        
-    }
-    /**
-     * @param uid - UUID
-     * @param limit - number
-     * @returns ARFuture<ClientConnectionInfo[]>
-     *
-     * @aetherMethodId 31
-     */
-    public abstract getClientConnections(uid: UUID, limit: number): ARFuture<ClientConnectionInfo[]>;
-    public getClientConnectionsArguments(args: AuthorizedApiGetClientConnectionsArguments): ARFuture<ClientConnectionInfo[]>  {
-        return this.getClientConnections(args.uid, args.limit);
-        
-    }
-    /**
-     * @param uid - UUID
-     * @param fromTime - bigint
-     * @param toTime - bigint
-     * @param limit - number
-     * @returns ARFuture<MessageInfo[]>
-     *
-     * @aetherMethodId 32
-     */
-    public abstract getClientMessages(uid: UUID, fromTime: bigint, toTime: bigint, limit: number): ARFuture<MessageInfo[]>;
-    public getClientMessagesArguments(args: AuthorizedApiGetClientMessagesArguments): ARFuture<MessageInfo[]>  {
-        return this.getClientMessages(args.uid, args.fromTime, args.toTime, args.limit);
-        
-    }
-    /**
-     * @param delayMillis - bigint
-     *
-     * @aetherMethodId 33
-     */
-    public abstract setNextReadDelay(delayMillis: bigint): void;
-    public setNextReadDelayArguments(args: AuthorizedApiSetNextReadDelayArguments): void  {
-        this.setNextReadDelay(args.delayMillis);
-        
-    }
-    /**
-     * @param uid - UUID
-     * @returns ARFuture<Uap>
-     *
-     * @aetherMethodId 34
-     */
-    public abstract getUap(uid: UUID): ARFuture<Uap>;
-    public getUapArguments(args: AuthorizedApiGetUapArguments): ARFuture<Uap>  {
-        return this.getUap(args.uid);
-        
-    }
-    /**
-     * @param uid - UUID
-     * @returns ARFuture<WebRtcSession>
-     *
-     * @aetherMethodId 40
-     */
-    public abstract requestWebRtcSession(uid: UUID): ARFuture<WebRtcSession>;
-    public requestWebRtcSessionArguments(args: AuthorizedApiRequestWebRtcSessionArguments): ARFuture<WebRtcSession>  {
-        return this.requestWebRtcSession(args.uid);
-        
-    }
-    /**
-     * @param session - WebRtcSession
-     *
-     * @aetherMethodId 41
-     */
-    public abstract publishWebRtcSession(session: WebRtcSession): void;
-    public publishWebRtcSessionArguments(args: AuthorizedApiPublishWebRtcSessionArguments): void  {
-        this.publishWebRtcSession(args.session);
-        
-    }
-    /**
-     * @aetherMethodId 42
-     */
-    public abstract selfDestruct(): AFuture;
-    public selfDestructArguments(args: AuthorizedApiSelfDestructArguments): AFuture  {
-        return this.selfDestruct();
-        
-    }
-    /**
-     * @returns ARFuture<ServerDescriptorWithGeo[]>
-     *
-     * @aetherMethodId 43
-     */
-    public abstract getServers(): ARFuture<ServerDescriptorWithGeo[]>;
-    public getServersArguments(args: AuthorizedApiGetServersArguments): ARFuture<ServerDescriptorWithGeo[]>  {
-        return this.getServers();
+    public abstract openReceiveWindow(durationMs: bigint): AFuture;
+    public openReceiveWindowArguments(args: AuthorizedApiOpenReceiveWindowArguments): AFuture  {
+        return this.openReceiveWindow(args.durationMs);
         
     }
     /**
@@ -12705,6 +12944,41 @@ export abstract class AuthorizedApiV2Local<RT extends RemoteApi> implements Auth
     public abstract switchVersion(version: number): void;
     public switchVersionArguments(args: AuthorizedApiSwitchVersionArguments): void  {
         this.switchVersion(args.version);
+        
+    }
+    /**
+     * @param startsInMs - bigint
+     * @param durationMs - bigint
+     *
+     * @aetherMethodId 45
+     */
+    public abstract setReceiveWindow(startsInMs: bigint, durationMs: bigint): void;
+    public setReceiveWindowArguments(args: AuthorizedApiSetReceiveWindowArguments): void  {
+        this.setReceiveWindow(args.startsInMs, args.durationMs);
+        
+    }
+    /**
+     * @param testId - number
+     * @param sequence - number
+     * @param payload - Uint8Array
+     *
+     * @aetherMethodId 46
+     */
+    public abstract probePacket(testId: number, sequence: number, payload: Uint8Array): void;
+    public probePacketArguments(args: AuthorizedApiProbePacketArguments): void  {
+        this.probePacket(args.testId, args.sequence, args.payload);
+        
+    }
+    /**
+     * @param testId - number
+     * @param firstSequence - number
+     * @param count - number
+     *
+     * @aetherMethodId 47
+     */
+    public abstract requestProbeReport(testId: number, firstSequence: number, count: number): void;
+    public requestProbeReportArguments(args: AuthorizedApiRequestProbeReportArguments): void  {
+        this.requestProbeReport(args.testId, args.firstSequence, args.count);
         
     }
     

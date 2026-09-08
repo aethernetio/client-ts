@@ -19,8 +19,9 @@ import {
     LoginApi,
     LoginApiRemote,
     LoginClientStream,
-    LoginStream,
+
     Message,
+    ProbeReport,
     ServerDescriptor,
     UUIDAndCloud,
     AccessCheckPair,
@@ -425,6 +426,20 @@ const remaining =
      * Processes incoming messages and promotes connection priority.
      * Ported from ConnectionWork.java
      */
+
+    /**
+     * Completes the matching client-side diagnostic probe request.
+     *
+     * @param report server-side probe observation snapshot
+     */
+    public probeReport(
+        report: ProbeReport,
+    ): void {
+        this.connection.onProbeReport(report);
+    }
+
+
+
     public sendMessages(
         messages: Message[],
     ): void {
@@ -596,6 +611,10 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
     private readonly pingAttemptGate =
         new PingAttemptGate();
 
+    private readonly pendingProbeReports =
+        new Map<string, ARFuture<ProbeReport>>();
+
+
     private nextPingAtMs = 0;
 
     firstAuth: boolean = false;
@@ -620,16 +639,11 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
             this.authorizedApi = v0;
             this.negotiatedLoginApiVersion = 0;
             return;
-        }
 
-        if (version === 1) {
-            v0.switchVersion(1);
-            this.authorizedApi = LoginStream.V1.api(v0);
-            this.negotiatedLoginApiVersion = 1;
-            return;
         }
 
         throw new Error(
+
             `Unsupported LoginStream API version: ${version}`,
         );
     }
@@ -1060,6 +1074,126 @@ const uidsToRemove = Array.from(uidsMap.keys());
 
 
 
+
+    /**
+     * Sends ping timing without changing legacy receive behavior and also
+     * declares the next explicit receive window.
+     */
+    private sendPingWithReceiveWindow(
+        api: AuthorizedApiRemote,
+        nextConnectMsDuration: number,
+        rxWindowMs: number,
+    ): AFuture {
+        const result = api.ping(
+            BigInt(nextConnectMsDuration),
+            BigInt(rxWindowMs),
+        );
+
+        api.setReceiveWindow(
+            BigInt(nextConnectMsDuration),
+            BigInt(rxWindowMs),
+        );
+
+        return result;
+    }
+
+
+    /**
+     * Sends one diagnostic probe as a separate FastMeta transport flush.
+     */
+    public sendProbePacket(
+        testId: number,
+        sequence: number,
+        payload: Uint8Array,
+    ): void {
+        if (!this.isWritable()) {
+            throw new Error(
+                "Connection is not writable for probe packet",
+            );
+        }
+
+        this.authorizedApi.probePacket(
+            testId,
+            sequence,
+            payload,
+        );
+        this.authorizedApi.getFastMetaContext().flush();
+    }
+
+
+
+
+    /**
+     * Requests the server observation snapshot for a probe sequence range.
+     */
+    public requestProbeReport(
+        testId: number,
+        firstSequence: number,
+        count: number,
+    ): ARFuture<ProbeReport> {
+        const result = ARFuture.make<ProbeReport>();
+
+        if (count < 0) {
+            result.tryError(
+                new Error(
+                    `Probe report count must be non-negative: ${count}`,
+                ),
+            );
+            return result;
+        }
+
+        const key =
+            `${testId}:${firstSequence}:${count}`;
+        const existing =
+            this.pendingProbeReports.get(key);
+
+        if (existing != null) {
+            return existing;
+        }
+
+        this.pendingProbeReports.set(key, result);
+
+        try {
+            this.authorizedApi.requestProbeReport(
+                testId,
+                firstSequence,
+                count,
+            );
+            this.authorizedApi.getFastMetaContext().flush();
+        } catch (error) {
+            this.pendingProbeReports.delete(key);
+            result.tryError(
+                error instanceof Error
+                    ? error
+                    : new Error(String(error)),
+            );
+        }
+
+        return result;
+    }
+
+
+    /**
+     * Completes a pending diagnostic request from ClientApiSafe.
+     */
+    public onProbeReport(
+        report: ProbeReport,
+    ): void {
+        const key =
+            `${report.getTestId()}:${report.getFirstSequence()}:${report.getCount()}`;
+        const pending =
+            this.pendingProbeReports.get(key);
+
+        if (pending == null) {
+            return;
+        }
+
+        this.pendingProbeReports.delete(key);
+        pending.tryDone(report);
+    }
+
+
+
     public measurePingMs(): ARFuture<number> {
         const result =
             ARFuture.make<number>();
@@ -1120,14 +1254,13 @@ const uidsToRemove = Array.from(uidsMap.keys());
             );
 
             try {
-                this.authorizedApi.ping(
-                    BigInt(
-                        fullPingIntervalMs,
-                    ),
-                    BigInt(
-                        rxWindowMs,
-                    ),
+
+                this.sendPingWithReceiveWindow(
+                    this.authorizedApi,
+                    fullPingIntervalMs,
+                    rxWindowMs,
                 ).to(() => {
+
                     if (
                         !this.completePingAttempt(
                             pingToken,
@@ -1242,14 +1375,13 @@ const uidsToRemove = Array.from(uidsMap.keys());
         );
 
         try {
-            this.authorizedApi.ping(
-                BigInt(
-                    fullPingIntervalMs,
-                ),
-                BigInt(
-                    rxWindowMs,
-                ),
+
+            this.sendPingWithReceiveWindow(
+                this.authorizedApi,
+                fullPingIntervalMs,
+                rxWindowMs,
             ).to(() => {
+
                 if (
                     !this.completePingAttempt(
                         pingToken,
