@@ -489,10 +489,190 @@ class UniversalMetaArrayImpl<T> implements FastMetaType<T[]> {
 }
 
 
+
+class TieredIntFastMeta implements FastMetaType<bigint> {
+    private readonly baseBytes: number;
+    private readonly limits: bigint[];
+    private readonly word: bigint;
+    private readonly headerMax: bigint;
+    private readonly maxEncodable: bigint;
+
+    constructor(baseBytes: number, limits: (number | bigint)[]) {
+        if (baseBytes !== 1 && baseBytes !== 2 && baseBytes !== 4) {
+            throw new Error("TieredInt minTierBytes must be 1, 2, or 4");
+        }
+        if (limits.length < 1 || limits.length > 3 ||
+            baseBytes * (1 << limits.length) > 8) {
+            throw new Error("Invalid TieredInt tier count");
+        }
+
+        this.baseBytes = baseBytes;
+        this.word = 1n << BigInt(8 * baseBytes);
+        this.headerMax = this.word - 1n;
+        this.limits = limits.map(value => {
+            if (typeof value === "number" &&
+                (!Number.isSafeInteger(value) || value < 0)) {
+                throw new Error("TieredInt limits must be uint32 values");
+            }
+            const v = BigInt(value);
+            if (v < 0n || v > 0xFFFFFFFFn) {
+                throw new Error("TieredInt limits must be uint32 values");
+            }
+            return v;
+        });
+
+        let previousMax = this.headerMax;
+        for (let i = 0; i < this.limits.length; i++) {
+            const limit = this.limits[i];
+            if (i > 0 && limit <= this.limits[i - 1]) {
+                throw new Error("TieredInt limits must be strictly increasing");
+            }
+            if (i === 0 && limit >= this.headerMax) {
+                throw new Error("TieredInt first limit leaves no extension header space");
+            }
+            if (i > 0 && limit > previousMax) {
+                throw new Error("TieredInt limit does not fit the previous wire size");
+            }
+            const mod = this.word ** BigInt(1 << i);
+            previousMax =
+                (previousMax - limit - 1n) * mod +
+                limit + 1n + (mod - 1n);
+        }
+        this.maxEncodable = previousMax;
+    }
+
+    serialize(_ctx: MetaContext, obj: bigint, out: DataOut): void {
+        if (typeof obj !== "bigint" || obj < 0n) {
+            throw new Error("TieredInt value must be a non-negative bigint");
+        }
+        if (obj > this.maxEncodable) {
+            throw new Error("TieredInt value exceeds configured range");
+        }
+
+        let value = obj;
+        const lows: Array<bigint | undefined> =
+            new Array(this.limits.length);
+        for (let i = this.limits.length - 1; i >= 0; i--) {
+            const limit = this.limits[i];
+            if (value > limit) {
+                const mod = this.word ** BigInt(1 << i);
+                const delta = value - limit - 1n;
+                const low = delta % mod;
+                lows[i] = low;
+                value = (delta - low) / mod + limit + 1n;
+            }
+        }
+
+        this.writeLittleEndian(out, value, this.baseBytes);
+        for (let i = 0; i < lows.length; i++) {
+            if (lows[i] !== undefined) {
+                this.writeLittleEndian(
+                    out,
+                    lows[i] as bigint,
+                    this.baseBytes * (1 << i),
+                );
+            }
+        }
+    }
+
+    deserialize(_ctx: MetaContext, dataIn: DataIn): bigint {
+        let value = this.readLittleEndian(dataIn, this.baseBytes);
+        for (let i = 0; i < this.limits.length; i++) {
+            const limit = this.limits[i];
+            if (value <= limit) return value;
+
+            const bytes = this.baseBytes * (1 << i);
+            const low = this.readLittleEndian(dataIn, bytes);
+            const mod = this.word ** BigInt(1 << i);
+            value =
+                (value - limit - 1n) * mod +
+                limit + 1n + low;
+            if (value > this.maxEncodable) {
+                throw new SecurityConnectionDropException(
+                    "Malformed TieredInt encoding",
+                );
+            }
+        }
+        return value;
+    }
+
+    private readLittleEndian(dataIn: DataIn, bytes: number): bigint {
+        if (dataIn.getSizeForRead() < bytes) {
+            throw new SecurityConnectionDropException(
+                "Truncated TieredInt encoding",
+            );
+        }
+        let value = 0n;
+        for (let i = 0; i < bytes; i++) {
+            value |= BigInt(dataIn.readUByte()) << BigInt(8 * i);
+        }
+        return value;
+    }
+
+    private writeLittleEndian(
+        out: DataOut,
+        value: bigint,
+        bytes: number,
+    ): void {
+        for (let i = 0; i < bytes; i++) {
+            out.writeByte(
+                Number((value >> BigInt(8 * i)) & 0xFFn),
+            );
+        }
+    }
+
+    serializeToBytes(obj: bigint): Uint8Array {
+        const data = new DataInOut();
+        this.serialize(FastFutureContextStub, obj, data);
+        return data.toArray();
+    }
+
+    deserializeFromBytes(data: Uint8Array): bigint {
+        return this.deserialize(
+            FastFutureContextStub,
+            new DataInOutStatic(data),
+        );
+    }
+
+    loadFromFile(_file: string): bigint {
+        throw new Error("UnsupportedOperationException");
+    }
+
+    metaHashCode(obj: bigint | null | undefined): number {
+        if (obj === null || obj === undefined) return 0;
+        const hash = obj ^ (obj >> 32n);
+        return Number(hash & 0xFFFFFFFFn) | 0;
+    }
+
+    metaEquals(
+        v1: bigint | null | undefined,
+        v2: any | null | undefined,
+    ): boolean {
+        return v1 === v2;
+    }
+
+    metaToString(
+        obj: bigint | null | undefined,
+        res: AString,
+    ): void {
+        res.add(String(obj));
+    }
+}
+
+
+
 /**
  * Central class containing FastMetaType for all primitive and standard types.
  */
 export class FastMeta {
+
+    public static tieredInt(
+        minTierBytes: number,
+        ...limits: (number | bigint)[]
+    ): FastMetaType<bigint> {
+        return new TieredIntFastMeta(minTierBytes, limits);
+    }
+
 
     public static readonly META_BOOLEAN: FastMetaType<boolean> = new class implements FastMetaType<boolean> {
         serialize(_ctx: MetaContext, obj: boolean, out: DataOut): void { out.writeBoolean(obj); }

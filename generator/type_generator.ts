@@ -38,8 +38,33 @@ export class TypeGenerator {
             return this.generateMultiplexorClass(name, defn);
         if (defn?.enum) return this.generateEnum(name, defn);
         if (defn?.syncmap) return "";
+
+        if (defn?.tieredInt)
+            return this.generateTieredInt(name, defn.tieredInt);
+
         return this.generateStructure(name, defn || {});
     }
+
+
+    private generateTieredInt(name: string, cfg: any): string {
+        const minTierBytes = Number(cfg.minTierBytes);
+        const limits = Array.isArray(cfg.limits)
+            ? cfg.limits.map((value: unknown) => Number(value))
+            : [];
+        const args = limits.map((value: number) => String(value)).join(", ");
+        const factoryArgs =
+            args.length > 0
+                ? `${minTierBytes}, ${args}`
+                : String(minTierBytes);
+
+        return [
+            `export class ${name} {`,
+            `    public static readonly META: FastMetaType<bigint> = FastMeta.tieredInt(${factoryArgs});`,
+            `    private constructor() {}`,
+            `}`,
+        ].join("\n");
+    }
+
 
     private getMultiplexorChannels(cfg: TypeDefinition): Array<{
         name: string;
@@ -102,10 +127,13 @@ export class TypeGenerator {
                     `Anonymous types cannot be validated this way.`,
                 );
 
+
             const referencedName = type as string;
-            const canonicalName =
-                this.generatorLogic.resolveCanonicalTypeName(referencedName);
-            fieldTypes.set(fn, new TypeInfo(canonicalName));
+            fieldTypes.set(
+                fn,
+                this.generatorLogic.typeInfo(referencedName),
+            );
+
         });
         return fieldTypes;
     }

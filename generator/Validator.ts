@@ -91,6 +91,100 @@ export class Validator {
         }
     }
 
+
+    private validateTieredIntDefinition(
+        typeName: string,
+        typeDef: TypeDefinition,
+        sourceFile: string,
+    ): void {
+        if (!Object.prototype.hasOwnProperty.call(typeDef, 'tieredInt')) return;
+
+        const fail = (message: string): void => {
+            this.errors.push(
+                `In file '${path.basename(sourceFile)}': tieredInt type '${typeName}' ${message}.`,
+            );
+        };
+
+        const typeKeys = Object.keys(typeDef).filter(
+            key => key !== 'tieredInt' && key !== 'doc',
+        );
+        if (typeKeys.length !== 0) {
+            fail(`cannot declare other type features: ${typeKeys.join(', ')}`);
+            return;
+        }
+
+        const cfg = (typeDef as any).tieredInt;
+        if (typeof cfg !== 'object' || cfg === null || Array.isArray(cfg)) {
+            fail('must contain an object configuration');
+            return;
+        }
+
+        const cfgKeys = Object.keys(cfg).sort();
+        if (cfgKeys.length !== 2 ||
+            cfgKeys[0] !== 'limits' ||
+            cfgKeys[1] !== 'minTierBytes') {
+            fail('configuration must contain exactly minTierBytes and limits');
+            return;
+        }
+
+        const baseBytes = cfg.minTierBytes;
+        const rawLimits = cfg.limits;
+        if (!Number.isInteger(baseBytes) || ![1, 2, 4].includes(baseBytes)) {
+            fail('minTierBytes must be 1, 2, or 4');
+            return;
+        }
+        if (!Array.isArray(rawLimits) ||
+            rawLimits.length < 1 ||
+            rawLimits.length > 3) {
+            fail('limits must contain between 1 and 3 entries');
+            return;
+        }
+        if (baseBytes * (1 << rawLimits.length) > 8) {
+            fail('maximum wire width must not exceed 8 bytes');
+            return;
+        }
+
+        const limits: bigint[] = [];
+        for (const raw of rawLimits) {
+            if (typeof raw !== 'number' ||
+                !Number.isInteger(raw) ||
+                raw < 0 ||
+                raw > 0xFFFFFFFF) {
+                fail('limits must be uint32 integers');
+                return;
+            }
+            limits.push(BigInt(raw));
+        }
+
+        for (let i = 1; i < limits.length; i++) {
+            if (limits[i] <= limits[i - 1]) {
+                fail('limits must be strictly increasing');
+                return;
+            }
+        }
+
+        const word = 1n << BigInt(8 * baseBytes);
+        const headerMax = word - 1n;
+        if (limits[0] >= headerMax) {
+            fail('first limit must be below the base-tier header maximum');
+            return;
+        }
+
+        let previousMax = headerMax;
+        for (let i = 0; i < limits.length; i++) {
+            const limit = limits[i];
+            if (i > 0 && limit > previousMax) {
+                fail(`limit ${i} is unreachable from the previous tier`);
+                return;
+            }
+            const mod = word ** BigInt(1 << i);
+            previousMax =
+                (previousMax - limit - 1n) * mod +
+                limit + 1n + (mod - 1n);
+        }
+    }
+
+
     /**
      * Validates all type definitions in a protocol file.
      */
@@ -100,6 +194,13 @@ export class Validator {
 
         Object.entries(types).forEach(([typeName, typeDef]) => {
             if (!typeDef) return;
+
+            this.validateTieredIntDefinition(
+                typeName,
+                typeDef,
+                sourceFile,
+            );
+
 
             const parentName = typeDef.parent as string;
             if (parentName && parentName !== 'Exception' && !this.findTypeDefinition(parentName)) {

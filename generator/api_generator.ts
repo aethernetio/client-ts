@@ -313,7 +313,7 @@ export class ApiGenerator {
                 const typeStr =
                     this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
                 docLines.push(
-                    `${indent} * @param ${pn} - ${new TypeInfo(typeStr).getArgumentType()}`,
+                    `${indent} * @param ${pn} - ${this.generatorLogic.typeInfo(typeStr).getArgumentType()}`,
                 );
             });
         }
@@ -393,7 +393,7 @@ export class ApiGenerator {
                 this.generatorLogic.resolveCanonicalTypeName(returnTypeStrRaw);
 
             if (returnTypeStr === "void") return "AFuture";
-            return new TypeInfo(returnTypeStr).getAsReturnType();
+            return this.generatorLogic.typeInfo(returnTypeStr).getAsReturnType();
         }
 
         if (m.throws != null) return "AFuture";
@@ -498,7 +498,7 @@ export class ApiGenerator {
                         : (pt as string);
                 const typeStr =
                     this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
-                return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
+                return `${pn}: ${this.generatorLogic.typeInfo(typeStr).getFieldType()}`;
             })
             .join(", ");
 
@@ -520,7 +520,7 @@ export class ApiGenerator {
             if (returnTypeStr === "void") {
                 finalReturns = "AFuture";
             } else {
-                const returnTypeInfo = new TypeInfo(returnTypeStr);
+                const returnTypeInfo = this.generatorLogic.typeInfo(returnTypeStr);
                 finalReturns = returnTypeInfo.getAsReturnType();
             }
         } else if (hasThrows) {
@@ -568,11 +568,11 @@ export class ApiGenerator {
                 );
                 const openArgs: string[] = [];
                 nonStreamParams.forEach(([n, t]) => {
-                    const ti = new TypeInfo(
-                        this.generatorLogic.resolveCanonicalTypeName(
-                            t as string,
-                        ),
+
+                    const ti = this.generatorLogic.typeInfo(
+                        t as string,
                     );
+
                     openArgs.push(`${n}: ${ti.getArgumentType()}`);
                 });
                 const factoryType =
@@ -640,7 +640,7 @@ export class ApiGenerator {
                         : (pt as string);
                 const typeStr =
                     this.generatorLogic.resolveCanonicalTypeName(typeStrRaw);
-                return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
+                return `${pn}: ${this.generatorLogic.typeInfo(typeStr).getFieldType()}`;
             })
             .join(", ");
 
@@ -661,7 +661,7 @@ export class ApiGenerator {
             if (returnTypeStr === "void") {
                 finalReturns = "AFuture";
             } else {
-                const returnTypeInfo = new TypeInfo(returnTypeStr);
+                const returnTypeInfo = this.generatorLogic.typeInfo(returnTypeStr);
                 finalReturns = returnTypeInfo.getAsReturnType();
             }
         } else if (hasThrows) {
@@ -759,7 +759,7 @@ export class ApiGenerator {
                 ? (m.returns as TypeDefinition).stream!.name!
                 : (m.returns as string);
         const returnTypeStr = g.resolveCanonicalTypeName(returnTypeStrRaw);
-        const returnTypeInfo = new TypeInfo(returnTypeStr);
+        const returnTypeInfo = g.typeInfo(returnTypeStr);
 
         const throwsTypeStrRaw =
             typeof m.throws === "object" &&
@@ -787,7 +787,7 @@ export class ApiGenerator {
                     ? (paramType as TypeDefinition).stream!.name!
                     : (paramType as string);
             const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
-            const typeInfo = new TypeInfo(typeStr);
+            const typeInfo = g.typeInfo(typeStr);
             const localVar = g.getUniqueVarName(paramName);
 
             sb.push(
@@ -984,9 +984,7 @@ export class ApiGenerator {
                 );
                 const openArgs: string[] = [];
                 nonStreamParams.forEach(([n, t]) => {
-                    const ti = new TypeInfo(
-                        g.resolveCanonicalTypeName(t as string),
-                    );
+                    const ti = g.typeInfo(t as string);
                     openArgs.push(`${n}: ${ti.getArgumentType()}`);
                 });
                 const factoryType =
@@ -1054,7 +1052,7 @@ export class ApiGenerator {
                 ? (m.returns as TypeDefinition).stream!.name!
                 : (m.returns as string);
         const returnTypeStr = g.resolveCanonicalTypeName(returnTypeStrRaw);
-        const returnTypeInfo = new TypeInfo(returnTypeStr);
+        const returnTypeInfo = g.typeInfo(returnTypeStr);
 
         const throwsTypeStrRaw =
             typeof m.throws === "object" &&
@@ -1075,7 +1073,7 @@ export class ApiGenerator {
                         ? (pt as TypeDefinition).stream!.name!
                         : (pt as string);
                 const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
-                return `${pn}: ${new TypeInfo(typeStr).getFieldType()}`;
+                return `${pn}: ${g.typeInfo(typeStr).getFieldType()}`;
             })
             .join(", ");
 
@@ -1170,7 +1168,7 @@ export class ApiGenerator {
                         ? (pt as TypeDefinition).stream!.name!
                         : (pt as string);
                 const typeStr = g.resolveCanonicalTypeName(typeStrRaw);
-                return [pn, new TypeInfo(typeStr)];
+                return [pn, g.typeInfo(typeStr)];
             }),
         );
 
@@ -1207,7 +1205,7 @@ export class ApiGenerator {
             (paramType as TypeDefinition).stream?.name
                 ? (paramType as TypeDefinition).stream!.name!
                 : (paramType as string);
-        return new TypeInfo(g.resolveCanonicalTypeName(typeStrRaw));
+        return g.typeInfo(typeStrRaw);
     }
 
     private isCollapsibleMethod(m: any): boolean {

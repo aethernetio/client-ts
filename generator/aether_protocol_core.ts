@@ -118,6 +118,12 @@ export class TypeInfo {
 
     public readonly isCollapsible: boolean;
 
+    public readonly declaredType?: string;
+    public readonly numericKind?: string;
+    public readonly numericMinTierBytes?: number;
+    public readonly numericLimits?: readonly number[];
+
+
 
     private static readonly PRIMITIVE_TYPES = new Set([
         "void", "byte", "short", "int", "long", "float", "double", "boolean",
@@ -131,8 +137,21 @@ export class TypeInfo {
      */
 
 
-    constructor(type: string, isAbstract: boolean = false) {
+
+    constructor(
+        type: string,
+        isAbstract: boolean = false,
+        declaredType?: string,
+        numericKind?: string,
+        numericMinTierBytes?: number,
+        numericLimits?: readonly number[],
+    ) {
         this.isAbstract = isAbstract;
+        this.declaredType = declaredType;
+        this.numericKind = numericKind;
+        this.numericMinTierBytes = numericMinTierBytes;
+        this.numericLimits = numericLimits;
+
         if (typeof type !== 'string') {
             this.javaType = "void"; this.javaTypeBoxed = "void"; this.arrayStaticSize = 0;
             this.isNullable = false; this.isArray = false; this.isPack = false;
@@ -251,6 +270,39 @@ export class TypeInfo {
         }
     }
 
+    static namedScalar(
+        syntax: TypeInfo,
+        declaredType: string,
+        numericKind: string,
+        numericMinTierBytes: number,
+        numericLimits: readonly number[],
+    ): TypeInfo {
+        let runtimeType = "long";
+        if (syntax.isArray) {
+            runtimeType += `[${syntax.arrayStaticSize > 0 ? syntax.arrayStaticSize : ""}]`;
+        }
+        if (syntax.isNullable) runtimeType += "?";
+        if (syntax.isCollapsible) runtimeType += "~";
+
+        return new TypeInfo(
+            runtimeType,
+            syntax.isAbstract,
+            declaredType,
+            numericKind,
+            numericMinTierBytes,
+            numericLimits,
+        );
+    }
+
+    isNamedScalar(): boolean {
+        return this.numericKind !== undefined;
+    }
+
+    getMetaName(): string {
+        return this.declaredType ?? this.javaType;
+    }
+
+
 
 
 
@@ -271,12 +323,24 @@ export class TypeInfo {
      * @returns A new TypeInfo instance for the base type.
      */
 
+
     getElementType(): TypeInfo {
+        if (this.isNamedScalar()) {
+            return new TypeInfo(
+                this.javaType,
+                this.isAbstract,
+                this.declaredType,
+                this.numericKind,
+                this.numericMinTierBytes,
+                this.numericLimits,
+            );
+        }
         return new TypeInfo(
             this.isPack ? "intpack" : this.javaType,
             this.isAbstract,
         );
     }
+
 
 
     /**
@@ -359,9 +423,14 @@ export class TypeInfo {
      * @returns The DSL string.
      */
 
+
     toString(): string {
-        return `${this.javaType}${this.isPack ? '(pack)' : ''}${this.isArray ? `[${this.arrayStaticSize > 0 ? this.arrayStaticSize : ''}]` : ''}${this.isNullable ? '?' : ''}${this.isCollapsible ? '~' : ''}`;
+        const scalarIdentity = this.isNamedScalar()
+            ? `${this.declaredType}{${this.numericKind}:${this.numericMinTierBytes}:${(this.numericLimits || []).join(",")}}:`
+            : "";
+        return `${scalarIdentity}${this.javaType}${this.isPack ? '(pack)' : ''}${this.isArray ? `[${this.arrayStaticSize > 0 ? this.arrayStaticSize : ''}]` : ''}${this.isNullable ? '?' : ''}${this.isCollapsible ? '~' : ''}`;
     }
+
 
 }
 
@@ -468,6 +537,33 @@ export class GeneratorLogic {
 
         return referencedName;
     }
+
+    public typeInfo(referencedName: string): TypeInfo {
+        const canonical = this.resolveCanonicalTypeName(referencedName);
+        const syntax = new TypeInfo(canonical);
+        const definition = this.findTypeDefinition(syntax.javaType);
+        const tieredInt = (definition as any)?.tieredInt;
+
+        if (!tieredInt || typeof tieredInt !== "object") {
+            return syntax;
+        }
+
+        const declaredName =
+            this.canonicalTypeNameMap.get(syntax.javaType.toLowerCase()) ??
+            syntax.javaType;
+        const limits = Array.isArray(tieredInt.limits)
+            ? tieredInt.limits.map((value: unknown) => Number(value))
+            : [];
+
+        return TypeInfo.namedScalar(
+            syntax,
+            declaredName,
+            "tieredInt",
+            Number(tieredInt.minTierBytes),
+            limits,
+        );
+    }
+
 
 
     /**
@@ -746,6 +842,13 @@ export class GeneratorLogic {
         let res = this.metaAccessors.get(typeKey);
         if (res) return res;
 
+        if (t.isNamedScalar() && !t.isArray) {
+            res = `${t.getMetaName()}.META`;
+            this.metaAccessors.set(typeKey, res);
+            return res;
+        }
+
+
         if (t.isArray) {
             if (t.javaType === 'byte') {
                 res = "FastMeta.META_ARRAY_BYTE";
@@ -853,10 +956,14 @@ export class GeneratorLogic {
             case "byte": sb.push(`${outVar}.writeByte(${inVar});`); break;
             case "short": sb.push(`${outVar}.writeShort(${inVar});`); break;
             case "int": sb.push(`${outVar}.writeInt(${inVar});`); break;
+
             case "long":
-                if (type.isPack) sb.push(`SerializerPackNumber.INSTANCE.put(${outVar}, ${inVar});`);
+                if (type.isNamedScalar())
+                    sb.push(`${this.generateAccessMeta(type)}.serialize(${serializeContextVar}, ${inVar}, ${outVar});`);
+                else if (type.isPack) sb.push(`SerializerPackNumber.INSTANCE.put(${outVar}, ${inVar});`);
                 else sb.push(`${outVar}.writeLong(${inVar});`);
                 break;
+
             case "float": sb.push(`${outVar}.writeFloat(${inVar});`); break;
             case "double": sb.push(`${outVar}.writeDouble(${inVar});`); break;
             case "Date": sb.push(`${outVar}.writeLong(${inVar}.getTime());`); break;
@@ -937,10 +1044,14 @@ export class GeneratorLogic {
             case "byte": sb.push(`${outVar} = ${inVar}.readByte();`); break;
             case "short": sb.push(`${outVar} = ${inVar}.readShort();`); break;
             case "int": sb.push(`${outVar} = ${inVar}.readInt();`); break;
+
             case "long":
-                if (type.isPack) sb.push(`${outVar} = DeserializerPackNumber.INSTANCE.put(${inVar});`);
+                if (type.isNamedScalar())
+                    sb.push(`${outVar} = ${this.generateAccessMeta(type)}.deserialize(${serializeContextVar}, ${inVar});`);
+                else if (type.isPack) sb.push(`${outVar} = DeserializerPackNumber.INSTANCE.put(${inVar});`);
                 else sb.push(`${outVar} = ${inVar}.readLong();`);
                 break;
+
             case "float": sb.push(`${outVar} = ${inVar}.readFloat();`); break;
             case "double": sb.push(`${outVar} = ${inVar}.readDouble();`); break;
             case "Date": sb.push(`${outVar} = new Date(Number(${inVar}.readLong()));`); break;
