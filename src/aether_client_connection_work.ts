@@ -740,11 +740,14 @@ export class ConnectionWork extends ConnectionBase<ClientApiUnsafe, LoginApiRemo
     public flushBackgroundRequests(): void {
         const a = this.authorizedApi;
 
+
         for (const uid of this.client.clouds.pollAllRequests()) {
             const cc = this.client.clouds.getNow(uid);
             const version = cc ? cc.getConfigVersion() - 1n : -1n;
+
             this.client.appliedConfigsRequests.getFuture(new AppliedConfig(uid, version));
         }
+
 
         for (const cc of this.client.clouds.values()) {
             if (cc.getConfigVersion() > cc.getConfirmedConfigVersion()) {
@@ -797,14 +800,20 @@ const uidsToRemove = Array.from(uidsMap.keys());
                 a.removeItemsFromAccessGroup(groupId, uidsToRemove);
             }
         }
+
         while (true) {
             const t = this.client.authTasks.poll();
             if (!t) break;
             t(a);
         }
 
+        if (!this.firstAuth) {
+            this.scheduledWork();
+            return;
+        }
 
         for (const m of this.client.messageNodeMap.values()) {
+
             if (!m.connectionsOut.has(this)) {
                 continue;
             }
