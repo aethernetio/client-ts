@@ -43,7 +43,7 @@
     "prepub": "npm run build:browser",
     "postpub": "npm run deploy:browser-site",
 
-    "pub": "npm run build && npm pack && curl -T aether-client-1.0.5.tgz -u deploy:1930 https://nexus.aethernet.io/npm-private/aether-client-1.0.5.tgz"
+    "pub": "npm run build && npm pack && curl -T aether-client-1.0.6.tgz -u deploy:1930 https://nexus.aethernet.io/npm-private/aether-client-1.0.6.tgz"
   },
   "overrides": {
     "chokidar": "3.5.3",

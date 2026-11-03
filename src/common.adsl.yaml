@@ -93,6 +93,7 @@ types:
     enum:
       - SODIUM
       - HYDROGEN
+      - P256_AES_GCM
   PowMethod:
     enum:
       - AE_BCRYPT_CRC32
@@ -150,6 +151,7 @@ types:
     fields:
       id: short
       ipAddress: IPAddressAndPortsList
+      signingKeys: SignedKey[]
   ServerDescriptorWithGeo:
     fields:
       id: short
@@ -158,6 +160,7 @@ types:
       latitude: double
       longitude: double
       type: ServerType
+      signingKeys: SignedKey[]
   Cloud:
     fields:
       data: short[]
@@ -245,3 +248,34 @@ types:
     enum:
       - REG
       - WORK
+
+  P256AesGcmSymmetric:
+    id: 11
+    parent: KeySymmetric
+    fields:
+      data: byte[32]
+  P256AesGcmCurvePrivate:
+    id: 12
+    parent: KeyAsymmetricPrivate
+    fields:
+      data: byte[32]
+  P256AesGcmCurvePublic:
+    id: 13
+    parent: KeyAsymmetricPublic
+    fields:
+      data: byte[64]
+  P256AesGcmSignPrivate:
+    id: 14
+    parent: KeySignPrivate
+    fields:
+      data: byte[32]
+  P256AesGcmSignPublic:
+    id: 15
+    parent: KeySignPublic
+    fields:
+      data: byte[64]
+  SignP256AesGcm:
+    id: 3
+    parent: Sign
+    fields:
+      data: byte[64]
