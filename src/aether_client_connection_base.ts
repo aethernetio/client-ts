@@ -146,19 +146,6 @@ export function getUriFromServerDescriptor(
                 continue;
             }
 
-            if (
-                cap.codec === AetherCodec.WSS
-                && isRawIP
-            ) {
-                Log.trace(
-                    "Skipping WSS for raw IP address",
-                    {
-                        ip: ipString,
-                        port: cap.port,
-                    },
-                );
-                continue;
-            }
 
             const hostString =
                 isIPv6 ? `[${ipString}]` : ipString;
